@@ -216,6 +216,7 @@ object ServiceLocator {
                 wording = errorWording,
                 selfEnabledGuide = object : EpgRepository.SelfEnabledGuide {
                     override var name by settings::selfEnabledGuide
+                    override var matchedCatalogueSync by settings::matchedCatalogueSync
                 },
             )
         }

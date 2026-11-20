@@ -54,6 +54,23 @@ Seven runs from a force-stop, on a device with the app's files already cached, o
 
 The slowest of both was the first run. Memory at Home after a cold start was 86 MB (PSS), with 296 MB available on the device.
 
+### Rows after a cold start (#582)
+
+When each of Home's rows, and Movies' and Shows' Continue Watching and Recently Added, first had its cards, from process start. Five cold starts of each build, compiled `speed-profile`, on 2026-11-20, with a Profile of at least 4 titles in Continue Watching, favourite films, shows and channels, and a big Xtream provider. Movies and Shows were opened with the remote's keys as soon as the app had drawn, which adds about 2 s to their Continue Watching.
+
+| Median (range) | Before, `62d1574c` | `main`, `1cd4ee49` | #582 merged with `main` |
+|---|---:|---:|---:|
+| Home, Continue Watching | 1.7 s (1.6-2.0) | 2.2 s (1.8-2.7) | 2.2 s (1.8-3.2) |
+| Home, every row | 32.3 s (29.6-34.9) | 29.4 s (28.9-30.0) | 4.8 s (4.3-5.0) |
+| Movies, Continue Watching | 4.1 s (3.6-4.6) | | 4.3 s (3.8-4.7) |
+| Movies, Recently Added | 34.8 s (33.2-39.2) | | 7.3 s (6.7-7.6) |
+| Shows, Continue Watching | 4.6 s (4.3-5.4) | | 4.3 s (4.2-6.4) |
+| Shows, Recently Added | 19.8 s (18.6-20.9) | | 6.9 s (6.7-8.8) |
+
+Recently Added was the row everything waited for: it waits on films and shows being grouped into titles, which a film-details lookup kept restarting. With #582 it comes within a few seconds of the 3 s a list waits for that grouping before showing every row, so a title can show twice until the grouping comes. Continue Watching didn't move: about 2 s from process start, against LOOK.md's 300 ms, which speed alone won't reach.
+
+**How:** a temporary log line in each row's flow, never committed, logged the time since `Process.getStartUptimeMillis()` the first time each row's value arrived, and `adb logcat` collected it after each cold start. Screen recordings were tried first and dropped: covers fill in as the provider's posters download, so artwork timed the network.
+
 ## What stands out
 
 - **The guide is the weakest screen.** Most of its frames miss the deadline, and holding Down draws about a third as many frames as holding Right on Home.

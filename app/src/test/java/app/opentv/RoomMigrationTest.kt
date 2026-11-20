@@ -272,6 +272,35 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `22 gives every channel its name key, region dropped, and keeps every Favourite`() {
+        val name = "channel-name-key.db"
+        helper.createDatabase(name, 21).use { db ->
+            db.execSQL(
+                "INSERT INTO sources (id, name, kind, url, userAgent, liveFormat, enabled, lastCatalogSyncMillis) " +
+                    "VALUES (1, 'Home', 'XTREAM', 'http://example.com', 'ua', 'HLS', 1, 0)",
+            )
+            for ((id, groupKey) in listOf(1 to "uk:bbc1", 2 to "bbc1", 3 to "")) {
+                db.execSQL(
+                    "INSERT INTO channels (id, sourceId, streamId, name, displayName, groupKey, qualityRank, " +
+                        "qualityLabel, tvArchive, tvArchiveDays, streamUrl, hidden, sortIndex, lastSeenMillis) " +
+                        "VALUES ($id, 1, '$id', 'n', 'n', '$groupKey', 0, '', 0, 0, 'http://example.com/$id', 0, 0, 0)",
+                )
+            }
+            db.execSQL(
+                "INSERT INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed) " +
+                    "VALUES (1, 'CHANNEL', 'Home', '1', 9, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 22, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT group_concat(nameKey, '|') FROM (SELECT nameKey FROM channels ORDER BY id)"))
+                .isEqualTo("bbc1|bbc1|")
+            assertThat(db.first("SELECT source || ':' || itemId FROM favourites WHERE profileId = 1"))
+                .isEqualTo("Home:1")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

@@ -13,6 +13,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.player.DecoderList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,14 +30,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -46,7 +51,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Held in memory rather than looked up per cover: a category's grid holds one shelf's rows, while a
  * cover's badge and whether it's shown once depend on Versions in other categories, and the tables have
  * no index on the TMDB id, which a schema change would add. Built from a light projection, off the
- * main thread, and kept until the app closes.
+ * main thread, and kept until the app closes. Grouping starts when something first asks, or [start].
  */
 class TitleIndex(
     private val db: OpenTvDatabase,
@@ -106,22 +111,30 @@ class TitleIndex(
 
     /** [items], a list of films, with each title once: the first of its Versions there. */
     fun <T> distinctMovies(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
-        items.combine(movies.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+        items.combine(movies.groupedOrNone()) { list, titles -> titles.distinct(list, idOf) }
 
     /** [items], a list of shows, with each title once: the first of its Versions there. */
     fun <T> distinctSeries(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
-        items.combine(series.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+        items.combine(series.groupedOrNone()) { list, titles -> titles.distinct(list, idOf) }
 
     /** [items], films and shows together, with each title once: the first of its Versions there. */
     fun distinctTitles(items: Flow<List<VodTitle>>): Flow<List<VodTitle>> =
-        combine(items, movies.filterNotNull(), series.filterNotNull(), ::distinctIn)
+        combine(items, movies.groupedOrNone(), series.groupedOrNone(), ::distinctIn)
 
     /** As [distinctTitles], for a list read once. */
     suspend fun distinct(items: List<VodTitle>): List<VodTitle> =
-        distinctIn(items, movies.filterNotNull().first(), series.filterNotNull().first())
+        distinctIn(items, movies.groupedOrNone().first(), series.groupedOrNone().first())
 
-    private fun distinctIn(items: List<VodTitle>, movies: Titles, series: Titles): List<VodTitle> =
-        items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
+    /**
+     * Starts grouping now rather than when something first asks, for a screen about to: the first
+     * screen opening, so the grouping is done while the viewer picks a Profile (#582). Not when the
+     * index is made, as a sync with nobody looking makes it too.
+     */
+    fun start() {
+        // Grouping, once started, runs until the index closes: holding a subscription is all it needs.
+        scope.launch { movies.collect {} }
+        scope.launch { series.collect {} }
+    }
 
     /** Stops regrouping, for a test that closes its database. */
     fun close() = scope.cancel()
@@ -153,8 +166,11 @@ class TitleIndex(
         .flatMapLatest { names ->
             var grouped: Int? = null
             db.invalidationTracker.createFlow(table)
-                // A refresh writes in batches: grouping once they settle is all that's wanted.
-                .debounce(SETTLE_MILLIS)
+                // A refresh writes in batches: grouping once they settle is all that's wanted, but no
+                // longer than a few seconds into them, as plain debounce never fires while writes keep
+                // coming faster than it waits, which held up the first grouping, and Recently Added
+                // with it, for as long as a film-details lookup wrote (#582).
+                .settled(SETTLE_MILLIS, FIRST_GROUPING_MAX_WAIT_MILLIS)
                 .conflate()
                 .transform {
                     val started = System.nanoTime()
@@ -182,7 +198,7 @@ class TitleIndex(
     private suspend fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
         val byId = HashMap<Long, Title>(rows.size)
         val titles = groupVersions(rows, VersionRow::tmdbId, VersionRow::name, VersionRow::year)
-        // Checked as it goes, so newer rows replace a grouping still under way instead of queuing behind it.
+        // Checked as it goes, so new category names, or the index closing, stop a grouping under way.
         val job = currentCoroutineContext()
         for ((i, versions) in titles.withIndex()) {
             if (i % CHECK_EVERY == 0) job.ensureActive()
@@ -201,6 +217,44 @@ private const val FIRST_GROUPING_WAIT_MILLIS = 3_000L
 
 /** How long the catalogue stays unchanged before it's grouped again. */
 private const val SETTLE_MILLIS = 500L
+
+/** The longest a stream of writes holds off grouping, at first or after a regroup's gap. */
+private const val FIRST_GROUPING_MAX_WAIT_MILLIS = 3_000L
+
+/** [items] with each title once, by [movies]' and [series]' titles. */
+private fun distinctIn(items: List<VodTitle>, movies: TitleIndex.Titles, series: TitleIndex.Titles): List<VodTitle> =
+    items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
+
+/**
+ * The titles once grouped, or every row its own title if the first grouping takes longer than a lookup
+ * waits, then the grouping when it comes: a list shown with a title twice for a moment beats Home
+ * waiting on a grouping a busy refresh holds up (#582).
+ */
+private fun StateFlow<TitleIndex.Titles?>.groupedOrNone(): Flow<TitleIndex.Titles> = flow {
+    emit(withTimeoutOrNull(FIRST_GROUPING_WAIT_MILLIS) { filterNotNull().first() } ?: TitleIndex.Titles.NONE)
+    emitAll(filterNotNull())
+}.distinctUntilChanged()
+
+/**
+ * Each value once [quietMillis] pass with no newer one, as `debounce` does, except that a value
+ * waiting when [maxWaitMillis] have passed since the first of its burst goes through then: plain
+ * `debounce` never emits while values keep coming faster than [quietMillis].
+ */
+@OptIn(FlowPreview::class)
+private fun <T> Flow<T>.settled(quietMillis: Long, maxWaitMillis: Long): Flow<T> {
+    val burstStart = AtomicLong(NO_BURST)
+    return onEach { burstStart.compareAndSet(NO_BURST, nowMillis()) }
+        .debounce {
+            val waited = nowMillis() - burstStart.get()
+            quietMillis.coerceAtMost((maxWaitMillis - waited).coerceAtLeast(0))
+        }
+        .onEach { burstStart.set(NO_BURST) }
+}
+
+private const val NO_BURST = -1L
+
+// Not SystemClock, which stands still under Robolectric unless a test moves it.
+private fun nowMillis() = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
 
 /**
  * How long after reading and grouping, which took [tookMillis], changes wait before the next: at least

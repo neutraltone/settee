@@ -520,7 +520,12 @@ class CatalogueRefresh(
             val now = clock()
             guidePassStarted.set(now)
             try {
-                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }, progress)
+                guide.syncAll(
+                    now,
+                    force,
+                    skipFetchedSince = runningSince.takeIf { force && it > 0 },
+                    progress = progress,
+                )
             } finally {
                 guidePassStarted.set(0)
             }

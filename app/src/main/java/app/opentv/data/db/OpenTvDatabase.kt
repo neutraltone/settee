@@ -97,7 +97,7 @@ class Converters {
         Reminder::class,
         EpisodeTimings::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -381,6 +381,22 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 21 → 22: each channel's name key, its group key with the region dropped, stored and indexed,
+         * so a Channel's rows in every region are found without reading every channel (#582).
+         */
+        private val CHANNEL_NAME_KEY = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `nameKey` TEXT NOT NULL DEFAULT ''")
+                // As ChannelNameNormalizer.nameKeyOf: everything after the first colon, or all of it.
+                db.execSQL(
+                    "UPDATE `channels` SET `nameKey` = CASE WHEN instr(`groupKey`, ':') > 0 " +
+                        "THEN substr(`groupKey`, instr(`groupKey`, ':') + 1) ELSE `groupKey` END",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_channels_nameKey` ON `channels` (`nameKey`)")
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
@@ -397,6 +413,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 SERVER_TIME_ZONE,
                 EPISODE_TIMINGS,
                 REFRESH_FAILURE,
+                CHANNEL_NAME_KEY,
             )
 
         /** The schemas opened empty rather than migrated; see [build]. */

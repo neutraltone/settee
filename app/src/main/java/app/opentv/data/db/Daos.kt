@@ -57,6 +57,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.data.model.movieCredits
 import app.opentv.data.model.seriesCredits
+import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.flow.Flow
 
@@ -97,6 +98,10 @@ interface SourceDao {
 
     @Query("UPDATE sources SET lastCatalogSyncMillis = :millis WHERE id = :id")
     suspend fun markCatalogSynced(id: Long, millis: Long)
+
+    /** When any provider's channels were last saved, 0 if never. */
+    @Query("SELECT IFNULL(MAX(lastCatalogSyncMillis), 0) FROM sources")
+    suspend fun latestCatalogSync(): Long
 
     /**
      * Saves what the viewer edited. The panel's time zone is the panel's to give when a refresh signs
@@ -223,13 +228,12 @@ interface ChannelDao {
     suspend fun byId(id: Long): Channel?
 
     /**
-     * Every row called [nameKey] in any region, hidden ones too: `groupKey` is `nameKey` itself, or
-     * ends in `:nameKey`. What [app.opentv.data.repo.ChannelLineup] folds to find one row's Channel.
-     * A suffix match can't use the groupKey index, so this scans the table; it runs once per lookup,
-     * never per row.
+     * Every row called any of [nameKeys] in any region, hidden ones too. What
+     * [app.opentv.data.repo.ChannelLineup] folds to find rows' Channels. [nameKeys] are bound
+     * variables, so keep them under older Android's 999.
      */
-    @Query("SELECT * FROM channels WHERE groupKey = :nameKey OR groupKey LIKE '%:' || :nameKey")
-    suspend fun sameName(nameKey: String): List<Channel>
+    @Query(CHANNELS_NAMED)
+    suspend fun sameName(nameKeys: List<String>): List<Channel>
 
     @Query("SELECT COUNT(*) FROM channels WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
@@ -375,7 +379,7 @@ interface ChannelDao {
     suspend fun everyRow(): List<Channel>
 
     /** The matcher's working set: no URLs or names, which a large catalogue would allocate on every launch. */
-    @Query("SELECT id, groupKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
+    @Query("SELECT id, nameKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
     suspend fun matcherInputs(): List<ChannelMatchInput>
 
     /** Every channel's name as the provider wrote it, which is where a region prefix is. */
@@ -755,6 +759,8 @@ data class ChannelCleaned(
     val groupKey: String,
     val qualityLabel: String,
     val qualityRank: Int,
+    /** [groupKey]'s name part, which the lineup looks Channels up by (see [Channel.nameKey]). */
+    val nameKey: String = ChannelNameNormalizer.nameKeyOf(groupKey),
 )
 
 /** What More like this ranks a film or show by, without the rest of its row. */
@@ -1483,13 +1489,9 @@ interface EpisodeDao {
 
     /**
      * Every episode [profileId] has any progress on. A join rather than `IN (:ids)`: a long watch
-     * history would run past SQLite's bound-variable limit. `'ep:' || id` is
-     * [app.opentv.data.repo.MediaKey.Episode]'s stored form, which a query can't build through it.
+     * history would run past SQLite's bound-variable limit. See [EPISODE_OF_POSITION] for the join.
      */
-    @Query(
-        "SELECT episodes.* FROM episodes JOIN playback_positions " +
-            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId",
-    )
+    @Query(PLAYED_EPISODES)
     fun observePlayed(profileId: Long): Flow<List<Episode>>
 
     /**
@@ -1498,12 +1500,7 @@ interface EpisodeDao {
      * home feed reads this each time a tab opens, and a long watch history's plots and stream URLs
      * would be felt on a Fire TV Stick.
      */
-    @Query(
-        "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
-            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
-            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
-            "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC",
-    )
+    @Query(STARTED_SERIES)
     suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 
     /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
@@ -2055,16 +2052,42 @@ internal const val SERIES_WITH_PERSON = """
 """
 
 /**
+ * A position's episode, joined by the id read out of its key rather than by building `'ep:' || id`
+ * from each episode: a key built per episode no index can serve, so every stored episode was read
+ * whenever a position, episode or dismissal changed (#582). This way SQLite reads the Profile's
+ * positions and finds each episode by its primary key. `ep:` is
+ * [app.opentv.data.repo.MediaKey.Episode]'s stored form.
+ */
+private const val EPISODE_OF_POSITION =
+    "substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
+        "AND episodes.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER)"
+
+/** Every channel called any of a list of name keys, in any region. See [ChannelDao.sameName]. */
+internal const val CHANNELS_NAMED = "SELECT * FROM channels WHERE nameKey IN (:nameKeys)"
+
+/** Every episode a Profile has any progress on. See [EpisodeDao.observePlayed]. */
+internal const val PLAYED_EPISODES =
+    "SELECT episodes.* FROM episodes JOIN playback_positions " +
+        "ON " + EPISODE_OF_POSITION + " WHERE playback_positions.profileId = :profileId"
+
+/** The series a Profile has started, played most recently first. See [EpisodeDao.startedSeries]. */
+internal const val STARTED_SERIES =
+    "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+        "ON " + EPISODE_OF_POSITION + " WHERE playback_positions.profileId = :profileId " +
+        "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
+        "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC"
+
+/**
  * Every episode of each series a Profile has played any of. See [EpisodeDao.ofPlayedSeries].
  *
  * Joined from the played series rather than asking `EXISTS` of each episode: SQLite 3.22 on Fire OS 7
  * runs a correlated subquery once per stored episode, and Home re-runs this whenever it comes back.
  */
 internal const val EPISODES_OF_PLAYED_SERIES =
-    "SELECT episodes.* FROM episodes JOIN (SELECT DISTINCT played.sourceId, played.seriesId " +
-        "FROM playback_positions JOIN episodes AS played ON playback_positions.mediaKey = 'ep:' || played.id " +
+    "SELECT every.* FROM episodes AS every JOIN (SELECT DISTINCT episodes.sourceId, episodes.seriesId " +
+        "FROM playback_positions JOIN episodes ON " + EPISODE_OF_POSITION + " " +
         "WHERE playback_positions.profileId = :profileId) AS played_series " +
-        "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"
+        "ON every.sourceId = played_series.sourceId AND every.seriesId = played_series.seriesId"
 
 /** The intro, recap and credits timings looked up for episodes (#517); a cache, so never synced. */
 @Dao

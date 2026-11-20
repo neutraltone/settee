@@ -129,6 +129,16 @@ override: falling back to the raw name would key every such row of a region alik
 to whatever guide channel shares their tags. Guide and category matching still use that fallback
 (`Normalized.groupKey`), where a name of only tags is the guide's own and does say something.
 
+Matching reads and cleans every channel's name, so a guide pass only redoes it when something it
+reads has changed: a guide downloaded, a moved built-in guide's channel list dropped, or channels
+saved since it last ran. That last is a stamp kept in `AppSettings` and compared with the sources'
+`lastCatalogSyncMillis`, so channels a refresh saved before the process went are still matched
+(#582). A pass that skips it still counts the working guides from the stored matches. A channel's
+name key, its `groupKey` with the region dropped, is stored and indexed as `nameKey`: the lineup
+finds every region's rows of a Channel in one indexed lookup, where a suffix match on `groupKey`
+read every channel once per favourite. Change `groupKey` through `Channel.withGroupKey`, which
+keeps the two in step.
+
 ### An open guide while a sync writes
 
 Each batch re-runs every Room query on `programmes`, so an open guide used to regroup and rebuild
@@ -249,6 +259,26 @@ The key is Settee's, set at build time like OpenSubtitles' (`TMDB_API_KEY`, from
 Viewers never enter one. It can't be hidden in an APK and needn't be, since TMDB rate-limits by IP
 address. It may be TMDB's v3 API
 Key or its v4 Read Access Token; `TmdbClient` sends whichever it is the way TMDB wants, from one place.
+
+## Home opens without catalogue-sized work
+
+What Home, Movies and Shows draw first is read from Room, with no network call before it, and
+nothing on that path reads a whole catalogue table (#582):
+
+- `TitleIndex` groups films and shows into titles in memory (ADR 0007). It starts when the first
+  screen opens (`OpenTvApp.onFirstOpen` calls `start()`), so it's done while the viewer picks a
+  Profile. It doesn't start when it's made: a sync with nobody looking makes it too, and grouping
+  a whole catalogue then takes memory from that sync on a 1 GB Stick.
+- Grouping waits for writes to settle, but never more than a few seconds into a stream of them:
+  a film-details lookup writes batches for minutes, and a plain debounce held the first grouping
+  until it stopped. After each grouping the next waits out a gap (`regroupGapMillis`, #588), so
+  steady writes regroup now and then. Lists that show each title once stop waiting for the first
+  grouping after 3 s and show every row until it comes.
+- Continue Watching looks up every card's title at once, so an ungrouped index costs one wait,
+  not one per card.
+- Played episodes are joined to their positions by the id read out of `mediaKey` (`ep:<id>`),
+  which finds each episode by its primary key. Building `'ep:' || id` per episode read the whole
+  table.
 
 ## SQLite's bound-variable limit is a real constraint here
 

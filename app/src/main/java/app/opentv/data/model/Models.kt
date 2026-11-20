@@ -10,6 +10,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.opentv.core.ViewerError
+import app.opentv.data.parser.ChannelNameNormalizer
 import kotlinx.serialization.Serializable
 
 /**
@@ -149,6 +150,7 @@ data class SourceCategoryName(val sourceId: Long, val id: String, val name: Stri
         Index(value = ["sourceId", "streamId"], unique = true),
         Index(value = ["sourceId", "categoryId"]),
         Index(value = ["groupKey"]),
+        Index(value = ["nameKey"]),
     ],
 )
 // Serializable so a live list can be staged on disk, decoded, before the transaction that saves it.
@@ -168,6 +170,12 @@ data class Channel(
      * matcher joins on its name part. See ChannelNameNormalizer.channelKey.
      */
     val groupKey: String = "",
+    /**
+     * [groupKey]'s name part, region dropped: `bbc1`. Stored and indexed so a Channel's rows in every
+     * region are one indexed lookup; a suffix match on [groupKey] read every channel, once per
+     * favourite (#582). Change [groupKey] with [withGroupKey], which sets both.
+     */
+    @ColumnInfo(defaultValue = "''") val nameKey: String = ChannelNameNormalizer.nameKeyOf(groupKey),
     /** Higher plays by default. 0 = the name said nothing about quality. */
     val qualityRank: Int = 0,
     /** `FHD`, `HD`, `RAW 60fps`… empty when unknown. */
@@ -209,6 +217,9 @@ data class Channel(
      */
     val lastSeenMillis: Long = 0,
 ) {
+    /** This row with [key] as its [groupKey], and [nameKey] to match. */
+    fun withGroupKey(key: String): Channel = copy(groupKey = key, nameKey = ChannelNameNormalizer.nameKeyOf(key))
+
     /**
      * The guide ids worth trying for this channel, most trustworthy first. The UI walks
      * them in order and uses the first that actually has programmes — a provider-supplied
@@ -221,7 +232,8 @@ data class Channel(
 /** The part of a [Channel] the guide matcher reads. */
 data class ChannelMatchInput(
     val id: Long,
-    val groupKey: String,
+    /** What the matcher looks the guide up by: see [Channel.nameKey]. */
+    val nameKey: String,
     val epgChannelId: String?,
     val matchedEpgId: String?,
     val epgOverrideId: String?,

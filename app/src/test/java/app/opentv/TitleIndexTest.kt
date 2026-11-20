@@ -15,16 +15,25 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.regroupGapMillis
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -121,6 +130,63 @@ class TitleIndexTest {
 
         assertThat(titles.of(1)?.versionIds?.toList()).containsExactly(1L, 2L)
         assertThat(titles.badgeOf(1)).isNull()
+    }
+
+    @Test
+    fun `nothing is grouped until something asks or the index is started`(): Unit = runBlocking {
+        // A sync with nobody looking builds the index too: grouping a whole catalogue then would take a
+        // Stick's memory from the recording or refresh that started the process (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+
+        delay(1_500)
+
+        assertThat(index.movies.value).isNull()
+    }
+
+    @Test
+    fun `a started index groups titles before anything asks for them`(): Unit = runBlocking {
+        // So the grouping is done while the viewer picks a Profile, not after Home asks (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+
+        index.start()
+        // Read, never collected: nothing subscribes.
+        val grouped = withTimeoutOrNull(5_000) {
+            while (index.movies.value?.of(1) == null) delay(20)
+            true
+        }
+
+        assertThat(grouped).isTrue()
+    }
+
+    @Test
+    fun `titles are grouped while a refresh keeps writing`(): Unit = runBlocking {
+        // A refresh filling in films' details writes a batch every moment; waiting for it to settle
+        // left Recently Added waiting until it finished (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+        val writing = launch(Dispatchers.Default) {
+            var n = 2L
+            while (isActive) {
+                db.movies().upsertAll(listOf(movie(n, "EN - Film $n (2007)", "en", tmdbId = "$n")))
+                n++
+                delay(200)
+            }
+        }
+
+        val grouped = withTimeoutOrNull(8_000) { index.movies.filterNotNull().first() }
+        writing.cancel()
+
+        assertThat(grouped?.of(1)).isNotNull()
+    }
+
+    @Test
+    fun `a list doesn't wait for ever on titles that haven't been grouped`() = runTest {
+        // A scope that never runs: the grouping never starts.
+        val stalled = TitleIndex(db, stick, CoroutineScope(StandardTestDispatcher()))
+        val films = listOf(VodTitle.OfMovie(movie(1, "NF - Superbad (2007)", "nf")))
+
+        val shown = withTimeoutOrNull(60_000) { stalled.distinctTitles(flowOf(films)).first() }
+
+        assertThat(shown).isEqualTo(films)
     }
 
     @Test

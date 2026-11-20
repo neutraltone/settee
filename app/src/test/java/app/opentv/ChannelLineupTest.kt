@@ -308,15 +308,15 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `the favourites look each channel's name up once, however many qualities are starred`() = runTest {
-        seed("UK| ITV HD", "UK| ITV SD", sourceId = 1)
+    fun `the favourites look every channel's name up in one query, however many qualities are starred`() = runTest {
+        seed("UK| ITV HD", "UK| ITV SD", "UK| BBC One", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
-        lineup.setFavourite(all().single(), favourite = true)
+        all().forEach { lineup.setFavourite(it, favourite = true) }
         val dao = CountingChannelDao(db.channels())
 
         val favourites = countedLineup(dao).channels(LineupScope.Favourites()).first()
 
-        assertThat(favourites.single().qualities).hasSize(3)
+        assertThat(favourites.map { it.qualities.size }).containsExactly(1, 3)
         assertThat(dao.sameNameLookups).isEqualTo(1)
     }
 
@@ -326,9 +326,9 @@ class ChannelLineupTest {
         var everyRowSubscriptions = 0
         var scopeSubscriptions = 0
 
-        override suspend fun sameName(nameKey: String): List<Channel> {
+        override suspend fun sameName(nameKeys: List<String>): List<Channel> {
             sameNameLookups++
-            return real.sameName(nameKey)
+            return real.sameName(nameKeys)
         }
 
         override fun observeEvery(): Flow<List<Channel>> = real.observeEvery().onStart { everyRowSubscriptions++ }

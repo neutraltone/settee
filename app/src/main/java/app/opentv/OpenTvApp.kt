@@ -120,9 +120,18 @@ open class OpenTvApp :
      */
     protected open fun onFirstOpen() {
         val graph = ServiceLocator.get(this)
+        // Now, so the titles are grouped while the viewer picks a Profile rather than after Home first
+        // asks for them (#582). Off the main thread: making the index makes the database.
+        appScope.launch { graph.titleIndex.start() }
         val catchUpNormaliser = NormaliserCatchUp(
             this,
-            renormalise = { graph.catalogRepository.renormalizeAll() },
+            renormalise = {
+                // New keys need matching to the guide, and the launch's guide pass doesn't know they
+                // changed (#582). Matched even when nothing changed: a launch that stopped between the
+                // two runs both again.
+                graph.catalogRepository.renormalizeAll()
+                graph.epgRepository.runMatcher()
+            },
             carryLocks = { from ->
                 if (from <= LAST_ASCII_KEY_NORMALIZER) {
                     val categories = StreamKind.entries.flatMap { graph.database.categories().allByKind(it) }

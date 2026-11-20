@@ -16,6 +16,7 @@ import app.opentv.data.db.GuideRefreshDao
 import app.opentv.data.db.ProgrammeDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.ChannelEpgMatch
+import app.opentv.data.model.ChannelMatchInput
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.GuideProgramme
@@ -93,15 +94,27 @@ class EpgRepository(
 ) {
 
     /**
-     * The built-in guide Settee switched on by itself, by name rather than id: ids restart when the
-     * database is rebuilt, and the name is what [BUILT_IN_FEEDS] keys on. Null once the viewer has
-     * switched it on or off themselves, which makes it their choice.
+     * What the guide keeps in [app.opentv.core.AppSettings] so it outlives the process. Named for its
+     * first member; the second joined it rather than a new constructor parameter (#582).
      */
     interface SelfEnabledGuide {
+        /**
+         * The built-in guide Settee switched on by itself, by name rather than id: ids restart when the
+         * database is rebuilt, and the name is what [BUILT_IN_FEEDS] keys on. Null once the viewer has
+         * switched it on or off themselves, which makes it their choice.
+         */
         var name: String?
 
-        /** For tests: the app keeps it in [app.opentv.core.AppSettings] so it outlives the process. */
-        class InMemory(override var name: String? = null) : SelfEnabledGuide
+        /**
+         * The newest saved channels the matcher has seen, as [SourceDao.latestCatalogSync] gave it: a
+         * guide pass that downloads nothing matches only when channels have been saved since. Kept
+         * across restarts, so channels a refresh saved before the process went are still matched.
+         */
+        var matchedCatalogueSync: Long
+
+        /** For tests. */
+        class InMemory(override var name: String? = null, override var matchedCatalogueSync: Long = 0) :
+            SelfEnabledGuide
     }
 
     data class SyncSummary(
@@ -196,9 +209,11 @@ class EpgRepository(
      * built-in list, and removes a provider feed whose source is gone. Insert-if-absent, so user
      * toggles survive every call. A built-in whose address has moved keeps its row, toggle included,
      * and takes the new address: matching by address alone would leave the dead one switched on
-     * beside a second, switched-off row of the same name.
+     * beside a second, switched-off row of the same name. True when a guide's channel list went with
+     * it, which leaves matches to redo.
      */
-    suspend fun ensureFeeds() {
+    suspend fun ensureFeeds(): Boolean {
+        var dropped = false
         // Against every source, not just the enabled ones: a provider that's only switched off keeps
         // its feed, toggle and all. A feed whose provider is gone would otherwise fail every refresh,
         // and the viewer can't remove it, since Settings only offers that for custom feeds. Feeds are
@@ -208,7 +223,10 @@ class EpgRepository(
         val sources = sourceDao.all().mapTo(HashSet()) { it.id }
         for (feed in feeds) {
             val provider = feed.providerSourceId ?: continue
-            if (provider !in sources) removeFeed(feed)
+            if (provider !in sources) {
+                removeFeed(feed)
+                dropped = true
+            }
         }
         for (source in sourceDao.enabled()) {
             if (feedDao.forProvider(source.id) == null) {
@@ -231,6 +249,7 @@ class EpgRepository(
                     // to ids whose programmes have aged out. Its programmes go by age as usual.
                     aliasDao.deleteForFeed(existing.id)
                     feedDao.update(existing.copy(url = url, lastResult = ""))
+                    dropped = true
                 }
             } else if (feedDao.byUrl(url) == null) {
                 // Off by default: shipping a switched-on 20 MB download for a country the
@@ -239,12 +258,14 @@ class EpgRepository(
                 feedDao.insert(EpgFeed(name = name, url = url, builtIn = true, enabled = false))
             }
         }
+        return dropped
     }
 
     // ---- Sync ------------------------------------------------------------------------------
 
     /**
-     * Downloads every enabled feed, merges, prunes, and re-runs the matcher. [skipFetchedSince] leaves
+     * Downloads every enabled feed, merges, prunes, and re-runs the matcher when a guide or the channels
+     * changed since it last ran (see [SelfEnabledGuide.matchedCatalogueSync]). [skipFetchedSince] leaves
      * out feeds already downloaded at or after that time, even when [force]d. [progress] hears how far
      * through it is, 0 to 1, never backwards; see [GuideProgress].
      */
@@ -254,12 +275,13 @@ class EpgRepository(
         skipFetchedSince: Long? = null,
         progress: (SyncProgress) -> Unit = {},
     ): SyncSummary = withContext(Dispatchers.IO) {
-        ensureFeeds()
+        val guideDropped = ensureFeeds()
         maybeAutoEnableRegionalFeed()
 
         var succeeded = 0
         var failed = 0
         var written = 0
+        var downloaded = 0
 
         val (due, fresh) = feedDao.enabled().partition { feed ->
             val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
@@ -283,6 +305,7 @@ class EpgRepository(
             when (result) {
                 is FeedResult.Success -> {
                     succeeded++
+                    downloaded++
                     written += result.programmes
                     feedDao.markSynced(
                         feed.id,
@@ -306,7 +329,11 @@ class EpgRepository(
             programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
         }
 
-        val (matched, total) = runMatcher()
+        // Matching reads and cleans every channel's name, so it's skipped when neither side has changed:
+        // the launch's pass, which mostly finds every guide fresh, ran it each time (#582).
+        val channelsSaved = sourceDao.latestCatalogSync() > selfEnabledGuide.matchedCatalogueSync
+        val rematch = downloaded > 0 || guideDropped || channelsSaved
+        val (matched, total) = if (rematch) runMatcher() else countMatched()
         reporting.done()
         SyncSummary(succeeded, failed, written, matched, total)
     }
@@ -508,11 +535,24 @@ class EpgRepository(
 
     // ---- Matching --------------------------------------------------------------------------
 
+    /** Whether any of this channel's guide ids, or [newMatch], has programmes in [populated]. */
+    private fun ChannelMatchInput.hasWorkingGuide(populated: Set<String>, newMatch: String? = null) =
+        epgCandidates.any { it in populated } || (newMatch != null && newMatch in populated)
+
+    /** What [runMatcher] returns, from the matches already stored: no names cleaned, nothing written. */
+    private suspend fun countMatched(): Pair<Int, Int> = matching.withLock {
+        val populated = aliasDao.populatedOfEnabledFeeds().toHashSet()
+        val channels = channelDao.matcherInputs()
+        channels.count { it.hasWorkingGuide(populated) } to channels.size
+    }
+
     /**
      * Joins every channel to the merged guide by normalised name.
      * Returns (channels with a working guide id, total channels).
      */
     suspend fun runMatcher(): Pair<Int, Int> = matching.withLock {
+        // Read first: channels saved while this runs are newer, so the next pass matches them.
+        val catalogue = sourceDao.latestCatalogSync()
         val aliases = aliasDao.ofEnabledFeeds()
         val index = EpgMatcher.buildIndex(aliases)
         // Only ids that actually have programmes count as "working" — a match against a
@@ -524,15 +564,14 @@ class EpgRepository(
         val changed = ArrayList<ChannelEpgMatch>()
 
         for (channel in channels) {
-            val newMatch = index.match(ChannelNameNormalizer.nameKeyOf(channel.groupKey))
+            val newMatch = index.match(channel.nameKey)
             if (newMatch != channel.matchedEpgId) changed += ChannelEpgMatch(channel.id, newMatch)
-            val works = channel.epgCandidates.any { it in populated } ||
-                (newMatch != null && newMatch in populated)
-            if (works) matched++
+            if (channel.hasWorkingGuide(populated, newMatch)) matched++
         }
         // All at once, unlike programmes: a match is cheap to work out again if this is interrupted,
         // and each separate transaction would make the lineup re-read every channel.
         if (changed.isNotEmpty()) channelDao.setMatchedEpgIds(changed)
+        selfEnabledGuide.matchedCatalogueSync = catalogue
 
         Log.i(
             TAG,

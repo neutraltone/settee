@@ -97,6 +97,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
             remove(KEY_SETUP_SOURCE)
         }
         selfEnabledGuide = null
+        matchedCatalogueSync = 0L
     }
 
     // ---- Parental controls -------------------------------------------------------------------
@@ -392,6 +393,16 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         }
 
     /**
+     * The saved channels the guide matcher last saw
+     * ([app.opentv.data.repo.EpgRepository.SelfEnabledGuide.matchedCatalogueSync]).
+     */
+    var matchedCatalogueSync: Long
+        get() = prefs.getLong(KEY_MATCHED_CATALOGUE_SYNC, 0L)
+        set(value) {
+            prefs.edit { putLong(KEY_MATCHED_CATALOGUE_SYNC, value) }
+        }
+
+    /**
      * Video scaling in the player, as an [androidx.media3.ui.AspectRatioFrameLayout] RESIZE_MODE_*
      * constant (0 = Fit). Persisted so the choice survives leaving the player, which testers asked
      * for — picking Fill every single time you open a channel gets old fast.
@@ -639,6 +650,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_LAST_CHANNEL = "last_channel_id"
         private const val KEY_LAST_SEEN_VERSION = "last_seen_version"
         private const val KEY_SELF_ENABLED_GUIDE = "self_enabled_guide"
+        private const val KEY_MATCHED_CATALOGUE_SYNC = "matched_catalogue_sync"
         private const val KEY_RESIZE_MODE = "player_resize_mode"
         private const val KEY_LANGUAGE = "language_tag"
 
