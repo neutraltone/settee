@@ -15,11 +15,16 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.regroupGapMillis
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,8 +37,13 @@ import org.robolectric.annotation.Config
 class TitleIndexTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val filmListReads = AtomicInteger()
     private val db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
+        .setQueryCallback(
+            { sql, _ -> if (sql.startsWith(FILM_LIST)) filmListReads.incrementAndGet() },
+            Executors.newSingleThreadExecutor(),
+        )
         .build()
     private val stick = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
     private val index = TitleIndex(db, stick)
@@ -89,6 +99,44 @@ class TitleIndexTest {
         assertThat(titles.badgeOf(1)).isNull()
     }
 
+    @Test
+    fun `films filled in one after another, as the background pass does, don't each read every film again`(): Unit =
+        runBlocking {
+            val index = TitleIndex(db, stick, regroupGap = { STEADY_GAP_MILLIS })
+            db.movies().upsertAll((1L..2_000L).map { movie(it, "Film $it (2001)", "en", tmdbId = "$it") })
+            index.movies.filterNotNull().first()
+            filmListReads.set(0)
+
+            // Further apart than the settle, as a pass waiting on its provider saves.
+            for (id in 1L..6L) {
+                delay(600)
+                db.movies().upsertAll(listOf(movie(id, "Film $id (2001)", "en", tmdbId = "$id").copy(genre = "Drama")))
+            }
+
+            assertThat(filmListReads.get()).isAtMost(1)
+            index.close()
+        }
+
+    @Test
+    fun `a film added while films keep changing still joins its title once the gap has passed`(): Unit = runBlocking {
+        val index = TitleIndex(db, stick, regroupGap = { GAP_MILLIS })
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+        index.movies.filterNotNull().first()
+
+        db.movies().upsertAll(listOf(movie(2, "4K - Superbad (2007)", "4k")))
+
+        val grouped = withTimeout(GAP_MILLIS * 3) { index.movies.filterNotNull().first { it.of(2) != null } }
+        assertThat(grouped.of(2)?.versionIds?.toList()).containsExactly(1L, 2L)
+        index.close()
+    }
+
+    @Test
+    fun `the gap between groupings keeps them to a twentieth of the time, between ten seconds and ten minutes`() {
+        assertThat(regroupGapMillis(5)).isEqualTo(10_000)
+        assertThat(regroupGapMillis(2_000)).isEqualTo(38_000)
+        assertThat(regroupGapMillis(60_000)).isEqualTo(600_000)
+    }
+
     private fun movie(id: Long, name: String, category: String, tmdbId: String = "8363") = Movie(
         id = id,
         sourceId = 1,
@@ -117,4 +165,12 @@ class TitleIndexTest {
         plot = null,
         tmdbId = "203857",
     )
+
+    private companion object {
+        const val FILM_LIST = "SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies"
+        const val GAP_MILLIS = 2_000L
+
+        /** Longer than the six saves take, as on a Stick, where one grouping takes many seconds. */
+        const val STEADY_GAP_MILLIS = 10_000L
+    }
 }

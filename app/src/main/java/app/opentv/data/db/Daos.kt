@@ -1109,9 +1109,9 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Movie>
 
-    /** Every film as grouping into titles reads it, again whenever the table changes. */
+    /** Every film as grouping into titles reads it. */
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies ORDER BY id")
-    fun observeVersionRows(): Flow<List<VersionRow>>
+    suspend fun versionRows(): List<VersionRow>
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
@@ -1381,9 +1381,9 @@ interface SeriesDao {
     @Query("SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM series WHERE tmdbId IN (:tmdbIds)")
     suspend fun picksWithTmdbIds(tmdbIds: List<String>): List<TitlePick>
 
-    /** Every show as grouping into titles reads it, again whenever the table changes. */
+    /** Every show as grouping into titles reads it. */
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")
-    fun observeVersionRows(): Flow<List<VersionRow>>
+    suspend fun versionRows(): List<VersionRow>
 
     /**
      * Series whose cast credits the person filed under [nameKey], best-rated first. See
