@@ -296,7 +296,7 @@ One page: the welcome and the choice of provider together.
 
 Once a provider is saved while none was saved before (a fresh install, or after every provider was deleted), on the TV or from the phone, a setup screen comes up instead of Home, and stays until the library is ready to browse. Adding another provider later from Settings works as it does today, in the background.
 
-- **The screen:** the mark in its tile, a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
+- **The screen:** the waiting TV (the mark in its tile once setup finishes), a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
 - **The steps,** in order, each named only while it runs:
   1. "Adding your channels", which also proves the login works. It always runs.
   2. "Loading the TV guide", only when Live TV is switched on: the guide is only for live channels. If Live TV is switched on later, the guide arrives with the next refresh.

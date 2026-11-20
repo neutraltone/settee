@@ -34,6 +34,7 @@ import app.opentv.R
 import app.opentv.data.repo.CatalogueRefresh.Setup
 import app.opentv.data.repo.CatalogueRefresh.StepDone
 import app.opentv.data.repo.SetupStep
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
@@ -71,7 +72,13 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
+                // The waiting TV while it works, so the screen is plainly busy, not stuck; the
+                // still mark once it's done, as a TV that kept moving would say it was still going.
+                if (setup.finished) {
+                    Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
+                } else {
+                    AerialTv(stringResource(R.string.progress_still_working))
+                }
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
                     Finished(setup)

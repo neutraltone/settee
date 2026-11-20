@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -60,6 +61,7 @@ class SetupScreenTest {
         setScreen(Setup(SetupStep.entries))
 
         compose.onNodeWithText("Adding your channels").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Still working").assertIsDisplayed()
         captureScreen("setup_adding_channels")
         compose.onRoot().performKeyInput {
             pressKey(Key.DirectionCenter)
@@ -178,6 +180,7 @@ class SetupScreenTest {
         ).assertIsDisplayed()
         compose.onNodeWithText("Watch live TV now").assertDoesNotExist()
         compose.onNodeWithText("Take me to Settee").assertIsFocused()
+        compose.onNodeWithContentDescription("Still working").assertDoesNotExist()
         captureScreen("setup_finished")
         compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
 
