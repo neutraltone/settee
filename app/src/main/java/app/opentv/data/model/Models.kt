@@ -232,7 +232,8 @@ data class Channel(
 /** The part of a [Channel] the guide matcher reads. */
 data class ChannelMatchInput(
     val id: Long,
-    val groupKey: String,
+    /** What the matcher looks the guide up by: see [Channel.nameKey]. */
+    val nameKey: String,
     val epgChannelId: String?,
     val matchedEpgId: String?,
     val epgOverrideId: String?,

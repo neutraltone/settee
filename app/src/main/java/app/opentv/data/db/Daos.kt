@@ -223,8 +223,8 @@ interface ChannelDao {
 
     /**
      * Every row called any of [nameKeys] in any region, hidden ones too. What
-     * [app.opentv.data.repo.ChannelLineup] folds to find rows' Channels. Keep [nameKeys] to a few
-     * hundred: they're bound variables.
+     * [app.opentv.data.repo.ChannelLineup] folds to find rows' Channels. [nameKeys] are bound
+     * variables, so keep them under older Android's 999.
      */
     @Query(CHANNELS_NAMED)
     suspend fun sameName(nameKeys: List<String>): List<Channel>
@@ -373,7 +373,7 @@ interface ChannelDao {
     suspend fun everyRow(): List<Channel>
 
     /** The matcher's working set: no URLs or names, which a large catalogue would allocate on every launch. */
-    @Query("SELECT id, groupKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
+    @Query("SELECT id, nameKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
     suspend fun matcherInputs(): List<ChannelMatchInput>
 
     /** Every channel's name as the provider wrote it, which is where a region prefix is. */
@@ -2050,8 +2050,7 @@ internal const val SERIES_WITH_PERSON = """
  * from each episode: a key built per episode no index can serve, so every stored episode was read
  * whenever a position, episode or dismissal changed (#582). This way SQLite reads the Profile's
  * positions and finds each episode by its primary key. `ep:` is
- * [app.opentv.data.repo.MediaKey.Episode]'s stored form. [EPISODES_OF_PLAYED_SERIES] spells it out
- * again for its alias `played`.
+ * [app.opentv.data.repo.MediaKey.Episode]'s stored form.
  */
 private const val EPISODE_OF_POSITION =
     "substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
@@ -2079,11 +2078,10 @@ internal const val STARTED_SERIES =
  * runs a correlated subquery once per stored episode, and Home re-runs this whenever it comes back.
  */
 internal const val EPISODES_OF_PLAYED_SERIES =
-    "SELECT episodes.* FROM episodes JOIN (SELECT DISTINCT played.sourceId, played.seriesId " +
-        "FROM playback_positions JOIN episodes AS played ON substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
-        "AND played.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER) " +
+    "SELECT every.* FROM episodes AS every JOIN (SELECT DISTINCT episodes.sourceId, episodes.seriesId " +
+        "FROM playback_positions JOIN episodes ON " + EPISODE_OF_POSITION + " " +
         "WHERE playback_positions.profileId = :profileId) AS played_series " +
-        "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"
+        "ON every.sourceId = played_series.sourceId AND every.seriesId = played_series.seriesId"
 
 /** The intro, recap and credits timings looked up for episodes (#517); a cache, so never synced. */
 @Dao

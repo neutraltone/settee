@@ -65,7 +65,7 @@ class CatalogueQueryPlansTest {
     fun `what a Profile has played finds its episodes by id rather than reading every episode`() {
         // Joined on a key built from each episode's id, no index could serve it: every stored
         // episode was read whenever a position, episode or dismissal changed (#582).
-        val scan = Regex("""SCAN (TABLE )?(episodes|played)\b""")
+        val scan = Regex("""SCAN (TABLE )?(episodes|every)\b""")
         for (sql in listOf(PLAYED_EPISODES, STARTED_SERIES, EPISODES_OF_PLAYED_SERIES)) {
             assertThat(planOf(sql).filter { scan.containsMatchIn(it) }).isEmpty()
         }

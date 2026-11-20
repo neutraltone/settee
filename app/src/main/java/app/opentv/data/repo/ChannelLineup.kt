@@ -508,7 +508,7 @@ internal fun channelKeys(rows: List<Channel>): Map<Long, String> {
     val regionalByName = HashMap<String, MutableSet<String>>()
     for (row in rows) {
         if (':' in row.groupKey) {
-            regionalByName.getOrPut(ChannelNameNormalizer.nameKeyOf(row.groupKey)) { HashSet() } += row.groupKey
+            regionalByName.getOrPut(row.nameKey) { HashSet() } += row.groupKey
         }
     }
     return rows.associate { row ->
