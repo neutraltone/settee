@@ -29,6 +29,10 @@ jobs:
       !startsWith(github.head_ref, 'release-please--') &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    # A Robolectric test JVM sometimes hangs on CI and never finishes; without limits it holds the
+    # job for GitHub's six-hour default. Each render is usually 5-8 minutes, so a hung one gives up
+    # at 20 and, as it continues on error, the report still goes out for the others.
+    timeout-minutes: 75
     env:
       GH_VERSION: 2.102.0 # the first gh with --attach
       PR: ${{ github.event.pull_request.number }}
@@ -78,15 +82,18 @@ jobs:
       # the branch was cut don't show up as this PR's changes.
       - name: Render the base
         continue-on-error: true
+        timeout-minutes: 20
         run: tools/screenshots/render.sh "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$SHOTS/base"
 
       - name: Render the head
         continue-on-error: true
+        timeout-minutes: 20
         run: tools/screenshots/render.sh "$HEAD_SHA" "$SHOTS/head"
 
       - name: Render the previous push
         if: env.PREVIOUS_SHA != ''
         continue-on-error: true
+        timeout-minutes: 20
         run: tools/screenshots/render.sh "$PREVIOUS_SHA" "$SHOTS/previous"
 
       - name: Compare

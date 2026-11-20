@@ -23,6 +23,8 @@ jobs:
   release:
     name: Build and publish APK
     runs-on: ubuntu-latest
+    # A hung test run fails the release rather than sitting for six hours; it usually takes 7 minutes.
+    timeout-minutes: 40
     env:
       TAG: ${{ inputs.tag }}
 
