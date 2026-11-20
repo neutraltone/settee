@@ -43,7 +43,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Held in memory rather than looked up per cover: a category's grid holds one shelf's rows, while a
  * cover's badge and whether it's shown once depend on Versions in other categories, and the tables have
  * no index on the TMDB id, which a schema change would add. Built from a light projection, off the
- * main thread, and kept until the app closes.
+ * main thread, and kept until the app closes. Grouping starts as soon as it's made, not when
+ * something first asks (#582).
  */
 class TitleIndex(
     db: OpenTvDatabase,
@@ -144,7 +145,7 @@ class TitleIndex(
             delay(RETRY_MILLIS)
             true
         }
-        .stateIn(scope, SharingStarted.Lazily, null)
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
     private suspend fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
         val byId = HashMap<Long, Title>(rows.size)

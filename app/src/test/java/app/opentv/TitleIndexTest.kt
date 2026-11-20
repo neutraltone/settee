@@ -17,9 +17,11 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleIndex
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,6 +89,20 @@ class TitleIndexTest {
 
         assertThat(titles.of(1)?.versionIds?.toList()).containsExactly(1L, 2L)
         assertThat(titles.badgeOf(1)).isNull()
+    }
+
+    @Test
+    fun `titles are grouped before anything asks for them`(): Unit = runBlocking {
+        // So the grouping is done while the viewer picks a Profile, not after Home asks (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+
+        // Read, never collected: nothing subscribes.
+        val grouped = withTimeoutOrNull(5_000) {
+            while (index.movies.value?.of(1) == null) delay(20)
+            true
+        }
+
+        assertThat(grouped).isTrue()
     }
 
     private fun movie(id: Long, name: String, category: String, tmdbId: String = "8363") = Movie(

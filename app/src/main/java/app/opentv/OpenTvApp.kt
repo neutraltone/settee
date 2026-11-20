@@ -120,6 +120,9 @@ open class OpenTvApp :
      */
     protected open fun onFirstOpen() {
         val graph = ServiceLocator.get(this)
+        // Built now, so the titles are grouped while the viewer picks a Profile rather than after
+        // Home first asks for them (#582). Building it starts the grouping.
+        appScope.launch { graph.titleIndex }
         val catchUpNormaliser = NormaliserCatchUp(
             this,
             renormalise = { graph.catalogRepository.renormalizeAll() },
