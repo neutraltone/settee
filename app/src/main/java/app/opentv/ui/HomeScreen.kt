@@ -58,6 +58,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
 import app.opentv.ui.design.SkeletonCards
 import app.opentv.ui.design.SkeletonShelf
+import app.opentv.ui.design.SkeletonTile
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
@@ -124,6 +125,7 @@ internal fun HomeScreen(
         banner = banner,
         onOpenProviders = onOpenProviders,
         loading = state.loading,
+        liveLoading = state.liveLoading,
     )
 }
 
@@ -158,6 +160,8 @@ internal fun HomeContent(
     onOpenProviders: (sourceId: Long) -> Unit = {},
     /** The rows still on their way, which hold their places as skeletons ([HomeState.loading]). */
     loading: Set<HomeRowKind> = emptySet(),
+    /** Whether the Live Preview is still on its way, its place held above the rows ([HomeState.liveLoading]). */
+    liveLoading: Boolean = false,
 ) {
     val all =
         remember(
@@ -171,6 +175,7 @@ internal fun HomeContent(
             recentMovies,
             arrangement,
             loading,
+            liveLoading,
         ) {
             homeShelves(
                 live,
@@ -181,6 +186,7 @@ internal fun HomeContent(
                 ),
                 arrangement,
                 loading,
+                liveLoading,
             )
         }
     val shelves = all.shown
@@ -320,6 +326,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                 val leave: (String) -> LeaveScreen = { item -> { go -> pick(item, go) } }
                 when (shelf) {
                     is HomeShelf.Skeleton -> HomeSkeletonShelf(shelf, isTop = shelves.first() === shelf, opening)
+                    is HomeShelf.LivePlace -> LivePlaceTile(shelf, isTop = shelves.first() === shelf, opening)
                     is HomeShelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         shelf.tile.open(
                             { channel -> confirmLive { pick(LIVE_PICK) { actions.onWatchLive(channel) } } },
@@ -375,10 +382,28 @@ private fun rememberRestoreFocus(target: RowPick?, fallback: FocusRequester, onD
 private sealed class HomeShelf(key: String, items: List<String>) {
     val row = PickRow(key, items)
 
-    class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
+    /** Whether this is a place held for the top row, which takes the Highlight Home opens on. */
+    open val holdsOpening: Boolean get() = false
+
+    /** Whether this is a row that takes the Highlight over from that place when it lands. */
+    open val takesOpening: Boolean get() = false
+
+    class Live(val tile: LiveTile) : HomeShelf(LIVE_KEY, listOf(LIVE_PICK)) {
+        override val takesOpening get() = true
+    }
+
+    /** The Live Preview still on its way, its place held by a blank tile. */
+    class LivePlace : HomeShelf(LIVE_KEY, emptyList()) {
+        override val holdsOpening get() = true
+    }
+
+    /** One of the Home Rows, under [title]. */
+    sealed class Row(key: String, items: List<String>, val title: Int) : HomeShelf(key, items)
 
     class Resume(val cards: List<ResumeItem>) :
-        HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.titleKey })
+        Row(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.titleKey }, R.string.vod_continue_watching) {
+        override val takesOpening get() = true
+    }
 
     /**
      * A row of covers; [showsStatus] when each says where the Profile is with its title. [titleArg]
@@ -386,19 +411,22 @@ private sealed class HomeShelf(key: String, items: List<String>) {
      */
     class Covers(
         key: String,
-        val title: Int,
+        title: Int,
         val covers: List<Cover>,
         val showsStatus: Boolean,
         titleArg: String? = null,
-    ) : HomeShelf(key, covers.map { it.title.pickKey }) {
+    ) : Row(key, covers.map { it.title.pickKey }, title) {
         val titleArgs: Array<Any> = listOfNotNull<Any>(titleArg).toTypedArray()
     }
 
     class Channels(val channels: List<HomeChannel>) :
-        HomeShelf(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey })
+        Row(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey }, R.string.home_favourite_channels)
 
-    /** A row still on its way, its place held by blank cards under its real [title]. */
-    class Skeleton(val kind: HomeRowKind, val title: Int) : HomeShelf(kind.key, emptyList())
+    /** A Home Row still on its way, its place held by blank cards under its real [title]. */
+    class Skeleton(val kind: HomeRowKind, val title: Int) : HomeShelf(kind.key, emptyList()) {
+        // Continue Watching is the only Home Row a place is held for at the top: Home opens on it.
+        override val holdsOpening get() = kind == HomeRowKind.CONTINUE_WATCHING
+    }
 }
 
 /**
@@ -408,23 +436,23 @@ private sealed class HomeShelf(key: String, items: List<String>) {
  */
 @Stable
 private class OpeningHandOver(private val shelves: State<List<HomeShelf>>) {
-    /** Whether Continue Watching is still a skeleton in the rows drawn now. */
-    private val skeletonNow
-        get() = shelves.value.any { it is HomeShelf.Skeleton && it.kind == HomeRowKind.CONTINUE_WATCHING }
+    /** Whether the top of Home is still a place being held. */
+    private val placeNow get() = shelves.value.firstOrNull()?.holdsOpening == true
 
-    /** Whether the opening skeleton card had the Highlight when it went, so its row's first card takes it. */
+    /** Whether the opening place had the Highlight when it went, so the row taking over takes it. */
     var held by mutableStateOf(false)
         private set
 
     private var handing: CardFocus? = null
 
-    fun modifierFor(shelf: HomeShelf.Skeleton, isTop: Boolean): Modifier? =
-        if (isTop && shelf.kind == HomeRowKind.CONTINUE_WATCHING) {
-            // Losing it as the skeleton goes isn't the viewer moving: the real row takes it over.
+    /** What goes on the place's opening card: only the top one's, and only a place that holds it. */
+    fun modifierFor(place: HomeShelf, isTop: Boolean): Modifier? =
+        if (isTop && place.holdsOpening) {
+            // Losing it as the place goes isn't the viewer moving: the real row takes it over.
             Modifier.onFocusChanged {
                 if (it.isFocused) {
                     held = true
-                } else if (skeletonNow) {
+                } else if (placeNow) {
                     held = false
                 }
             }
@@ -432,9 +460,9 @@ private class OpeningHandOver(private val shelves: State<List<HomeShelf>>) {
             null
         }
 
-    /** Where [shelf]'s Highlight goes: its first card when it takes over from the skeleton, else [otherwise]. */
+    /** Where [shelf]'s Highlight goes: its first card when it takes over from the place, else [otherwise]. */
     fun focusFor(shelf: HomeShelf, otherwise: CardFocus?): CardFocus? {
-        if (!held || shelf !is HomeShelf.Resume) return otherwise
+        if (!held || !shelf.takesOpening) return otherwise
         return handing ?: CardFocus(0) {
             held = false
             handing = null
@@ -453,6 +481,12 @@ private fun ScreenFrameScope.HomeSkeletonShelf(shelf: HomeShelf.Skeleton, isTop:
     SkeletonShelf(stringResource(shelf.title), cards, opening = opening.modifierFor(shelf, isTop))
 }
 
+/** The Live Preview's place, its picture holding the Highlight Home opens on until the tile lands. */
+@Composable
+private fun LivePlaceTile(place: HomeShelf.LivePlace, isTop: Boolean, opening: OpeningHandOver) {
+    SkeletonTile(LIVE_HEIGHT, opening = opening.modifierFor(place, isTop))
+}
+
 /** Home's rows of covers, by kind. */
 private class HomeTitles(
     val recentShows: List<Cover>,
@@ -468,7 +502,7 @@ private class HomeCards(
     val titles: HomeTitles,
     val favouriteChannels: List<HomeChannel>,
 ) {
-    fun shelf(row: HomeRowKind): HomeShelf = when (row) {
+    fun shelf(row: HomeRowKind): HomeShelf.Row = when (row) {
         HomeRowKind.CONTINUE_WATCHING -> HomeShelf.Resume(continueWatching)
         HomeRowKind.BECAUSE_YOU_WATCHED -> HomeShelf.Covers(
             row.key,
@@ -503,36 +537,33 @@ private fun homeShelves(
     cards: HomeCards,
     arrangement: HomeArrangement,
     loading: Set<HomeRowKind>,
+    liveLoading: Boolean,
 ): HomeShelves {
     val (shownRows, hiddenRows) = arrangement.rows.partition(arrangement::isShown)
     val rows = shownRows.mapNotNull { row ->
         val shelf = cards.shelf(row)
         when {
             shelf.row.items.isNotEmpty() -> shelf
-            row in loading -> HomeShelf.Skeleton(row, shelf.placeTitle)
+            row in loading -> HomeShelf.Skeleton(row, shelf.title)
             else -> null
         }
     }
-    val shown = listOfNotNull(live?.takeIf { arrangement.livePreview }?.let(HomeShelf::Live)) + rows
+    val lead = when {
+        !arrangement.livePreview -> null
+        live != null -> HomeShelf.Live(live)
+        liveLoading -> HomeShelf.LivePlace()
+        else -> null
+    }
+    val shown = listOfNotNull(lead) + rows
     val anyHidden = (live != null && !arrangement.livePreview) ||
         hiddenRows.any { cards.shelf(it).row.items.isNotEmpty() }
     return HomeShelves(shown, anyHidden)
 }
 
-/**
- * The title a row's cards come under, which its skeleton shows while they're on their way. Never
- * Because you watched's, which names a title: that row is never loading ([HomeState.loading]).
- */
-private val HomeShelf.placeTitle: Int
-    get() = when (this) {
-        is HomeShelf.Resume -> R.string.vod_continue_watching
-        is HomeShelf.Covers -> title
-        is HomeShelf.Channels -> R.string.home_favourite_channels
-        is HomeShelf.Skeleton -> title
-        is HomeShelf.Live -> error("The Live Preview is no Home Row, so never loading")
-    }
-
 private const val LIVE_PICK = "live"
+
+/** The Live Preview's key in Home's list, its place's and its tile's alike, so one replaces the other in place. */
+private const val LIVE_KEY = "live"
 
 // A pick is kept by the provider's ids rather than the local row id, which a catalogue refresh can
 // change while the viewer is away. Movies and shows share a row, so each says which it is.

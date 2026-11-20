@@ -65,13 +65,13 @@ internal fun ScreenFrameScope.CoverGrid(
 ) {
     when {
         // Still loading: the grid's shape, so the covers fill in rather than replace a message.
-        covers == null -> return SkeletonGrid(liftRoom = GRID_LIFT_ROOM)
+        covers == null -> return SkeletonGrid()
         covers.isEmpty() -> return EmptyBrowse(VodEmpty.Hint(empty, body = null))
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
     val coverReturn = rememberCoverReturn(state, covers)
-    val room = with(LocalDensity.current) { GRID_LIFT_ROOM.toPx() }
+    val room = with(LocalDensity.current) { SetteeSpace.LiftRoom.toPx() }
     CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RowToTheTop(room) }) {
         CoverRows(state, covers, coverReturn, onHighlight, onOpen, onOptions)
     }
@@ -135,7 +135,7 @@ private fun ScreenFrameScope.CoverRows(
         // Columns as wide as a cover, so it's the size it is in a row. Adaptive ones share out the
         // width left over, which stretched each cover wider than For you's.
         columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
-        contentPadding = PaddingValues(vertical = GRID_LIFT_ROOM),
+        contentPadding = PaddingValues(vertical = SetteeSpace.LiftRoom),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
         verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
         modifier = Modifier.fillMaxSize().railReturnTarget(),
@@ -199,8 +199,6 @@ private data class ShownCovers(val first: Int, val last: Int, val columns: Int)
 
 private const val PREFETCH_ROWS = 4
 
-/** Above and below the grid's covers, for a highlighted one's lift and ring, as a Shelf leaves. */
-private val GRID_LIFT_ROOM = 12.dp
 
 /** A title's cover, the same in a row and a grid. */
 @Composable

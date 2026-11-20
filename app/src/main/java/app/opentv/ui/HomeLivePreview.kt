@@ -46,6 +46,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
@@ -172,7 +173,7 @@ internal fun ScreenFrameScope.LivePreviewTile(tile: LiveTile, focus: CardFocus?,
         focus.done(runCatching { focus.requester.requestFocus() }.isSuccess)
     }
     Row(
-        Modifier.fillMaxWidth().padding(vertical = LIFT_ROOM).height(LIVE_HEIGHT),
+        Modifier.fillMaxWidth().padding(vertical = SetteeSpace.LiftRoom).height(LIVE_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The channel's name is drawn beside the picture but belongs to it, for TalkBack and for tests.
@@ -222,5 +223,4 @@ private fun DetailLine(text: String) {
 }
 
 /** About 140 dp in all with the room for its lift, as docs/LOOK.md allows the Live Preview. */
-private val LIVE_HEIGHT = 116.dp
-private val LIFT_ROOM = 12.dp
+internal val LIVE_HEIGHT = 116.dp

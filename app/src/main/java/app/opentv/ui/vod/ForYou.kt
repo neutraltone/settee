@@ -86,7 +86,7 @@ internal fun <T> ScreenFrameScope.ForYou(
     val titles = rememberTextMeasurer()
     val density = LocalDensity.current
     val coverTop = remember(density) {
-        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height + with(density) { SHELF_LIFT_ROOM.toPx() }
+        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height + with(density) { SetteeSpace.LiftRoom.toPx() }
     }
     val toTheTop = remember(coverTop) { RowToTheTop(coverTop) }
 
@@ -116,7 +116,7 @@ internal fun <T> ScreenFrameScope.ForYou(
     // end with the row above part-shown. Always there, sized for a row of covers: worked out from
     // the last row once it was on screen, it came too late for the press that brought it on, which
     // stopped short on a Stick.
-    val rowHeight = coverTop + with(density) { (ArtCardSize.Portrait.height + SHELF_LIFT_ROOM).toPx() }
+    val rowHeight = coverTop + with(density) { (ArtCardSize.Portrait.height + SetteeSpace.LiftRoom).toPx() }
     val roomUnderLast by remember(column, rowHeight) {
         derivedStateOf { (column.layoutInfo.viewportSize.height - rowHeight).coerceAtLeast(0f) }
     }
@@ -266,5 +266,3 @@ private val TitleCover.cardKey get() = "$id"
 
 private const val CONTINUE_WATCHING = "cw"
 
-/** As much as a Shelf leaves above and below its covers. */
-private val SHELF_LIFT_ROOM = 12.dp

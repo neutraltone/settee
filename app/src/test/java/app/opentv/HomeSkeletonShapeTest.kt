@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
@@ -112,6 +113,26 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
+    fun `a Profile whose last watch was live gets a place for the Live Preview`() = runTest {
+        db.channels().replaceCatalogue(1, listOf(bbcOne), syncStamp = 1)
+        graph.viewerLibrary.live.record(db.channels().everyRow().single())
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.liveLoading).isTrue()
+    }
+
+    @Test
+    fun `a Profile that has watched nothing live gets no place for the Live Preview`() = runTest {
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.liveLoading).isFalse()
+    }
+
+    @Test
     fun `a row the Profile hid never gets a place`() = runTest {
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
         graph.profileSettings.arrangeHome(HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))
@@ -156,6 +177,17 @@ class HomeSkeletonShapeTest {
         durationSeconds = null,
         containerExtension = "mkv",
         streamUrl = "https://example.com/1",
+    )
+
+    private val bbcOne = Channel(
+        sourceId = 1,
+        streamId = "1",
+        name = "BBC One",
+        categoryId = null,
+        logoUrl = null,
+        epgChannelId = null,
+        number = 1,
+        streamUrl = "http://example.com/live/u/p/1.ts",
     )
 
     private val severance = Series(

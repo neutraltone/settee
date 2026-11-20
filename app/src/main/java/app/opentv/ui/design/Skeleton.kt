@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +29,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -36,11 +40,12 @@ import kotlin.math.cos
 
 /**
  * A row still loading: its real [title] over blank cards, as many as reach the screen's edge. The
- * cards pulse slowly as one ([skeletonPulse]); the title is real, so it stays still.
+ * blank cards pulse slowly as one layer ([rememberSkeletonPulse]); the title is real, so it stays still.
  *
  * No card can take the Highlight, except the first when [opening] is given: the card a screen opens
- * on, which holds the Highlight until the real row arrives to take it over. OK does nothing on it.
- * [opening] goes on that card, for the screen to ask for the Highlight and hear it go.
+ * on, which holds the Highlight until the real row arrives to take it over. OK does nothing on it, and
+ * it stands outside the pulse, so the Highlight on it holds steady. [opening] goes on that card, for
+ * the screen to ask for the Highlight and hear it go.
  */
 @Composable
 fun ScreenFrameScope.SkeletonShelf(
@@ -51,7 +56,7 @@ fun ScreenFrameScope.SkeletonShelf(
     val pulse = rememberSkeletonPulse()
     Column {
         Text(title, SetteeType.Section, maxLines = 1)
-        BoxWithConstraints(Modifier.bleed().padding(vertical = SHELF_LIFT_ROOM)) {
+        BoxWithConstraints(Modifier.bleed().padding(vertical = SetteeSpace.LiftRoom)) {
             val count = cardsToFill(maxWidth - SetteeSpace.ScreenSide, cards)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -59,18 +64,19 @@ fun ScreenFrameScope.SkeletonShelf(
                 // Unbounded, or the Row squeezes the card that runs past the edge to fit.
                 modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).padding(bleedPadding),
             ) {
-                repeat(count) { index ->
-                    val size = cards.card(index)
-                    val blank = Modifier
-                        .size(size.width, size.height)
-                        .then(pulse)
-                        .background(SetteeColors.Surface, SetteeShapes.Card)
-                    if (index == 0 && opening != null) {
-                        HighlightSurface(onClick = {}, style = size.style, modifier = opening.testTag(SKELETON_CARD)) {
-                            Box(blank)
-                        }
-                    } else {
-                        Box(Modifier.testTag(SKELETON_CARD).then(blank))
+                val first = if (opening != null) 1 else 0
+                if (opening != null) {
+                    val size = cards.card(0)
+                    OpeningBlank(size.style, SetteeShapes.Card, opening.size(size.width, size.height))
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
+                    verticalAlignment = cards.alignment,
+                    modifier = pulse,
+                ) {
+                    for (index in first until count) {
+                        val size = cards.card(index)
+                        Box(Modifier.size(size.width, size.height).blank(SetteeShapes.Card))
                     }
                 }
             }
@@ -79,29 +85,44 @@ fun ScreenFrameScope.SkeletonShelf(
 }
 
 /**
- * A grid of covers still loading, as a category's whole grid lays them out: rows of blank covers
- * filling the space, pulsing as one ([rememberSkeletonPulse]). None can take the Highlight.
+ * Home's Live Preview tile still loading: a blank picture [pictureHeight] tall, 16:9, beside a blank
+ * line where the channel's name goes, as tall as the tile with the room for its lift. Given
+ * [opening], the picture holds the Highlight Home opens on until the tile arrives, outside the pulse.
  */
 @Composable
-fun SkeletonGrid(modifier: Modifier = Modifier, liftRoom: Dp = SHELF_LIFT_ROOM) {
+fun SkeletonTile(pictureHeight: Dp, opening: Modifier? = null) {
+    val pulse = rememberSkeletonPulse()
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = SetteeSpace.LiftRoom).height(pictureHeight),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val picture = Modifier.fillMaxHeight().aspectRatio(16f / 9f)
+        if (opening != null) {
+            OpeningBlank(HighlightStyle.Card, SetteeShapes.Card, opening.then(picture))
+        } else {
+            Box(picture.then(pulse).blank(SetteeShapes.Card))
+        }
+        Spacer(Modifier.width(TILE_GAP))
+        Box(Modifier.width(TILE_NAME_WIDTH).height(TILE_NAME_HEIGHT).then(pulse).blank(SetteeShapes.Cell))
+    }
+}
+
+/**
+ * A grid of covers still loading, as a category's whole grid lays them out: rows of blank covers
+ * filling the space, pulsing as one layer ([rememberSkeletonPulse]). None can take the Highlight.
+ */
+@Composable
+fun SkeletonGrid(modifier: Modifier = Modifier) {
     val pulse = rememberSkeletonPulse()
     val cover = ArtCardSize.Portrait
-    BoxWithConstraints(modifier.fillMaxSize().padding(vertical = liftRoom)) {
+    BoxWithConstraints(modifier.fillMaxSize().padding(vertical = SetteeSpace.LiftRoom)) {
         // As many whole columns as the grid fits, and as many rows as reach the bottom.
         val columns = ((maxWidth + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap)).toInt().coerceAtLeast(1)
         val rows = ceil(maxHeight / (cover.height + SetteeSpace.RowGap)).toInt().coerceAtLeast(1)
-        Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
+        Column(pulse, verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
             repeat(rows) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap)) {
-                    repeat(columns) {
-                        Box(
-                            Modifier
-                                .testTag(SKELETON_CARD)
-                                .size(cover.width, cover.height)
-                                .then(pulse)
-                                .background(SetteeColors.Surface, SetteeShapes.Card),
-                        )
-                    }
+                    repeat(columns) { Box(Modifier.size(cover.width, cover.height).blank(SetteeShapes.Card)) }
                 }
             }
         }
@@ -111,10 +132,10 @@ fun SkeletonGrid(modifier: Modifier = Modifier, liftRoom: Dp = SHELF_LIFT_ROOM) 
 /**
  * A guide still being built, as the guide lays itself out: a band [header] tall, then rows [rowHeight]
  * tall, each a blank channel cell [channelColumn] wide and blank programmes of a few lengths in
- * [halfHour]s, filling the space and pulsing as one ([rememberSkeletonPulse]).
+ * [halfHour]s, filling the space and pulsing as one layer ([rememberSkeletonPulse]).
  *
  * Only the first row's channel cell can take the Highlight, given [opening]: the row the guide opens
- * on, which holds it until the real rows arrive. OK does nothing on it.
+ * on, which holds it until the real rows arrive, outside the pulse. OK does nothing on it.
  */
 @Composable
 fun SkeletonGuide(
@@ -129,31 +150,22 @@ fun SkeletonGuide(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val rows = ceil((maxHeight - header) / rowHeight).toInt().coerceAtLeast(1)
         val width = maxWidth
-        Column(Modifier.padding(top = header)) {
+        val cell = Modifier.width(channelColumn - GUIDE_GAP).height(rowHeight).padding(vertical = GUIDE_GAP / 2)
+        // First, so it's the first blank card in reading order; it sits over the first row's place.
+        if (opening != null) {
+            OpeningBlank(HighlightStyle.Cell, SetteeShapes.Cell, Modifier.padding(top = header).then(cell).then(opening))
+        }
+        Column(Modifier.padding(top = header).then(pulse)) {
             repeat(rows) { row ->
                 Row(
                     Modifier.height(rowHeight).wrapContentWidth(Alignment.Start, unbounded = true),
                     horizontalArrangement = Arrangement.spacedBy(GUIDE_GAP),
                 ) {
-                    val cell = Modifier
-                        .width(channelColumn - GUIDE_GAP)
-                        .fillMaxHeight()
-                        .padding(vertical = GUIDE_GAP / 2)
-                    val blankCell = Modifier
-                        .fillMaxSize()
-                        .then(pulse)
-                        .background(SetteeColors.Surface, SetteeShapes.Cell)
+                    // The opening cell is drawn over this one's place, outside the pulse.
                     if (row == 0 && opening != null) {
-                        HighlightSurface(
-                            onClick = {},
-                            style = HighlightStyle.Cell,
-                            modifier = cell.then(opening).testTag(SKELETON_CARD),
-                        ) { highlighted ->
-                            // A highlighted cell is the Highlight's coral fill, as the guide's own is.
-                            if (!highlighted) Box(blankCell)
-                        }
+                        Spacer(cell)
                     } else {
-                        Box(cell) { Box(blankCell.testTag(SKELETON_CARD)) }
+                        Box(cell.blank(SetteeShapes.Cell))
                     }
                     // Programmes of a few lengths, each row starting at a different one, so it reads as a guide.
                     var reached = channelColumn
@@ -165,8 +177,7 @@ fun SkeletonGuide(
                                 .width(length - GUIDE_GAP)
                                 .fillMaxHeight()
                                 .padding(vertical = GUIDE_GAP / 2)
-                                .then(pulse)
-                                .background(SetteeColors.Surface, SetteeShapes.Cell),
+                                .blank(SetteeShapes.Cell),
                         )
                         reached += length
                         block++
@@ -188,18 +199,35 @@ private fun cardsToFill(width: Dp, cards: SkeletonCards): Int {
     return count
 }
 
+/** A blank card's fill, found by tests as [SKELETON_CARD]. */
+private fun Modifier.blank(shape: Shape) = testTag(SKELETON_CARD).background(SetteeColors.Surface, shape)
+
 /**
- * Settee's skeleton pulse, for each blank card of a skeleton: its opacity easing between full and [PULSE_LOW] and back
- * every [PULSE_MILLIS], about the aerial TV's beat. One slow breath on every card at once, not a
- * shimmer across them: alive from the sofa, never a flashing light in a dark room. Opacity on a layer
- * redraws nothing inside it, so the pulse costs the Stick no layout or drawing.
+ * The blank card a screen opens on, which can take the Highlight in [style] and does nothing on OK.
+ * With a fill style it's the Highlight's coral while highlighted, as a real cell is; a ringed card
+ * keeps its blank under the ring.
+ */
+@Composable
+private fun OpeningBlank(style: HighlightStyle, shape: Shape, modifier: Modifier) {
+    HighlightSurface(onClick = {}, style = style, modifier = modifier.testTag(SKELETON_CARD)) { highlighted ->
+        if (!highlighted || style.highlighted.ring != null) {
+            Box(Modifier.fillMaxSize().background(SetteeColors.Surface, shape))
+        }
+    }
+}
+
+/**
+ * Settee's skeleton pulse, for a skeleton's layer of blank cards: its opacity easing between full and
+ * [PULSE_LOW] and back every [PULSE_MILLIS], about the aerial TV's beat. One slow breath on the whole
+ * layer, not a shimmer across the cards: alive from the sofa, never a flashing light in a dark room.
+ * Opacity on a layer redraws nothing inside it, so the pulse costs the Stick no layout or drawing.
  *
  * It follows the frame clock's own time, not the time since it appeared, so every skeleton on the
  * screen breathes together. Like [AerialTv] it ignores the animation scale: the motion is the only
  * sign the screen isn't frozen, which WCAG counts as essential (docs/LOOK.md, Waiting).
  */
 @Composable
-fun rememberSkeletonPulse(): Modifier {
+private fun rememberSkeletonPulse(): Modifier {
     val millis = rememberFrameMillis()
     return remember(millis) {
         Modifier.graphicsLayer {
@@ -239,5 +267,9 @@ private val PROGRAMME_HALF_HOURS = listOf(2, 1, 3, 2, 1, 4)
 /** Between a guide skeleton's blocks, as the guide's rules part its cells. */
 private val GUIDE_GAP = 4.dp
 
-/** As much as a Shelf leaves above and below its covers: placeholders are as tall as a row. */
-private val SHELF_LIFT_ROOM = 12.dp
+/** Between the Live Preview's picture and its words, as on the tile. */
+private val TILE_GAP = 18.dp
+
+/** A channel's name, roughly, on the Live Preview tile. */
+private val TILE_NAME_WIDTH = 220.dp
+private val TILE_NAME_HEIGHT = 28.dp

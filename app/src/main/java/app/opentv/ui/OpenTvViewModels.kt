@@ -1692,6 +1692,8 @@ data class HomeState(
      * with skeletons, so none moves a row below it when it lands (#581).
      */
     val loading: Set<HomeRowKind> = emptySet(),
+    /** Whether the Live Preview is still on its way, which Home holds the place of above the rows. */
+    val liveLoading: Boolean = false,
 )
 
 /**
@@ -1949,16 +1951,22 @@ class HomeViewModel @JvmOverloads constructor(
 
     // The quick reads first: combine starts collecting in this order, and Room has four threads, which
     // the slow row reads queued ahead would otherwise take, leaving Home blank behind them.
+    /** Whether Home holds the Live Preview's place before its tile is built: as [expected] does for the rows. */
+    private val expectedLive: Flow<Boolean> = combine(
+        graph.viewerLibrary.live.hasPreview(),
+        settings.liveEnabled,
+    ) { preview, liveOn -> preview && liveOn }
+
     private val rows: Flow<HomeState> = combine(
-        expected,
+        combine(expected, expectedLive, ::Pair),
         // The arrangement is in the same state as the places, so Home is never drawn once in the usual
         // order and then moved.
         graph.profileSettings.homeArrangement,
-        // And so is the Live Preview, so Home is first drawn with it and highlights it.
-        live,
+        // The Live Preview comes as the rows do, its place held until then; Home opens on it either way.
+        live.arrival(),
         becauseYouWatched,
         arrivals,
-    ) { expected, arrangement, live, because, arrived ->
+    ) { (expected, expectedLive), arrangement, live, because, arrived ->
         // Covers show before their statuses have come, and gain them when they do.
         val statuses = arrived.watching?.value?.second ?: CoverStatuses()
         // Favourites carry no status: Home shows only their titles.
@@ -1971,12 +1979,13 @@ class HomeViewModel @JvmOverloads constructor(
             favouriteChannels = arrived.channels?.value.orEmpty(),
             recentShows = arrived.recentShows?.value.orEmpty().withStatuses(statuses),
             recentMovies = arrived.recentMovies?.value.orEmpty().withStatuses(statuses),
-            live = live,
+            live = live?.value,
             arrangement = arrangement,
             becauseYouWatched = because
                 ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
                 ?.takeIf { it.covers.isNotEmpty() },
             loading = (expected - arrived.kinds()).filterTo(mutableSetOf(), arrangement::isShown),
+            liveLoading = live == null && expectedLive && arrangement.livePreview,
         )
     }
 

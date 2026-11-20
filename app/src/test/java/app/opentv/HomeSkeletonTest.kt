@@ -19,7 +19,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
+import app.opentv.data.repo.LivePreview
+import app.opentv.ui.LiveNow
+import app.opentv.ui.LiveTile
 import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
@@ -55,6 +59,8 @@ class HomeSkeletonTest {
     private var continueWatching by mutableStateOf(emptyList<ResumeItem>())
     private var recentMovies by mutableStateOf(emptyList<Cover>())
     private var loading by mutableStateOf(setOf(HomeRowKind.CONTINUE_WATCHING, HomeRowKind.RECENT_MOVIES))
+    private var live by mutableStateOf<LiveTile?>(null)
+    private var liveLoading by mutableStateOf(false)
     private val resumed = mutableListOf<MediaKey>()
 
     private fun setHome() = compose.setTvContent {
@@ -69,7 +75,9 @@ class HomeSkeletonTest {
             onPlayChannel = {},
             takeFocus = true,
             recentMovies = recentMovies,
+            live = live,
             loading = loading,
+            liveLoading = liveLoading,
         )
     }
 
@@ -123,6 +131,33 @@ class HomeSkeletonTest {
         compose.onNodeWithText("Heat").assertExists()
         openingSkeleton().assertIsFocused()
     }
+
+    @Test
+    fun `the Live Preview's place leads Home with the Highlight, and its tile takes it over`() {
+        liveLoading = true
+        setHome()
+
+        openingSkeleton().assertIsFocused()
+        captureScreen("home_skeleton_live_preview")
+
+        live = LiveTile(LiveNow(LivePreview.Playable(channel4), nowTitle = "Countdown", nextTitle = null), null, null)
+        liveLoading = false
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Channel 4").assertIsFocused()
+    }
+
+    private val channel4 = Channel(
+        id = 40,
+        sourceId = 1,
+        streamId = "40",
+        name = "Channel 4",
+        streamUrl = "https://example.com/40.ts",
+        categoryId = null,
+        logoUrl = null,
+        epgChannelId = null,
+        number = null,
+    )
 
     private fun movie(id: Long, name: String) = Movie(
         id = id,
