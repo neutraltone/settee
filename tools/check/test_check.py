@@ -261,6 +261,82 @@ class VerdictTest(unittest.TestCase):
         self.assertIn(":app:detekt", report)
 
 
+DUMP = """\
+2026-11-20 12:40:01
+Full thread dump OpenJDK 64-Bit Server VM (17.0.13+11 mixed mode, sharing):
+
+"Test worker" #1 prio=5 os_prio=0 cpu=900.00ms elapsed=1300.00s tid=0x1 nid=0x2 waiting on condition
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@17.0.13/Native Method)
+	at java.util.concurrent.FutureTask.get(java.base@17.0.13/FutureTask.java:191)
+	at org.robolectric.internal.SandboxTestRunner.runOnMainThread(SandboxTestRunner.java:1)
+
+"SDK 34 Main Thread" #20 prio=5 os_prio=0 cpu=1200.00ms elapsed=1290.00s tid=0x3 nid=0x4 waiting on condition
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+	at java.lang.Thread.sleep(java.base@17.0.13/Native Method)
+	at androidx.compose.ui.test.junit4.ComposeIdlingResource.waitForIdle(ComposeIdlingResource.kt:9)
+	at app.opentv.LiveBrowseTest.days page through the guide(LiveBrowseTest.kt:212)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+
+"Finalizer" #3 daemon prio=8 os_prio=0 cpu=0.00ms elapsed=1300.00s tid=0x5 nid=0x6 in Object.wait()
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait(java.base@17.0.13/Native Method)
+"""
+
+
+class ThreadDumpTest(unittest.TestCase):
+    def test_finds_the_test_a_hung_jvm_is_stuck_in_and_where_it_is_waiting(self):
+        stuck = check.stuck_in(DUMP)
+
+        self.assertIn('"SDK 34 Main Thread"', stuck)
+        self.assertIn("ComposeIdlingResource.waitForIdle", stuck)
+        self.assertIn("app.opentv.LiveBrowseTest.days page through the guide(LiveBrowseTest.kt:212)", stuck)
+        self.assertNotIn("Finalizer", stuck)
+        self.assertNotIn("Test worker", stuck)
+
+    def test_a_dump_with_no_test_on_any_thread_says_so_rather_than_nothing(self):
+        self.assertEqual(check.stuck_in('"Finalizer" #3\n\tat java.lang.Object.wait(Native Method)\n'), "")
+
+    def test_jcmd_is_the_one_beside_the_java_the_test_jvm_runs(self):
+        self.assertEqual(
+            check.jcmd_for("/opt/jdk-17/bin/java -Dx=1 worker.GradleWorkerMain 'Gradle Test Executor 3'"),
+            "/opt/jdk-17/bin/jcmd",
+        )
+
+    def test_a_cut_off_run_that_answered_a_dump_blames_the_test_and_shows_where_it_waits(self):
+        report, code = check.verdict(
+            gradle_exit=None,
+            results=check.Results(),
+            found=[],
+            tasks=[],
+            log_path="x.log",
+            cut_off=check.CutOff.FROZEN,
+            last="LiveBrowseTest > the rows load",
+            dumps=[check.Dump(731, "threads-731.txt", answered=True, stuck=check.stuck_in(DUMP))],
+        )
+
+        self.assertEqual(code, 1)
+        self.assertIn("HUNG", report)
+        self.assertNotIn("not a test failure", report)
+        self.assertIn("LiveBrowseTest.days page through the guide(LiveBrowseTest.kt:212)", report)
+        self.assertIn("threads-731.txt", report)
+
+    def test_a_frozen_run_that_cant_answer_a_dump_is_still_the_machine(self):
+        report, _ = check.verdict(
+            gradle_exit=None,
+            results=check.Results(),
+            found=[],
+            tasks=[],
+            log_path="x.log",
+            cut_off=check.CutOff.FROZEN,
+            dumps=[check.Dump(731, "", answered=False, stuck="")],
+        )
+
+        self.assertIn("FROZEN", report)
+        self.assertIn("not a test failure", report)
+        self.assertIn("didn't answer a thread dump", report)
+
+
 PS = """\
   102 03:26:31 /usr/bin/java -Dx=1 worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 20'
   731    12:05 /usr/bin/java -Dx=1 worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 15'
@@ -396,6 +472,11 @@ class FrozenTest(unittest.TestCase):
     def test_a_run_that_hasnt_reached_its_tests_is_not_however_long_it_compiles(self):
         self.assertFalse(check.frozen(last_progress=None, started=900, now=9_000))
 
+    def test_ci_waits_longer_as_its_first_test_on_each_sdk_downloads_that_sdk(self):
+        now = 1_000 + check.FROZEN_SECONDS + 1
+        self.assertFalse(check.frozen(last_progress=1_000, started=900, now=now, limit=check.frozen_seconds("ci")))
+        self.assertEqual(check.frozen_seconds("test"), check.FROZEN_SECONDS)
+
     def test_progress_left_by_an_earlier_run_doesnt_count_against_this_one(self):
         self.assertFalse(check.frozen(last_progress=500, started=900, now=9_000))
 
@@ -432,6 +513,17 @@ class CommandTest(unittest.TestCase):
         self.assertIsNone(check.parse_args(["everything"]))
         self.assertIsNone(check.parse_args(["test"]))
         self.assertIsNone(check.parse_args([]))
+
+    def test_ci_mode_runs_what_ci_ran_and_stops_before_the_jobs_own_limit(self):
+        self.assertEqual(check.gradle_tasks("ci", []), ["test", "--stacktrace"])
+        self.assertEqual(check.parse_args(["ci"]), ("ci", [], 22, False))
+
+    def test_ci_mode_watches_both_variants_tests_and_the_others_only_debug(self):
+        self.assertEqual(
+            check.result_dirs("ci"),
+            ["app/build/test-results/testDebugUnitTest", "app/build/test-results/testReleaseUnitTest"],
+        )
+        self.assertEqual(check.result_dirs("test"), ["app/build/test-results/testDebugUnitTest"])
 
     def test_all_mode_runs_every_pr_check_without_stopping_at_the_first_failure(self):
         self.assertEqual(

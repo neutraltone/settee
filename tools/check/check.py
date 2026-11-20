@@ -12,9 +12,11 @@ It also leaves no test process behind. On a Mac short of memory, a test JVM can 
 thread gets stuck in the kernel re-faulting a page of compiled code, the rest of the JVM waits on
 it for ever, and it ignores every signal but SIGKILL, Gradle's request to stop included. Left
 alone it spins for hours, taking a core and its memory, which makes the next freeze likelier. So
-a run in which no test finishes for two minutes is reported as FROZEN and killed, as is one that
-outlasts its time, and test processes left in this checkout by an abandoned earlier run are killed
-before the next starts. A freeze is the machine, not the test it happened to stop in: run it again.
+a run in which no test finishes for two minutes is killed, as is one that outlasts its time, and
+test processes left in this checkout by an abandoned earlier run are killed before the next starts.
+Before killing a run it cuts off, it asks the test JVM for a thread dump. A frozen JVM can't answer,
+and is reported as FROZEN: that is the machine, not the test it happened to stop in, so run it again.
+One that answers was waiting for ever in a test, and is reported as HUNG with where it waits: fix it.
 If the script itself is terminated, it stops the Gradle run it started first. It can't when it is
 killed outright, so give whatever runs it longer than its own time, or run it in the background.
 
@@ -22,9 +24,10 @@ Usage, from anywhere in a checkout (a worktree included):
   tools/check/check.py test RecordingsContentTest [OtherTest ...]   the named test classes
   tools/check/check.py quick      ktlintFormat and detekt: after each change, before the long checks
   tools/check/check.py all        what a PR's checks run, in one pass that doesn't stop at the first failure
+  tools/check/check.py ci         CI's `./gradlew test`, both variants, with Gradle's whole output printed
   tools/check/check.py sweep      kill test processes left running for over half an hour, in any checkout
 
---timeout MINUTES changes how long a run may take (test and quick: 8, all: 25); at least 1.
+--timeout MINUTES changes how long a run may take (test and quick: 8, all: 25, ci: 22); at least 1.
 --rerun, with test, runs the tests even if nothing has changed since they last passed.
 `all` runs the debug unit tests only; CI's `./gradlew test` runs the release variant's as well.
 Run one Gradle command per checkout at a time: a run treats any other test process there as left over.
@@ -41,7 +44,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 RESULTS = "app/build/test-results/testDebugUnitTest"
-IN_PROGRESS = f"{RESULTS}/binary/in-progress-results-generic.bin"
+RELEASE_RESULTS = "app/build/test-results/testReleaseUnitTest"
+IN_PROGRESS = "binary/in-progress-results-generic.bin"
 LINT_REPORT = "app/build/reports/lint-results-debug.txt"
 PACKAGE = "app.opentv"
 SLOW_SECONDS = 30.0
@@ -52,7 +56,12 @@ STALE_MINUTES = 30
 
 # With no test finishing for this long, the test JVM has frozen: the slowest real test takes under 30s.
 FROZEN_SECONDS = 120
+# A CI runner starts with no Robolectric SDK jars, so the first test on each SDK waits on a download.
+CI_FROZEN_SECONDS = 300
 POLL_SECONDS = 2
+# Long enough for a JVM that is merely busy to answer; one frozen in the kernel never does.
+DUMP_SECONDS = 30
+TOP_FRAMES = 12
 
 
 class CutOff:
@@ -65,9 +74,11 @@ MODES = {
     "test": ["testDebugUnitTest"],
     "quick": ["ktlintFormat", "detekt"],
     "all": ["testDebugUnitTest", "ktlintCheck", "detekt", "lintDebug", "--continue"],
+    "ci": ["test", "--stacktrace"],
     "sweep": [],
 }
-TIMEOUT_MINUTES = {"test": 8, "quick": 8, "all": 25, "sweep": 1}
+# ci stops before the Unit tests step's own 25 minutes, so its report and dumps still get uploaded.
+TIMEOUT_MINUTES = {"test": 8, "quick": 8, "all": 25, "ci": 22, "sweep": 1}
 
 
 @dataclass
@@ -86,6 +97,17 @@ class Results:
 
 
 @dataclass
+class Dump:
+    """A thread dump taken of a test process before killing it: where it was saved, whether the
+    process answered at all, and the threads that were in a test when it did."""
+
+    pid: int
+    path: str
+    answered: bool
+    stuck: str
+
+
+@dataclass
 class Worker:
     """A Gradle test process: how many minutes it has run, and the directory it runs in."""
 
@@ -94,14 +116,14 @@ class Worker:
     cwd: str
 
 
-def read_results(directory, since):
-    """This run's unit test results: Gradle leaves an earlier run's files behind when it fails
-    before the tests start, so anything written before `since` isn't counted."""
+def read_results(directories, since):
+    """This run's unit test results, from one results directory or a list of them: Gradle leaves an
+    earlier run's files behind when it fails before the tests start, so anything written before
+    `since` isn't counted."""
     results = Results()
-    directory = Path(directory)
-    if not directory.is_dir():
-        return results
-    for path in sorted(directory.glob("TEST-*.xml")):
+    if isinstance(directories, (str, Path)):
+        directories = [directories]
+    for path in [path for directory in map(Path, directories) for path in sorted(directory.glob("TEST-*.xml"))]:
         if path.stat().st_mtime < since:
             continue
         try:
@@ -195,11 +217,68 @@ def read_record(record):
         return b""
 
 
-def frozen(last_progress, started, now):
+def result_dirs(mode):
+    """Where the mode's tests write their results: ci runs both variants', like `./gradlew test`."""
+    return [RESULTS, RELEASE_RESULTS] if mode == "ci" else [RESULTS]
+
+
+def frozen_seconds(mode):
+    return CI_FROZEN_SECONDS if mode == "ci" else FROZEN_SECONDS
+
+
+def frozen(last_progress, started, now, limit=FROZEN_SECONDS):
     """Whether a run has frozen: its tests have started (`last_progress` is when one last finished,
-    None before any has) and none has finished since. Progress from before `started` is an earlier
-    run's, left behind while this one compiles."""
-    return last_progress is not None and last_progress >= started and now - last_progress > FROZEN_SECONDS
+    None before any has) and none has finished for `limit` seconds. Progress from before `started`
+    is an earlier run's, left behind while this one compiles."""
+    return last_progress is not None and last_progress >= started and now - last_progress > limit
+
+
+def jcmd_for(command):
+    """The jcmd beside the java a test process runs, so it matches that JVM and needs no PATH."""
+    return str(Path(command.split()[0]).with_name("jcmd"))
+
+
+def stuck_in(dump):
+    """The threads of a thread dump that are in one of this project's tests, at most a screenful
+    of each: its top frames, which on a hang are what it waits on, and the test's own frame."""
+    test_frame = re.compile(rf"^\tat {re.escape(PACKAGE)}\.[\w$]*Test\b", flags=re.MULTILINE)
+    threads = []
+    for block in re.split(r"\n\s*\n", dump):
+        lines = block.strip("\n").splitlines()
+        if not lines or not lines[0].startswith('"') or not test_frame.search(block):
+            continue
+        frames = [line for line in lines[1:] if line.startswith("\tat ")]
+        last = next(at for at, line in enumerate(frames) if test_frame.match(line))
+        shown = frames[:TOP_FRAMES] if last < TOP_FRAMES else [*frames[:TOP_FRAMES], "\t...", frames[last]]
+        threads.append("\n".join([lines[0], *shown]))
+    return "\n\n".join(threads)
+
+
+def dump_threads(root, out_dir):
+    """A thread dump of each test process in `root`'s checkout, saved in `out_dir`. A JVM stuck in
+    a test answers with where it waits; one frozen in the kernel can't reach the point where it
+    would, so no answer is the machine and an answer is the test."""
+    listed = subprocess.run(["ps", "-axo", "pid=,etime=,command="], capture_output=True, text=True).stdout
+    commands = {int(m.group(1)): m.group(2) for m in re.finditer(r"^\s*(\d+)\s+\S+\s+(.*)$", listed, re.MULTILINE)}
+    dumps = []
+    for worker in leftover(test_workers(listed, _cwd_of), root, minutes=0):
+        try:
+            answer = subprocess.run(
+                [jcmd_for(commands[worker.pid]), str(worker.pid), "Thread.print", "-l"],
+                capture_output=True,
+                text=True,
+                timeout=DUMP_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            dumps.append(Dump(worker.pid, "", answered=False, stuck=""))
+            continue
+        if answer.returncode != 0 or "Full thread dump" not in answer.stdout:
+            dumps.append(Dump(worker.pid, "", answered=False, stuck=""))
+            continue
+        path = Path(out_dir) / f"threads-{worker.pid}.txt"
+        path.write_text(answer.stdout)
+        dumps.append(Dump(worker.pid, str(path), answered=True, stuck=stuck_in(answer.stdout)))
+    return dumps
 
 
 def test_workers(ps_output, cwd_of):
@@ -292,9 +371,22 @@ def _age(minutes):
     return f"{minutes / 60:.0f}h" if minutes >= 120 else f"{minutes:.0f}m"
 
 
-def verdict(gradle_exit, results, found, tasks, log_path, reasons=(), stopped=(), cut_off="", last=""):
+def verdict(
+    gradle_exit,
+    results,
+    found,
+    tasks,
+    log_path,
+    reasons=(),
+    stopped=(),
+    cut_off="",
+    last="",
+    dumps=(),
+    frozen_after=FROZEN_SECONDS,
+):
     """What to print, and the exit code: Gradle's, whatever else was or wasn't found. A run that was
-    cut off has no exit code and has failed."""
+    cut off has no exit code and has failed; the thread dumps taken before killing it say whether a
+    test was waiting for ever (it answered) or the JVM had frozen (it couldn't)."""
     out = [f"STOPPED  test process {w.pid}, left running for {_age(w.minutes)} in {w.cwd}" for w in stopped]
     for failure in results.failures:
         where = f" ({failure.where})" if failure.where else ""
@@ -306,10 +398,23 @@ def verdict(gradle_exit, results, found, tasks, log_path, reasons=(), stopped=()
     for seconds, name in results.slow:
         out.append(f"SLOW  {seconds:.0f}s  {name}")
     ran = f"{results.tests} tests in {results.seconds:.0f}s" if results.tests else "tests up to date or not run"
-    if cut_off:
+    answered = [dump for dump in dumps if dump.answered]
+    if cut_off and answered:
         after = f"; the last test to finish was {last}" if last else ""
+        stalled = f"no test finished for {frozen_after}s" if cut_off == CutOff.FROZEN else "the run outlasted its time"
+        out.append(
+            f"HUNG  {stalled}, and the test JVM answered a thread dump, so a test is waiting for ever: "
+            f"it is the test, not the machine{after}  full output: {log_path}"
+        )
+        for dump in answered:
+            out.append(f"    thread dump of test process {dump.pid}: {dump.path}")
+            stuck = dump.stuck or "no thread was in a test; see the dump"
+            out += [f"    {line}" for line in stuck.splitlines()]
+    elif cut_off:
+        after = f"; the last test to finish was {last}" if last else ""
+        silent = " (it didn't answer a thread dump)" if dumps else ""
         why = (
-            f"no test finished for {FROZEN_SECONDS}s, so the test JVM had frozen and was killed. "
+            f"no test finished for {frozen_after}s, so the test JVM had frozen and was killed{silent}. "
             "That is the machine running short of memory, not a test failure: run it again"
             if cut_off == CutOff.FROZEN
             else "the run outlasted its time and was stopped"
@@ -352,8 +457,9 @@ def main(argv):
     command = ["./gradlew", "--console=plain", *gradle_tasks(mode, names, rerun)]
     stopped = stop_leftover(root, STALE_MINUTES)
     started = time.time()
-    cut_off, last, gradle_exit = "", "", None
-    in_progress = Path(root) / IN_PROGRESS
+    cut_off, last, gradle_exit, dumps = "", "", None, []
+    in_progress = [Path(root) / directory / IN_PROGRESS for directory in result_dirs(mode)]
+    limit = frozen_seconds(mode)
     for stop in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(stop, _terminated)
     with open(log_path, "w") as log:
@@ -365,7 +471,8 @@ def main(argv):
                     break
                 except subprocess.TimeoutExpired:
                     now = time.time()
-                    if frozen(modified(in_progress), started, now):
+                    progress = [at for at in map(modified, in_progress) if at is not None]
+                    if frozen(max(progress, default=None), started, now, limit):
                         cut_off = CutOff.FROZEN
                     elif now - started > minutes * 60:
                         cut_off = CutOff.TIMED_OUT
@@ -376,7 +483,8 @@ def main(argv):
             stop_leftover(root, minutes=0)
             raise
         if cut_off:
-            last = last_finished(read_record(in_progress))
+            last = next(filter(None, (last_finished(read_record(record)) for record in in_progress)), "")
+            dumps = dump_threads(root, log_path.parent)
             gradle.kill()
             gradle.wait()
     # The run is over, so any test process still in this checkout is one that didn't stop.
@@ -387,7 +495,7 @@ def main(argv):
         log_text += "\n" + lint.read_text(errors="replace")
     report, code = verdict(
         gradle_exit,
-        read_results(Path(root) / RESULTS, since=started),
+        read_results([Path(root) / directory for directory in result_dirs(mode)], since=started),
         findings(log_text, root),
         failed_tasks(log_text),
         log_path,
@@ -395,7 +503,12 @@ def main(argv):
         stopped,
         cut_off,
         last,
+        dumps,
+        limit,
     )
+    if mode == "ci":
+        # A CI log is read after the fact, so it keeps Gradle's whole output ahead of the summary.
+        print(log_text)
     print(report)
     print(f"({time.time() - started:.0f}s: {' '.join(command)})")
     return code

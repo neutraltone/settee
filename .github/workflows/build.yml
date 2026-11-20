@@ -36,10 +36,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Unit tests
-        # Usually 6-8 minutes, 14 at the slowest seen. Its own limit, so a hang still leaves time
-        # for the test reports to upload.
+        # Usually 6-8 minutes, 14 at the slowest seen. check.py runs `./gradlew test` and, when no
+        # test finishes for five minutes or the run reaches 22, takes a thread dump of the test JVM
+        # before killing it, so a hang names the test it is stuck in. The step's own limit is a
+        # backstop for check.py itself.
         timeout-minutes: 25
-        run: ./gradlew test --stacktrace
+        run: tools/check/check.py ci
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
@@ -78,12 +80,18 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
+      # Gradle writes the HTML reports only once the test task ends, so a hung run has none; the
+      # per-class XML results, check.py's log and its thread dumps are there either way.
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: test-reports
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/check-ci.log
+            app/build/threads-*.txt
           if-no-files-found: ignore
 
   lint:
