@@ -234,8 +234,11 @@ keeping the local id that resume points use and the first-seen time.
 With Settee's built-in TMDB Key, the background pass after a catalogue sync (`MovieGenres` for films,
 `SeriesTmdbPass` for series) asks TMDB about every title once, 200 at a time with a minute's rest
 between, and asks again once its answer is six months old: posters and casts change, and a title TMDB
-had no match for may have one since. Each title stores when TMDB last answered (`tmdbAnsweredAt`), a
-match or not; a refresh carries it across like every other looked-up detail, and a title TMDB couldn't
+had no match for may have one since. The same pass asks the provider `get_vod_info` about each film it
+hasn't answered about, at least a second apart (#591): back to back, a fast panel saw about 240 requests
+a minute, and providers throttle or block busy accounts. TMDB isn't held to that gap, and what's found is
+saved 50 at a time, since every write wakes each watcher of the table. Each title stores when TMDB
+last answered (`tmdbAnsweredAt`), a match or not; a refresh carries it across like every other looked-up detail, and a title TMDB couldn't
 be reached about keeps its old date, so it's asked again next time rather than in six months. TMDB only
 fills what the provider left empty, the second time as the first. Opening a series asks at once when
 its details are missing or that old, so a series the pass hasn't reached still fills in. In a build

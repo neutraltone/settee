@@ -18,6 +18,7 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.LookupPace
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodTitle
@@ -79,7 +80,7 @@ class TestCatalog(
         tmdbKey = tmdbKey,
         wording = ErrorWording(context, onTelevision = false),
     ).apply {
-        genrePauseMillis = 0
+        lookupPace = LookupPace(pauseMillis = 0, providerGapMillis = 0)
         staging = this@TestCatalog.staging
     }
 
