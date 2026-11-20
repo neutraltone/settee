@@ -10,6 +10,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.opentv.core.ViewerError
+import app.opentv.data.parser.ChannelNameNormalizer
 import kotlinx.serialization.Serializable
 
 /**
@@ -149,6 +150,7 @@ data class SourceCategoryName(val sourceId: Long, val id: String, val name: Stri
         Index(value = ["sourceId", "streamId"], unique = true),
         Index(value = ["sourceId", "categoryId"]),
         Index(value = ["groupKey"]),
+        Index(value = ["nameKey"]),
     ],
 )
 // Serializable so a live list can be staged on disk, decoded, before the transaction that saves it.
@@ -168,6 +170,12 @@ data class Channel(
      * matcher joins on its name part. See ChannelNameNormalizer.channelKey.
      */
     val groupKey: String = "",
+    /**
+     * [groupKey]'s name part, region dropped: `bbc1`. Stored and indexed so a Channel's rows in every
+     * region are one indexed lookup; a suffix match on [groupKey] read every channel, once per
+     * favourite (#582). Set it again whenever a copy changes [groupKey].
+     */
+    @ColumnInfo(defaultValue = "''") val nameKey: String = ChannelNameNormalizer.nameKeyOf(groupKey),
     /** Higher plays by default. 0 = the name said nothing about quality. */
     val qualityRank: Int = 0,
     /** `FHD`, `HD`, `RAW 60fps`… empty when unknown. */

@@ -217,13 +217,12 @@ interface ChannelDao {
     suspend fun byId(id: Long): Channel?
 
     /**
-     * Every row called [nameKey] in any region, hidden ones too: `groupKey` is `nameKey` itself, or
-     * ends in `:nameKey`. What [app.opentv.data.repo.ChannelLineup] folds to find one row's Channel.
-     * A suffix match can't use the groupKey index, so this scans the table; it runs once per lookup,
-     * never per row.
+     * Every row called any of [nameKeys] in any region, hidden ones too. What
+     * [app.opentv.data.repo.ChannelLineup] folds to find rows' Channels. Keep [nameKeys] to a few
+     * hundred: they're bound variables.
      */
-    @Query("SELECT * FROM channels WHERE groupKey = :nameKey OR groupKey LIKE '%:' || :nameKey")
-    suspend fun sameName(nameKey: String): List<Channel>
+    @Query(CHANNELS_NAMED)
+    suspend fun sameName(nameKeys: List<String>): List<Channel>
 
     @Query("SELECT COUNT(*) FROM channels WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
@@ -2050,6 +2049,9 @@ internal const val SERIES_WITH_PERSON = """
 private const val EPISODE_OF_POSITION =
     "substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
         "AND episodes.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER)"
+
+/** Every channel called any of a list of name keys, in any region. See [ChannelDao.sameName]. */
+internal const val CHANNELS_NAMED = "SELECT * FROM channels WHERE nameKey IN (:nameKeys)"
 
 /** Every episode a Profile has any progress on. See [EpisodeDao.observePlayed]. */
 internal const val PLAYED_EPISODES =

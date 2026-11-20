@@ -465,15 +465,18 @@ private fun Flow<List<Category>>.rowsInGroup(
 }
 
 /**
- * Every row, hidden ones too, that could share a Channel with any of [rows]. One lookup per name,
- * not per row: each scans the table, and a Favourite has every Quality starred. A row with no
- * group key only finds itself.
+ * Every row, hidden ones too, that could share a Channel with any of [rows]: every name in one
+ * query, rather than one per row or per name, since Favourites is every starred Channel at once. A
+ * row with no group key only finds itself.
  */
 private suspend fun ChannelDao.sameNamed(rows: List<Channel>): List<Channel> {
     val (keyless, keyed) = rows.partition { it.groupKey.isEmpty() }
-    val named = keyed.map { ChannelNameNormalizer.nameKeyOf(it.groupKey) }.distinct().flatMap { sameName(it) }
+    val named = keyed.map { it.nameKey }.distinct().chunked(NAMES_PER_QUERY).flatMap { sameName(it) }
     return (keyless + named).distinctBy { it.id }
 }
+
+/** Names bound in one lookup, well inside SQLite's 999 bound variables on older Android. */
+private const val NAMES_PER_QUERY = 500
 
 /**
  * Whether a Channel shown in this scope may default to [row] when it isn't among the scope's own rows.
