@@ -52,6 +52,7 @@ import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
@@ -149,7 +150,7 @@ internal fun <T> ScreenFrameScope.ForYou(
                 railReturnItem(key = row.key, contentType = "covers") {
                     RowAtTop(first + i, row.modifier) {
                         if (row.titles.isEmpty()) {
-                            PlaceholderShelf(row.title)
+                            SkeletonShelf(row.title)
                             return@RowAtTop
                         }
                         val covers = remember(row.titles) { row.titles.map { it to cover(it) } }
@@ -254,29 +255,8 @@ private fun <T> pickRows(
 /** A cover's key wherever For you keeps one: its list, its row's memory, a remembered pick. */
 private val TitleCover.cardKey get() = "$id"
 
-/** A row still being worked out: its title over blank covers, which can't take the Highlight. */
-@Composable
-internal fun ScreenFrameScope.PlaceholderShelf(title: String) {
-    Column {
-        Text(title, SetteeType.Section, maxLines = 1)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
-            modifier = Modifier.bleed().padding(bleedPadding).padding(vertical = SHELF_LIFT_ROOM),
-        ) {
-            repeat(PLACEHOLDER_COVERS) {
-                Box(
-                    Modifier
-                        .size(ArtCardSize.Portrait.width, ArtCardSize.Portrait.height)
-                        .background(SetteeColors.Surface, SetteeShapes.Card),
-                )
-            }
-        }
-    }
-}
-
-private const val PLACEHOLDER_COVERS = 8
-
 private const val CONTINUE_WATCHING = "cw"
 
-/** As much as a Shelf leaves above and below its covers: placeholders are as tall as a row. */
+
+/** As much as a Shelf leaves above and below its covers. */
 private val SHELF_LIFT_ROOM = 12.dp

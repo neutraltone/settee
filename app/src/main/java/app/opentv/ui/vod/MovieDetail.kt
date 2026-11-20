@@ -64,6 +64,7 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -272,7 +273,7 @@ internal fun MovieDetailContent(
                 PeopleRows(movie, onOpenPerson, spot, Modifier.padding(top = SetteeSpace.RowGap))
                 if (similar == null) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
-                    PlaceholderShelf(stringResource(R.string.vod_more_like_this))
+                    SkeletonShelf(stringResource(R.string.vod_more_like_this))
                 } else if (similar.isNotEmpty()) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
                     MoreLikeThis(

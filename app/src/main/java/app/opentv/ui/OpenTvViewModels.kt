@@ -105,7 +105,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -566,22 +565,6 @@ class ChannelsViewModel @JvmOverloads constructor(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
-    /** Whether the guide's first rows have reached the screen: after that, no loading line again. */
-    @Volatile
-    private var guideBuilt = false
-
-    /**
-     * Whether a start-up build has finished since the guide was last watched, decided on the build's
-     * own thread. [guideBuilt] is set only once its rows reach the screen, so a second build starting
-     * straight after the first, before then, would show the line again and leave it up (#359).
-     */
-    @Volatile
-    private var startupBuildDone = false
-
-    /** The start-up loading line while it's up, so taking it down never takes another job's line. */
-    @Volatile
-    private var startupLine: String? = null
-
     private val _rowsBuilt = MutableStateFlow(false)
 
     /**
@@ -611,77 +594,32 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // build instead; the guide's live progress bars advance off the screen's clock.
                 // guideBuilds paces rebuilds for more listings from the end of the last build, so
                 // a guide sync doesn't keep a slow build running back to back (#257).
+                // Building the guide is the screen being built, which its skeleton rows show; the
+                // status line is for background work (#581).
                 lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
-                    // Show the size-aware loading bar for the FIRST guide build only (start-up).
-                    // After that the guide is built and flicking between categories is cheap, so
-                    // don't flash a loading line on every tap — that bar was only ever meant for
-                    // the one-time heavy load, and leaking it per-category read as a stuck "100%".
-                    val firstBuild = !startupBuildDone
-                    if (firstBuild) {
-                        startupLine = sizeMessage(channels.size).also { StatusBus.set(it, 0f) }
-                    }
-                    val rows = buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild)
-                    startupBuildDone = true
-                    GuideRows(scope, rows)
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now()))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
             // enough to freeze the UI for a big provider — a category tap that took minutes. Run the
             // whole pipeline off the main thread so the list just appears when it's ready.
             .flowOn(Dispatchers.Default)
-            // Once the first guide is on screen, clear the start-up bar — and never show it for a
-            // plain category switch again.
-            .onEach {
-                if (!guideBuilt) {
-                    guideBuilt = true
-                    clearStartupLine()
-                }
-                _rowsBuilt.value = true
-            }
-            // Leaving Live, or covering it with Settings, before the first build arrives stops this
-            // with the line still up, under every tab (#359). Not a finally round the build: a
-            // cancelled build runs on to the end and only fails when it hands its rows on, outside
-            // it. Here, after flowOn, this runs once the build has finished, so no progress lands
-            // after the clear. Coming back before any build arrived puts the line up again.
-            .onCompletion {
-                if (!guideBuilt) {
-                    clearStartupLine()
-                    startupBuildDone = false
-                }
-            }
+            .onEach { _rowsBuilt.value = true }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
-
-    /** Takes the start-up line down, unless another job has put up its own line since. */
-    private fun clearStartupLine() {
-        startupLine?.let(StatusBus::clear)
-        startupLine = null
-    }
 
     private fun buildRows(
         channels: List<LineupChannel>,
         byEpgChannel: Map<String, List<GuideProgramme>>,
         now: Long,
-        reportProgress: Boolean = false,
     ): List<Row> {
         // The programme→channel grouping is done once upstream (see [programmeIndex]) and passed
         // in ready-made, rather than regrouping the whole EPG on every category tap. Grouping is
         // kept out of SQL because the programme query cannot take a channel-id list without
         // hitting SQLite's bound-variable cap.
-        val total = channels.size.coerceAtLeast(1)
-        var built = 0
         return channels.map { channel ->
             val list = channel.guideId { it in byEpgChannel }
                 ?.let { byEpgChannel.getValue(it).sortedBy { p -> p.startUtcMillis } }
                 .orEmpty()
-
-            // Feed the progress bar as rows come together — this is the slow part on a big
-            // provider, so it's what the percentage should actually track.
-            if (reportProgress) {
-                built++
-                if (built % 400 == 0 || built == total) {
-                    StatusBus.setProgress(built.toFloat() / total)
-                }
-            }
 
             Row(
                 channel,
@@ -690,15 +628,6 @@ class ChannelsViewModel @JvmOverloads constructor(
                 programmes = list,
             )
         }
-    }
-
-    /** A friendly, size-aware line for the load: a small provider gets a quick word, a huge one
-     * gets a "bear with us". Used at start-up so the wait always says what it's doing. */
-    private fun sizeMessage(count: Int): String = when {
-        count <= 0 -> "Building the guide…"
-        count < 2000 -> "Loading $count channels. It's a small one, so this'll be quick."
-        count < 8000 -> "Loading $count channels. That's a fair few, so give it a moment…"
-        else -> "Loading $count channels. It's a big one, so bear with us…"
     }
 
     /**
