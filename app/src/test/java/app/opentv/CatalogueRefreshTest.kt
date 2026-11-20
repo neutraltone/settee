@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.CatalogueRefresh
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -538,12 +539,46 @@ class CatalogueRefreshTest {
 
         withContext(Dispatchers.Default) {
             refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
-            during(hold) { assertThat(refresh.state.value.buildingGuide).isTrue() }
+            during(hold) { assertThat(refresh.state.value.refreshingGuide).isTrue() }
             hold.release()
             test.awaitRefresh()
         }
 
-        assertThat(refresh.state.value.buildingGuide).isFalse()
+        assertThat(refresh.state.value.refreshingGuide).isFalse()
+    }
+
+    @Test
+    fun `the periodic refresh says it's refreshing the channels only while it is`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val hold = panel.hold("get_live_streams")
+
+        withContext(Dispatchers.Default) {
+            val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+            during(hold) { assertThat(refresh.state.value.refreshingChannels).isTrue() }
+            hold.release()
+            refreshing.await()
+        }
+
+        assertThat(refresh.state.value.refreshingChannels).isFalse()
+    }
+
+    @Test
+    fun `the periodic refresh says the guide is refreshing, and how far through it is, only while it is`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val hold = panel.hold("xmltv.php")
+
+        withContext(Dispatchers.Default) {
+            val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+            during(hold) {
+                assertThat(refresh.state.value.refreshingGuide).isTrue()
+                assertThat(refresh.state.value.guideProgress).isIn(Range.openClosed(0f, 1f))
+            }
+            hold.release()
+            refreshing.await()
+        }
+
+        assertThat(refresh.state.value.refreshingGuide).isFalse()
+        assertThat(refresh.state.value.guideProgress).isNull()
     }
 
     @Test
@@ -567,7 +602,16 @@ class CatalogueRefreshTest {
         }
 
         val state = refresh.state.value
-        assertThat(listOf(state.refreshing, state.loadingVod, state.buildingGuide)).containsExactly(false, false, false)
+        assertThat(
+            listOf(
+                state.refreshing,
+                state.refreshingChannels,
+                state.refreshingMoviesAndShows,
+                state.loadingVod,
+                state.refreshingGuide,
+            ),
+        ).containsExactly(false, false, false, false, false)
+        assertThat(state.guideProgress).isNull()
     }
 
     @Test

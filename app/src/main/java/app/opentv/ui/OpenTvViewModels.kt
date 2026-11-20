@@ -195,20 +195,22 @@ class SourcesViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             var shown = refresh.state.value.last
             var wasRefreshing = false
-            var announced: String? = null
+            var announced = emptyMap<RefreshMessages.Step, CornerLine>()
             try {
                 refresh.state.collect { state ->
                     val news = state.last.takeIf { it !== shown || (wasRefreshing && !state.refreshing) }
                     shown = state.last
                     wasRefreshing = state.refreshing
-                    // On changes only: the channel list's own progress shares this status bar.
-                    val status = when {
-                        state.loadingVod -> messages.of(RefreshMessages.Step.LoadingVod)
-                        state.buildingGuide -> messages.of(RefreshMessages.Step.BuildingGuide)
-                        else -> null
+                    val running = cornerLines(state)
+                    (announced - running.keys).values.forEach { StatusBus.clear(it.message) }
+                    running.forEach { (step, line) ->
+                        if (announced[step] !=
+                            line
+                        ) {
+                            StatusBus.show(line.message, line.progress)
+                        }
                     }
-                    if (status != announced) StatusBus.set(status)
-                    announced = status
+                    announced = running
                     _ui.update {
                         it.copy(
                             refreshing = state.refreshing,
@@ -223,11 +225,28 @@ class SourcesViewModel @JvmOverloads constructor(
                     }
                 }
             } finally {
-                // The bar outlives this screen model, and the next one can't know this one set it.
-                if (announced != null) StatusBus.set(null)
+                // The corner outlives this screen model, and the next one can't know this one set it.
+                announced.values.forEach { StatusBus.clear(it.message) }
             }
         }
     }
+
+    /**
+     * Each refresh step running now, as its line in the main screen's corner. One line per step, not
+     * one for the refresh: steps overlap (a new provider's guide while another's movies download),
+     * and picking one by a fixed order hid whichever started last. Only the guide knows how far
+     * through it is, so only it brings a bar, empty until its first share arrives.
+     */
+    private fun cornerLines(state: CatalogueRefresh.State) = buildMap {
+        fun line(step: RefreshMessages.Step, progress: Float? = null) =
+            put(step, CornerLine(messages.of(step), progress))
+        if (state.refreshingChannels) line(RefreshMessages.Step.RefreshingChannels)
+        if (state.refreshingMoviesAndShows) line(RefreshMessages.Step.RefreshingMoviesAndShows)
+        if (state.refreshingGuide) line(RefreshMessages.Step.RefreshingGuide, state.guideProgress ?: 0f)
+    }
+
+    /** What the corner says for one refresh step, and how far through it is when it can tell. */
+    private data class CornerLine(val message: String, val progress: Float?)
 
     /**
      * Forgets the last test and save, so a form doesn't open showing another's. A refresh still
@@ -596,7 +615,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // guideBuilds paces rebuilds for more listings from the end of the last build, so
                 // a guide sync doesn't keep a slow build running back to back (#257).
                 // Building the guide is the screen being built, which its skeleton rows show; the
-                // status line is for background work (#581).
+                // main screen's corner is for background work (#581, #583).
                 lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
                     GuideRows(scope, buildRows(channels, byEpgChannel, now()))
                 }

@@ -29,11 +29,11 @@ class StatusBusTest {
     @Test
     fun `a line another job put up since stays, bar and all`() {
         StatusBus.set("Loading 20 channels", 0.4f)
-        StatusBus.set("Updating the guide", 0.7f)
+        StatusBus.set("Refreshing the TV guide", 0.7f)
 
         StatusBus.clear("Loading 20 channels")
 
-        assertThat(StatusBus.message.value).isEqualTo("Updating the guide")
+        assertThat(StatusBus.message.value).isEqualTo("Refreshing the TV guide")
         assertThat(StatusBus.progress.value).isEqualTo(0.7f)
     }
 }

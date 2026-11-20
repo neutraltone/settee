@@ -5,11 +5,14 @@
  */
 package app.opentv
 
+import app.opentv.core.StatusBus
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import org.junit.After
 import org.junit.Test
 
 class FirstOpenWorkTest {
@@ -25,7 +28,45 @@ class FirstOpenWorkTest {
         syncNas = syncNas,
         catchUpNormaliser = catchUpNormaliser,
         launchRefresh = { ran += "refresh" },
+        syncingNas = SYNCING,
     )
+
+    @After
+    fun clearStatus() = StatusBus.set(null)
+
+    @Test
+    fun `the NAS sync says so in the corner while it runs, and takes it down after, even when it fails`() = runTest {
+        var shownWhileSyncing: String? = null
+        work(nasAutoSync = true, syncNas = { shownWhileSyncing = StatusBus.message.value }).run()
+
+        assertThat(shownWhileSyncing).isEqualTo(SYNCING)
+        assertThat(StatusBus.message.value).isNull()
+
+        work(nasAutoSync = true, syncNas = { error("The share went away") }).run()
+
+        assertThat(StatusBus.message.value).isNull()
+    }
+
+    @Test
+    fun `a refresh that finishes during the NAS sync leaves the sync's line up`() = runTest {
+        val refreshed = CompletableDeferred<Unit>()
+        var shownAfterRefresh: String? = null
+        FirstOpenWork(
+            nasAutoSync = true,
+            syncNas = {
+                refreshed.await()
+                shownAfterRefresh = StatusBus.message.value
+            },
+            catchUpNormaliser = {},
+            launchRefresh = {
+                StatusBus.during("Refreshing your channels") { yield() }
+                refreshed.complete(Unit)
+            },
+            syncingNas = SYNCING,
+        ).run()
+
+        assertThat(shownAfterRefresh).isEqualTo(SYNCING)
+    }
 
     @Test
     fun `with NAS auto-sync off, opening the app leaves the NAS alone`() = runTest {
@@ -89,11 +130,16 @@ class FirstOpenWorkTest {
             syncNas = {},
             catchUpNormaliser = { ran += "normaliser" },
             launchRefresh = { error("database full") },
+            syncingNas = SYNCING,
         )
 
         withContext(CoroutineExceptionHandler { _, t -> escaped += t }) { failing.run() }
 
         assertThat(ran).containsExactly("normaliser")
         assertThat(escaped).isEmpty()
+    }
+
+    private companion object {
+        const val SYNCING = "Syncing with your other devices"
     }
 }

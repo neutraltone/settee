@@ -14,10 +14,12 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.StatusBus
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -55,6 +57,7 @@ class LiveSkeletonTest {
 
     @After
     fun tearDown() {
+        StatusBus.set(null)
         catalogue.release()
         viewModels.clear()
         catalogue.close()
@@ -79,13 +82,13 @@ class LiveSkeletonTest {
         graph.catalogRepository.renormalizeAll()
     }
 
-    private fun setLive(hasSources: Boolean = true) {
+    private fun setLive(hasSources: Boolean = true, isSyncing: Boolean = false) {
         graph.settings.setGuidePreviewVideo(false)
         compose.setTvContent {
             LiveScreen(
                 isTelevision = true,
                 hasSources = hasSources,
-                isSyncing = false,
+                isSyncing = isSyncing,
                 onPlayChannel = { played += it },
                 onAddSource = {},
                 onRefresh = {},
@@ -135,5 +138,15 @@ class LiveSkeletonTest {
 
         compose.waitUntilAtLeastOneExists(hasText("No channels yet"), 5_000)
         assertThat(compose.onAllNodesWithTag(SKELETON_CARD).fetchSemanticsNodes()).isEmpty()
+    }
+
+    @Test
+    fun `a first sync says what it's fetching in its own words, not the corner's`() {
+        StatusBus.show("Refreshing your channels")
+        setLive(isSyncing = true)
+
+        compose.waitUntilAtLeastOneExists(hasText("Loading your channels"), 5_000)
+        compose.onNodeWithText("A large provider can take a couple of minutes", substring = true).assertExists()
+        compose.onNodeWithText("Refreshing your channels").assertDoesNotExist()
     }
 }

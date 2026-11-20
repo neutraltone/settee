@@ -10,48 +10,56 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * A single line of "what the app is doing right now" — loading channels, building the guide,
- * loading movies — with an optional 0..1 progress fraction so slow jobs can show a real bar rather
- * than a spinner that gives nothing away. Shown as a slim status bar, so a big provider's slow
- * moments read as visible work instead of a frozen screen. Deliberately app-wide and dead simple:
- * any background job announces itself, the shell shows whatever's current, and it clears when done.
+ * What the app is doing in the background (a Catalogue Refresh's steps, device sync), with an
+ * optional 0..1 progress fraction where the job really knows how far through it is. The main screen
+ * shows the newest line in its corner. Each job shows and clears its own line, so when two overlap
+ * the newer shows and the older comes back once the newer ends, rather than one job's finish wiping
+ * out the other's news.
  */
 object StatusBus {
+    private class Line(val message: String, val progress: Float?)
+
+    private val lines = mutableListOf<Line>()
+
     private val _message = MutableStateFlow<String?>(null)
 
-    /** The current background activity, or null when nothing noteworthy is happening. */
+    /** The newest background activity, or null when nothing noteworthy is happening. */
     val message: StateFlow<String?> = _message.asStateFlow()
 
     private val _progress = MutableStateFlow<Float?>(null)
 
-    /** 0..1 progress for [message], or null for indeterminate (show a spinner, not a bar). */
+    /** 0..1 progress for [message], or null when it can't tell (show the aerial TV, not a bar). */
     val progress: StateFlow<Float?> = _progress.asStateFlow()
 
-    fun set(message: String?, progress: Float? = null) {
-        _message.value = message
-        _progress.value = if (message == null) null else progress
+    /** Puts [message] up as the newest line, or updates its progress if it's already up. */
+    fun show(message: String, progress: Float? = null) = change {
+        val at = indexOfFirst { it.message == message }
+        if (at >= 0) set(at, Line(message, progress)) else add(Line(message, progress))
     }
 
-    /** Update just the fraction while a job runs, keeping the current message. */
-    fun setProgress(progress: Float?) {
-        _progress.value = progress
+    /** Takes [message] down, bar and all, leaving any other job's line up. */
+    fun clear(message: String) = change { removeAll { it.message == message } }
+
+    /** Replaces every line with [message], or clears them all with null. For tests, mostly. */
+    fun set(message: String?, progress: Float? = null) = change {
+        clear()
+        if (message != null) add(Line(message, progress))
     }
 
-    /**
-     * Take [message] down, bar and all, if it's still the one showing. A job that stops on its own
-     * schedule clears its line with this, so a line another job put up since stays.
-     */
-    fun clear(message: String) {
-        if (_message.compareAndSet(message, null)) _progress.value = null
-    }
-
-    /** Announce [message] while [block] runs, then clear it — even if the work throws. */
+    /** Announce [message] while [block] runs, then clear it, even if the work throws. */
     suspend fun <T> during(message: String, block: suspend () -> T): T {
-        set(message)
+        show(message)
         return try {
             block()
         } finally {
-            set(null)
+            clear(message)
         }
+    }
+
+    private fun change(edit: MutableList<Line>.() -> Unit) = synchronized(lines) {
+        lines.edit()
+        val newest = lines.lastOrNull()
+        _message.value = newest?.message
+        _progress.value = newest?.progress
     }
 }

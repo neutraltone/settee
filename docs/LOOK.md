@@ -330,7 +330,7 @@ One list, with Coming up, Recorded and Series links as headings, and a heading w
 
 ## Waiting
 
-Row and grid screens wait with **skeletons**; everything else waits with the **aerial TV**.
+Row and grid screens wait with **skeletons**; everything else waits with the **aerial TV**. Work in the background shows in the **corner**.
 
 ### Skeletons
 
@@ -342,14 +342,23 @@ Home, Movies, Shows and Live draw their own shape while their rows load, so the 
 - **Live:** skeleton guide rows only when channels are on the device and the guide is still being built from them, as on every cold start. With no channels on the device (a first sync, a failed load, no provider) Live says why in words.
 - **One slow pulse,** one layer over a skeleton's blank cards: its opacity eases between full and 65% and back every 1.8 s, about the aerial TV's beat. Never a shimmer across the cards: alive from the sofa, not a flashing light in a dark room. Like the aerial TV it keeps moving with the system's animations removed, the same essential-motion exception.
 - **The opening card can take the Highlight:** the first card of whichever row leads the screen while it's a skeleton (on Home, the Live Preview, Continue Watching or whatever row comes first; For you's top row on Movies and Shows) and the first row of Live's guide. It stands outside the pulse, so the Highlight on it holds steady. OK does nothing on it, and nothing else in the skeleton can take the Highlight, so Right and Down find nothing; Back and the tabs work. When the real row arrives the Highlight is already in place, on its first card. When a skeleton with the Highlight goes without cards (Continue Watching coming back empty), the row now leading takes it, skeleton or cards; if the viewer had moved it off, it stays where they put it. Every other skeleton card is out of the Highlight's reach.
-- **Never the status line:** building a screen is what the skeleton shows. The status line is for background work only (a Catalogue Refresh, sync, film details filling in).
+- **Never the corner:** building a screen is what the skeleton shows. The corner is for background work only.
+
+### The corner
+
+What Settee is doing in the background, in the top-right corner of the main screen (#583).
+
+- **What it says,** each only while it runs: "Refreshing your channels", "Refreshing movies and shows" and "Refreshing the TV guide", a Catalogue Refresh's steps, whatever started it; and "Syncing with your other devices" while the NAS sync runs as the app opens. Never a failure: those stay on Providers, Guide settings and the tabs' own messages. Never film details filling in, which can take hours on a big library and would never leave.
+- **The look:** one line tall, quiet Mushroom Body words on Surface with Card corners, and the small aerial TV before them. The guide is the only work that knows how far through it is, so it alone shows a short bar after its words in place of the TV, filled from the download's real share, empty until the first share arrives. No percentage. Words and bar stay as they were while it fades out.
+- **Where:** inside the screen margin, top right. Row titles start at the left, so it sits in the first row's title band, clear of the row's highlighted card and its ring. At the foot it covered the ring of a card in the last row, and as a line along the bottom it pushed every row up when work began. It's drawn over the screen, so nothing moves when it comes or goes, and the Highlight never reaches it. Never on Live TV: the programme details fill its top right, and Live's own messages say when the channels or guide are on their way, in their own words rather than the corner's.
+- **When:** only once there has been work for a second, since most refreshes finish sooner and a line that blinks reads as a flicker. The second counts from when the work began, not from each step, so a refresh of quick steps still shows. It fades in over 250 ms on the Arrive curve and fades out as the work ends. Each step and job has its own line: when they overlap, the newest shows, and the older comes back once the newer ends.
 
 ### The aerial TV
 
 The aerial TV: the TV from the mark, with its face on the screen and coral arcs rising from its aerials, fading as they spread. It's drawn in cream rather than in its tile, because the arcs need the dark screen behind them.
 
 - **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, phone pairing's two waits, and Setup while it works. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
-- **Small size,** at text height, in the status line at the foot of the main screen, and at the end of a row whose thing is being fetched, such as an OpenSubtitles result downloading: no face, thicker aerials, one arc. A row already done shows its icon there instead (Downloaded, for a subtitle already on the box).
+- **Small size,** at text height, in the corner of the main screen, and at the end of a row whose thing is being fetched, such as an OpenSubtitles result downloading: no face, thicker aerials, one arc. A row already done shows its icon there instead (Downloaded, for a subtitle already on the box).
 - **On the Highlight,** at the end of a highlighted row, it's drawn all in plum, as the row's text is: coral arcs would vanish into the coral and leave a TV that looks stuck.
 - **Always animated,** even when the system's animations are removed. It and the skeletons' pulse are the exceptions in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
 - **Drawn, not laid out:** a frame redraws only the indicator, so it stays within the budget below.

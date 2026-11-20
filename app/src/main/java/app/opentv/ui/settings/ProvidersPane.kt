@@ -48,7 +48,7 @@ internal fun ProvidersPane(
     onAddProvider: () -> Unit,
     onEditProvider: (sourceId: Long) -> Unit,
     // The activity's, the one the rest of the app uses: one per visit to Settings would collect the
-    // refresh's progress again, and announce it on the status bar beside the app's own.
+    // refresh's progress again, and announce it in the main screen's corner beside the app's own.
     viewModel: SourcesViewModel = viewModel(viewModelStoreOwner = activityOwner()),
 ) {
     val ui by viewModel.ui.collectAsState()

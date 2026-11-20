@@ -132,7 +132,7 @@ its first 16 KB (#469): an HTTP or network failure is worded by the rows below, 
 `error_playlist_empty`. A test that passes says what it found, from `test_ok_*`, worded on the TV
 (`TestOutcomeWording`) and sent to the phone's channel manager as the same sentence.
 
-The refresh row in Settings › Providers reads Refreshing… and then the result line, which points to
+The refresh row in Settings › Providers reads Refreshing and then the result line, which points to
 Providers (`refresh_done_with_provider_problems`), Guide settings (`refresh_done_with_problems`) or
 both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 

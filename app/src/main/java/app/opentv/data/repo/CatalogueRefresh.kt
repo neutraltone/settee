@@ -116,8 +116,13 @@ class CatalogueRefresh(
      */
     data class State(
         val refreshing: Boolean = false,
+        val refreshingChannels: Boolean = false,
+        /** Movies and shows downloading, whatever started it; [loadingVod] is only Movies or Shows opening. */
+        val refreshingMoviesAndShows: Boolean = false,
         val loadingVod: Boolean = false,
-        val buildingGuide: Boolean = false,
+        val refreshingGuide: Boolean = false,
+        /** How far through the running guide pass is, 0 to 1; null when there isn't one. */
+        val guideProgress: Float? = null,
         val last: Outcome? = null,
         /** The running or latest [Trigger.Setup]; null until one starts. */
         val setup: Setup? = null,
@@ -172,6 +177,8 @@ class CatalogueRefresh(
     private val refreshes = AtomicInteger()
     private val vodChecks = AtomicInteger()
     private val guideBuilds = AtomicInteger()
+    private val channelUpdates = AtomicInteger()
+    private val vodUpdates = AtomicInteger()
 
     private val providerTurns = ConcurrentHashMap<Long, Mutex>()
     private val liveDownloads = OneAtATime<CatalogRepository.SyncResult>()
@@ -229,11 +236,9 @@ class CatalogueRefresh(
         _state.update { it.copy(last = outcome) }
         if (outcome is Outcome.ChannelsLoaded) {
             scope.launch {
-                marking(guideBuilds, { copy(buildingGuide = it) }) {
-                    runCatching { syncGuide(force = false) }
-                        .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
-                        .onFailure { Log.w(TAG, "Guide failed to load for a new provider", it) }
-                }
+                runCatching { syncGuide(force = false) }
+                    .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
+                    .onFailure { Log.w(TAG, "Guide failed to load for a new provider", it) }
                 rescan()
             }
         }
@@ -325,20 +330,18 @@ class CatalogueRefresh(
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
                     run.running(SetupStep.GUIDE)
-                    // Marked and reported as adding a provider does, so whoever left for Live TV
-                    // hears how the guide went the way they would have without Setup.
-                    val guide = marking(guideBuilds, { copy(buildingGuide = it) }) {
-                        runCatching {
-                            syncGuide(force = false) { done ->
-                                run.update {
-                                    copy(bar = run.bar.advance(SetupStep.GUIDE, done.share), found = done.programmes)
-                                }
+                    // Reported as adding a provider does, so whoever left for Live TV hears how the
+                    // guide went the way they would have without Setup.
+                    val guide = runCatching {
+                        syncGuide(force = false) { done ->
+                            run.update {
+                                copy(bar = run.bar.advance(SetupStep.GUIDE, done.share), found = done.programmes)
                             }
                         }
-                            .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
-                            .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
-                            .getOrNull()
                     }
+                        .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
+                        .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
+                        .getOrNull()
                     // Only when nothing came through: one dead feed among good ones still gives a guide.
                     val failed = guide == null || (guide.feedsSucceeded == 0 && guide.feedsFailed > 0)
                     val step = StepDone(SetupStep.GUIDE, guide?.channelsMatched ?: 0, guide?.channelsTotal, failed)
@@ -454,7 +457,8 @@ class CatalogueRefresh(
      * caller doesn't write it twice: a later success replaces an old failure, and screens read it there.
      */
     private suspend fun live(source: Source): CatalogRepository.SyncResult = liveDownloads.share(source) {
-        catalog.fetchLive(source, clock()).also { result ->
+        val fetched = marking(channelUpdates, { copy(refreshingChannels = it) }) { catalog.fetchLive(source, clock()) }
+        fetched.also { result ->
             val failure = (result as? CatalogRepository.SyncResult.Failed)?.reason
             runCatching { sources.saveRefreshResult(source.id, failure) }.onFailure { e ->
                 if (e is CancellationException) throw e
@@ -471,7 +475,9 @@ class CatalogueRefresh(
                 // A refresh's list of providers can be minutes old by the time this one's turn comes,
                 // and the old account's titles would overwrite the new one's.
                 if (!catalog.holdsAccountOf(source)) return@share null
-                setup?.fetchLists(source) ?: catalog.fetchVod(source, now)
+                marking(vodUpdates, { copy(refreshingMoviesAndShows = it) }) {
+                    setup?.fetchLists(source) ?: catalog.fetchVod(source, now)
+                }
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
@@ -510,6 +516,8 @@ class CatalogueRefresh(
     /**
      * Guide passes take turns. One forced while another runs leaves out the feeds that pass has just
      * downloaded, since they're as fresh as the viewer could ask, but still downloads any it skipped.
+     * Every pass is marked, with how far through it is, whichever trigger started it: the periodic
+     * refresh's pass is the one most often running while someone browses.
      */
     private suspend fun syncGuide(
         force: Boolean,
@@ -520,12 +528,12 @@ class CatalogueRefresh(
             val now = clock()
             guidePassStarted.set(now)
             try {
-                guide.syncAll(
-                    now,
-                    force,
-                    skipFetchedSince = runningSince.takeIf { force && it > 0 },
-                    progress = progress,
-                )
+                marking(guideBuilds, { copy(refreshingGuide = it, guideProgress = if (it) guideProgress else null) }) {
+                    guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }) { done ->
+                        _state.update { it.copy(guideProgress = done.share) }
+                        progress(done)
+                    }
+                }
             } finally {
                 guidePassStarted.set(0)
             }

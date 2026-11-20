@@ -178,7 +178,7 @@ class SettingsProvidersRefreshTest {
 
         // As the work it queued would: the test's WorkManager doesn't run it.
         val refreshing = thread { runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) } }
-        waitFor("Refreshing…")
+        waitFor("Refreshing")
         highlighted().assertTextContains(refreshRow)
         letGo.countDown()
         refreshing.join(20_000)
