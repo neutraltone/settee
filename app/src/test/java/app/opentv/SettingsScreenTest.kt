@@ -335,7 +335,12 @@ class SettingsScreenTest {
         show(SettingsMemory(SettingsSection.Guide))
         waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        val before = runBlocking { graph.epgRepository.observeFeeds().first() }
+        // The screen makes sure every provider has its guide row in the background; done here too, so
+        // a provider an earlier test saved can't gain its row between the two reads.
+        val before = runBlocking {
+            graph.epgRepository.ensureFeeds()
+            graph.epgRepository.observeFeeds().first()
+        }
 
         compose.onNodeWithText("Add your own guide").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
