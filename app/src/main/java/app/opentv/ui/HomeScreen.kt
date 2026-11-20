@@ -302,7 +302,10 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
         runCatching { start.requestFocus() }
     }
     LaunchedEffect(target?.rowIndex) { target?.let { column.scrollToItem(it.rowIndex) } }
-    val opening = rememberOpeningPlace(placeNow = shelves.firstOrNull()?.holdsOpening == true)
+    // Whatever leads Home holds or takes its opening Highlight, as on For you: the rows can come in
+    // any order, and Continue Watching, which usually leads, can come back empty.
+    val top = shelves.firstOrNull()
+    val opening = rememberOpeningPlace(topPlace = top?.takeIf { it is HomeShelf.Place }?.row?.key)
     LazyColumn(
         state = column,
         verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
@@ -312,7 +315,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
             // Each kind of shelf draws its own composable, so its class is its content type.
             railReturnItem(key = shelf.row.key, contentType = shelf::class) {
                 val restoring = focus?.takeIf { target?.row == shelf.row.key }
-                val rowFocus = opening.focusFor(shelf.takesOpening, otherwise = restoring)
+                val rowFocus = opening.focusFor(top === shelf, otherwise = restoring)
                 fun pick(item: String, open: () -> Unit) {
                     picked = RowPick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
                     // Before the next screen starts: a second stream can cut off a single-connection
@@ -322,7 +325,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                 }
                 val leave: (String) -> LeaveScreen = { item -> { go -> pick(item, go) } }
                 when (shelf) {
-                    is HomeShelf.Place -> HomePlace(shelf, isTop = shelves.first() === shelf, opening)
+                    is HomeShelf.Place -> HomePlace(shelf, isTop = top === shelf, opening)
                     is HomeShelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         shelf.tile.open(
                             { channel -> confirmLive { pick(LIVE_PICK) { actions.onWatchLive(channel) } } },
@@ -332,7 +335,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                     is HomeShelf.Resume -> ContinueWatchingShelf(
                         shelf.cards,
                         // The large first card is only for when nothing sits above it.
-                        large = shelves.first() === shelf,
+                        large = top === shelf,
                         rowFocus,
                         onResume = { card -> pick(card.titleKey) { actions.onResume(card.key) } },
                         leave = { card -> leave(card.titleKey) },
@@ -378,31 +381,19 @@ private fun rememberRestoreFocus(target: RowPick?, fallback: FocusRequester, onD
 private sealed class HomeShelf(key: String, items: List<String>) {
     val row = PickRow(key, items)
 
-    /** Whether this is a place held for the top row, which takes the Highlight Home opens on. */
-    open val holdsOpening: Boolean get() = false
-
-    /** Whether this is a row that takes the Highlight over from that place when it lands. */
-    open val takesOpening: Boolean get() = false
-
-    class Live(val tile: LiveTile) : HomeShelf(LIVE_KEY, listOf(LIVE_PICK)) {
-        override val takesOpening get() = true
-    }
+    class Live(val tile: LiveTile) : HomeShelf(LIVE_KEY, listOf(LIVE_PICK))
 
     /** A row still on its way, its place held by blank cards. */
     sealed class Place(key: String) : HomeShelf(key, emptyList())
 
     /** The Live Preview still on its way, its place held by a blank tile. */
-    class LivePlace : Place(LIVE_KEY) {
-        override val holdsOpening get() = true
-    }
+    class LivePlace : Place(LIVE_KEY)
 
     /** One of the Home Rows, under [title]. */
     sealed class Row(key: String, items: List<String>, val title: Int) : HomeShelf(key, items)
 
     class Resume(val cards: List<ResumeItem>) :
-        Row(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.titleKey }, R.string.vod_continue_watching) {
-        override val takesOpening get() = true
-    }
+        Row(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.titleKey }, R.string.vod_continue_watching)
 
     /**
      * A row of covers; [showsStatus] when each says where the Profile is with its title. [titleArg]
@@ -428,10 +419,7 @@ private sealed class HomeShelf(key: String, items: List<String>) {
         )
 
     /** A Home Row still on its way, its place held by blank cards under its real [title]. */
-    class Skeleton(val kind: HomeRowKind, val title: Int) : Place(kind.key) {
-        // Continue Watching is the only Home Row a place is held for at the top: Home opens on it.
-        override val holdsOpening get() = kind == HomeRowKind.CONTINUE_WATCHING
-    }
+    class Skeleton(val kind: HomeRowKind, val title: Int) : Place(kind.key)
 }
 
 /**
@@ -440,7 +428,7 @@ private sealed class HomeShelf(key: String, items: List<String>) {
  */
 @Composable
 private fun ScreenFrameScope.HomePlace(place: HomeShelf.Place, isTop: Boolean, opening: OpeningPlace) {
-    val opens = opening.modifierIf(isTop && place.holdsOpening)
+    val opens = opening.modifierIf(isTop)
     when (place) {
         is HomeShelf.LivePlace -> SkeletonTile(LIVE_HEIGHT, opening = opens)
         is HomeShelf.Skeleton -> {

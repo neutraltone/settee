@@ -101,7 +101,7 @@ internal fun <T> ScreenFrameScope.ForYou(
     val focus = remember(target) { target?.let { CardFocus(it.index) { back.restoring = null } } }
     // The top row's place holds the Highlight For you opens on until the row lands (#581).
     val topRow = rowKeys.all.firstOrNull()
-    val opening = rememberOpeningPlace(placeNow = rowKeys.topIsPlace)
+    val opening = rememberOpeningPlace(topPlace = topRow.takeIf { rowKeys.topIsPlace })
     fun focusIn(row: String) = opening.focusFor(row == topRow, otherwise = focus?.takeIf { target?.row == row })
     fun openingIn(row: String) = opening.modifierIf(row == topRow)
     fun highlighted(row: String, item: String, index: Int) =
