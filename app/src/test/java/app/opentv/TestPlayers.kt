@@ -29,6 +29,7 @@ import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.player.PlayerController
@@ -187,6 +188,9 @@ class TestPlayers(private val context: Context) {
      */
     var limitStartUp = false
 
+    /** What [controller]s made from now on tell about their opens and errors. */
+    var diagnostics: PlaybackDiagnostics? = null
+
     /** How a controller's failing streams fail: by default, as a dropped connection does. */
     var failure: () -> IOException = { IOException("Connection dropped") }
 
@@ -214,6 +218,7 @@ class TestPlayers(private val context: Context) {
             dvr = dvr,
             liveRecording = liveRecording,
             limitStartUp = limitStartUp,
+            diagnostics = diagnostics,
             buildPlayer = {
                 val starts = window.takeUnless { hanging }
                 TestExoPlayerBuilder(context)

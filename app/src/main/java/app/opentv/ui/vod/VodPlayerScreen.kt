@@ -149,6 +149,7 @@ fun VodPlayerScreen(
                 growingDataSourceFactory =
                 app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
                 liveRecording = growingRec,
+                diagnostics = graph.diagnosticsLog,
             ),
         )
     }

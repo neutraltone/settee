@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Subtitles
@@ -83,6 +84,7 @@ enum class SettingsSection(@StringRes val title: Int, @StringRes val hint: Int, 
     Addons(R.string.settings_pane_addons, R.string.settings_pane_addons_hint, Icons.Filled.Extension),
     OpenSubtitles(R.string.opensubtitles_name, R.string.settings_pane_opensubtitles_hint, Icons.Filled.Subtitles),
     Manager(R.string.settings_pane_manager, R.string.settings_pane_manager_hint, Icons.Filled.PhoneAndroid),
+    Diagnostics(R.string.settings_pane_diagnostics, R.string.settings_pane_diagnostics_hint, Icons.Filled.MonitorHeart),
     About(R.string.settings_pane_about, R.string.settings_pane_about_hint, Icons.Filled.Info),
 }
 
@@ -145,6 +147,7 @@ fun SettingsScreen(
     onOpenLockedCategories: () -> Unit = {},
     onOpenFontLicences: () -> Unit = {},
     onOpenHomeRows: () -> Unit = {},
+    onOpenDiagnostics: () -> Unit = {},
     // A seam so tests can show each answer without reaching GitHub.
     checkForUpdate: UpdateCheck = CheckGitHub,
     // And one so tests can have OpenSubtitles whatever key the build has; the app's own by default.
@@ -252,6 +255,7 @@ fun SettingsScreen(
                         onOpenLockedCategories,
                         onOpenFontLicences,
                         onOpenHomeRows,
+                        onOpenDiagnostics,
                         checkForUpdate,
                         openSubtitles,
                     )
@@ -270,6 +274,7 @@ private fun Pane(
     onOpenLockedCategories: () -> Unit,
     onOpenFontLicences: () -> Unit,
     onOpenHomeRows: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
     checkForUpdate: UpdateCheck,
     openSubtitles: OpenSubtitles?,
 ) {
@@ -284,6 +289,7 @@ private fun Pane(
         SettingsSection.Addons -> AddonsPane()
         SettingsSection.OpenSubtitles -> openSubtitles?.let { OpenSubtitlesPane(it) }
         SettingsSection.Manager -> ManagerPane()
+        SettingsSection.Diagnostics -> DiagnosticsPane(onOpenDiagnostics)
         SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }
 }
