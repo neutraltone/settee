@@ -78,7 +78,8 @@ class PairingServerTest {
     @Test
     fun `a session that times out goes straight to saying so, never through Idle`() {
         // Idle is what the phone screen takes as another screen stopping the server, and listens again.
-        val timing = PairingServer(scope, PairingFonts(context), context::getString, sessionTimeoutMillis = 200)
+        val timing =
+            PairingServer(scope, PairingFonts(context), resources = { context.resources }, sessionTimeoutMillis = 200)
         val seen = java.util.Collections.synchronizedList(mutableListOf<PairingServer.State>())
         val watching = scope.launch(Dispatchers.Unconfined) { timing.state.collect { seen += it } }
         timing.start()
