@@ -14,7 +14,7 @@ plugins {
 // A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
 // Keep the marker comment: release-please finds the line by it, and without it a release PR bumps
 // CHANGELOG.md but not the APK's version.
-val appVersionName = "1.3.1" // x-release-please-version
+val appVersionName = "1.4.0" // x-release-please-version
 
 /** local.properties, which git ignores, read once for the built-in keys below; empty without one. */
 val localProperties = Properties().apply {
