@@ -366,21 +366,22 @@ class QuickChecks internal constructor(
     private val favourites: FavouriteDao,
     private val activeProfileId: StateFlow<Long>,
 ) {
-    /** Whether it has played anything: Home's Continue Watching. */
-    fun played(): Flow<Boolean> = playedKeyed("")
+    /** Whether Home's Continue Watching will likely have a card: a film's or a show's. */
+    fun anythingToContinue(): Flow<Boolean> = combine(filmToContinue(), showToContinue()) { a, b -> a || b }
 
-    /** Whether it has played a film: Movies' Continue Watching. */
-    fun playedFilms(): Flow<Boolean> = playedKeyed(MOVIE_PREFIX)
+    /** Whether Movies' Continue Watching will have a card: a film In Progress (a Watched one never makes one). */
+    fun filmToContinue(): Flow<Boolean> =
+        activeProfileId.flatMapLatest { positions.observeFilmInProgress(it, WATCHED_FRACTION) }
 
-    /** Whether it has played an episode: Shows' Continue Watching. */
-    fun playedEpisodes(): Flow<Boolean> = playedKeyed(EPISODE_PREFIX)
+    /**
+     * Whether Shows' Continue Watching will likely have a card: an episode In Progress, or Watched with
+     * an Up Next after it, which takes the episodes to tell, so any Watched episode counts.
+     */
+    fun showToContinue(): Flow<Boolean> = activeProfileId.flatMapLatest { positions.observeEpisodeToContinue(it) }
 
     /** Whether it has a Favourite of [kind], from the Favourites table alone. */
     fun hasFavourite(kind: StreamKind): Flow<Boolean> =
         activeProfileId.flatMapLatest { favourites.observeAny(it, kind) }
-
-    private fun playedKeyed(prefix: String): Flow<Boolean> =
-        activeProfileId.flatMapLatest { positions.observeAny(it, prefix) }
 }
 
 class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {

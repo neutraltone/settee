@@ -927,13 +927,13 @@ class VodViewModel @JvmOverloads constructor(
      * Highlight and pushes the row it was on off the screen.
      */
     val movieRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
-        graph.viewerLibrary.quickChecks.playedFilms(),
+        graph.viewerLibrary.quickChecks.filmToContinue(),
         graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
     )
 
     /** As [movieRowsExpected], for Shows. */
     val seriesRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
-        graph.viewerLibrary.quickChecks.playedEpisodes(),
+        graph.viewerLibrary.quickChecks.showToContinue(),
         graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
     )
 
@@ -1921,7 +1921,7 @@ class HomeViewModel @JvmOverloads constructor(
      * Because you watched has none: it starts from the row it last had, at once.
      */
     private val expected: Flow<Set<HomeRowKind>> = combine(
-        graph.viewerLibrary.quickChecks.played(),
+        graph.viewerLibrary.quickChecks.anythingToContinue(),
         graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
         graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
         graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.LIVE),

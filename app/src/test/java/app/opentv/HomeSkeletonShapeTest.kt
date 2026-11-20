@@ -92,6 +92,26 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
+    fun `a Profile whose only film is finished gets no place for Continue Watching`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).containsExactly(HomeRowKind.RECENT_SHOWS, HomeRowKind.RECENT_MOVIES)
+    }
+
+    @Test
+    fun `a finished episode still gets a place, for its Up Next`() = runTest {
+        graph.viewerLibrary.recordProgress("ep:5", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).contains(HomeRowKind.CONTINUE_WATCHING)
+    }
+
+    @Test
     fun `a row the Profile hid never gets a place`() = runTest {
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
         graph.profileSettings.arrangeHome(HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))

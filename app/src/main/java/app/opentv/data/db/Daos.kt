@@ -1543,14 +1543,32 @@ interface PlaybackPositionDao {
     suspend fun all(): List<PlaybackPosition>
 
     /**
-     * Whether a profile has played anything whose key starts [prefix] ("" for anything, "movie:",
-     * "ep:"): the quick check for a Continue Watching row.
+     * Whether a profile has a film In Progress: no hand mark, and not past [watched] of the way
+     * through, as Watched is worked out. The quick check for a film's Continue Watching card.
      */
     @Query(
-        "SELECT EXISTS(SELECT 1 FROM playback_positions " +
-            "WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%')",
+        """
+        SELECT EXISTS(
+          SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE 'movie:%'
+            AND mark IS NULL AND NOT (durationMillis > 0 AND positionMillis > durationMillis * :watched)
+        )
+        """,
     )
-    fun observeAny(profileId: Long, prefix: String): Flow<Boolean>
+    fun observeFilmInProgress(profileId: Long, watched: Double): Flow<Boolean>
+
+    /**
+     * Whether a profile has an episode not marked Unwatched: In Progress, or Watched with perhaps an
+     * Up Next after it. The quick check for a show's Continue Watching card.
+     */
+    @Query(
+        """
+        SELECT EXISTS(
+          SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE 'ep:%'
+            AND (mark IS NULL OR mark = 'WATCHED')
+        )
+        """,
+    )
+    fun observeEpisodeToContinue(profileId: Long): Flow<Boolean>
 
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
