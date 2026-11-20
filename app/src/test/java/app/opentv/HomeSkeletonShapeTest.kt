@@ -6,11 +6,7 @@
 package app.opentv
 
 import android.app.Application
-import androidx.room.Room
-import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
@@ -20,9 +16,6 @@ import app.opentv.data.repo.HomeRowKind
 import app.opentv.ui.HomeState
 import app.opentv.ui.HomeViewModel
 import com.google.common.truth.Truth.assertThat
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -52,21 +45,8 @@ import org.robolectric.annotation.Config
 class HomeSkeletonShapeTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
-    private val catalogue = HeldCatalogue()
-    private val graph = ServiceLocator.Graph(
-        app,
-        settingsFile = "home-skeleton-shape-test",
-        openDatabase = {
-            // On a file with WAL, as the app's is: in memory there is one connection, so a held read
-            // would hold up the quick checks too, which on the device read alongside it.
-            Room.databaseBuilder(app, OpenTvDatabase::class.java, DATABASE)
-                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                // Threads to spare: a held read keeps its thread, where a slow one only borrows it.
-                .setQueryExecutor(Executors.newCachedThreadPool())
-                .setQueryCallback({ sql, _ -> catalogue.onStatement(sql) }, Runnable::run)
-                .build()
-        },
-    )
+    private val catalogue = HeldCatalogue(app, "home-skeleton-shape-test")
+    private val graph = catalogue.graph
     private val db = graph.database
     private val viewModels = ViewModelsInTest()
 
@@ -82,8 +62,7 @@ class HomeSkeletonShapeTest {
     fun tearDown() {
         catalogue.release()
         runBlocking { viewModels.stopAll() }
-        db.close()
-        app.deleteDatabase(DATABASE)
+        catalogue.close()
         Dispatchers.resetMain()
     }
 
@@ -173,32 +152,5 @@ class HomeSkeletonShapeTest {
 
     private companion object {
         const val FILM_MILLIS = 6_000_000L
-        const val DATABASE = "home-skeleton-shape-test.db"
-    }
-}
-
-/**
- * Holds every read of the catalogue's tables, on the thread making it, until [release]: Home's cards
- * are built from them, its quick checks aren't.
- */
-private class HeldCatalogue {
-    @Volatile
-    private var holding = false
-    private val released = CountDownLatch(1)
-
-    fun hold() {
-        holding = true
-    }
-
-    fun release() = released.countDown()
-
-    fun onStatement(sql: String) {
-        if (holding && sql.trimStart().startsWith("SELECT", ignoreCase = true) && CATALOGUE.containsMatchIn(sql)) {
-            released.await(10, TimeUnit.SECONDS)
-        }
-    }
-
-    private companion object {
-        val CATALOGUE = Regex("""\b(movies|series|episodes|channels)\b""", RegexOption.IGNORE_CASE)
     }
 }

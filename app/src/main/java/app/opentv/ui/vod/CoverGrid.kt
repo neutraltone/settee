@@ -43,6 +43,7 @@ import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeSpace
+import app.opentv.ui.design.SkeletonGrid
 import app.opentv.ui.railReturnTarget
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -57,14 +58,14 @@ import kotlinx.coroutines.flow.filterNotNull
 @Composable
 internal fun ScreenFrameScope.CoverGrid(
     covers: List<TitleCover>?,
-    loading: String,
     empty: String,
     onHighlight: (Long) -> Unit,
     onOpen: (Long) -> Unit,
     onOptions: ((Long) -> Unit)?,
 ) {
     when {
-        covers == null -> return EmptyBrowse(VodEmpty.Loading(loading))
+        // Still loading: the grid's shape, so the covers fill in rather than replace a message.
+        covers == null -> return SkeletonGrid(liftRoom = GRID_LIFT_ROOM)
         covers.isEmpty() -> return EmptyBrowse(VodEmpty.Hint(empty, body = null))
     }
     val state = rememberLazyGridState()

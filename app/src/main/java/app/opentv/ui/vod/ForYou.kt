@@ -5,6 +5,9 @@
  */
 package app.opentv.ui.vod
 
+import app.opentv.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -52,6 +55,7 @@ import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.SkeletonCards
 import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
@@ -61,7 +65,10 @@ import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.railReturnItem
 import app.opentv.ui.restoreTarget
 
-/** For you's rows, top to bottom: Continue Watching, then [rows]. */
+/**
+ * For you's rows, top to bottom: Continue Watching, then [rows]. While [resumeLoading], Continue
+ * Watching's place is held by a skeleton, as a pending row's is.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun <T> ScreenFrameScope.ForYou(
@@ -72,12 +79,13 @@ internal fun <T> ScreenFrameScope.ForYou(
     onOpen: (T) -> Unit,
     onHighlight: (Long) -> Unit,
     options: @Composable (T) -> (() -> Unit)?,
+    resumeLoading: Boolean = false,
 ) {
     val column = rememberLazyListState()
     // Until the viewer moves down, a row that lands above the first (Recommended, worked out after
     // the others) is shown at the top, rather than the list holding on to the row that was first.
     var atTheTop by remember { mutableStateOf(true) }
-    val rowKeys = rowKeys(resume, rows)
+    val rowKeys = rowKeys(resume, rows, resumeLoading)
     LaunchedEffect(rowKeys.all.firstOrNull()) { if (atTheTop) column.scrollToItem(0) }
 
     // The highlighted cover's row goes to the top ([RowToTheTop]): a cover sits its row's title and
@@ -127,7 +135,17 @@ internal fun <T> ScreenFrameScope.ForYou(
             verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
             modifier = Modifier.fillMaxSize().focusGroup(),
         ) {
-            val first = if (resume.isNotEmpty()) 1 else 0
+            val first = if (resume.isNotEmpty() || resumeLoading) 1 else 0
+            if (resume.isEmpty() && resumeLoading) {
+                railReturnItem(key = CONTINUE_WATCHING, contentType = "continue-watching") {
+                    RowAtTop(0) {
+                        SkeletonShelf(
+                            stringResource(R.string.vod_continue_watching),
+                            SkeletonCards.ContinueWatching(largeFirst = false),
+                        )
+                    }
+                }
+            }
             if (resume.isNotEmpty()) {
                 railReturnItem(key = CONTINUE_WATCHING, contentType = "continue-watching") {
                     RowAtTop(0) {
@@ -232,9 +250,10 @@ private fun rememberForYouReturn(): ForYouReturn {
 /** For you's rows by key, top to bottom: [all] as the list draws them, [withCards] as a [RowPick] counts them. */
 private class RowKeys(val all: List<String>, val withCards: List<String>)
 
-private fun rowKeys(resume: List<ResumeItem>, rows: List<TitleRow<*>>): RowKeys {
+private fun rowKeys(resume: List<ResumeItem>, rows: List<TitleRow<*>>, resumeLoading: Boolean): RowKeys {
     val cw = listOfNotNull(CONTINUE_WATCHING.takeIf { resume.isNotEmpty() })
-    return RowKeys(cw + rows.map { it.key }, cw + rows.filter { it.titles.isNotEmpty() }.map { it.key })
+    val cwPlace = listOfNotNull(CONTINUE_WATCHING.takeIf { resume.isNotEmpty() || resumeLoading })
+    return RowKeys(cwPlace + rows.map { it.key }, cw + rows.filter { it.titles.isNotEmpty() }.map { it.key })
 }
 
 /** For you's rows with cards in them, as [restoreTarget] takes them. */

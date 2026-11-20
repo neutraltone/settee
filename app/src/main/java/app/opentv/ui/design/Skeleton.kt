@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 
 /** Which cards a [SkeletonShelf] holds the place of. */
@@ -88,6 +90,36 @@ fun ScreenFrameScope.SkeletonShelf(
                         }
                     } else {
                         Box(Modifier.testTag(SKELETON_CARD).then(blank))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A grid of covers still loading, as a category's whole grid lays them out: rows of blank covers
+ * filling the space, pulsing as one ([rememberSkeletonPulse]). None can take the Highlight.
+ */
+@Composable
+fun SkeletonGrid(modifier: Modifier = Modifier, liftRoom: Dp = SHELF_LIFT_ROOM) {
+    val pulse = rememberSkeletonPulse()
+    val cover = ArtCardSize.Portrait
+    BoxWithConstraints(modifier.fillMaxSize().padding(vertical = liftRoom)) {
+        // As many whole columns as the grid fits, and as many rows as reach the bottom.
+        val columns = ((maxWidth + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap)).toInt().coerceAtLeast(1)
+        val rows = ceil(maxHeight / (cover.height + SetteeSpace.RowGap)).toInt().coerceAtLeast(1)
+        Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
+            repeat(rows) {
+                Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap)) {
+                    repeat(columns) {
+                        Box(
+                            Modifier
+                                .testTag(SKELETON_CARD)
+                                .size(cover.width, cover.height)
+                                .then(pulse)
+                                .background(SetteeColors.Surface, SetteeShapes.Card),
+                        )
                     }
                 }
             }

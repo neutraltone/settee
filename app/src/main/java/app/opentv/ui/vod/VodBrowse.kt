@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,6 +58,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.ExpectedRows
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
@@ -97,9 +99,10 @@ fun MoviesScreen(
 ) {
     val resume = viewModel.continueWatchingMovies.collectAsState().value
     val favourites = viewModel.favouriteMovies.collectAsState().value
+    val expected = viewModel.movieRowsExpected.collectAsState().value
     val recommended by viewModel.recommendedMovies.collectAsState()
     val recommending by viewModel.recommendingMovies.collectAsState()
-    val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
+    val recentlyAdded = viewModel.recentlyAddedMovies.collectAsState().value
     val genreRows by viewModel.movieGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.moviesLoadFailure.collectAsState().value
@@ -112,10 +115,11 @@ fun MoviesScreen(
         if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
+    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded)
     val hasForYou = !resume.isNullOrEmpty() ||
         !favourites.isNullOrEmpty() ||
         recommended.isNotEmpty() ||
-        recentlyAdded.isNotEmpty() ||
+        !recentlyAdded.isNullOrEmpty() ||
         genreRows.isNotEmpty()
     val categories by viewModel.movieCategories.collectAsState()
     // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
@@ -133,7 +137,6 @@ fun MoviesScreen(
         grid = { onHighlight ->
             CoverGrid(
                 covers,
-                loading = stringResource(R.string.vod_loading_movies),
                 empty = stringResource(R.string.vod_empty_category_movies),
                 onHighlight = onHighlight,
                 onOpen = { id -> scope.launch { viewModel.movie(id)?.let(onOpenMovie) } },
@@ -144,8 +147,7 @@ fun MoviesScreen(
                 },
             )
         },
-        hasForYou = hasForYou,
-        forYouLoaded = resume != null && favourites != null,
+        forYou = loading.shown(hasForYou),
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
             providers = providers,
@@ -161,12 +163,13 @@ fun MoviesScreen(
             resume.orEmpty(),
             favourites.orEmpty(),
             recommended,
-            recentlyAdded,
+            recentlyAdded.orEmpty(),
             genreRows,
             onResume,
             onOpenMovie,
             onHighlight,
             recommending,
+            loading,
         )
     }
 }
@@ -185,9 +188,10 @@ fun SeriesScreen(
 ) {
     val resume = viewModel.continueWatchingSeries.collectAsState().value
     val favourites = viewModel.favouriteSeries.collectAsState().value
+    val expected = viewModel.seriesRowsExpected.collectAsState().value
     val recommended by viewModel.recommendedSeries.collectAsState()
     val recommending by viewModel.recommendingSeries.collectAsState()
-    val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
+    val recentlyAdded = viewModel.recentlyAddedSeries.collectAsState().value
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.showsLoadFailure.collectAsState().value
@@ -198,10 +202,11 @@ fun SeriesScreen(
         if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
+    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded)
     val hasForYou = !resume.isNullOrEmpty() ||
         !favourites.isNullOrEmpty() ||
         recommended.isNotEmpty() ||
-        recentlyAdded.isNotEmpty() ||
+        !recentlyAdded.isNullOrEmpty() ||
         genreRows.isNotEmpty()
     val categories by viewModel.seriesCategories.collectAsState()
     // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
@@ -219,7 +224,6 @@ fun SeriesScreen(
         grid = { onHighlight ->
             CoverGrid(
                 covers,
-                loading = stringResource(R.string.vod_loading_shows),
                 empty = stringResource(R.string.vod_empty_category_shows),
                 onHighlight = onHighlight,
                 onOpen = { id -> scope.launch { viewModel.series(id)?.let(onOpenSeries) } },
@@ -230,8 +234,7 @@ fun SeriesScreen(
                 },
             )
         },
-        hasForYou = hasForYou,
-        forYouLoaded = resume != null && favourites != null,
+        forYou = loading.shown(hasForYou),
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
             providers = providers,
@@ -247,12 +250,13 @@ fun SeriesScreen(
             resume.orEmpty(),
             favourites.orEmpty(),
             recommended,
-            recentlyAdded,
+            recentlyAdded.orEmpty(),
             genreRows,
             onResume,
             onOpenSeries,
             onHighlight,
             recommending,
+            loading,
         )
     }
 }
@@ -269,13 +273,14 @@ internal fun ScreenFrameScope.MovieShelves(
     onOpenMovie: (Movie) -> Unit,
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
+    loading: ForYouLoading = ForYouLoading.NONE,
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
     val rows = listOf(
-        TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
+        TitleRow("fav", stringResource(R.string.vod_favourites), favourites, pending = loading.favourites),
         TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
-        TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded),
+        TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded, pending = loading.recentlyAdded),
     ) + genreRows.map { TitleRow("g:${it.genre}", it.genre, it.items) }
     ForYou(
         resume,
@@ -285,6 +290,7 @@ internal fun ScreenFrameScope.MovieShelves(
         onOpen = onOpenMovie,
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfMovie(it)) },
+        resumeLoading = loading.continueWatching,
     )
 }
 
@@ -300,13 +306,14 @@ internal fun ScreenFrameScope.SeriesShelves(
     onOpenSeries: (Series) -> Unit,
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
+    loading: ForYouLoading = ForYouLoading.NONE,
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
     val rows = listOf(
-        TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
+        TitleRow("fav", stringResource(R.string.vod_favourites), favourites, pending = loading.favourites),
         TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
-        TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded),
+        TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded, pending = loading.recentlyAdded),
     ) + genreRows.map { TitleRow("g:${it.genre}", it.genre, it.items) }
     ForYou(
         resume,
@@ -316,6 +323,7 @@ internal fun ScreenFrameScope.SeriesShelves(
         onOpen = onOpenSeries,
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfSeries(it)) },
+        resumeLoading = loading.continueWatching,
     )
 }
 
@@ -337,6 +345,43 @@ internal class TitleRow<T>(
     val modifier: Modifier = Modifier,
     val pending: Boolean = false,
 )
+
+/**
+ * Which of For you's rows are still on their way, held by skeletons: those quick checks expect
+ * ([ExpectedRows]) whose cards haven't come, and Recently Added until it has.
+ */
+@Immutable
+internal data class ForYouLoading(
+    val continueWatching: Boolean,
+    val favourites: Boolean,
+    val recentlyAdded: Boolean,
+    /** Whether the quick checks are back, so For you knows which places to hold. */
+    val known: Boolean = true,
+) {
+    private val any get() = continueWatching || favourites || recentlyAdded
+
+    /** What Movies or Shows draws: nothing for the moment until the checks are back, else rows or why there are none. */
+    fun shown(hasForYou: Boolean): ForYouShown = when {
+        !known -> ForYouShown.WAITING
+        any || hasForYou -> ForYouShown.ROWS
+        else -> ForYouShown.EMPTY
+    }
+
+    companion object {
+        val NONE = ForYouLoading(continueWatching = false, favourites = false, recentlyAdded = false)
+
+        fun of(expected: ExpectedRows?, resume: List<*>?, favourites: List<*>?, recentlyAdded: List<*>?) =
+            ForYouLoading(
+                continueWatching = expected?.continueWatching == true && resume == null,
+                favourites = expected?.favourites == true && favourites == null,
+                recentlyAdded = recentlyAdded == null,
+                known = expected != null,
+            )
+    }
+}
+
+/** What Movies' or Shows' For you draws. */
+internal enum class ForYouShown { WAITING, ROWS, EMPTY }
 
 /** Movies' or Shows' own words for [vodEmpty]. */
 internal class EmptyWords(
@@ -425,8 +470,8 @@ internal sealed interface VodEmpty {
 }
 
 /**
- * Movies' or Shows' screen: For you's rows ([forYou]) once its top rows have loaded ([forYouLoaded]),
- * or [empty] when it has none, with the
+ * Movies' or Shows' screen: For you's [rows], some perhaps still skeletons, or [empty] when it has
+ * none ([forYou] says which), with the
  * Categories Sidebar tucked away to their left. It slides open and pushes the screen along, and
  * slides shut ([SidebarSlide]).
  *
@@ -445,10 +490,9 @@ private fun VodBrowse(
     onPickCategory: (String?) -> Unit,
     backdropFor: (Long) -> Flow<Backdrop?>,
     grid: @Composable ScreenFrameScope.(onHighlight: (Long) -> Unit) -> Unit,
-    hasForYou: Boolean,
-    forYouLoaded: Boolean,
+    forYou: ForYouShown,
     empty: VodEmpty,
-    forYou: @Composable ScreenFrameScope.(onHighlight: (Long) -> Unit) -> Unit,
+    rows: @Composable ScreenFrameScope.(onHighlight: (Long) -> Unit) -> Unit,
 ) {
     val backdrop = rememberRestingBackdrop(backdropFor)
     val slide = rememberSidebarSlide()
@@ -488,10 +532,8 @@ private fun VodBrowse(
                 Box(Modifier.weight(1f)) {
                     when {
                         category != null -> grid(backdrop.onHighlight)
-                        // Nothing until the rows at the top have loaded: arriving after the
-                        // Highlight, they pushed the row it was on off the screen.
-                        !forYouLoaded -> Unit
-                        hasForYou -> forYou(backdrop.onHighlight)
+                        forYou == ForYouShown.WAITING -> Unit
+                        forYou == ForYouShown.ROWS -> rows(backdrop.onHighlight)
                         else -> EmptyBrowse(empty)
                     }
                 }

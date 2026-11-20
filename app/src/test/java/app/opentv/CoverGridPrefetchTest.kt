@@ -118,7 +118,7 @@ class CoverGridPrefetchTest {
     @Test
     fun `covers are fetched ahead at the size their cards draw them`() {
         compose.setTvContent {
-            ScreenFrame { CoverGrid(covers("Film"), "Loading", "Nothing here", {}, {}, null) }
+            ScreenFrame { CoverGrid(covers("Film"), "Nothing here", {}, {}, null) }
         }
 
         val ahead = fetchedAhead()
@@ -131,7 +131,7 @@ class CoverGridPrefetchTest {
     fun `leaving the grid gives up on the covers it was fetching ahead`() {
         var open by mutableStateOf(true)
         compose.setTvContent {
-            ScreenFrame { if (open) CoverGrid(covers("Film"), "Loading", "Nothing here", {}, {}, null) }
+            ScreenFrame { if (open) CoverGrid(covers("Film"), "Nothing here", {}, {}, null) }
         }
         val ahead = fetchedAhead()
 
@@ -144,7 +144,7 @@ class CoverGridPrefetchTest {
     fun `new covers give up on the old ones it was fetching ahead`() {
         var category by mutableStateOf(covers("Film"))
         compose.setTvContent {
-            ScreenFrame { CoverGrid(category, "Loading", "Nothing here", {}, {}, null) }
+            ScreenFrame { CoverGrid(category, "Nothing here", {}, {}, null) }
         }
         val ahead = fetchedAhead()
 

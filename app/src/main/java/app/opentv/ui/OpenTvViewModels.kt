@@ -921,8 +921,27 @@ class VodViewModel @JvmOverloads constructor(
         viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
     }
 
-    // null until loaded, so Movies and Shows can wait for the rows at the top before drawing any:
-    // arriving after the Highlight, they pushed the row it was on down off the screen.
+    /**
+     * Which of For you's rows to hold places for before their cards come, from quick checks of the
+     * Profile's own small tables (#581); null until those are back. So a row never lands above the
+     * Highlight and pushes the row it was on off the screen.
+     */
+    val movieRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
+        graph.viewerLibrary.hasPlayedFilms(),
+        graph.viewerLibrary.favourites.hasAny(StreamKind.MOVIE),
+    )
+
+    /** As [movieRowsExpected], for Shows. */
+    val seriesRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
+        graph.viewerLibrary.hasPlayedEpisodes(),
+        graph.viewerLibrary.favourites.hasAny(StreamKind.SERIES),
+    )
+
+    private fun expectedRows(played: Flow<Boolean>, favourites: Flow<Boolean>) =
+        combine(played, favourites, ::ExpectedRows)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // null until loaded, which For you shows as a skeleton when [movieRowsExpected] expects the row.
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingMovies()
@@ -1079,15 +1098,16 @@ class VodViewModel @JvmOverloads constructor(
 
     // Each title once, where its newest Version puts it (ADR 0007). A provider adds a title's Versions
     // together, so more rows are read than shown.
-    val recentlyAddedMovies: StateFlow<List<Movie>> =
+    /** Null until first read, while For you holds the row's place with a skeleton. */
+    val recentlyAddedMovies: StateFlow<List<Movie>?> =
         graph.titleIndex.distinctMovies(graph.catalogRepository.recentlyAddedMovies(RECENT_ROWS_READ)) { it.id }
             .map { it.take(RECENT_TITLES_SHOWN) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val recentlyAddedSeries: StateFlow<List<Series>> =
+    val recentlyAddedSeries: StateFlow<List<Series>?> =
         graph.titleIndex.distinctSeries(graph.catalogRepository.recentlyAddedSeries(RECENT_ROWS_READ)) { it.id }
             .map { it.take(RECENT_TITLES_SHOWN) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // True while Recommended is being worked out, which takes seconds on a big library, so the
     // screen can keep its place with a placeholder row rather than have it land above the others.
@@ -1622,6 +1642,9 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
 
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
+
+/** Which of For you's rows Movies or Shows hold places for while they load: Recently Added always does. */
+data class ExpectedRows(val continueWatching: Boolean, val favourites: Boolean)
 
 /** A row's value once it has come; before it, the row is null in [HomeArrivals]. */
 private class Arrived<T>(val value: T)

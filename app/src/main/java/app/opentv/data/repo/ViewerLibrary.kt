@@ -244,11 +244,20 @@ class ViewerLibrary(
         .map { list -> cards.oneCardPerTitle(list).map { it.card } }
 
     /**
-     * Whether the active Profile has played anything, from its positions alone: quick enough for Home
-     * to hold Continue Watching's place before its cards are built.
+     * Whether the active Profile has played anything, from its positions alone: quick enough for a
+     * screen to hold Continue Watching's place before its cards are built.
      */
+    fun hasPlayed(): Flow<Boolean> = hasPlayedKeyed("")
+
+    /** As [hasPlayed], films only, for Movies. */
+    fun hasPlayedFilms(): Flow<Boolean> = hasPlayedKeyed(MOVIE_PREFIX)
+
+    /** As [hasPlayed], episodes only, for Shows. */
+    fun hasPlayedEpisodes(): Flow<Boolean> = hasPlayedKeyed(EPISODE_PREFIX)
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun hasPlayed(): Flow<Boolean> = activeProfileId.flatMapLatest { positions.observeAny(it) }
+    private fun hasPlayedKeyed(prefix: String): Flow<Boolean> =
+        activeProfileId.flatMapLatest { positions.observeAny(it, prefix) }
 
     /** Home's Continue Watching: movies and series together, most recently played first. */
     fun continueWatching(): Flow<List<ContinueWatchingCard>> = home().map { it.continueWatching }

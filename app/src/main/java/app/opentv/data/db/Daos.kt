@@ -1539,9 +1539,12 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
 
-    /** Whether a profile has played anything: Home's quick check for a Continue Watching row. */
-    @Query("SELECT EXISTS(SELECT 1 FROM playback_positions WHERE profileId = :profileId)")
-    fun observeAny(profileId: Long): Flow<Boolean>
+    /**
+     * Whether a profile has played anything whose key starts [prefix] ("" for anything, "movie:",
+     * "ep:"): the quick check for a Continue Watching row.
+     */
+    @Query("SELECT EXISTS(SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%')")
+    fun observeAny(profileId: Long, prefix: String): Flow<Boolean>
 
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
