@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,15 +24,19 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VersionTraits
 import app.opentv.data.repo.VodQualities
+import app.opentv.ui.AddonStreams
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.vod.MovieDetailContent
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PageVersions
@@ -104,7 +109,7 @@ class MovieDetailContentTest {
 
     private fun similarFilm(id: Long, name: String) = film.copy(id = id, streamId = "m$id", name = name)
 
-    private var findStreams: (suspend () -> List<StremioStream>) = { streams }
+    private var findStreams: (suspend () -> AddonStreams) = { AddonStreams.Found(streams) }
 
     private fun show(
         movie: Movie = film,
@@ -369,7 +374,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `a picker closed while it is still looking stays closed when the streams arrive`() {
-        val answer = CompletableDeferred<List<StremioStream>>()
+        val answer = CompletableDeferred<AddonStreams>()
         findStreams = { answer.await() }
         show(addons = true)
         compose.onNodeWithText("Add-on sources").performClick()
@@ -377,19 +382,56 @@ class MovieDetailContentTest {
 
         Espresso.pressBack()
         settle()
-        answer.complete(streams)
+        answer.complete(AddonStreams.Found(streams))
         settle()
 
         compose.onNodeWithText("Choose a stream").assertDoesNotExist()
     }
 
     @Test
+    fun `when every add-on fails, the picker says why, with Try again, which asks them again`() {
+        var asked = 0
+        findStreams = {
+            asked++
+            if (asked == 1) {
+                AddonStreams.Failed(
+                    ViewerError(
+                        "Can't reach the add-on. Check this TV is online and the address is right.",
+                        "UnknownHost",
+                    ),
+                )
+            } else {
+                AddonStreams.Found(streams)
+            }
+        }
+        show(addons = true)
+        compose.onNodeWithText("Add-on sources").requestFocus()
+        press(Key.DirectionCenter)
+
+        compose.onNodeWithText("Can't reach the add-on. Check this TV is online and the address is right.")
+            .assertIsDisplayed()
+        compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("UnknownHost"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("No streams found", substring = true).assertDoesNotExist()
+        compose.onNode(hasText("Try again") and isFocused()).assertExists()
+        captureScreen("movie_detail_addon_picker_failed")
+
+        // The page's own button keeps focus in its window under the dialog, so OK goes to the dialog's.
+        compose.onNode(hasText("Try again") and isFocused()).performKeyInput { pressKey(Key.DirectionCenter) }
+        settle()
+
+        assertThat(asked).isEqualTo(2)
+        compose.onNode(hasText("4K") and hasClickAction()).assertExists()
+    }
+
+    @Test
     fun `two add-ons offering the same link both show`() {
         val same = "https://example.com/same.mkv"
         findStreams = {
-            listOf(
-                StremioStream(url = same, title = "1080p", addonName = "First add-on"),
-                StremioStream(url = same, title = "1080p", addonName = "Second add-on"),
+            AddonStreams.Found(
+                listOf(
+                    StremioStream(url = same, title = "1080p", addonName = "First add-on"),
+                    StremioStream(url = same, title = "1080p", addonName = "Second add-on"),
+                ),
             )
         }
         show(addons = true)

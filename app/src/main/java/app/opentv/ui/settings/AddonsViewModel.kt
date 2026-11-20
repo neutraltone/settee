@@ -9,7 +9,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.remote.AddonFailure
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +20,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Backs Add-ons: the stored add-ons, and checking a new one against the live add-on before keeping it. */
-class AddonsViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class AddonsViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
 
     val addons: StateFlow<List<StremioAddon>> = graph.settings.stremioAddons
 
@@ -27,7 +31,9 @@ class AddonsViewModel(app: Application) : AndroidViewModel(app) {
         data object Idle : Status
         data object Checking : Status
         data class Added(val name: String) : Status
-        data object Invalid : Status
+
+        /** The add-on couldn't be added, and why, worded by [app.opentv.core.ErrorWording.ofAddon]. */
+        data class Failed(val error: ViewerError) : Status
     }
 
     private val _status = MutableStateFlow<Status>(Status.Idle)
@@ -39,12 +45,13 @@ class AddonsViewModel(app: Application) : AndroidViewModel(app) {
         if (url.isBlank()) return
         viewModelScope.launch {
             _status.value = Status.Checking
-            val name = withContext(Dispatchers.IO) { graph.stremioClient.fetchManifest(url) }
-            _status.value = if (name != null) {
+            // Only an AddonFailure is caught: cancellation, or a bug, isn't "can't reach the add-on".
+            _status.value = try {
+                val name = withContext(Dispatchers.IO) { graph.stremioClient.fetchManifest(url) }
                 graph.settings.addStremioAddon(StremioAddon(manifestUrl = url, name = name))
                 Status.Added(name)
-            } else {
-                Status.Invalid
+            } catch (failure: AddonFailure) {
+                Status.Failed(graph.errorWording.ofAddon(failure))
             }
         }
     }

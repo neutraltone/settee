@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Sedang merekam di %1$s — ketuk untuk menonton</string>
     <string name="rec_switch_soon_title">Segera merekam: %1$s</string>
     <string name="rec_switch_soon_text">Dimulai di %1$s dalam 30 detik — layar ini akan beralih ke sana</string>
-    <string name="rec_switch_banner">\"%1$s\" merekam di %2$s — layar ini akan beralih</string>
     <string name="rec_switch_keep_watching">Tetap menonton</string>
     <string name="rec_switch_channel_name">Alih otomatis rekaman</string>
     <string name="rec_switch_channel_desc">Memperingatkan sebelum mengalihkan layar ke rekaman terjadwal</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Penyedia Anda menyatakan akun ini tidak aktif. Tanyakan kepada mereka, lalu coba lagi.</string>
     <string name="error_bad_address">Alamat itu sepertinya tidak benar. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_not_a_panel">Alamat itu tidak menjawab seperti penyedia IPTV. Periksa alamat dan port di detail penyedia Anda, atau masuk ke Wi-Fi Anda jika diminta.</string>
+    <string name="error_addon_cant_reach_tv">Tidak dapat menjangkau add-on. Periksa apakah TV ini online dan alamatnya sudah benar.</string>
+    <string name="error_addon_cant_reach_device">Tidak dapat menjangkau add-on. Periksa apakah perangkat ini online dan alamatnya sudah benar.</string>
+    <string name="error_addon_timed_out">Add-on berhenti merespons. Mungkin sedang sibuk, jadi coba lagi sebentar lagi.</string>
+    <string name="error_addon_trouble">Add-on sedang bermasalah. Masalahnya ada di pihaknya, jadi coba lagi nanti.</string>
+    <string name="error_not_an_addon_tv">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet TV ini tidak meminta Anda masuk terlebih dahulu.</string>
+    <string name="error_not_an_addon_device">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet perangkat ini tidak meminta Anda masuk terlebih dahulu.</string>
+    <string name="error_addon_lookup_tv">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
+    <string name="error_addon_lookup_device">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
     <string name="error_device_refused">Penyedia Anda tidak menerima detail ini. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_guide">Gagal mengunduh panduan ini. Coba lagi sebentar lagi.</string>
     <string name="error_guide_empty">Panduan ini berhasil diunduh, tetapi tidak berisi acara. Periksa apakah tautannya benar.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles tidak menerima nama pengguna atau sandi itu. Periksa lalu coba lagi.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles mengeluarkan TV ini dari akun. Masuk lagi di Setelan.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
+    <string name="error_not_a_guide">Alamat itu bukan panduan acara. Periksa apakah tautannya benar, atau masuk ke Wi-Fi Anda jika diminta.</string>
+    <string name="settings_guide_bad_address">Itu bukan alamat web. Periksa apakah sudah diketik seperti yang ditunjukkan tautan panduan, misalnya example.com/guide.xml.</string>
 </resources>

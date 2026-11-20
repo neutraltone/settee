@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">正在 %1$s 上录制——点按观看</string>
     <string name="rec_switch_soon_title">即将开始录制：%1$s</string>
     <string name="rec_switch_soon_text">将在 30 秒后于 %1$s 开始——画面将自动切换</string>
-    <string name="rec_switch_banner">“%1$s”将在 %2$s 上录制——画面即将切换</string>
     <string name="rec_switch_keep_watching">继续观看</string>
     <string name="rec_switch_channel_name">录制自动切换</string>
     <string name="rec_switch_channel_desc">在画面切换到预约录制前发出提醒</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">你的提供商表示此账户未激活。请向他们确认后重试。</string>
     <string name="error_bad_address">该地址看起来不正确。请在“设置”中检查提供商信息。</string>
     <string name="error_not_a_panel">该地址的响应不像 IPTV 提供商。请在提供商信息中检查地址和端口，或在 Wi-Fi 要求时登录。</string>
+    <string name="error_addon_cant_reach_tv">无法连接到插件。请检查这台电视是否已联网，以及地址是否正确。</string>
+    <string name="error_addon_cant_reach_device">无法连接到插件。请检查本设备是否已联网，以及地址是否正确。</string>
+    <string name="error_addon_timed_out">插件停止了响应。它可能正忙，请稍后重试。</string>
+    <string name="error_addon_trouble">插件出现了问题。这是插件那边的问题，请稍后重试。</string>
+    <string name="error_not_an_addon_tv">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及这台电视的网络是否要求你先登录。</string>
+    <string name="error_not_an_addon_device">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及本设备的网络是否要求你先登录。</string>
+    <string name="error_addon_lookup_tv">无法查找这部电影来询问你的插件。请检查这台电视是否已联网，然后重试。</string>
+    <string name="error_addon_lookup_device">无法查找这部电影来询问你的插件。请检查本设备是否已联网，然后重试。</string>
     <string name="error_device_refused">你的提供商未接受这些信息。请在“设置”中检查提供商信息。</string>
     <string name="error_guide">无法下载此节目单。请稍后重试。</string>
     <string name="error_guide_empty">此节目单已下载，但其中没有节目。请确认链接是否正确。</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles 不接受该用户名或密码。请检查后重试。</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles 已将这台电视退出登录。请在设置中重新登录。</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles 已将此设备退出登录。请在设置中重新登录。</string>
+    <string name="error_not_a_guide">该地址不是节目指南。请检查链接是否正确，或在 Wi-Fi 要求时登录。</string>
+    <string name="settings_guide_bad_address">这不是网址。请检查是否按指南链接所示输入，例如 example.com/guide.xml。</string>
 </resources>

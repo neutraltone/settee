@@ -5,6 +5,7 @@
  */
 package app.opentv.pairing
 
+import android.content.res.Resources
 import android.util.Log
 import app.opentv.R
 import app.opentv.core.ServerProblem
@@ -61,10 +62,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 class PairingServer(
     private val scope: CoroutineScope,
     private val fonts: PairingFonts,
-    /** The app's strings, for what the phone is told once the TV answers. */
-    private val text: (Int) -> String,
+    /** The app's strings, in its language, for everything the phone's page says. */
+    private val resources: () -> Resources,
     sessionTimeoutMillis: Long = TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES),
 ) {
+
+    private val text: (Int) -> String = { resources().getString(it) }
 
     /** Ends a session left listening, so a code on screen isn't left open on the network for ever. */
     private val timer = SessionTimer(scope, sessionTimeoutMillis) {
@@ -112,7 +115,7 @@ class PairingServer(
          */
         class Received(val draft: Source, private val reply: CompletableDeferred<Reply>) : State {
             /** [error] is why the login failed, or null once the channels are in. */
-            fun answer(error: String?) {
+            fun answer(error: ViewerError?) {
                 val answered = if (error == null) Reply.AllDone else Reply.LoginFailed(error)
                 reply.complete(answered)
             }
@@ -144,7 +147,7 @@ class PairingServer(
     sealed interface Reply {
         data object AllDone : Reply
 
-        data class LoginFailed(val reason: String) : Reply
+        data class LoginFailed(val reason: ViewerError) : Reply
 
         /** The TV left pairing before it answered. */
         data object Stopped : Reply
@@ -265,7 +268,7 @@ class PairingServer(
 
         if (!PairingHttp.isPrivateAddress(client.inetAddress?.hostAddress)) {
             client.getOutputStream().write(
-                PairingHttp.httpResponse("403 Forbidden", "text/plain", "Local network only."),
+                PairingHttp.httpResponse("403 Forbidden", "text/plain", text(R.string.pairing_phone_local_only)),
             )
             return
         }
@@ -328,9 +331,9 @@ class PairingServer(
         val token = address?.token.orEmpty()
         val form = PairingHttp.parseFormEncoded(body)
         if (!codeMatches(output, form, token)) return
-        val draft = draftFrom(form)
+        val draft = draftFrom(form, text)
         if (draft == null) {
-            output.write(html(PairingPage.form(token, "Please fill in the server address.")))
+            output.write(formPage(token, text, ViewerError(text(R.string.pairing_phone_missing_address))))
             return
         }
         val reply = CompletableDeferred<Reply>()
@@ -346,7 +349,7 @@ class PairingServer(
                 // Still listening, with the same code and address, so the phone can put it right. Before
                 // the page goes, or the phone could have it, and try again, while this still says received.
                 session?.let { _state.value = State.Listening(it) }
-                output.write(html(PairingPage.form(token, answer.reason)))
+                output.write(formPage(token, text, answer.reason))
             }
             answer == Reply.AllDone && asked.thenOpenSubtitles -> {
                 // Straight on to OpenSubtitles' sign-in, on the same address, as the TV moves to that
@@ -375,15 +378,17 @@ class PairingServer(
                 PairingHttp.httpResponse(
                     "403 Forbidden",
                     "text/html",
-                    PairingPage.message("Too many attempts", "Start pairing again on the TV to get a new code."),
+                    PairingPage.message(
+                        text(R.string.pairing_phone_too_many_title),
+                        text(R.string.pairing_phone_too_many_body),
+                    ),
                 ),
             )
             stop(State.Failed(ServerProblem.TOO_MANY_CODES))
         } else {
             val left = MAX_CODE_ATTEMPTS - wrongCodeAttempts
-            output.write(
-                html(PairingPage.form(token, "That code doesn't match the one on the TV. $left attempts left.")),
-            )
+            val wrong = resources().getQuantityString(R.plurals.pairing_phone_wrong_code, left, left)
+            output.write(formPage(token, text, ViewerError(wrong)))
         }
         return false
     }
@@ -456,13 +461,23 @@ class PairingServer(
 /** [page] as the phone gets it. */
 private fun html(page: String): ByteArray = PairingHttp.httpResponse("200 OK", "text/html", page)
 
+/** The provider form again, saying [why] it came back, with the detail line the TV's `ErrorMessage` draws. */
+private fun formPage(token: String, text: (Int) -> String, why: ViewerError): ByteArray =
+    html(PairingPage.form(token, text, PairingPage.Error(why.sentence, why.detail)))
+
 /** The provider the phone's form describes; null without a server address. */
-private fun draftFrom(form: Map<String, String>): Source? {
+private fun draftFrom(form: Map<String, String>, text: (Int) -> String): Source? {
     val kind = if (form["kind"] == "m3u") SourceKind.M3U else SourceKind.XTREAM
     val url = form["url"].orEmpty().trim().ifEmpty { return null }
     return Source(
         name = form["name"].orEmpty().trim().ifBlank {
-            if (kind == SourceKind.XTREAM) "My provider" else "My playlist"
+            text(
+                if (kind == SourceKind.XTREAM) {
+                    R.string.onboarding_default_provider_name
+                } else {
+                    R.string.onboarding_default_playlist_name
+                },
+            )
         },
         kind = kind,
         url = url,
@@ -482,16 +497,13 @@ private fun afterProvider(answer: PairingServer.Reply?, text: (Int) -> String): 
         text(R.string.pairing_phone_stopped_title),
         text(R.string.pairing_phone_stopped_body),
     )
-    else -> PairingPage.message(
-        "Sent to your TV",
-        "You can put your phone down. The rest happens on the telly.",
-    )
+    else -> PairingPage.message(text(R.string.pairing_phone_sent_title), text(R.string.pairing_phone_sent_body))
 }
 
 /** The page the QR code opens for [asked], with why the TV turned the last try down when it did. */
 private fun phonePage(token: String, problem: ViewerError?, asked: PairingServer.Mode, text: (Int) -> String) =
     when (asked) {
-        is PairingServer.Mode.Provider -> PairingPage.form(token, null)
+        is PairingServer.Mode.Provider -> PairingPage.form(token, text, null)
         is PairingServer.Mode.OpenSubtitles -> PairingPage.openSubtitles(
             token,
             text,

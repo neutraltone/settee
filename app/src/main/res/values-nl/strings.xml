@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Nu aan het opnemen op %1$s — tik om te kijken</string>
     <string name="rec_switch_soon_title">Binnenkort opname: %1$s</string>
     <string name="rec_switch_soon_text">Begint over 30s op %1$s — dit scherm schakelt hierheen over</string>
-    <string name="rec_switch_banner">“%1$s” wordt opgenomen op %2$s — dit scherm schakelt over</string>
     <string name="rec_switch_keep_watching">Blijven kijken</string>
     <string name="rec_switch_channel_name">Automatisch wisselen bij opname</string>
     <string name="rec_switch_channel_desc">Waarschuwt voordat het scherm overschakelt naar een geplande opname</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Je provider zegt dat dit account niet actief is. Vraag het na bij je provider en probeer het dan opnieuw.</string>
     <string name="error_bad_address">Dat adres lijkt niet te kloppen. Controleer je providergegevens in Instellingen.</string>
     <string name="error_not_a_panel">Dat adres antwoordde niet als een IPTV-provider. Controleer het adres en de poort in je providergegevens, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
+    <string name="error_addon_cant_reach_tv">Kan de add-on niet bereiken. Controleer of deze tv online is en het adres klopt.</string>
+    <string name="error_addon_cant_reach_device">Kan de add-on niet bereiken. Controleer of dit apparaat online is en het adres klopt.</string>
+    <string name="error_addon_timed_out">De add-on reageert niet meer. Misschien is het er druk, dus probeer het zo opnieuw.</string>
+    <string name="error_addon_trouble">De add-on heeft problemen. Dat ligt aan hun kant, dus probeer het later opnieuw.</string>
+    <string name="error_not_an_addon_tv">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van deze tv niet eerst vraagt om je aan te melden.</string>
+    <string name="error_not_an_addon_device">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van dit apparaat niet eerst vraagt om je aan te melden.</string>
+    <string name="error_addon_lookup_tv">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_addon_lookup_device">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_device_refused">Je provider heeft deze gegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_guide">Kan deze gids niet downloaden. Probeer het zo opnieuw.</string>
     <string name="error_guide_empty">Deze gids is gedownload, maar er stonden geen programma\'s in. Controleer of het de juiste link is.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles accepteerde die gebruikersnaam of dat wachtwoord niet. Controleer ze en probeer het opnieuw.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles heeft deze tv afgemeld. Log opnieuw in via Instellingen.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
+    <string name="error_not_a_guide">Dat adres is geen gids. Controleer of het de juiste link is, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
+    <string name="settings_guide_bad_address">Dat is geen webadres. Controleer of het is getypt zoals de link van de gids het toont, bijvoorbeeld example.com/guide.xml.</string>
 </resources>

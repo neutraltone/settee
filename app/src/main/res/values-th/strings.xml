@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">กำลังบันทึกทาง %1$s — แตะเพื่อรับชม</string>
     <string name="rec_switch_soon_title">กำลังจะบันทึก: %1$s</string>
     <string name="rec_switch_soon_text">เริ่มทาง %1$s ในอีก 30 วินาที — หน้าจอนี้จะสลับไปที่นั่น</string>
-    <string name="rec_switch_banner">\"%1$s\" บันทึกทาง %2$s — หน้าจอนี้จะสลับไป</string>
     <string name="rec_switch_keep_watching">ดูรายการนี้ต่อ</string>
     <string name="rec_switch_channel_name">การสลับอัตโนมัติของการบันทึก</string>
     <string name="rec_switch_channel_desc">เตือนก่อนสลับหน้าจอไปยังรายการที่ตั้งเวลาบันทึกไว้</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">ผู้ให้บริการของคุณแจ้งว่าบัญชีนี้ไม่ได้ใช้งานอยู่ สอบถามผู้ให้บริการ แล้วลองอีกครั้ง</string>
     <string name="error_bad_address">ที่อยู่นั้นดูไม่ถูกต้อง ตรวจสอบรายละเอียดผู้ให้บริการของคุณในการตั้งค่า</string>
     <string name="error_not_a_panel">ที่อยู่นั้นไม่ได้ตอบกลับเหมือนผู้ให้บริการ IPTV ตรวจสอบที่อยู่และพอร์ตในรายละเอียดผู้ให้บริการของคุณ หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
+    <string name="error_addon_cant_reach_tv">เข้าถึงแอดออนไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่และที่อยู่ถูกต้อง</string>
+    <string name="error_addon_cant_reach_device">เข้าถึงแอดออนไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่และที่อยู่ถูกต้อง</string>
+    <string name="error_addon_timed_out">แอดออนหยุดตอบสนอง อาจกำลังมีผู้ใช้มาก ลองอีกครั้งในอีกสักครู่</string>
+    <string name="error_addon_trouble">แอดออนกำลังมีปัญหา ปัญหานี้อยู่ฝั่งแอดออน ลองอีกครั้งภายหลัง</string>
+    <string name="error_not_an_addon_tv">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของทีวีเครื่องนี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>
+    <string name="error_not_an_addon_device">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของอุปกรณ์นี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>
+    <string name="error_addon_lookup_tv">ค้นหาภาพยนตร์นี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_addon_lookup_device">ค้นหาภาพยนตร์นี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_device_refused">ผู้ให้บริการของคุณไม่ยอมรับรายละเอียดเหล่านี้ ตรวจสอบรายละเอียดผู้ให้บริการของคุณในการตั้งค่า</string>
     <string name="error_guide">ดาวน์โหลดผังรายการนี้ไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_guide_empty">ดาวน์โหลดผังรายการนี้แล้ว แต่ไม่มีรายการอยู่ในนั้น ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ไม่ยอมรับชื่อผู้ใช้หรือรหัสผ่านนั้น ตรวจสอบแล้วลองอีกครั้ง</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ออกจากระบบทีวีเครื่องนี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
+    <string name="error_not_a_guide">ที่อยู่นั้นไม่ใช่ผังรายการ ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
+    <string name="settings_guide_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ตามที่ลิงก์ของผังรายการแสดง เช่น example.com/guide.xml</string>
 </resources>

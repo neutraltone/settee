@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">В момента се записва на %1$s — докоснете, за да гледате</string>
     <string name="rec_switch_soon_title">Скоро запис: %1$s</string>
     <string name="rec_switch_soon_text">Започва на %1$s след 30 сек — този екран ще превключи към него</string>
-    <string name="rec_switch_banner">„%1$s“ се записва на %2$s — този екран ще превключи</string>
     <string name="rec_switch_keep_watching">Продължи да гледаш</string>
     <string name="rec_switch_channel_name">Автоматично превключване при запис</string>
     <string name="rec_switch_channel_desc">Предупреждава преди превключване на екрана към насрочен запис</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Доставчикът ви съобщава, че този акаунт не е активен. Свържете се с него, след което опитайте отново.</string>
     <string name="error_bad_address">Този адрес не изглежда правилен. Проверете данните на доставчика в Настройки.</string>
     <string name="error_not_a_panel">Този адрес не отговори като IPTV доставчик. Проверете адреса и порта в данните на доставчика или влезте в Wi-Fi мрежата, ако ви поиска.</string>
+    <string name="error_addon_cant_reach_tv">Няма връзка с добавката. Проверете дали този телевизор е свързан с интернет и дали адресът е верен.</string>
+    <string name="error_addon_cant_reach_device">Няма връзка с добавката. Проверете дали това устройство е свързано с интернет и дали адресът е верен.</string>
+    <string name="error_addon_timed_out">Добавката спря да отговаря. Може да е претоварена, затова опитайте отново след малко.</string>
+    <string name="error_addon_trouble">Добавката има проблеми. Те са от нейната страна, затова опитайте отново по-късно.</string>
+    <string name="error_not_an_addon_tv">Този адрес не даде добавка. Проверете дали е връзката към manifest.json и дали интернетът на този телевизор не иска първо да влезете.</string>
+    <string name="error_not_an_addon_device">Този адрес не даде добавка. Проверете дали е връзката към manifest.json и дали интернетът на това устройство не иска първо да влезете.</string>
+    <string name="error_addon_lookup_tv">Филмът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали този телевизор е свързан с интернет и опитайте отново.</string>
+    <string name="error_addon_lookup_device">Филмът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали това устройство е свързано с интернет и опитайте отново.</string>
     <string name="error_device_refused">Доставчикът ви не прие тези данни. Проверете данните на доставчика в Настройки.</string>
     <string name="error_guide">Тази програма не можа да се изтегли. Опитайте отново след малко.</string>
     <string name="error_guide_empty">Програмата се изтегли, но в нея няма предавания. Проверете дали връзката е правилна.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прие това потребителско име или парола. Проверете ги и опитайте отново.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles излезе от профила на този телевизор. Влезте отново от Настройки.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles излезе от профила на това устройство. Влезте отново от Настройки.</string>
+    <string name="error_not_a_guide">Този адрес не е програма. Проверете дали връзката е правилна или влезте в Wi-Fi мрежата, ако ви поиска.</string>
+    <string name="settings_guide_bad_address">Това не е уеб адрес. Проверете дали е въведен както в връзката на програмата, например example.com/guide.xml.</string>
 </resources>

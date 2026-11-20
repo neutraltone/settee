@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Aufnahme läuft auf %1$s — tippen zum Ansehen</string>
     <string name="rec_switch_soon_title">Aufnahme startet bald: %1$s</string>
     <string name="rec_switch_soon_text">Startet in 30 s auf %1$s — dieser Bildschirm wechselt automatisch dorthin</string>
-    <string name="rec_switch_banner">„%1$s” wird auf %2$s aufgenommen — dieser Bildschirm wechselt</string>
     <string name="rec_switch_keep_watching">Hier bleiben</string>
     <string name="rec_switch_channel_name">Automatischer Aufnahmewechsel</string>
     <string name="rec_switch_channel_desc">Warnt, bevor der Bildschirm zu einer geplanten Aufnahme wechselt</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Laut deinem Anbieter ist dieses Konto nicht aktiv. Frag bei ihm nach und versuch es dann erneut.</string>
     <string name="error_bad_address">Diese Adresse sieht nicht richtig aus. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_not_a_panel">Diese Adresse hat nicht wie ein IPTV-Anbieter geantwortet. Überprüfe Adresse und Port in deinen Anbieterdaten oder melde dich im WLAN an, falls es danach fragt.</string>
+    <string name="error_addon_cant_reach_tv">Das Add-on ist nicht erreichbar. Überprüfe, ob dieser Fernseher online ist und die Adresse stimmt.</string>
+    <string name="error_addon_cant_reach_device">Das Add-on ist nicht erreichbar. Überprüfe, ob dieses Gerät online ist und die Adresse stimmt.</string>
+    <string name="error_addon_timed_out">Das Add-on antwortet nicht mehr. Vielleicht ist es ausgelastet, also versuch es gleich noch einmal.</string>
+    <string name="error_addon_trouble">Das Add-on hat Probleme. Das liegt an ihm, also versuch es später erneut.</string>
+    <string name="error_not_an_addon_tv">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Fernsehers nicht erst eine Anmeldung verlangt.</string>
+    <string name="error_not_an_addon_device">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Geräts nicht erst eine Anmeldung verlangt.</string>
+    <string name="error_addon_lookup_tv">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieser Fernseher online ist, und versuch es dann erneut.</string>
+    <string name="error_addon_lookup_device">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieses Gerät online ist, und versuch es dann erneut.</string>
     <string name="error_device_refused">Dein Anbieter hat diese Angaben nicht akzeptiert. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_guide">Dieser Guide konnte nicht heruntergeladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_guide_empty">Dieser Guide wurde heruntergeladen, enthielt aber keine Sendungen. Überprüfe, ob es der richtige Link ist.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles hat diesen Benutzernamen oder dieses Passwort nicht akzeptiert. Prüfe beides und versuche es erneut.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles hat diesen Fernseher abgemeldet. Melde dich in den Einstellungen erneut an.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles hat dieses Gerät abgemeldet. Melde dich in den Einstellungen erneut an.</string>
+    <string name="error_not_a_guide">Diese Adresse ist kein Programmführer. Überprüfe, ob es der richtige Link ist, oder melde dich im WLAN an, falls es danach fragt.</string>
+    <string name="settings_guide_bad_address">Das ist keine Webadresse. Überprüfe, ob sie so eingegeben ist, wie der Link des Programmführers sie zeigt, etwa example.com/guide.xml.</string>
 </resources>

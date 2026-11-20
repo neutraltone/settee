@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -345,25 +346,33 @@ private fun GuideRow(
         row.programmes.filter { it.endUtcMillis > window.first && it.startUtcMillis < window.last }
     }
     val spans = remember(shown, window) { layOutCells(shown, window.first, window.last) }
-    val channel = remember { FocusRequester() }
-    val first = remember { FocusRequester() }
-    val last = remember { FocusRequester() }
+    val landing = remember { RowLanding() }
+    val channel = landing.channel
+    val first = landing.first
+    val last = landing.last
     // Paging a day, the window moves first and the programmes follow: land only once they're the new
     // day's, or the Highlight goes to a cell about to be replaced. A row with nothing on that day
     // lands on its channel, rather than losing the Highlight with the cell it was on.
     val forThisDay = row.programmes.all { it.endUtcMillis > window.first && it.startUtcMillis < window.last }
     if (land != null && forThisDay) {
         LaunchedEffect(land, shown) {
-            withFrameNanos {}
-            val target = when {
-                shown.isEmpty() -> channel
-                land == Land.Last -> last
-                else -> first
-            }
-            runCatching { target.requestFocus() }
+            landing.landOn(shown, land)
             onLanded()
         }
     }
+    // The window moves on at :00 and :30, and a programme ending then leaves the row, its cell and
+    // the Highlight with it. Worked out as the row composes, while that cell is still there: once
+    // it's gone, so is any sign it had the Highlight.
+    val highlighted = remember { HighlightedProgramme() }
+    val lostHighlight = remember(shown) { highlighted.isGoneFrom(shown) }
+    LaunchedEffect(shown) {
+        if (lostHighlight && land == null) {
+            highlighted.held = false
+            landing.landOn(shown, Land.First)
+        }
+    }
+    // Read when a cell goes, so the Rail comes back to whichever programme is first by then.
+    val railFallback by rememberUpdatedState(landing.target(shown, Land.First))
     Row(
         Modifier
             .fillMaxWidth()
@@ -414,6 +423,8 @@ private fun GuideRow(
                     onPrevDay = onPrevDay,
                     first = first,
                     last = last,
+                    highlighted = highlighted,
+                    railFallback = { railFallback },
                 )
             }
         }
@@ -495,13 +506,13 @@ private fun ProgrammeCells(
     onPrevDay: (() -> Unit)?,
     first: FocusRequester,
     last: FocusRequester,
+    highlighted: HighlightedProgramme,
+    railFallback: () -> FocusRequester,
 ) {
-    // By start rather than index, so a guide refresh that adds or drops a programme keeps the same one.
-    var highlightedStart by remember { mutableLongStateOf(Long.MIN_VALUE) }
-    val highlighted = shown.indexOfFirst { it.startUtcMillis == highlightedStart }
+    val highlightedIndex = shown.indexOfFirst { it.startUtcMillis == highlighted.start }
     // Read here, not in GuideGrid, so crossing a half hour recomposes the rows' cells and no more.
     val view = strip.view
-    val built = (cellsToBuild(spans, view.from, view.width) + listOf(0, shown.lastIndex, highlighted))
+    val built = (cellsToBuild(spans, view.from, view.width) + listOf(0, shown.lastIndex, highlightedIndex))
         .filter { it in shown.indices }
         .toSortedSet()
     var x = 0.dp
@@ -517,13 +528,16 @@ private fun ProgrammeCells(
                 width = span.width,
                 isNow = programme.isLiveAt(nowMillis),
                 onHighlight = {
-                    highlightedStart = programme.startUtcMillis
+                    highlighted.start = programme.startUtcMillis
+                    highlighted.held = true
                     onHighlight(programme)
                 },
+                onHighlightLost = { if (highlighted.start == programme.startUtcMillis) highlighted.held = false },
+                railFallback = railFallback,
                 onClick = { onProgramme(programme) },
                 onPastEnd = onNextDay.takeIf { i == shown.lastIndex },
                 onBeforeStart = onPrevDay.takeIf { i == 0 },
-                landing = listOfNotNull(first.takeIf { i == 0 }, last.takeIf { i == shown.lastIndex }),
+                landedOnBy = listOfNotNull(first.takeIf { i == 0 }, last.takeIf { i == shown.lastIndex }),
             )
         }
         x = span.end
@@ -532,29 +546,69 @@ private fun ProgrammeCells(
     if (stripEnd > x) Spacer(Modifier.width(stripEnd - x))
 }
 
+/**
+ * The row's programme last highlighted, by [start] rather than index so a guide refresh that adds
+ * or drops a programme keeps the same one, and whether it still [held] the Highlight. [start] is
+ * state, since its cell is kept built (the Rail comes back to it); [held] is plain, read as the row
+ * composes, and a change to it is no reason to compose again.
+ */
+private class HighlightedProgramme {
+    var start by mutableLongStateOf(Long.MIN_VALUE)
+    var held = false
+
+    /** Whether the programme with the Highlight has left [shown]. */
+    fun isGoneFrom(shown: List<GuideProgramme>): Boolean = held && shown.none { it.startUtcMillis == start }
+}
+
+/** Where in a row the Highlight lands: its first or last programme, or its channel when it has none. */
+private class RowLanding {
+    val channel = FocusRequester()
+    val first = FocusRequester()
+    val last = FocusRequester()
+
+    fun target(shown: List<GuideProgramme>, land: Land): FocusRequester = when {
+        shown.isEmpty() -> channel
+        land == Land.Last -> last
+        else -> first
+    }
+
+    /** On the next frame, once the cells are built: there may be none to land on. */
+    suspend fun landOn(shown: List<GuideProgramme>, land: Land) {
+        withFrameNanos {}
+        runCatching { target(shown, land).requestFocus() }
+    }
+}
+
 @Composable
 private fun ProgrammeCell(
     programme: GuideProgramme,
     width: Dp,
     isNow: Boolean,
     onHighlight: () -> Unit,
+    onHighlightLost: () -> Unit,
     onClick: () -> Unit,
     onPastEnd: (() -> Unit)?,
     onBeforeStart: (() -> Unit)?,
-    landing: List<FocusRequester>,
+    landedOnBy: List<FocusRequester>,
+    railFallback: () -> FocusRequester,
 ) {
     val railReturn = LocalRailReturn.current
     val self = remember { FocusRequester() }
+    // Gone while the Rail would come back to it (the window moved on past it): back to the row's
+    // first programme instead, without taking the Highlight from the Rail now.
+    DisposableEffect(self) { onDispose { if (railReturn.target === self) railReturn.target = railFallback() } }
     HighlightSurface(
         onClick = onClick,
         style = HighlightStyle.Cell,
         modifier = Modifier
-            .then(landing.fold(Modifier as Modifier) { m, requester -> m.focusRequester(requester) })
+            .then(landedOnBy.fold(Modifier as Modifier) { m, requester -> m.focusRequester(requester) })
             .focusRequester(self)
             .onFocusChanged {
                 if (it.isFocused) {
                     railReturn.target = self
                     onHighlight()
+                } else {
+                    onHighlightLost()
                 }
             }
             .onPreviewKeyEvent { event ->

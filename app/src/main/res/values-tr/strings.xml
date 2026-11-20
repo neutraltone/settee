@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Şu anda %1$s kaydediliyor — izlemek için dokunun</string>
     <string name="rec_switch_soon_title">Yakında kayıt: %1$s</string>
     <string name="rec_switch_soon_text">%1$s kanalında 30 sn içinde başlıyor — bu ekran ona geçecek</string>
-    <string name="rec_switch_banner">“%1$s” %2$s üzerinde kaydediliyor — bu ekran geçecek</string>
     <string name="rec_switch_keep_watching">Bu kanalda kal</string>
     <string name="rec_switch_channel_name">Kayıt otomatik geçişi</string>
     <string name="rec_switch_channel_desc">Ekran planlanan bir kayda geçmeden önce uyarır</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Sağlayıcınız bu hesabın etkin olmadığını söylüyor. Onlara danışın, ardından tekrar deneyin.</string>
     <string name="error_bad_address">Bu adres doğru görünmüyor. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_not_a_panel">Bu adres bir IPTV sağlayıcısı gibi yanıt vermedi. Sağlayıcı bilgilerinizdeki adresi ve bağlantı noktasını kontrol edin veya Wi-Fi isterse oturum açın.</string>
+    <string name="error_addon_cant_reach_tv">Eklentiye ulaşılamıyor. Bu TV\'nin internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
+    <string name="error_addon_cant_reach_device">Eklentiye ulaşılamıyor. Bu cihazın internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
+    <string name="error_addon_timed_out">Eklenti yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
+    <string name="error_addon_trouble">Eklenti sorun yaşıyor. Sorun onun tarafında, bu yüzden daha sonra tekrar deneyin.</string>
+    <string name="error_not_an_addon_tv">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu TV\'nin internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
+    <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
+    <string name="error_addon_lookup_tv">Eklentilerinize sormak için bu film aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_lookup_device">Eklentilerinize sormak için bu film aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_device_refused">Sağlayıcınız bu bilgileri kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_guide">Bu rehber indirilemedi. Birazdan tekrar deneyin.</string>
     <string name="error_guide_empty">Bu rehber indirildi ama içinde hiç program yoktu. Doğru bağlantı olduğunu kontrol edin.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles bu kullanıcı adını veya şifreyi kabul etmedi. Kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles bu televizyonun oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
+    <string name="error_not_a_guide">Bu adres bir rehber değil. Doğru bağlantı olduğunu kontrol edin veya Wi-Fi isterse oturum açın.</string>
+    <string name="settings_guide_bad_address">Bu bir web adresi değil. Rehberin bağlantısında göründüğü gibi yazıldığını kontrol edin, örneğin example.com/guide.xml.</string>
 </resources>

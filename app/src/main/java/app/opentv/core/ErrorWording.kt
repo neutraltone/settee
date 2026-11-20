@@ -8,6 +8,10 @@ package app.opentv.core
 import android.content.Context
 import androidx.annotation.StringRes
 import app.opentv.R
+import app.opentv.data.parser.NotAGuideException
+import app.opentv.data.remote.AddonFailure
+import app.opentv.data.remote.GuideAddressException
+import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
@@ -38,6 +42,9 @@ interface HttpStatus {
 }
 
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
+    /** What Test connection says when it passes, in the same language as its failures. */
+    val tests = TestOutcomeWording { resources }
+
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
 
@@ -55,7 +62,8 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
      */
     fun ofProvider(error: Throwable, @StringRes fallback: Int): ViewerError {
         if (error is ProviderException) return ofProvider(error, fallback)
-        return ViewerError(resources.getString(sentenceOf(error) ?: fallback), ViewerError.detailOf(codeOf(error)))
+        val sentence = networkSentenceOf(error, onTelevision) ?: fallback
+        return ViewerError(resources.getString(sentence), ViewerError.detailOf(codeOf(error)))
     }
 
     /** Anything else's [error]: always [sentence], with what went wrong on the detail line. */
@@ -63,6 +71,21 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         resources.getString(sentence),
         ViewerError.detailOf(codeOf(error), (error as? HttpStatus)?.status?.let { "HTTP $it" }),
     )
+
+    /**
+     * A guide's [error] in words. The provider's own guide ([fromProvider]) is worded as the provider
+     * is, so a login it turns down says so; any other guide has no provider to blame.
+     */
+    fun ofGuide(error: Throwable, fromProvider: Boolean): ViewerError = when {
+        error is NotAGuideException || error is GuideAddressException -> of(error, R.string.error_not_a_guide)
+        fromProvider -> ofProvider(error, R.string.error_guide)
+        // Only the status: the exception's type says nothing the status doesn't.
+        error is GuideDownloadException -> ViewerError(
+            resources.getString(if (error.status in NOT_A_GUIDE) R.string.error_not_a_guide else R.string.error_guide),
+            ViewerError.detailOf("HTTP ${error.status}"),
+        )
+        else -> of(error, R.string.error_guide)
+    }
 
     private fun ofProvider(error: ProviderException, @StringRes fallback: Int): ViewerError {
         val status = error.status
@@ -74,6 +97,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive
             Problem.BAD_ADDRESS -> R.string.error_bad_address
             Problem.DEVICE_REFUSED -> R.string.error_device_refused
+            Problem.NOT_A_PLAYLIST -> R.string.error_playlist_empty
             Problem.NOT_A_PANEL -> R.string.error_not_a_panel
             Problem.HTTP_STATUS, Problem.BAD_REPLY -> fallback
         }
@@ -117,6 +141,38 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         ),
         ViewerError.detailOf("HTTP $status"),
     )
+
+    /**
+     * Why a Stremio add-on couldn't be used, in its own words rather than [ofProvider]'s: an add-on
+     * isn't "your provider", and the viewer pasted its address themselves.
+     */
+    fun ofAddon(failure: AddonFailure): ViewerError = when (failure) {
+        is AddonFailure.NotAnAddon -> ofHardware(
+            R.string.error_not_an_addon_tv,
+            R.string.error_not_an_addon_device,
+            ViewerError.detailOf("NotAnAddon", failure.status?.let { "HTTP $it" }),
+        )
+        is AddonFailure.Http -> of(R.string.error_addon_trouble, "HTTP ${failure.status}")
+        is AddonFailure.NoLookup ->
+            ofHardware(
+                R.string.error_addon_lookup_tv,
+                R.string.error_addon_lookup_device,
+                codeOf(failure.cause ?: failure),
+            )
+        is AddonFailure.Unreachable -> {
+            val cause = failure.cause ?: failure
+            // SocketTimeoutException is one of these.
+            if (cause is InterruptedIOException) {
+                of(R.string.error_addon_timed_out, codeOf(cause))
+            } else {
+                ofHardware(
+                    R.string.error_addon_cant_reach_tv,
+                    R.string.error_addon_cant_reach_device,
+                    codeOf(cause),
+                )
+            }
+        }
+    }
 
     /** What went wrong with OpenSubtitles: finding, downloading or signing in. */
     fun ofOpenSubtitles(error: Throwable): ViewerError = when (error) {
@@ -168,12 +224,20 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         )
     }
 
-    @StringRes
-    private fun sentenceOf(error: Throwable): Int? = networkSentenceOf(error, onTelevision)
-
     companion object {
         private const val TOO_MANY_REQUESTS = 429
         private val SERVER_ERRORS = 500..599
+
+        /**
+         * A guide's address answering one of these is wrong or dead: trying again won't help. A
+         * login a guide wants is one no setting here can give it, so 401 and 403 are the same.
+         */
+        private val NOT_A_GUIDE = setOf(
+            HttpURLConnection.HTTP_NOT_FOUND,
+            HttpURLConnection.HTTP_GONE,
+            HttpURLConnection.HTTP_UNAUTHORIZED,
+            HttpURLConnection.HTTP_FORBIDDEN,
+        )
 
         /** An exception's type as the detail line shows it: "UnknownHost" for UnknownHostException. */
         fun codeOf(error: Throwable): String = error.javaClass.simpleName.removeSuffix("Exception")

@@ -29,6 +29,9 @@ open class ProviderException(
         DEVICE_REFUSED,
         HTTP_STATUS,
 
+        /** An address that answered, but not with a playlist: a web page, say, or an error in words. */
+        NOT_A_PLAYLIST(viewersToFix = true),
+
         /** A web page or a 404 where `player_api.php` should be: a wrong address or port, or a Wi-Fi sign-in page. */
         NOT_A_PANEL(viewersToFix = true),
 

@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Đang ghi trên %1$s — chạm để xem</string>
     <string name="rec_switch_soon_title">Sắp ghi: %1$s</string>
     <string name="rec_switch_soon_text">Bắt đầu trên %1$s sau 30 giây — màn hình này sẽ chuyển sang đó</string>
-    <string name="rec_switch_banner">“%1$s” ghi trên %2$s — màn hình này sẽ chuyển</string>
     <string name="rec_switch_keep_watching">Tiếp tục xem</string>
     <string name="rec_switch_channel_name">Tự động chuyển khi ghi hình</string>
     <string name="rec_switch_channel_desc">Cảnh báo trước khi chuyển màn hình sang bản ghi đã lên lịch</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Nhà cung cấp cho biết tài khoản này chưa hoạt động. Hỏi lại họ, rồi thử lại.</string>
     <string name="error_bad_address">Địa chỉ đó có vẻ không đúng. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_not_a_panel">Địa chỉ đó không phản hồi như một nhà cung cấp IPTV. Kiểm tra địa chỉ và cổng trong thông tin nhà cung cấp, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
+    <string name="error_addon_cant_reach_tv">Không thể kết nối tới tiện ích. Kiểm tra xem TV này có đang trực tuyến và địa chỉ có đúng không.</string>
+    <string name="error_addon_cant_reach_device">Không thể kết nối tới tiện ích. Kiểm tra xem thiết bị này có đang trực tuyến và địa chỉ có đúng không.</string>
+    <string name="error_addon_timed_out">Tiện ích đã ngừng phản hồi. Có thể nó đang bận, vì vậy hãy thử lại sau giây lát.</string>
+    <string name="error_addon_trouble">Tiện ích đang gặp sự cố. Đó là vấn đề phía tiện ích, vì vậy hãy thử lại sau.</string>
+    <string name="error_not_an_addon_tv">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của TV này không yêu cầu bạn đăng nhập trước.</string>
+    <string name="error_not_an_addon_device">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của thiết bị này không yêu cầu bạn đăng nhập trước.</string>
+    <string name="error_addon_lookup_tv">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem TV này có đang trực tuyến không, rồi thử lại.</string>
+    <string name="error_addon_lookup_device">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem thiết bị này có đang trực tuyến không, rồi thử lại.</string>
     <string name="error_device_refused">Nhà cung cấp không chấp nhận các thông tin này. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_guide">Không thể tải lịch phát này. Thử lại sau giây lát.</string>
     <string name="error_guide_empty">Đã tải lịch phát này, nhưng không có chương trình nào trong đó. Kiểm tra xem liên kết có đúng không.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles không chấp nhận tên người dùng hoặc mật khẩu đó. Hãy kiểm tra rồi thử lại.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles đã đăng xuất TV này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
+    <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
+    <string name="settings_guide_bad_address">Đó không phải địa chỉ web. Kiểm tra xem đã nhập đúng như liên kết của lịch phát sóng chưa, ví dụ example.com/guide.xml.</string>
 </resources>

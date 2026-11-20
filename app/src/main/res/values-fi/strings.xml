@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Tallennetaan nyt kanavalla %1$s — napauta katsoaksesi</string>
     <string name="rec_switch_soon_title">Tallennus pian: %1$s</string>
     <string name="rec_switch_soon_text">Alkaa kanavalla %1$s 30 s kuluttua — tämä näyttö vaihtuu siihen</string>
-    <string name="rec_switch_banner">“%1$s” tallentaa kanavalla %2$s — tämä näyttö vaihtuu</string>
     <string name="rec_switch_keep_watching">Jatka katselua</string>
     <string name="rec_switch_channel_name">Tallennuksen automaattinen vaihto</string>
     <string name="rec_switch_channel_desc">Varoittaa ennen näytön vaihtamista ajastettuun tallennukseen</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Palveluntarjoajasi mukaan tämä tili ei ole aktiivinen. Tarkista asia heiltä ja yritä sitten uudelleen.</string>
     <string name="error_bad_address">Osoite ei näytä oikealta. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_not_a_panel">Osoite ei vastannut kuin IPTV-palveluntarjoaja. Tarkista osoite ja portti palveluntarjoajasi tiedoista tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
+    <string name="error_addon_cant_reach_tv">Lisäosaa ei tavoiteta. Tarkista, että tämä televisio on verkossa ja että osoite on oikein.</string>
+    <string name="error_addon_cant_reach_device">Lisäosaa ei tavoiteta. Tarkista, että tämä laite on verkossa ja että osoite on oikein.</string>
+    <string name="error_addon_timed_out">Lisäosa lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
+    <string name="error_addon_trouble">Lisäosalla on ongelmia. Vika on sen päässä, joten yritä myöhemmin uudelleen.</string>
+    <string name="error_not_an_addon_tv">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän television internetyhteys vaadi ensin kirjautumista.</string>
+    <string name="error_not_an_addon_device">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän laitteen internetyhteys vaadi ensin kirjautumista.</string>
+    <string name="error_addon_lookup_tv">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_lookup_device">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ei hyväksynyt käyttäjätunnusta tai salasanaa. Tarkista ne ja yritä uudelleen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles kirjasi tämän television ulos. Kirjaudu uudelleen asetuksissa.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
+    <string name="error_not_a_guide">Osoite ei ole ohjelmaopas. Tarkista, että linkki on oikea, tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
+    <string name="settings_guide_bad_address">Tämä ei ole verkko-osoite. Tarkista, että se on kirjoitettu kuten oppaan linkki sen näyttää, esimerkiksi example.com/guide.xml.</string>
 </resources>

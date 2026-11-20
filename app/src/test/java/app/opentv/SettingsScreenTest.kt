@@ -44,6 +44,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
@@ -328,6 +329,29 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `an address that isn't one keeps the guide's entry screen open, saying why`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        show(SettingsMemory(SettingsSection.Guide))
+        waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val before = runBlocking { graph.epgRepository.observeFeeds().first() }
+
+        compose.onNodeWithText("Add your own guide").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        val entry = compose.entryKeyboard()
+        entry.type("not a guide")
+        entry.pressAction()
+
+        val why = app.getString(R.string.settings_guide_bad_address)
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText(app.getString(R.string.common_save))).assertExists()
+        captureScreen("settings_guide_bad_address")
+        assertThat(runBlocking { graph.epgRepository.observeFeeds().first() }).isEqualTo(before)
+        // Still on the box, to put it right (Down from it to Save is EntryScreenTest's).
+        assertThat(entry.highlighted()).isTrue()
+    }
+
+    @Test
     fun `OK on a guide opens its details, which turn it off and remove it`() {
         runBlocking { graph.epgRepository.addCustomFeed("Own guide 168", "http://127.0.0.1:9/own168.xml") }
         show(SettingsMemory(SettingsSection.Guide))
@@ -607,7 +631,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `Add an add-on asks for its address on an entry screen, and says when it isn't one`() {
+    fun `Add an add-on asks for its address on an entry screen, and says why one couldn't be added`() {
         show(SettingsMemory(SettingsSection.Addons))
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
 
@@ -616,15 +640,18 @@ class SettingsScreenTest {
         compose.entryKeyboard().run {
             assertThat(connection().first.inputType)
                 .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+            // Nothing listens on port 9 here, so the connection is refused.
             type("http://127.0.0.1:9/manifest.json")
             pressAction()
         }
 
         compose.waitUntil(10_000) {
-            compose.onAllNodes(hasText("Add an add-on") and hasText("That isn't an add-on's address", substring = true))
-                .fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasText("Can't reach the add-on.", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("Connect"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("That address didn't give an add-on", substring = true).assertDoesNotExist()
         compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
+        captureScreen("settings_addons_failed")
     }
 
     @Test

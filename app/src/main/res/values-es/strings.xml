@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Grabando ahora en %1$s — toca para ver</string>
     <string name="rec_switch_soon_title">Grabación pronto: %1$s</string>
     <string name="rec_switch_soon_text">Empieza en %1$s en 30 s — esta pantalla cambiará a ese canal</string>
-    <string name="rec_switch_banner">«%1$s» se graba en %2$s — esta pantalla cambiará</string>
     <string name="rec_switch_keep_watching">Seguir viendo</string>
     <string name="rec_switch_channel_name">Cambio automático de grabación</string>
     <string name="rec_switch_channel_desc">Avisa antes de cambiar la pantalla a una grabación programada</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Tu proveedor dice que esta cuenta no está activa. Consúltalo con ellos y vuelve a intentarlo.</string>
     <string name="error_bad_address">Esa dirección no parece correcta. Revisa los datos de tu proveedor en Ajustes.</string>
     <string name="error_not_a_panel">Esa dirección no respondió como un proveedor de IPTV. Revisa la dirección y el puerto en los datos de tu proveedor, o inicia sesión en tu Wi-Fi si te lo pide.</string>
+    <string name="error_addon_cant_reach_tv">No se puede conectar con el complemento. Comprueba que este televisor esté conectado a internet y que la dirección sea correcta.</string>
+    <string name="error_addon_cant_reach_device">No se puede conectar con el complemento. Comprueba que este dispositivo esté conectado a internet y que la dirección sea correcta.</string>
+    <string name="error_addon_timed_out">El complemento dejó de responder. Puede que esté ocupado, así que vuelve a intentarlo en un momento.</string>
+    <string name="error_addon_trouble">El complemento tiene problemas. Es cosa suya, así que vuelve a intentarlo más tarde.</string>
+    <string name="error_not_an_addon_tv">Esa dirección no dio un complemento. Comprueba que sea el enlace a manifest.json y que el internet de este televisor no te pida iniciar sesión antes.</string>
+    <string name="error_not_an_addon_device">Esa dirección no dio un complemento. Comprueba que sea el enlace a manifest.json y que el internet de este dispositivo no te pida iniciar sesión antes.</string>
+    <string name="error_addon_lookup_tv">No se pudo buscar esta película para preguntar a tus complementos. Comprueba que este televisor esté conectado a internet y vuelve a intentarlo.</string>
+    <string name="error_addon_lookup_device">No se pudo buscar esta película para preguntar a tus complementos. Comprueba que este dispositivo esté conectado a internet y vuelve a intentarlo.</string>
     <string name="error_device_refused">Tu proveedor no aceptó estos datos. Revisa los datos de tu proveedor en Ajustes.</string>
     <string name="error_guide">No se pudo descargar esta guía. Vuelve a intentarlo en un momento.</string>
     <string name="error_guide_empty">Esta guía se descargó, pero no tenía programas. Comprueba que sea el enlace correcto.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles no ha aceptado ese usuario o contraseña. Revísalos y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha cerrado la sesión de esta tele. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
+    <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>
+    <string name="settings_guide_bad_address">Eso no es una dirección web. Comprueba que esté escrita como la muestra el enlace de la guía, por ejemplo example.com/guide.xml.</string>
 </resources>

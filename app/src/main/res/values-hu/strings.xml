@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Most rögzítve: %1$s — koppintson a megtekintéshez</string>
     <string name="rec_switch_soon_title">Hamarosan felvétel: %1$s</string>
     <string name="rec_switch_soon_text">Kezdés itt: %1$s, 30 mp múlva — ez a képernyő átvált rá</string>
-    <string name="rec_switch_banner">„%1$s” felvétele itt: %2$s — ez a képernyő átvált</string>
     <string name="rec_switch_keep_watching">Nézés folytatása</string>
     <string name="rec_switch_channel_name">Felvétel automatikus váltása</string>
     <string name="rec_switch_channel_desc">Figyelmeztet, mielőtt a képernyő átvált egy ütemezett felvételre</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">A szolgáltató szerint ez a fiók nem aktív. Érdeklődjön náluk, majd próbálja újra.</string>
     <string name="error_bad_address">Ez a cím nem tűnik helyesnek. Ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="error_not_a_panel">Ez a cím nem úgy válaszolt, mint egy IPTV-szolgáltató. Ellenőrizze a címet és a portot a szolgáltató adataiban, vagy jelentkezzen be a Wi-Fi-hálózatba, ha kéri.</string>
+    <string name="error_addon_cant_reach_tv">A bővítmény nem érhető el. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
+    <string name="error_addon_cant_reach_device">A bővítmény nem érhető el. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
+    <string name="error_addon_timed_out">A bővítmény nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
+    <string name="error_addon_trouble">A bővítménynél problémák vannak. Ez az ő oldalán van, ezért próbálja újra később.</string>
+    <string name="error_not_an_addon_tv">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek a TV-nek az internete nem kér-e előbb bejelentkezést.</string>
+    <string name="error_not_an_addon_device">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek az eszköznek az internete nem kér-e előbb bejelentkezést.</string>
+    <string name="error_addon_lookup_tv">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, majd próbálja újra.</string>
+    <string name="error_addon_lookup_device">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, majd próbálja újra.</string>
     <string name="error_device_refused">A szolgáltató nem fogadta el ezeket az adatokat. Ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="error_guide">Nem sikerült letölteni ezt a műsorújságot. Próbálja újra egy kicsit később.</string>
     <string name="error_guide_empty">A műsorújság letöltődött, de nem volt benne műsor. Ellenőrizze, hogy a helyes linket adta-e meg.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">Az OpenSubtitles nem fogadta el ezt a felhasználónevet vagy jelszót. Ellenőrizd őket, és próbáld újra.</string>
     <string name="error_opensubtitles_token_tv">Az OpenSubtitles kijelentkeztette ezt a tévét. Jelentkezz be újra a Beállításokban.</string>
     <string name="error_opensubtitles_token_device">Az OpenSubtitles kijelentkeztette ezt az eszközt. Jelentkezz be újra a Beállításokban.</string>
+    <string name="error_not_a_guide">Ez a cím nem műsorújság. Ellenőrizze, hogy a megfelelő hivatkozás-e, vagy jelentkezzen be a Wi-Fi-hálózatba, ha kéri.</string>
+    <string name="settings_guide_bad_address">Ez nem webcím. Ellenőrizze, hogy úgy írta-e be, ahogy a műsorújság hivatkozása mutatja, például example.com/guide.xml.</string>
 </resources>

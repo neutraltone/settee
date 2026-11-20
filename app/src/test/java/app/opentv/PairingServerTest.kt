@@ -38,7 +38,7 @@ class PairingServerTest {
 
     private val scope = CoroutineScope(Dispatchers.Default)
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    private val server = PairingServer(scope, PairingFonts(context), context::getString)
+    private val server = PairingServer(scope, PairingFonts(context), resources = { context.resources })
 
     @After
     fun close() {
@@ -58,13 +58,17 @@ class PairingServerTest {
         return OkHttpClient().newCall(request).execute().use { it.code to it.body.string() }
     }
 
-    /** Sends a playlist from the phone's form, as the viewer would. */
-    private fun submit(session: PairingServer.Session): Pair<Int, String> {
+    /** Sends a playlist from the phone's form, as the viewer would: with [code] typed, at [url]. */
+    private fun submit(
+        session: PairingServer.Session,
+        code: String = session.confirmCode,
+        url: String = "http://example.com/list.m3u",
+    ): Pair<Int, String> {
         val form = okhttp3.FormBody.Builder()
             .add("t", session.url.substringAfter("t="))
-            .add("code", session.confirmCode)
+            .add("code", code)
             .add("kind", "m3u")
-            .add("url", "http://example.com/list.m3u")
+            .add("url", url)
             .build()
         val request = Request.Builder().url("http://${session.host}:${session.port}/submit").post(form).build()
         return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
@@ -156,19 +160,42 @@ class PairingServerTest {
     }
 
     @Test
-    fun `a login that fails shows why on the phone, which can try again`() {
+    fun `a login that fails shows why on the phone, with its detail line, and it can try again`() {
         val session = listening()
 
         val first = scope.async(Dispatchers.IO) { submit(session) }
-        received().answer(error = "Wrong username or password.")
+        received().answer(ViewerError("Wrong username or password.", "LoginRejected · HTTP 401"))
         val (_, page) = runBlocking { first.await() }
 
         assertThat(page).contains("<form")
         assertThat(page).contains("Wrong username or password.")
+        assertThat(page).contains("LoginRejected · HTTP 401")
         assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
         val second = scope.async(Dispatchers.IO) { submit(session) }
         received().answer(error = null)
         assertThat(runBlocking { second.await() }.second).contains("All done")
+    }
+
+    @Test
+    fun `a form sent without an address asks for one, in the app's words`() {
+        val session = listening()
+
+        val (_, page) = submit(session, url = "")
+
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_missing_address))
+    }
+
+    @Test
+    fun `a wrong code says how many tries are left, and too many ends pairing, in the app's words`() {
+        val session = listening()
+        val wrong = if (session.confirmCode == "000000") "111111" else "000000"
+
+        val (_, first) = submit(session, code = wrong)
+        val (_, last) = (2..5).map { submit(session, code = wrong) }.last()
+
+        assertThat(shown(first)).contains(context.resources.getQuantityString(R.plurals.pairing_phone_wrong_code, 4, 4))
+        assertThat(last).contains(context.getString(R.string.pairing_phone_too_many_title))
+        assertThat(last).contains(context.getString(R.string.pairing_phone_too_many_body))
     }
 
     @Test
@@ -179,6 +206,26 @@ class PairingServerTest {
 
         assertThat(code).isEqualTo(200)
         assertThat(page).contains("<form")
+    }
+
+    @Test
+    fun `the provider form's words come from the app's strings, both kinds' labels included`() {
+        val session = listening()
+
+        val page = shown(get(session.url).second)
+
+        listOf(
+            R.string.pairing_phone_form_title,
+            R.string.pairing_phone_form_body,
+            R.string.onboarding_xtream_login,
+            R.string.onboarding_m3u_url,
+            R.string.onboarding_server_address,
+            R.string.onboarding_playlist_url,
+            R.string.onboarding_playlist_help,
+            R.string.pairing_phone_code,
+            R.string.pairing_phone_send,
+            R.string.pairing_phone_sending,
+        ).forEach { assertThat(page).contains(context.getString(it)) }
     }
 
     @Test

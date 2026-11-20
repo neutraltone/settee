@@ -47,7 +47,7 @@ class RearmScheduledTest {
     private val engine = RecordingEngine(
         context,
         recordings,
-        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
+        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http),
         settings,
         EpgRepository(
             programmeDao = db.programmes(),

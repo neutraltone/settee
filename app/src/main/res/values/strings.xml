@@ -200,6 +200,7 @@
     <string name="settings_guide_updating">Updating the guide…</string>
     <string name="settings_guide_add_own">Add your own guide</string>
     <string name="settings_guide_own_address">Your guide\'s address</string>
+    <string name="settings_guide_bad_address">That isn\'t a web address. Check it\'s typed as the guide\'s link shows it, such as example.com/guide.xml.</string>
     <string name="settings_guide_own_name">Your own guide</string>
     <string name="settings_guide_use">Use this guide</string>
     <string name="settings_row_channels">Show, hide and star channels</string>
@@ -246,7 +247,6 @@
     <string name="settings_addons_add_note">By the address of its manifest. If it uses a debrid service, set your key up on the add-on\'s own site first.</string>
     <string name="settings_addons_address">Your add-on\'s address</string>
     <string name="settings_addons_address_hint">The link to its manifest, ending in manifest.json</string>
-    <string name="settings_addons_invalid">That isn\'t an add-on\'s address. Check it ends in manifest.json and try again.</string>
     <string name="settings_manager_scan">Scan this with your phone\'s camera, or type the address into a browser on the same wifi:</string>
     <string name="settings_manager_new_address">Get a new address</string>
     <string name="settings_manager_new_address_note">If the typed address has stopped working after a few wrong tries</string>
@@ -460,6 +460,21 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
+    <string name="pairing_phone_form_title">Set up Settee</string>
+    <string name="pairing_phone_form_body">Filling this in here beats using the remote.</string>
+    <string name="pairing_phone_name_optional">Name, optional</string>
+    <string name="pairing_phone_name_example">Living room provider</string>
+    <string name="pairing_phone_server_help">You can paste the whole line from your provider, and the extra bits get trimmed.</string>
+    <string name="pairing_phone_code">Code shown on your TV</string>
+    <string name="pairing_phone_code_help">This proves it\'s you in front of the TV.</string>
+    <string name="pairing_phone_send">Send to TV</string>
+    <string name="pairing_phone_sending">Sending to your TV…</string>
+    <string name="pairing_phone_local_only">Only a phone on the same network as your TV can open this page.</string>
+    <string name="pairing_phone_missing_address">Add your provider\'s address, then send it again.</string>
+    <string name="pairing_phone_too_many_title">Too many wrong codes</string>
+    <string name="pairing_phone_too_many_body">Start setting up from your phone again on the TV to get a new code.</string>
+    <string name="pairing_phone_sent_title">Sent to your TV</string>
+    <string name="pairing_phone_sent_body">You can put your phone down. Carry on on your TV.</string>
     <string name="pairing_starting">Getting pairing ready</string>
     <string name="pairing_got_it">Got it. Connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
@@ -642,7 +657,6 @@
     <string name="rec_switch_now_text">Now recording on %1$s. Tap to watch.</string>
     <string name="rec_switch_soon_title">Recording soon: %1$s</string>
     <string name="rec_switch_soon_text">Starts on %1$s in 30s. This screen will switch to it.</string>
-    <string name="rec_switch_banner">“%1$s” records on %2$s. This screen will switch.</string>
     <string name="rec_switch_keep_watching">Keep watching</string>
     <!-- Guard before opening live TV while a recording runs (single connection) -->
     <string name="rec_live_warn_title">Recording in progress</string>
@@ -744,7 +758,21 @@
     <string name="error_not_a_panel">That address didn\'t answer like an IPTV provider. Check the address and port in your provider\'s details, or sign in to your Wi-Fi if it asks.</string>
     <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
     <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
+    <string name="error_not_a_guide">That address isn\'t a guide. Check it\'s the right link, or sign in to your Wi-Fi if it asks.</string>
     <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
+    <string name="error_addon_cant_reach_tv">Can\'t reach the add-on. Check this TV is online and the address is right.</string>
+    <string name="error_addon_cant_reach_device">Can\'t reach the add-on. Check this device is online and the address is right.</string>
+    <string name="error_addon_timed_out">The add-on stopped responding. It may be busy, so try again in a moment.</string>
+    <string name="error_addon_trouble">The add-on is having problems. That\'s at its end, so try again later.</string>
+    <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
+    <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
+    <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
+    <string name="error_addon_lookup_device">Couldn\'t look this film up to ask your add-ons. Check this device is online, then try again.</string>
+    <string name="test_ok_xtream">Your login works.</string>
+    <string name="test_ok_xtream_user">Signed in as %1$s.</string>
+    <string name="test_ok_xtream_expires">Your subscription runs until %1$s.</string>
+    <string name="test_ok_stalker">Your portal accepted the MAC address.</string>
+    <string name="test_ok_playlist">Found your playlist. Save to load its channels.</string>
     <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
     <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
     <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>
@@ -821,6 +849,14 @@
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>
         <item quantity="other">%d problems</item>
+    </plurals>
+    <plurals name="pairing_phone_wrong_code">
+        <item quantity="one">That code doesn\'t match the one on your TV. %d try left.</item>
+        <item quantity="other">That code doesn\'t match the one on your TV. %d tries left.</item>
+    </plurals>
+    <plurals name="test_ok_xtream_connections">
+        <item quantity="one">Watch on %d screen at a time.</item>
+        <item quantity="other">Watch on %d screens at a time.</item>
     </plurals>
     <plurals name="refresh_channels_loaded">
         <item quantity="one">Loaded %d channel. The guide is loading in the background; Movies and Shows load when you open them.</item>

@@ -78,7 +78,7 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
         }
     }
 
-    /** 30s out: tell the viewer the screen is about to switch (banner in-app + a heads-up card). */
+    /** 30s out: tell the viewer the screen is about to switch (a Side Panel in-app + a heads-up card). */
     private fun onWarn(context: Context, id: Long) {
         val pending = goAsync()
         val app = context.applicationContext

@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Práve sa nahráva na %1$s — klepnutím sledujte</string>
     <string name="rec_switch_soon_title">Čoskoro nahrávanie: %1$s</string>
     <string name="rec_switch_soon_text">Začína na %1$s o 30 s — táto obrazovka naň prepne</string>
-    <string name="rec_switch_banner">„%1$s“ sa nahráva na %2$s — táto obrazovka prepne</string>
     <string name="rec_switch_keep_watching">Pokračovať v sledovaní</string>
     <string name="rec_switch_channel_name">Automatické prepnutie pri nahrávaní</string>
     <string name="rec_switch_channel_desc">Upozorní pred prepnutím obrazovky na naplánované nahrávanie</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Podľa poskytovateľa tento účet nie je aktívny. Overte si to u neho a potom to skúste znova.</string>
     <string name="error_bad_address">Táto adresa nevyzerá správne. Skontrolujte údaje poskytovateľa v Nastaveniach.</string>
     <string name="error_not_a_panel">Táto adresa neodpovedala ako poskytovateľ IPTV. Skontrolujte adresu a port v údajoch poskytovateľa alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
+    <string name="error_addon_cant_reach_tv">Doplnok nie je dostupný. Skontrolujte, či je tento televízor pripojený na internet a adresa je správna.</string>
+    <string name="error_addon_cant_reach_device">Doplnok nie je dostupný. Skontrolujte, či je toto zariadenie pripojené na internet a adresa je správna.</string>
+    <string name="error_addon_timed_out">Doplnok prestal odpovedať. Možno je vyťažený, preto to skúste o chvíľu znova.</string>
+    <string name="error_addon_trouble">Doplnok má problémy. Je to na jeho strane, preto to skúste neskôr.</string>
+    <string name="error_not_an_addon_tv">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto televízora od vás najprv nežiada prihlásenie.</string>
+    <string name="error_not_an_addon_device">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto zariadenia od vás najprv nežiada prihlásenie.</string>
+    <string name="error_addon_lookup_tv">Film sa nepodarilo dohľadať, aby sa mohli opýtať vaše doplnky. Skontrolujte, či je tento televízor pripojený na internet, a skúste to znova.</string>
+    <string name="error_addon_lookup_device">Film sa nepodarilo dohľadať, aby sa mohli opýtať vaše doplnky. Skontrolujte, či je toto zariadenie pripojené na internet, a skúste to znova.</string>
     <string name="error_device_refused">Poskytovateľ tieto údaje neprijal. Skontrolujte údaje poskytovateľa v Nastaveniach.</string>
     <string name="error_guide">Tento program sa nepodarilo stiahnuť. Skúste to o chvíľu znova.</string>
     <string name="error_guide_empty">Program sa stiahol, ale nie sú v ňom žiadne relácie. Skontrolujte, či je to správny odkaz.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles neprijali toto používateľské meno alebo heslo. Skontrolujte ich a skúste to znova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles tento televízor odhlásili. Prihláste sa znova v Nastaveniach.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
+    <string name="error_not_a_guide">Táto adresa nie je sprievodca. Skontrolujte, že ide o správny odkaz, alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
+    <string name="settings_guide_bad_address">To nie je webová adresa. Skontrolujte, že je zadaná tak, ako ju ukazuje odkaz na sprievodcu, napríklad example.com/guide.xml.</string>
 </resources>

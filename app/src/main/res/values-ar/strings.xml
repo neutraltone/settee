@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">جارٍ التسجيل الآن على %1$s — اضغط للمشاهدة</string>
     <string name="rec_switch_soon_title">تسجيل قريبًا: %1$s</string>
     <string name="rec_switch_soon_text">يبدأ على %1$s خلال 30 ثانية — سينتقل هذا العرض إليه</string>
-    <string name="rec_switch_banner">يتم تسجيل «%1$s» على %2$s — سينتقل هذا العرض</string>
     <string name="rec_switch_keep_watching">البقاء على هذه القناة</string>
     <string name="rec_switch_channel_name">التبديل التلقائي للتسجيل</string>
     <string name="rec_switch_channel_desc">يُنبّه قبل تبديل العرض إلى تسجيل مجدول</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">يقول مزوّدك إن هذا الحساب غير نشط. تواصل معه، ثم أعد المحاولة.</string>
     <string name="error_bad_address">لا يبدو هذا العنوان صحيحًا. تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="error_not_a_panel">لم يستجب هذا العنوان كمزوّد IPTV. تحقق من العنوان والمنفذ في بيانات مزوّدك، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>
+    <string name="error_addon_cant_reach_tv">تعذر الوصول إلى الإضافة. تأكد من أن هذا التلفاز متصل بالإنترنت وأن العنوان صحيح.</string>
+    <string name="error_addon_cant_reach_device">تعذر الوصول إلى الإضافة. تأكد من أن هذا الجهاز متصل بالإنترنت وأن العنوان صحيح.</string>
+    <string name="error_addon_timed_out">توقفت الإضافة عن الاستجابة. ربما تكون مشغولة، لذا أعد المحاولة بعد قليل.</string>
+    <string name="error_addon_trouble">تواجه الإضافة مشكلات. المشكلة من جهتها، لذا أعد المحاولة لاحقًا.</string>
+    <string name="error_not_an_addon_tv">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا التلفاز لا يطلب منك تسجيل الدخول أولًا.</string>
+    <string name="error_not_an_addon_device">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا الجهاز لا يطلب منك تسجيل الدخول أولًا.</string>
+    <string name="error_addon_lookup_tv">تعذر البحث عن هذا الفيلم لسؤال إضافاتك. تأكد من أن هذا التلفاز متصل بالإنترنت، ثم أعد المحاولة.</string>
+    <string name="error_addon_lookup_device">تعذر البحث عن هذا الفيلم لسؤال إضافاتك. تأكد من أن هذا الجهاز متصل بالإنترنت، ثم أعد المحاولة.</string>
     <string name="error_device_refused">لم يقبل مزوّدك هذه البيانات. تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="error_guide">تعذر تنزيل دليل البرامج هذا. أعد المحاولة بعد قليل.</string>
     <string name="error_guide_empty">تم تنزيل دليل البرامج هذا، لكنه لا يحتوي على أي برامج. تأكد من أنه الرابط الصحيح.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">لم يقبل OpenSubtitles اسم المستخدم أو كلمة المرور. تحقّق منهما وحاول مرة أخرى.</string>
     <string name="error_opensubtitles_token_tv">سجّل OpenSubtitles خروج هذا التلفاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
     <string name="error_opensubtitles_token_device">سجّل OpenSubtitles خروج هذا الجهاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
+    <string name="error_not_a_guide">هذا العنوان ليس دليل برامج. تحقق من أنه الرابط الصحيح، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>
+    <string name="settings_guide_bad_address">هذا ليس عنوان ويب. تحقق من كتابته كما يظهر في رابط الدليل، مثل example.com/guide.xml.</string>
 </resources>

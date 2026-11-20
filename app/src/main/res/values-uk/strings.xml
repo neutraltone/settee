@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Зараз записується на %1$s — торкніться, щоб дивитися</string>
     <string name="rec_switch_soon_title">Скоро запис: %1$s</string>
     <string name="rec_switch_soon_text">Починається на %1$s через 30 с — цей екран перемкнеться на нього</string>
-    <string name="rec_switch_banner">«%1$s» записується на %2$s — цей екран перемкнеться</string>
     <string name="rec_switch_keep_watching">Продовжити перегляд</string>
     <string name="rec_switch_channel_name">Автоперемикання запису</string>
     <string name="rec_switch_channel_desc">Попереджає перед перемиканням екрана на запланований запис</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">Провайдер повідомляє, що цей обліковий запис не активний. Уточніть у провайдера, потім спробуйте ще раз.</string>
     <string name="error_bad_address">Схоже, адреса неправильна. Перевірте дані провайдера в налаштуваннях.</string>
     <string name="error_not_a_panel">Ця адреса відповіла не як IPTV-провайдер. Перевірте адресу й порт у даних провайдера або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
+    <string name="error_addon_cant_reach_tv">Не вдається зв\'язатися з додатком. Перевірте, що цей телевізор підключений до інтернету і адреса правильна.</string>
+    <string name="error_addon_cant_reach_device">Не вдається зв\'язатися з додатком. Перевірте, що цей пристрій підключений до інтернету і адреса правильна.</string>
+    <string name="error_addon_timed_out">Додаток перестав відповідати. Можливо, він перевантажений, тож спробуйте ще раз трохи згодом.</string>
+    <string name="error_addon_trouble">У додатка проблеми. Це на його боці, тож спробуйте ще раз пізніше.</string>
+    <string name="error_not_an_addon_tv">За цією адресою немає додатка. Перевірте, що це посилання на manifest.json і що інтернет цього телевізора не вимагає спершу увійти.</string>
+    <string name="error_not_an_addon_device">За цією адресою немає додатка. Перевірте, що це посилання на manifest.json і що інтернет цього пристрою не вимагає спершу увійти.</string>
+    <string name="error_addon_lookup_tv">Не вдалося знайти фільм, щоб запитати ваші додатки. Перевірте, що цей телевізор підключений до інтернету, і спробуйте ще раз.</string>
+    <string name="error_addon_lookup_device">Не вдалося знайти фільм, щоб запитати ваші додатки. Перевірте, що цей пристрій підключений до інтернету, і спробуйте ще раз.</string>
     <string name="error_device_refused">Провайдер не прийняв ці дані. Перевірте дані провайдера в налаштуваннях.</string>
     <string name="error_guide">Не вдалося завантажити цю програму передач. Спробуйте ще раз трохи згодом.</string>
     <string name="error_guide_empty">Програма передач завантажилася, але в ній немає передач. Перевірте, що посилання правильне.</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прийняв це ім\'я користувача або пароль. Перевірте їх і спробуйте ще раз.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles вийшов з облікового запису на цьому телевізорі. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
+    <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
+    <string name="settings_guide_bad_address">Це не вебадреса. Перевірте, чи її введено так, як у посиланні на програму, наприклад example.com/guide.xml.</string>
 </resources>

@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">अभी %1$s पर रिकॉर्ड हो रहा है — देखने के लिए टैप करें</string>
     <string name="rec_switch_soon_title">जल्द रिकॉर्ड होगा: %1$s</string>
     <string name="rec_switch_soon_text">30 सेकंड में %1$s पर शुरू होगा — यह स्क्रीन उस पर स्विच हो जाएगी</string>
-    <string name="rec_switch_banner">“%1$s” %2$s पर रिकॉर्ड होगा — यह स्क्रीन स्विच हो जाएगी</string>
     <string name="rec_switch_keep_watching">देखते रहें</string>
     <string name="rec_switch_channel_name">रिकॉर्डिंग ऑटो-स्विच</string>
     <string name="rec_switch_channel_desc">किसी शेड्यूल्ड रिकॉर्डिंग पर स्क्रीन स्विच करने से पहले चेतावनी देता है</string>
@@ -272,6 +271,14 @@
     <string name="error_account_inactive">आपका प्रदाता कहता है कि यह खाता सक्रिय नहीं है। उनसे पूछें, फिर कोशिश करें।</string>
     <string name="error_bad_address">वह पता सही नहीं लगता। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_not_a_panel">उस पते ने IPTV प्रदाता की तरह जवाब नहीं दिया। अपने प्रदाता के विवरण में पता और पोर्ट जांचें, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
+    <string name="error_addon_cant_reach_tv">ऐड-ऑन तक नहीं पहुंचा जा सका। जांचें कि यह टीवी ऑनलाइन है और पता सही है।</string>
+    <string name="error_addon_cant_reach_device">ऐड-ऑन तक नहीं पहुंचा जा सका। जांचें कि यह डिवाइस ऑनलाइन है और पता सही है।</string>
+    <string name="error_addon_timed_out">ऐड-ऑन ने जवाब देना बंद कर दिया। हो सकता है वह व्यस्त हो, इसलिए थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="error_addon_trouble">ऐड-ऑन को दिक्कत आ रही है। यह उसकी तरफ़ की समस्या है, इसलिए बाद में फिर कोशिश करें।</string>
+    <string name="error_not_an_addon_tv">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस टीवी का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
+    <string name="error_not_an_addon_device">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस डिवाइस का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
+    <string name="error_addon_lookup_tv">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह टीवी ऑनलाइन है, फिर कोशिश करें।</string>
+    <string name="error_addon_lookup_device">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह डिवाइस ऑनलाइन है, फिर कोशिश करें।</string>
     <string name="error_device_refused">आपके प्रदाता ने ये विवरण स्वीकार नहीं किए। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_guide">यह गाइड डाउनलोड नहीं हो सकी। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_guide_empty">यह गाइड डाउनलोड हो गई, लेकिन इसमें कोई प्रोग्राम नहीं था। जांचें कि यह सही लिंक है।</string>
@@ -340,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ने यह यूज़रनेम या पासवर्ड स्वीकार नहीं किया। इन्हें जाँचें और फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ने इस टीवी को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
+    <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
+    <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
 </resources>

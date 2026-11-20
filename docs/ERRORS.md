@@ -126,6 +126,12 @@ Every refresh, whatever triggered it, saves each provider's channel-list failure
 - in Live TV's empty state, titled `guide_load_failed_title_named` with the provider's name, when
   there are no channels at all.
 
+Test connection on an M3U playlist fetches its address, with the provider's User-Agent, and reads only
+its first 16 KB (#469): an HTTP or network failure is worded by the rows below, so a 404 is
+`error_test_failed` with HTTP 404 on the detail line, and an answer that isn't a playlist is
+`error_playlist_empty`. A test that passes says what it found, from `test_ok_*`, worded on the TV
+(`TestOutcomeWording`) and sent to the phone's channel manager as the same sentence.
+
 The refresh row in Settings › Providers reads Refreshing… and then the result line, which points to
 Providers (`refresh_done_with_provider_problems`), Guide settings (`refresh_done_with_problems`) or
 both (`refresh_done_with_provider_and_guide_problems`), by what failed.
@@ -144,8 +150,9 @@ both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 | Provider answered with no channels | `error_no_channels` | Your provider sent no channels. Your account may not have any yet, so check with them. | NoChannels | Provider's: no package |
 | Channel list too big for memory (`OutOfMemoryError` while syncing) | `error_channel_list_memory_tv` / `_device` | Your provider's channel list needs more memory than this TV has. | OutOfMemory | This hardware: list too big |
 | Playlist with no channels | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup |
+| Test finding no `#EXTM3U` or `#EXTINF` at the start of the address's answer (`Problem.NOT_A_PLAYLIST`) | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NotAPlaylist | Viewer's setup: a web page or the wrong link |
 | Anything else while downloading | `error_catalogue` | Couldn't load your provider's channels. Try again in a moment. | exception type, or HTTP status | Unknown |
-| Test button, anything else | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type | Unknown |
+| Test button, anything else, including a playlist address answering 404 | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type, or HTTP status | Unknown, or a wrong playlist link |
 | The guide with no channels and no failure saved on a provider | `guide_load_failed_desc` | Try again in a moment, or check your provider's details in Settings. | none | Unknown |
 
 ## Show page episodes
@@ -183,12 +190,24 @@ instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeou
 
 ## Guides
 
-A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in Guide settings.
+A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in Guide settings, never
+in Home's banner. A guide the viewer added has no provider behind it, so its sentences never say "your
+provider"; the provider's own guide (`xmltv.php`) is worded as the provider is (see Providers above), with
+`error_guide` where that table falls back.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
+| Own guide answers 404, 410, 401 or 403 | `error_not_a_guide` | That address isn't a guide. Check it's the right link, or sign in to your Wi-Fi if it asks. | HTTP status | The viewer's: a wrong or dead link |
+| Any guide answers 200 with something other than XMLTV (a web page, plain text, JSON) | `error_not_a_guide` | (as above) | NotAGuide | The viewer's: an expired share link, a host's landing page, a Wi-Fi sign-in page |
+| Own guide saved with an address that isn't a web address (before entry checked it) | `error_not_a_guide` | (as above) | GuideAddress | The viewer's: a mistyped address |
+| Own guide answers any other status (429, 5xx, …) | `error_guide` | Couldn't download this guide. Try again in a moment. | HTTP status | The feed's server |
+| Provider's guide answers 401/403, 429, 5xx | `error_login`, `error_http_429`, `error_http_5xx` | (as in Providers) | HTTP status | The provider's |
 | Downloaded, no programmes | `error_guide_empty` | This guide downloaded, but had no programmes in it. Check it's the right link. | NoProgrammes | The feed's |
-| Any exception | `error_guide` | Couldn't download this guide. Try again in a moment. | exception type · HTTP status | The feed's server, or the network |
+| Any other exception | `error_guide` | Couldn't download this guide. Try again in a moment. | exception type · HTTP status | The feed's server, or the network |
+
+Guide settings' address entry adds `http://` to an address typed without a scheme, and won't save one
+that still isn't a web address: the entry window stays open with `settings_guide_bad_address` ("That
+isn't a web address. Check it's typed as the guide's link shows it, such as example.com/guide.xml.").
 
 ## Settings
 
@@ -204,8 +223,30 @@ A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in 
 | NAS sync: any exception | `sync_nas_failed` | Couldn't reach your NAS. Check it's on and the details in Recording settings are right. | exception type | The NAS, or the network |
 | Recording settings' Test connection (also the channel manager page's) | `recset_status_failed` | Couldn't connect to your NAS. Check it's on and these details are right. | exception type | The NAS, or its details |
 | Pairing, the channel manager: no network, wouldn't start, timed out, too many codes | `pairing_*`, `manager_*` (`_no_network_tv`/`_device`, `_failed_tv`/`_device`, `_timed_out`, `_too_many_codes`) | As sharing, for pairing or the channel manager | exception type when one was behind it | As sharing |
+| Phone's setup page opened from outside the TV's local network (HTTP 403, plain text) | `pairing_phone_local_only` | Only a phone on the same network as your TV can open this page. | none | Phone on mobile data, or another network |
+| Phone's setup page: sent without an address | `pairing_phone_missing_address` | Add your provider's address, then send it again. | none | Viewer's typing |
+| Phone's setup page: wrong code | `pairing_phone_wrong_code` (plurals) | That code doesn't match the one on your TV. 4 tries left. | none | Viewer's typing |
+| Phone's setup page: fifth wrong code | `pairing_phone_too_many_title`, `pairing_phone_too_many_body` | Too many wrong codes. Start setting up from your phone again on the TV to get a new code. | none | Viewer's typing, or someone guessing |
+| Phone's setup page: the provider's channels didn't load | As Provider connection | The TV's sentence, with its detail line under it | As Provider connection | As Provider connection |
 | Update check couldn't reach a release (`Outcome.CouldNotCheck`) | `about_check_failed` | Couldn't check for updates. Try again later. | HTTP status, EmptyReply, NoApk, or exception type | GitHub, the network, or a release missing its APK |
 | Update download failed | `update_failed_tv` / `_device` | Couldn't download the update. Check this TV is online, then try again. | exception type | The network |
+
+## Add-ons
+
+Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` throws. In Settings › Add-ons,
+under Add an add-on, when a pasted address couldn't be added; and in a film's Add-on sources picker,
+with a Try again that asks the add-ons again, only when every add-on failed or TMDB didn't answer. When at least one answered,
+the picker lists its streams, or says "No streams found from your add-ons for this title." (an empty
+state, not an error: no detail line), and the failing ones stay quiet. So does a film TMDB answers for but can't match
+to IMDb: that's "No streams found" too. An add-on that answers 404 for a film's streams has nothing for it, not a failure.
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| No answer: unknown host, refused, no route (`AddonFailure.Unreachable`) | `error_addon_cant_reach_tv` / `_device` | Can't reach the add-on. Check this TV is online and the address is right. | exception type | Viewer's network, or a mistyped host |
+| Timed out (`Unreachable` from a `SocketTimeoutException` or other `InterruptedIOException`) | `error_addon_timed_out` | The add-on stopped responding. It may be busy, so try again in a moment. | exception type | The add-on's server |
+| A 5xx (`AddonFailure.Http`) | `error_addon_trouble` | The add-on is having problems. That's at its end, so try again later. | HTTP status | The add-on's server |
+| Any other status but 2xx (a 404 for the manifest, a 401 or 403 from a personalised address), a web page or anything else that isn't JSON, or JSON with no `id` or `name` (`AddonFailure.NotAnAddon`) | `error_not_an_addon_tv` / `_device` | That address didn't give an add-on. Check it's the manifest.json link, and that this TV's internet doesn't need you to sign in first. | NotAnAddon · HTTP 404 (status when there was one) | The address or the key in it, or Wi-Fi asking to sign in |
+| Add-on sources only: TMDB, which turns the film into an IMDb id, didn't answer, so no add-on was asked (`AddonFailure.NoLookup`) | `error_addon_lookup_tv` / `_device` | Couldn't look this film up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
 
 ## OpenSubtitles
 
