@@ -19,6 +19,9 @@ jobs:
   build:
     name: Test and assemble
     runs-on: ubuntu-latest
+    # A Robolectric test JVM sometimes hangs on CI and never finishes; without a limit it holds the
+    # required checks pending for GitHub's six-hour default. Limits are about three times a normal run.
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v7
@@ -33,6 +36,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Unit tests
+        # Usually 6-8 minutes, 14 at the slowest seen. Its own limit, so a hang still leaves time
+        # for the test reports to upload.
+        timeout-minutes: 25
         run: ./gradlew test --stacktrace
 
       - name: Assemble debug APK
@@ -83,6 +89,7 @@ jobs:
   lint:
     name: Android Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v7
@@ -110,6 +117,7 @@ jobs:
   ktlint:
     name: ktlint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
@@ -129,6 +137,7 @@ jobs:
   detekt:
     name: detekt
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
@@ -156,6 +165,7 @@ jobs:
   screenshot-tools:
     name: Screenshot tools
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
@@ -190,6 +200,7 @@ jobs:
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GITLEAKS_VERSION: 8.30.1
 
