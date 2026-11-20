@@ -67,6 +67,7 @@ import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.SkeletonGuide
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.RowHighlight
@@ -642,6 +643,19 @@ private fun ProgrammeCell(
 private const val HOURS_IN_DAY = 24
 private const val HOUR_MS = 60 * 60 * 1000L
 private const val HALF_HOUR_MS = 30 * 60 * 1000L
+/**
+ * The guide's shape while its rows are first built from channels on the device: [SkeletonGuide] in
+ * the guide's own measures. Given [opening], its first row holds the Highlight until the rows come.
+ */
+@Composable
+internal fun GuideSkeleton(opening: Modifier?) = SkeletonGuide(
+    header = HEADER_HEIGHT,
+    rowHeight = ROW_HEIGHT,
+    channelColumn = CHANNEL_COLUMN,
+    halfHour = HALF_HOUR_WIDTH,
+    opening = opening,
+)
+
 private val CHANNEL_COLUMN = 220.dp
 private val ROW_HEIGHT = 56.dp
 private val HEADER_HEIGHT = 32.dp

@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.LongState
@@ -127,6 +130,71 @@ fun SkeletonGrid(modifier: Modifier = Modifier, liftRoom: Dp = SHELF_LIFT_ROOM) 
     }
 }
 
+/**
+ * A guide still being built, as the guide lays itself out: a band [header] tall, then rows [rowHeight]
+ * tall, each a blank channel cell [channelColumn] wide and blank programmes of a few lengths in
+ * [halfHour]s, filling the space and pulsing as one ([rememberSkeletonPulse]).
+ *
+ * Only the first row's channel cell can take the Highlight, given [opening]: the row the guide opens
+ * on, which holds it until the real rows arrive. OK does nothing on it.
+ */
+@Composable
+fun SkeletonGuide(
+    header: Dp,
+    rowHeight: Dp,
+    channelColumn: Dp,
+    halfHour: Dp,
+    modifier: Modifier = Modifier,
+    opening: Modifier? = null,
+) {
+    val pulse = rememberSkeletonPulse()
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val rows = ceil((maxHeight - header) / rowHeight).toInt().coerceAtLeast(1)
+        val width = maxWidth
+        Column(Modifier.padding(top = header)) {
+            repeat(rows) { row ->
+                Row(
+                    Modifier.height(rowHeight).wrapContentWidth(Alignment.Start, unbounded = true),
+                    horizontalArrangement = Arrangement.spacedBy(GUIDE_GAP),
+                ) {
+                    val cell = Modifier
+                        .width(channelColumn - GUIDE_GAP)
+                        .fillMaxHeight()
+                        .padding(vertical = GUIDE_GAP / 2)
+                    val blankCell = Modifier.fillMaxSize().then(pulse).background(SetteeColors.Surface, SetteeShapes.Cell)
+                    if (row == 0 && opening != null) {
+                        HighlightSurface(
+                            onClick = {},
+                            style = HighlightStyle.Cell,
+                            modifier = cell.then(opening).testTag(SKELETON_CARD),
+                        ) {
+                            Box(blankCell)
+                        }
+                    } else {
+                        Box(cell) { Box(blankCell.testTag(SKELETON_CARD)) }
+                    }
+                    // Programmes of a few lengths, each row starting at a different one, so it reads as a guide.
+                    var reached = channelColumn
+                    var block = row
+                    while (reached < width) {
+                        val length = halfHour * PROGRAMME_HALF_HOURS[block % PROGRAMME_HALF_HOURS.size]
+                        Box(
+                            Modifier
+                                .width(length - GUIDE_GAP)
+                                .fillMaxHeight()
+                                .padding(vertical = GUIDE_GAP / 2)
+                                .then(pulse)
+                                .background(SetteeColors.Surface, SetteeShapes.Cell),
+                        )
+                        reached += length
+                        block++
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** How many [cards] it takes to reach across [width]: the last may run past the edge, none wholly beyond it. */
 private fun cardsToFill(width: Dp, cards: SkeletonCards): Int {
     var reached = 0.dp
@@ -182,6 +250,12 @@ private const val PULSE_MILLIS = 1_800L
 
 /** How far the pulse dims the cards: a third, enough to see it breathe, not to see it blink. */
 private const val PULSE_LOW = 0.65f
+
+/** A guide skeleton's programmes, in half hours, in turn. */
+private val PROGRAMME_HALF_HOURS = listOf(2, 1, 3, 2, 1, 4)
+
+/** Between a guide skeleton's blocks, as the guide's rules part its cells. */
+private val GUIDE_GAP = 4.dp
 
 /** As much as a Shelf leaves above and below its covers: placeholders are as tall as a row. */
 private val SHELF_LIFT_ROOM = 12.dp

@@ -39,7 +39,6 @@
     <string name="guide_no_info">Još nema podataka vodiča</string>
     <string name="guide_loading_channels">Učitavanje vaših kanala</string>
     <string name="guide_fetching_desc">Dohvaćanje popisa kanala i vodiča od vašeg pružatelja usluge. Kod velikog pružatelja usluge prvi put može potrajati nekoliko minuta.</string>
-    <string name="guide_building_desc">Izrada vodiča na temelju kanala spremljenih na ovom uređaju. Kod velikog pružatelja usluge ovo traje malo dulje — uskoro će se pojaviti.</string>
     <string name="guide_no_favourites_title">Još nema favorita</string>
     <string name="guide_no_channels_title">Još nema kanala</string>
     <string name="guide_add_provider_desc">Kanali vašeg pružatelja usluge pojavit će se ovdje. Dodajte svog pružatelja usluge za početak.</string>

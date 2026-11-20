@@ -39,7 +39,6 @@
     <string name="guide_no_info">Noch keine Programminformationen</string>
     <string name="guide_loading_channels">Deine Sender werden geladen</string>
     <string name="guide_fetching_desc">Die Senderliste und der Guide werden von deinem Anbieter abgerufen. Bei einem großen Anbieter kann das beim ersten Mal ein paar Minuten dauern.</string>
-    <string name="guide_building_desc">Dein Guide wird aus den auf diesem Gerät gespeicherten Sendern erstellt. Bei einem großen Anbieter dauert das einen Moment — er erscheint gleich.</string>
     <string name="guide_no_favourites_title">Noch keine Favoriten</string>
     <string name="guide_no_channels_title">Noch keine Sender</string>
     <string name="guide_add_provider_desc">Die Sender deines Anbieters erscheinen hier. Füge deinen Anbieter hinzu, um loszulegen.</string>

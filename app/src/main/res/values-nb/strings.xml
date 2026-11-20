@@ -39,7 +39,6 @@
     <string name="guide_no_info">Ingen programinformasjon ennå</string>
     <string name="guide_loading_channels">Laster kanalene dine</string>
     <string name="guide_fetching_desc">Henter kanallisten og guiden fra leverandøren din. Hos en stor leverandør kan dette ta et par minutter første gang.</string>
-    <string name="guide_building_desc">Bygger guiden ut fra kanalene som er lagret på denne enheten. Hos en stor leverandør tar dette en liten stund — den dukker opp snart.</string>
     <string name="guide_no_favourites_title">Ingen favoritter ennå</string>
     <string name="guide_no_channels_title">Ingen kanaler ennå</string>
     <string name="guide_add_provider_desc">Kanalene fra leverandøren din vises her. Legg til leverandøren din for å komme i gang.</string>

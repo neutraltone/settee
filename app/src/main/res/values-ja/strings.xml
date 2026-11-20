@@ -39,7 +39,6 @@
     <string name="guide_no_info">番組表情報はまだありません</string>
     <string name="guide_loading_channels">チャンネルを読み込み中</string>
     <string name="guide_fetching_desc">プロバイダーからチャンネルリストと番組表を取得しています。プロバイダーの規模が大きい場合、初回は数分かかることがあります。</string>
-    <string name="guide_building_desc">この端末に保存されたチャンネルから番組表を作成しています。プロバイダーの規模が大きい場合は少し時間がかかりますが、まもなく表示されます。</string>
     <string name="guide_no_favourites_title">まだお気に入りがありません</string>
     <string name="guide_no_channels_title">まだチャンネルがありません</string>
     <string name="guide_add_provider_desc">プロバイダーのチャンネルがここに表示されます。プロバイダーを追加して始めましょう。</string>

@@ -39,7 +39,6 @@
     <string name="guide_no_info">هنوز اطلاعاتی از راهنما موجود نیست</string>
     <string name="guide_loading_channels">در حال بارگذاری کانال‌های شما</string>
     <string name="guide_fetching_desc">در حال دریافت فهرست کانال‌ها و راهنما از ارائه‌دهنده شما. برای ارائه‌دهنده‌های بزرگ، بار اول ممکن است چند دقیقه طول بکشد.</string>
-    <string name="guide_building_desc">در حال ساخت راهنما از کانال‌های ذخیره‌شده روی این دستگاه. برای ارائه‌دهنده‌های بزرگ کمی طول می‌کشد — به‌زودی نمایش داده می‌شود.</string>
     <string name="guide_no_favourites_title">هنوز علاقه‌مندی‌ای وجود ندارد</string>
     <string name="guide_no_channels_title">هنوز کانالی وجود ندارد</string>
     <string name="guide_add_provider_desc">کانال‌های ارائه‌دهنده شما اینجا نمایش داده می‌شوند. برای شروع، ارائه‌دهنده خود را اضافه کنید.</string>

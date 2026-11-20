@@ -39,7 +39,6 @@
     <string name="guide_no_info">अभी तक कोई गाइड जानकारी नहीं</string>
     <string name="guide_loading_channels">आपके चैनल लोड हो रहे हैं</string>
     <string name="guide_fetching_desc">आपके प्रदाता से चैनल सूची और गाइड लाई जा रही है। बड़े प्रदाता के लिए पहली बार में कुछ मिनट लग सकते हैं।</string>
-    <string name="guide_building_desc">इस डिवाइस पर सेव किए गए चैनलों से आपकी गाइड बनाई जा रही है। बड़े प्रदाता के लिए इसमें थोड़ा समय लगता है — यह जल्द ही दिखाई देगी।</string>
     <string name="guide_no_favourites_title">अभी तक कोई पसंदीदा नहीं</string>
     <string name="guide_no_channels_title">अभी तक कोई चैनल नहीं</string>
     <string name="guide_add_provider_desc">आपके प्रदाता के चैनल यहां दिखेंगे। शुरू करने के लिए अपना प्रदाता जोड़ें।</string>

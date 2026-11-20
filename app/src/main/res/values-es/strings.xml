@@ -39,7 +39,6 @@
     <string name="guide_no_info">Todavía no hay información de la guía</string>
     <string name="guide_loading_channels">Cargando tus canales</string>
     <string name="guide_fetching_desc">Obteniendo la lista de canales y la guía de tu proveedor. Con un proveedor grande, la primera vez puede tardar un par de minutos.</string>
-    <string name="guide_building_desc">Creando tu guía a partir de los canales guardados en este dispositivo. Con un proveedor grande esto tarda un momento; aparecerá en breve.</string>
     <string name="guide_no_favourites_title">Todavía no hay favoritos</string>
     <string name="guide_no_channels_title">Todavía no hay canales</string>
     <string name="guide_add_provider_desc">Los canales de tu proveedor aparecerán aquí. Agrega tu proveedor para empezar.</string>

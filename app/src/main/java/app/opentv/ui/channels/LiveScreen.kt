@@ -255,13 +255,17 @@ fun LiveScreen(
                 if (rows.isEmpty()) {
                     when {
                         favouritesOnly -> NoFavourites(openSidebar)
-                        // Work genuinely in progress: a sync is running, the catalogue check hasn't
-                        // returned yet, or channels are on disk and the guide is still building. A big
-                        // provider takes a while, and "No channels" during it reads as failure.
-                        isSyncing || channelsPresent == null -> Loading(isSyncing)
+                        // Channels on the device and the guide still being built from them, as on
+                        // every cold start: the guide's shape, its first row holding the Highlight,
+                        // so the rows fill in rather than replace a message (#581).
+                        channelsPresent == true && !rowsBuilt -> OpeningGuideSkeleton(takeFocus)
+                        // The catalogue check is only a moment: nothing, rather than a flash of words.
+                        channelsPresent == null -> Unit
                         // Built, with channels on the device, and nothing here: every one is hidden.
-                        channelsPresent == true && rowsBuilt -> NothingToShow(openSidebar)
-                        channelsPresent == true -> Loading(isSyncing)
+                        channelsPresent == true -> NothingToShow(openSidebar)
+                        // No channels on the device yet and a sync under way: the first, which takes
+                        // a while on a big provider, and "No channels" during it reads as failure.
+                        isSyncing -> Loading()
                         // Nothing is syncing and the catalogue is confirmed empty: with a provider set
                         // up, the last load failed or returned nothing.
                         hasSources -> LoadFailed(loadFailure, onRetry = onRefresh, onEditProvider = onAddSource)
@@ -432,21 +436,33 @@ private fun LiveSidebar(
     )
 }
 
+/** A first sync's channels on their way, with the sync's own line and progress when it has them. */
 @Composable
-private fun Loading(isSyncing: Boolean) {
+private fun Loading() {
     val status by StatusBus.message.collectAsState()
     val progress by StatusBus.progress.collectAsState()
     Message(
         title = stringResource(R.string.guide_loading_channels),
-        body = status ?: if (isSyncing) {
-            stringResource(R.string.guide_fetching_desc)
-        } else {
-            // Channels are already on the device; the guide is being built from them.
-            stringResource(R.string.guide_building_desc)
-        },
+        body = status ?: stringResource(R.string.guide_fetching_desc),
     ) {
         progress?.let { ProgressBar(it, Modifier.fillMaxWidth()) }
     }
+}
+
+/**
+ * The guide's skeleton, its first row taking the Highlight when the guide is to ([takeFocus]), as the
+ * real guide's first row would. When the rows come the guide takes it over as it opens.
+ */
+@Composable
+private fun OpeningGuideSkeleton(takeFocus: Boolean) {
+    val opening = remember { FocusRequester() }
+    LaunchedEffect(takeFocus) {
+        if (!takeFocus) return@LaunchedEffect
+        // Once laid out, which is when it can take the Highlight.
+        withFrameNanos {}
+        runCatching { opening.requestFocus() }
+    }
+    GuideSkeleton(opening = Modifier.focusRequester(opening))
 }
 
 /** Favourites with none in them: how to add one, and a way to another category. */

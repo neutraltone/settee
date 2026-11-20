@@ -39,7 +39,6 @@
     <string name="guide_no_info">Ei vielä opastietoja</string>
     <string name="guide_loading_channels">Ladataan kanaviasi</string>
     <string name="guide_fetching_desc">Haetaan kanavaluetteloa ja opasta palveluntarjoajaltasi. Suurella palveluntarjoajalla tämä voi kestää pari minuuttia ensimmäisellä kerralla.</string>
-    <string name="guide_building_desc">Muodostetaan opasta tälle laitteelle tallennetuista kanavista. Suurella palveluntarjoajalla tämä kestää hetken — se ilmestyy pian.</string>
     <string name="guide_no_favourites_title">Ei vielä suosikkeja</string>
     <string name="guide_no_channels_title">Ei vielä kanavia</string>
     <string name="guide_add_provider_desc">Palveluntarjoajasi kanavat näkyvät täällä. Aloita lisäämällä palveluntarjoajasi.</string>

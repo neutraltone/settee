@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit
 /**
  * A [graph] whose reads of the catalogue's tables can be held, on the thread making them, until
  * [release]: the way a big catalogue is slow on a Stick, for screens' skeletons (#581). A screen's
- * cards are built from those tables; its quick checks of the Profile's own small tables aren't held.
+ * cards are built from those tables; its quick checks (a count, an EXISTS, the Profile's own small
+ * tables) aren't held.
  * [name] is its settings' and database's, so tests don't share them; [close] removes the database.
  */
 class HeldCatalogue(private val app: Application, private val name: String) {
@@ -54,12 +55,16 @@ class HeldCatalogue(private val app: Application, private val name: String) {
     }
 
     private fun onStatement(sql: String) {
-        if (holding && sql.trimStart().startsWith("SELECT", ignoreCase = true) && CATALOGUE.containsMatchIn(sql)) {
+        val read = sql.trimStart()
+        // A count or an EXISTS is a quick check, however big the table: only reads of rows are held.
+        val quick = QUICK.containsMatchIn(read)
+        if (holding && read.startsWith("SELECT", ignoreCase = true) && !quick && CATALOGUE.containsMatchIn(read)) {
             released.await(HELD_SECONDS, TimeUnit.SECONDS)
         }
     }
 
     private companion object {
+        val QUICK = Regex("""^SELECT\s+(COUNT\(|EXISTS\()""", RegexOption.IGNORE_CASE)
         val CATALOGUE = Regex("""\b(movies|series|episodes|channels)\b""", RegexOption.IGNORE_CASE)
 
         /** Long enough to outlast a test's waits, short enough that a forgotten release can't hang a run. */

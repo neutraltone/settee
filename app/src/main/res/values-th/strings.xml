@@ -39,7 +39,6 @@
     <string name="guide_no_info">ยังไม่มีข้อมูลผังรายการ</string>
     <string name="guide_loading_channels">กำลังโหลดช่องของคุณ</string>
     <string name="guide_fetching_desc">กำลังดึงรายชื่อช่องและผังรายการจากผู้ให้บริการของคุณ ผู้ให้บริการรายใหญ่อาจใช้เวลาสองสามนาทีในครั้งแรก</string>
-    <string name="guide_building_desc">กำลังสร้างผังรายการจากช่องที่บันทึกไว้ในอุปกรณ์นี้ สำหรับผู้ให้บริการรายใหญ่อาจใช้เวลาสักครู่ — จะปรากฏขึ้นในไม่ช้า</string>
     <string name="guide_no_favourites_title">ยังไม่มีรายการโปรด</string>
     <string name="guide_no_channels_title">ยังไม่มีช่อง</string>
     <string name="guide_add_provider_desc">ช่องจากผู้ให้บริการของคุณจะแสดงที่นี่ เพิ่มผู้ให้บริการของคุณเพื่อเริ่มต้นใช้งาน</string>

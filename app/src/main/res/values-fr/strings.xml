@@ -39,7 +39,6 @@
     <string name="guide_no_info">Aucune information de programme pour l\'instant</string>
     <string name="guide_loading_channels">Chargement de vos chaînes</string>
     <string name="guide_fetching_desc">Récupération de la liste des chaînes et du guide auprès de votre fournisseur. Un fournisseur avec beaucoup de chaînes peut prendre quelques minutes la première fois.</string>
-    <string name="guide_building_desc">Création de votre guide à partir des chaînes enregistrées sur cet appareil. Avec un fournisseur important, cela prend un moment — il apparaîtra bientôt.</string>
     <string name="guide_no_favourites_title">Aucun favori pour l\'instant</string>
     <string name="guide_no_channels_title">Aucune chaîne pour l\'instant</string>
     <string name="guide_add_provider_desc">Les chaînes de votre fournisseur apparaîtront ici. Ajoutez votre fournisseur pour commencer.</string>

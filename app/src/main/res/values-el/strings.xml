@@ -39,7 +39,6 @@
     <string name="guide_no_info">Δεν υπάρχουν ακόμη πληροφορίες οδηγού</string>
     <string name="guide_loading_channels">Φόρτωση των καναλιών σας</string>
     <string name="guide_fetching_desc">Λήψη της λίστας καναλιών και του οδηγού από τον πάροχό σας. Ένας μεγάλος πάροχος μπορεί να χρειαστεί μερικά λεπτά την πρώτη φορά.</string>
-    <string name="guide_building_desc">Δημιουργία του οδηγού σας από τα κανάλια που είναι αποθηκευμένα σε αυτή τη συσκευή. Σε έναν μεγάλο πάροχο αυτό διαρκεί λίγο — θα εμφανιστεί σύντομα.</string>
     <string name="guide_no_favourites_title">Δεν υπάρχουν ακόμη αγαπημένα</string>
     <string name="guide_no_channels_title">Δεν υπάρχουν ακόμη κανάλια</string>
     <string name="guide_add_provider_desc">Τα κανάλια του παρόχου σας θα εμφανίζονται εδώ. Προσθέστε τον πάροχό σας για να ξεκινήσετε.</string>

@@ -39,7 +39,6 @@
     <string name="guide_no_info">Brak informacji z przewodnika</string>
     <string name="guide_loading_channels">Wczytywanie Twoich kanałów</string>
     <string name="guide_fetching_desc">Pobieranie listy kanałów i przewodnika od dostawcy. W przypadku dużego dostawcy może to potrwać kilka minut za pierwszym razem.</string>
-    <string name="guide_building_desc">Tworzenie przewodnika na podstawie kanałów zapisanych na tym urządzeniu. W przypadku dużego dostawcy zajmie to chwilę — wkrótce się pojawi.</string>
     <string name="guide_no_favourites_title">Brak ulubionych</string>
     <string name="guide_no_channels_title">Brak kanałów</string>
     <string name="guide_add_provider_desc">Tutaj pojawią się kanały Twojego dostawcy. Dodaj dostawcę, aby rozpocząć.</string>

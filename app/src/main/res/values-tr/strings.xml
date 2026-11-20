@@ -39,7 +39,6 @@
     <string name="guide_no_info">Henüz rehber bilgisi yok</string>
     <string name="guide_loading_channels">Kanallarınız yükleniyor</string>
     <string name="guide_fetching_desc">Sağlayıcınızdan kanal listesi ve rehber alınıyor. Büyük sağlayıcılarda ilk seferde bu birkaç dakika sürebilir.</string>
-    <string name="guide_building_desc">Rehberiniz, bu cihazda kayıtlı kanallardan oluşturuluyor. Büyük bir sağlayıcıda bu biraz zaman alır — kısa süre içinde görünecek.</string>
     <string name="guide_no_favourites_title">Henüz favori yok</string>
     <string name="guide_no_channels_title">Henüz kanal yok</string>
     <string name="guide_add_provider_desc">Sağlayıcınızın kanalları burada görünür. Başlamak için sağlayıcınızı ekleyin.</string>

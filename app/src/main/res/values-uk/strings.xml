@@ -39,7 +39,6 @@
     <string name="guide_no_info">Інформації програми передач поки немає</string>
     <string name="guide_loading_channels">Завантаження ваших каналів</string>
     <string name="guide_fetching_desc">Отримання списку каналів і програми передач від вашого провайдера. У великого провайдера це може зайняти кілька хвилин першого разу.</string>
-    <string name="guide_building_desc">Формування програми передач із каналів, збережених на цьому пристрої. У великого провайдера це займе трохи часу — вона з\'явиться незабаром.</string>
     <string name="guide_no_favourites_title">Поки що немає улюблених</string>
     <string name="guide_no_channels_title">Поки що немає каналів</string>
     <string name="guide_add_provider_desc">Тут з\'являться канали вашого провайдера. Додайте провайдера, щоб почати.</string>
