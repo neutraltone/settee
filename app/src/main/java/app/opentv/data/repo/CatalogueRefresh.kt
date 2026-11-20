@@ -273,9 +273,10 @@ class CatalogueRefresh(
      * provider: stops its steps and this provider's downloads, then removes the provider and all it
      * saved, as if it had never been saved. Waits for the downloads to let go first, so none writes
      * after the provider has gone; that's also why the form can't save again until this returns.
+     * Returns the provider it removed; null when there was no Setup to take back.
      */
-    suspend fun undoSetup() {
-        val jobs = setupRunning.getAndSet(null) ?: return
+    suspend fun undoSetup(): Long? {
+        val jobs = setupRunning.getAndSet(null) ?: return null
         jobs.undoing = true
         jobs.channels?.cancelAndJoin()
         // Set by the time the channels' coroutine is over, if it got as far as starting them.
@@ -288,6 +289,7 @@ class CatalogueRefresh(
         settings.setVodFetchedAtMillis(jobs.sourceId, 0L)
         _state.update { it.copy(setup = null, last = null) }
         jobs.undone.complete(Unit)
+        return jobs.sourceId
     }
 
     /** What [undoSetup] stops: the channels, then the steps after them, of one provider's Setup. */

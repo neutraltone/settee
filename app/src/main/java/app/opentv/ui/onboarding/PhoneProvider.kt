@@ -24,7 +24,9 @@ internal fun PhoneProvider(viewModel: SourcesViewModel, onSetup: () -> Unit, onC
     val ui by viewModel.ui.collectAsState()
     // The server starts once, for what it was started for: so not until the providers have loaded,
     // or a first provider couldn't be told from a later one and wouldn't carry on to OpenSubtitles.
-    if (!ui.loaded) {
+    // Nor while Back from Setup's OpenSubtitles step is taking the last provider back: it's still
+    // listed, and the one sent next would be taken for a later provider, with no step to carry on to.
+    if (!ui.loaded || ui.undoingSetup) {
         PairingStarting()
         return
     }

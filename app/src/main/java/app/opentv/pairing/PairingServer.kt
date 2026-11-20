@@ -69,8 +69,7 @@ class PairingServer(
     /** Ends a session left listening, so a code on screen isn't left open on the network for ever. */
     private val timer = SessionTimer(scope, sessionTimeoutMillis) {
         if (running && _state.value is State.Listening) {
-            stop()
-            _state.value = State.Failed(ServerProblem.TIMED_OUT)
+            stop(State.Failed(ServerProblem.TIMED_OUT))
         }
     }
 
@@ -236,7 +235,12 @@ class PairingServer(
         timer.arm()
     }
 
-    fun stop() {
+    /**
+     * Stops listening, ending on [failed] when it's a failure, in one step: the phone screen takes
+     * Idle as another screen having stopped the server, and listens again, so a failure must never
+     * pass through it.
+     */
+    fun stop(failed: State.Failed? = null) {
         // A phone still waiting on the TV is told now, not when its wait runs out.
         pending?.complete(Reply.Stopped)
         timer.cancel()
@@ -247,7 +251,11 @@ class PairingServer(
         // Whatever the phone sent goes with the session: the server is shared, and a sign-in left as
         // received would be handed to the next screen. Only a failure stays, for the screen that's
         // still saying why.
-        if (_state.value !is State.Failed) _state.value = State.Idle
+        if (failed != null) {
+            _state.value = failed
+        } else if (_state.value !is State.Failed) {
+            _state.value = State.Idle
+        }
     }
 
     // ---- Request handling ------------------------------------------------------------------
@@ -370,8 +378,7 @@ class PairingServer(
                     PairingPage.message("Too many attempts", "Start pairing again on the TV to get a new code."),
                 ),
             )
-            stop()
-            _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
+            stop(State.Failed(ServerProblem.TOO_MANY_CODES))
         } else {
             val left = MAX_CODE_ATTEMPTS - wrongCodeAttempts
             output.write(

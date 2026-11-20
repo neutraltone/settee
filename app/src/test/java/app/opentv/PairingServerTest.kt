@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -68,6 +69,27 @@ class PairingServerTest {
         val request = Request.Builder().url("http://${session.host}:${session.port}/submit").post(form).build()
         return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
             .newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    @Test
+    fun `a session that times out goes straight to saying so, never through Idle`() {
+        // Idle is what the phone screen takes as another screen stopping the server, and listens again.
+        val timing = PairingServer(scope, PairingFonts(context), context::getString, sessionTimeoutMillis = 200)
+        val seen = java.util.Collections.synchronizedList(mutableListOf<PairingServer.State>())
+        val watching = scope.launch(Dispatchers.Unconfined) { timing.state.collect { seen += it } }
+        timing.start()
+        assumeTrue("needs a private LAN address to serve on", timing.state.value is PairingServer.State.Listening)
+
+        val deadline = System.currentTimeMillis() + 5_000
+        while (timing.state.value !is PairingServer.State.Failed && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20)
+        }
+        watching.cancel()
+        timing.stop()
+
+        val after = seen.dropWhile { it !is PairingServer.State.Listening }
+        assertThat(after.last()).isEqualTo(PairingServer.State.Failed(app.opentv.core.ServerProblem.TIMED_OUT))
+        assertThat(after).doesNotContain(PairingServer.State.Idle)
     }
 
     @Test

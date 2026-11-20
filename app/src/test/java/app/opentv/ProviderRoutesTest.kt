@@ -319,7 +319,9 @@ class ProviderRoutesTest {
         guide.release()
 
         compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
-        compose.waitUntil(5_000) { runBlocking { withOpenSubtitles.sourceRepository.all() }.isEmpty() }
+        compose.waitUntil(5_000) {
+            compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
+        }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
         assertThat(device.textShownBy(device.box(1))).isEqualTo("http://example.com/list.m3u")
         assertThat(compose.runOnIdle { withOpenSubtitles.settings.setupSourceId }).isEqualTo(0L)
@@ -340,9 +342,11 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `Back on the OpenSubtitles step after a provider sent from the phone goes back to the phone screen`() {
+    fun `Back on the step after a provider sent from the phone goes back to the phone screen, still the first`() {
         // Only a TV offers the phone.
         shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
+        // The guide keeps Setup going, so taking it back waits while the phone screen comes back.
+        val guide = panel.hold("xmltv.php")
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
         compose.onNodeWithText("Set up from your phone").performClick()
         // The phone screen's server is the app's own, not the test graph's.
@@ -356,7 +360,10 @@ class ProviderRoutesTest {
         Espresso.pressBack()
 
         compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
-        compose.waitUntil(5_000) { runBlocking { withOpenSubtitles.sourceRepository.all() }.isEmpty() }
+        guide.release()
+        compose.waitUntil(5_000) {
+            compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
+        }
         // The step stops the server as it goes, after the phone screen is back: in the app they share
         // it, but here the step has the test graph's, so it's stopped as the step would.
         compose.runOnIdle { server.stop() }
@@ -364,6 +371,13 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
         compose.onNodeWithText("Then enter this code on your phone").assertExists()
         phone.join(5_000)
+
+        // Sent again, it's the first provider again, so the phone carries on to OpenSubtitles too.
+        val again = (server.state.value as PairingServer.State.Listening).session
+        val second = thread { submitFromPhone(again) }
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        assertThat(compose.runOnIdle { server.state.value }).isInstanceOf(PairingServer.State.Listening::class.java)
+        second.join(5_000)
         server.stop()
     }
 
