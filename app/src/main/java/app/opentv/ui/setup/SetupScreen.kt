@@ -103,11 +103,12 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
 /**
  * The waiting TV while setup works, so the screen is plainly busy, not stuck; the still mark once
  * it's done, as a TV that kept moving would say it was still going. Both sit in the mark's square,
- * so the text under them doesn't jump when setup finishes.
+ * so the text under them doesn't jump when setup finishes. The smaller TV sits at the bottom of it:
+ * centred, it left a gap under it far wider than the mark's.
  */
 @Composable
 private fun SetupIcon(finished: Boolean) {
-    Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(96.dp), contentAlignment = Alignment.BottomCenter) {
         if (finished) {
             Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.fillMaxSize())
         } else {
