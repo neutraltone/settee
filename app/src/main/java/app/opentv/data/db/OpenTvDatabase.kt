@@ -70,6 +70,9 @@ class Converters {
         value?.let { runCatching { TimingsSource.valueOf(it) }.getOrNull() }
 }
 
+/** The schema's version, which anything kept outside the database can check its row ids against. */
+const val DATABASE_VERSION = 22
+
 @Database(
     entities = [
         Source::class,
@@ -97,7 +100,7 @@ class Converters {
         Reminder::class,
         EpisodeTimings::class,
     ],
-    version = 22,
+    version = DATABASE_VERSION,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

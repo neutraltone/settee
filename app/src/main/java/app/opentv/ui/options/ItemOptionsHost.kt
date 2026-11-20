@@ -360,10 +360,25 @@ class ItemOptionsViewModel @JvmOverloads constructor(
 }
 
 /** The title behind a Continue Watching card, or null when it has left the catalogue. */
-private suspend fun CatalogRepository.resolve(item: ResumeItem): Resolved? = when (val card = item.card) {
+private suspend fun CatalogRepository.resolve(item: ResumeItem): Resolved? = when (
+    val card =
+        item.card ?: cardOf(item)
+) {
     is ContinueWatchingCard.Movie -> movie(card.movieId)?.let { Resolved.MovieCard(it, card) }
     is ContinueWatchingCard.Series -> Resolved.SeriesCard(seriesOf(card.episode), card)
     null -> null
+}
+
+/**
+ * The card of one drawn from the Home saved last time, which keeps only its key (#595): looked up again
+ * by that, so its options work before the fresh rows come. Null when its title has gone since.
+ */
+private suspend fun CatalogRepository.cardOf(item: ResumeItem): ContinueWatchingCard? = when (val key = item.key) {
+    is MediaKey.Movie -> movie(key.movieId)?.let { ContinueWatchingCard.Movie(it.id, item.progress ?: 0f) }
+    is MediaKey.Episode -> episode(key.episodeId)?.let {
+        ContinueWatchingCard.Series(it, item.progress, item.newEpisode)
+    }
+    else -> null
 }
 
 private sealed interface Resolved {

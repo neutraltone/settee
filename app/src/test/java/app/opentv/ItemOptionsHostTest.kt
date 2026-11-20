@@ -215,6 +215,26 @@ class ItemOptionsHostTest {
     }
 
     @Test
+    fun `a card from the Home saved last time offers its film's options, before Home's fresh rows come`() {
+        // As read back after a cold start: no card from the Profile's watching, only the key (#595).
+        openOptionsOn(movieCard.copy(card = null))
+
+        waitFor("Show info").assertExists()
+        waitFor("Add to Favourites").performClick()
+
+        assertThat(becameFavourite(movie)).isTrue()
+    }
+
+    @Test
+    fun `a show's card from the Home saved last time opens the show's page`() {
+        openOptionsOn(upNextCard.copy(card = null))
+
+        waitFor("Show info").performClick()
+
+        assertThat(events).containsExactly("before leaving", OptionsDestination.SeriesPage(series.id)).inOrder()
+    }
+
+    @Test
     fun `the panel's other options stay on the screen`() {
         openOptionsOn(movieCard)
 

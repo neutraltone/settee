@@ -36,6 +36,12 @@ class Profiles(
     private val settings: AppSettings,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    /**
+     * Told after a Profile is removed, so nothing kept outside the database passes to a new one given its
+     * id. A property rather than one more constructor argument, set where the graph is built.
+     */
+    internal var onRemoved: suspend (profileId: Long) -> Unit = {}
+
     private val dao = db.profiles()
     private val removed = RemovedProfiles(settings)
     private val renamer = ProfileRenames(db, viewerLibrary, profileSettings, recordings, settings, removed)
@@ -147,6 +153,7 @@ class Profiles(
             recordings.forgetProfile(id)
             dao.delete(id)
         }
+        onRemoved(id)
         true
     }
 

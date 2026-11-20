@@ -94,7 +94,9 @@ internal fun HomeScreen(
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
     // A Live Preview the Profile turned off doesn't play unseen; Home still hears of it, for its hint.
-    val preview = rememberLivePreviewPlayer(live?.preview?.channel?.takeIf { state.arrangement.livePreview })
+    // Nor does a saved one drawn while the fresh one comes: nothing has checked its channel still plays.
+    val preview =
+        rememberLivePreviewPlayer(live?.preview?.channel?.takeIf { state.arrangement.livePreview && !state.liveStill })
     // Home has no list of its own to zap through, so channel up and down go through every Channel.
     val play: (Channel) -> Unit = { channel ->
         viewModel.zapFromAll()
