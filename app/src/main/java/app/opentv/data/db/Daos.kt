@@ -13,6 +13,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
+import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEdits
@@ -748,6 +749,8 @@ data class ChannelCleaned(
     val groupKey: String,
     val qualityLabel: String,
     val qualityRank: Int,
+    /** [groupKey]'s name part, which the lineup looks Channels up by (see [Channel.nameKey]). */
+    val nameKey: String = ChannelNameNormalizer.nameKeyOf(groupKey),
 )
 
 /** What More like this ranks a film or show by, without the rest of its row. */

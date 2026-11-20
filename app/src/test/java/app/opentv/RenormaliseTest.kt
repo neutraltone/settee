@@ -50,6 +50,19 @@ class RenormaliseTest {
         db.categories().upsertAll(listOf(Category(id = id, sourceId = sourceId, name = name, kind = StreamKind.LIVE)))
 
     @Test
+    fun `cleaning a channel's name keys it by its name, region dropped, as the lineup looks it up`() = runTest {
+        provider(1)
+        category(sourceId = 1, id = "7", name = "UK| GENERAL")
+        db.channels().replaceCatalogue(1, listOf(channel(1, "a", "UK| BBC One HD", categoryId = "7")), syncStamp = 1)
+
+        catalogue.catalog.renormalizeAll()
+
+        val row = db.channels().everyRow().single()
+        assertThat(row.groupKey).isEqualTo("uk:bbc1")
+        assertThat(row.nameKey).isEqualTo("bbc1")
+    }
+
+    @Test
     fun `two providers with the same category id each label their channels from their own category`() = runTest {
         provider(1)
         provider(2)
