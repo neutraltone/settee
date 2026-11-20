@@ -117,11 +117,10 @@ fun SkeletonGrid(modifier: Modifier = Modifier) {
     val cover = ArtCardSize.Portrait
     BoxWithConstraints(modifier.fillMaxSize().padding(vertical = SetteeSpace.LiftRoom)) {
         // As many whole columns as the grid fits, and as many rows as reach the bottom.
-        val columns = ((maxWidth.bounded(FALLBACK_WIDTH) + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap))
-            .toInt().coerceAtLeast(1)
-        val rows = ceil(
-            maxHeight.bounded(FALLBACK_HEIGHT) / (cover.height + SetteeSpace.RowGap),
-        ).toInt().coerceAtLeast(1)
+        val width = maxWidth.bounded(FALLBACK_WIDTH)
+        val height = maxHeight.bounded(FALLBACK_HEIGHT)
+        val columns = ((width + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap)).toInt().coerceAtLeast(1)
+        val rows = ceil(height / (cover.height + SetteeSpace.RowGap)).toInt().coerceAtLeast(1)
         Column(pulse, verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
             repeat(rows) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap)) {
