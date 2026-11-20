@@ -296,7 +296,7 @@ One page: the welcome and the choice of provider together.
 
 Once a provider is saved while none was saved before (a fresh install, or after every provider was deleted), on the TV or from the phone, a setup screen comes up instead of Home, and stays until the library is ready to browse. Adding another provider later from Settings works as it does today, in the background.
 
-- **The screen:** the mark in its tile, a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
+- **The screen:** the waiting TV (the mark in its tile once setup finishes), a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
 - **The steps,** in order, each named only while it runs:
   1. "Adding your channels", which also proves the login works. It always runs.
   2. "Loading the TV guide", only when Live TV is switched on: the guide is only for live channels. If Live TV is switched on later, the guide arrives with the next refresh.
@@ -331,13 +331,13 @@ One list, with Coming up, Recorded and Series links as headings, and a heading w
 
 Waiting is the aerial TV: the TV from the mark, with its face on the screen and coral arcs rising from its aerials, fading as they spread. It's drawn in cream rather than in its tile, because the arcs need the dark screen behind them.
 
-- **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, and phone pairing's two waits. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
+- **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, phone pairing's two waits, and Setup while it works. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
 - **Small size,** at text height, in the status line at the foot of the main screen, and at the end of a row whose thing is being fetched, such as an OpenSubtitles result downloading: no face, thicker aerials, one arc. A row already done shows its icon there instead (Downloaded, for a subtitle already on the box).
 - **On the Highlight,** at the end of a highlighted row, it's drawn all in plum, as the row's text is: coral arcs would vanish into the coral and leave a TV that looks stuck.
 - **Always animated,** even when the system's animations are removed. It's the one exception in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
 - **Drawn, not laid out:** a frame redraws only the indicator, so it stays within the budget below.
 - **Nothing at app start.** The wait before the saved providers and Profiles have loaded shows only the background: it's usually a frame or two, and anything drawn there would flicker.
-- **A bar only for real progress.** When the work knows how far through it is, it shows the percentage and a bar instead of the TV. A bar never stands in for a spinner.
+- **A bar only for real progress.** When the work knows how far through it is, it shows the percentage and a bar instead of the TV. A bar never stands in for a spinner. Setup is the one screen with both: its bar measures the whole setup, but a step can sit still for a long time (a big guide), and the TV shows it hasn't stuck.
 - **The still parts come from the mark:** `tools/launcher-art/mark.py` writes them as drawables, and only the arcs and eyes are drawn in code, in the mark's coordinates.
 
 ## Motion and cost

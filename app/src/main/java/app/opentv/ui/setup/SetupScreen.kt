@@ -34,6 +34,7 @@ import app.opentv.R
 import app.opentv.data.repo.CatalogueRefresh.Setup
 import app.opentv.data.repo.CatalogueRefresh.StepDone
 import app.opentv.data.repo.SetupStep
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
@@ -71,7 +72,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
+                SetupIcon(setup.finished)
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
                     Finished(setup)
@@ -95,6 +96,25 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The waiting TV while setup works, so the screen is plainly busy, not stuck; the still mark once
+ * it's done, as a TV that kept moving would say it was still going. Both sit in the mark's square,
+ * so the text under them doesn't jump when setup finishes. The smaller TV sits at the bottom of it:
+ * centred, it left a gap under it far wider than the mark's.
+ */
+@Composable
+private fun SetupIcon(finished: Boolean) {
+    Box(Modifier.size(96.dp), contentAlignment = Alignment.BottomCenter) {
+        if (finished) {
+            Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.fillMaxSize())
+        } else {
+            // Not "Still working": the progress bar already says that, and a screen reader would
+            // hear it twice. The step line under it says which part is loading.
+            AerialTv(stringResource(R.string.setup_loading))
         }
     }
 }
