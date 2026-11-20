@@ -158,6 +158,11 @@ class SourcesViewModel @JvmOverloads constructor(
         val loadFailure: ProviderFailure? = null,
         /** The provider whose save has just finished with its channels in, until its page leaves. */
         val saved: SavedProvider? = null,
+        /**
+         * Back on the step after Setup's save is taking it back. The provider is still listed until
+         * this ends, so nothing may decide meanwhile whether the next is the first.
+         */
+        val undoingSetup: Boolean = false,
     ) {
         val syncing: Boolean get() = adding || refreshing
     }
@@ -318,6 +323,9 @@ class SourcesViewModel @JvmOverloads constructor(
                 }
                 onSetup()
                 val outcome = setup.await()
+                // Back on the step after saving is taking the provider away, and the form says nothing:
+                // channels that came in just before would otherwise say they're loaded.
+                if (outcome == CatalogueRefresh.Outcome.Undone || _ui.value.undoingSetup) return@launch
                 // A failed login is back on the form, with why.
                 val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
                 _ui.update { it.copy(adding = false, addFailure = failure, syncMessage = messages.of(outcome)) }
@@ -342,6 +350,27 @@ class SourcesViewModel @JvmOverloads constructor(
                 )
             }
             onChannels(failure)
+        }
+    }
+
+    /**
+     * Takes back the first provider's save, for Back on the step after it: Setup stops, the provider
+     * goes, and its form, still filled in, can save again once it has gone, never before, or the
+     * second save would be a second provider.
+     */
+    fun undoSetup() {
+        _ui.update { it.copy(adding = true, undoingSetup = true, addFailure = null, saved = null) }
+        viewModelScope.launch {
+            var removed: Long? = null
+            try {
+                removed = refresh.undoSetup()
+            } finally {
+                _ui.update { ui ->
+                    // Gone from the list now, not when the database's next read lands.
+                    val sources = ui.sources.filterNot { it.id == removed }
+                    ui.copy(sources = sources, adding = false, undoingSetup = false, syncMessage = null)
+                }
+            }
         }
     }
 

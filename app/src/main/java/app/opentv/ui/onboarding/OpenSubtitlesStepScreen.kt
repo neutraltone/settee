@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -30,10 +31,18 @@ import app.opentv.ui.settings.OpenSubtitlesSignInRows
  * Setup's optional OpenSubtitles step, straight after the first provider is saved, laid out as the
  * phone pairing screen is: the phone's QR code on the left, and on the right what an account gives,
  * Sign in on this TV, and Not now. Signed in, from the phone or the TV, it says so and waits for Carry
- * on: moving on by itself left nothing on screen long enough to read. [onDone] goes on, signed in or not.
+ * on: moving on by itself left nothing on screen long enough to read. [onDone] goes on, signed in or not;
+ * [onBack] is Back, signed in or not, to the step before.
  */
 @Composable
-fun OpenSubtitlesStepScreen(graph: ServiceLocator.Graph, openSubtitles: OpenSubtitles, onDone: () -> Unit) {
+fun OpenSubtitlesStepScreen(
+    graph: ServiceLocator.Graph,
+    openSubtitles: OpenSubtitles,
+    onDone: () -> Unit,
+    onBack: () -> Unit,
+) {
+    // The username and password windows are dialogs, so a Back there closes the window instead.
+    BackHandler(onBack = onBack)
     var signedIn by remember { mutableStateOf(false) }
     if (signedIn) {
         SignedIn(openSubtitles, onDone)

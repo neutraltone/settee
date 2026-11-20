@@ -13,6 +13,7 @@ import app.opentv.data.repo.SetupStep
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -49,7 +50,7 @@ class SetupRefreshTest {
         test.close()
     }
 
-    private suspend fun setUp(): CatalogueRefresh.Outcome.Added {
+    private suspend fun setUp(): CatalogueRefresh.Outcome {
         test.db.sources().insert(PANEL_SOURCE)
         val outcome = refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
         test.awaitRefresh()
@@ -359,6 +360,52 @@ class SetupRefreshTest {
 
         assertThat(counts.filter { it in 1..2_999 }).isNotEmpty()
         assertThat(counts).isInOrder()
+    }
+
+    @Test
+    fun `undoing setup while the channels load leaves no provider behind, and setup says it was undone`() = runTest {
+        val channels = panel.hold("get_live_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        val started = backgroundScope.async(Dispatchers.Default) {
+            refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+        }
+
+        during(channels) {
+            coroutineScope {
+                val undone = async { refresh.undoSetup() }
+                channels.release()
+                undone.await()
+            }
+        }
+
+        assertThat(started.await()).isEqualTo(CatalogueRefresh.Outcome.Undone)
+        test.awaitRefresh()
+        assertThat(test.db.sources().byId(PANEL_SOURCE.id)).isNull()
+        assertThat(test.db.channels().countForSource(PANEL_SOURCE.id)).isEqualTo(0)
+        assertThat(refresh.state.value.setup).isNull()
+        assertThat(test.settings.setupSourceId).isEqualTo(0L)
+    }
+
+    @Test
+    fun `undoing setup once the channels are in stops it and takes away what it saved`() = runTest {
+        val movies = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+
+        during(movies) {
+            coroutineScope {
+                val undone = async { refresh.undoSetup() }
+                movies.release()
+                undone.await()
+            }
+        }
+        test.awaitRefresh()
+
+        assertThat(panel.asked).doesNotContain("get_series")
+        assertThat(test.db.sources().byId(PANEL_SOURCE.id)).isNull()
+        assertThat(test.db.channels().countForSource(PANEL_SOURCE.id)).isEqualTo(0)
+        assertThat(test.db.movies().countForSource(PANEL_SOURCE.id)).isEqualTo(0)
+        assertThat(refresh.state.value.setup).isNull()
     }
 
     private companion object {

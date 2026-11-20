@@ -12,11 +12,16 @@ import app.opentv.data.model.Source
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +96,9 @@ class CatalogueRefresh(
         data class ChannelsLoaded(val channels: Int) : Added
 
         data class AddFailed(val reason: ViewerError) : Added
+
+        /** Setup was undone before the channels came in: the provider is gone, as if never saved. */
+        data object Undone : Outcome
 
         /** The background half of adding a provider. */
         data class GuideLoaded(val guide: EpgRepository.SyncSummary) : Outcome
@@ -169,6 +177,9 @@ class CatalogueRefresh(
     private val liveDownloads = OneAtATime<CatalogRepository.SyncResult>()
     private val vodDownloads = OneAtATime<Job?>()
 
+    /** The latest [Trigger.Setup], for [undoSetup]; null once undone. */
+    private val setupRunning = AtomicReference<SetupJobs?>()
+
     /** Serialises the guide: feeds are shared by every provider, so overlapping passes download twice. */
     private val guideLock = Mutex()
 
@@ -229,7 +240,7 @@ class CatalogueRefresh(
         outcome
     }.await()
 
-    suspend fun refresh(trigger: Trigger.Setup): Outcome.Added {
+    suspend fun refresh(trigger: Trigger.Setup): Outcome {
         val source = trigger.source
         // The channels always run: they're what proves the login works.
         val steps = buildList {
@@ -243,10 +254,55 @@ class CatalogueRefresh(
         }
         // Before anything suspends, so the screen opening next never sees the last try's state.
         val run = SetupRun(steps)
-        return scope.async { setUp(source, steps, run) }.await()
+        val jobs = SetupJobs(source.id).also { setupRunning.set(it) }
+        val channels = scope.async { setUp(source, steps, run, jobs) }
+        jobs.channels = channels
+        return try {
+            channels.await()
+        } catch (e: CancellationException) {
+            // Whoever asked being cancelled is theirs to hear; only undoing answers Undone.
+            currentCoroutineContext().ensureActive()
+            if (!jobs.undoing) throw e
+            jobs.undone.await()
+            Outcome.Undone
+        }
     }
 
-    private suspend fun setUp(source: Source, steps: List<SetupStep>, run: SetupRun): Outcome.Added {
+    /**
+     * Takes back the latest [Trigger.Setup], as the viewer going back from the step after saving its
+     * provider: stops its steps and this provider's downloads, then removes the provider and all it
+     * saved, as if it had never been saved. Waits for the downloads to let go first, so none writes
+     * after the provider has gone; that's also why the form can't save again until this returns.
+     * Returns the provider it removed; null when there was no Setup to take back.
+     */
+    suspend fun undoSetup(): Long? {
+        val jobs = setupRunning.getAndSet(null) ?: return null
+        jobs.undoing = true
+        jobs.channels?.cancelAndJoin()
+        // Set by the time the channels' coroutine is over, if it got as far as starting them.
+        jobs.steps?.cancelAndJoin()
+        liveDownloads.cancel(jobs.sourceId)
+        vodDownloads.cancel(jobs.sourceId)
+        val turns = providerTurns.getOrPut(jobs.sourceId) { Mutex() }
+        turns.withLock { catalog.deleteSource(jobs.sourceId) }
+        settings.setSetupSourceId(0L)
+        settings.setVodFetchedAtMillis(jobs.sourceId, 0L)
+        _state.update { it.copy(setup = null, last = null) }
+        jobs.undone.complete(Unit)
+        return jobs.sourceId
+    }
+
+    /** What [undoSetup] stops: the channels, then the steps after them, of one provider's Setup. */
+    private class SetupJobs(val sourceId: Long) {
+        @Volatile var channels: Deferred<Outcome.Added>? = null
+
+        @Volatile var steps: Job? = null
+
+        @Volatile var undoing = false
+        val undone = CompletableDeferred<Unit>()
+    }
+
+    private suspend fun setUp(source: Source, steps: List<SetupStep>, run: SetupRun, jobs: SetupJobs): Outcome.Added {
         settings.setVodFetchedAtMillis(source.id, 0L)
         settings.setSetupSourceId(source.id)
         val outcome = when (val result = live(source)) {
@@ -264,7 +320,7 @@ class CatalogueRefresh(
         settings.setSetupSourceId(0L)
         if (outcome is Outcome.ChannelsLoaded) {
             run.stepDone(StepDone(SetupStep.CHANNELS, outcome.channels))
-            scope.launch {
+            jobs.steps = scope.launch {
                 // One step after another, never two at once: two big downloads compete for a
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
@@ -500,6 +556,12 @@ class CatalogueRefresh(
                 }
             }
             return download.await()
+        }
+
+        /** Stops [sourceId]'s downloads, and waits for them to let go. */
+        suspend fun cancel(sourceId: Long) {
+            val downloads = synchronized(running) { running.filterKeys { it.id == sourceId }.values.toList() }
+            downloads.forEach { it.cancelAndJoin() }
         }
     }
 

@@ -144,11 +144,22 @@ private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: Sourc
         // A failed login goes back to the form, which says why, as from Setup itself.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         val openSubtitles = sources.graph.openSubtitles
-        val carryOn = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
+        val goToSetup = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
         if (openSubtitles == null) {
-            LaunchedEffect(Unit) { carryOn() }
+            LaunchedEffect(Unit) { goToSetup() }
         } else {
-            OpenSubtitlesStepScreen(sources.graph, openSubtitles, onDone = carryOn)
+            OpenSubtitlesStepScreen(
+                sources.graph,
+                openSubtitles,
+                onDone = goToSetup,
+                // Back to the form the provider was saved from, still filled in, which is why it stays
+                // under this step. The save is taken back, or the form would show a provider already
+                // loading, and saving it again would add a second.
+                onBack = {
+                    sources.undoSetup()
+                    nav.popBackStack()
+                },
+            )
         }
     }
 }

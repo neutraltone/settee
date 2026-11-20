@@ -25,10 +25,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.pairing.PairingServer
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.Tab
 import app.opentv.ui.design.SetteeType
@@ -36,13 +38,20 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.STEP_ACTIONS
 import app.opentv.ui.settings.SettingsMemory
 import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -260,13 +269,29 @@ class ProviderRoutesTest {
         hasText(text) and hasAnyAncestor(hasTestTag(STEP_ACTIONS)),
     )
 
+    /** Saves a first playlist in a build with OpenSubtitles, and waits for its step. */
+    private fun openStep() {
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+    }
+
+    /** Sends a playlist from the phone's form to the pairing server's [session], as the viewer would. */
+    private fun submitFromPhone(session: PairingServer.Session) {
+        val form = FormBody.Builder()
+            .add("t", session.url.substringAfter("t="))
+            .add("code", session.confirmCode)
+            .add("kind", "m3u")
+            .add("url", "http://example.com/list.m3u")
+            .build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/submit").post(form).build()
+        OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build().newCall(request).execute().close()
+    }
+
     @Test
     fun `with OpenSubtitles, the first provider goes on to the OpenSubtitles step, and Not now to Setup`() {
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        openStep()
 
-        savePlaylist()
-
-        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
         compose.onNodeWithText("Find subtitles with OpenSubtitles").assertExists()
         compose.onNodeWithText("5 a day work without an account", substring = true).assertExists()
         compose.onNodeWithText("Sign in on this TV").assertExists()
@@ -281,6 +306,106 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
+    }
+
+    @Test
+    fun `Back on the OpenSubtitles step goes back to the form, still filled in, and takes the provider away`() {
+        // Setup still loading, as it is when the viewer reads the step.
+        val guide = panel.hold("xmltv.php")
+        openStep()
+
+        Espresso.pressBack()
+        // Undoing waits for the download it stopped to let go.
+        guide.release()
+
+        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(5_000) {
+            compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
+        }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(device.textShownBy(device.box(1))).isEqualTo("http://example.com/list.m3u")
+        assertThat(compose.runOnIdle { withOpenSubtitles.settings.setupSourceId }).isEqualTo(0L)
+    }
+
+    @Test
+    fun `saving again after Back on the OpenSubtitles step adds the provider once`() {
+        openStep()
+        Espresso.pressBack()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNodeWithText("Save and load").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        openSubtitlesStepButton("Not now").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
+    }
+
+    @Test
+    fun `Back on the step after a provider sent from the phone goes back to the phone screen, still the first`() {
+        // Only a TV offers the phone.
+        shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
+        // The guide keeps Setup going, so taking it back waits while the phone screen comes back.
+        val guide = panel.hold("xmltv.php")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        compose.onNodeWithText("Set up from your phone").performClick()
+        // The phone screen's server is the app's own, not the test graph's.
+        val server = ServiceLocator.get(app).pairingServer
+        compose.waitUntil(5_000) { compose.runOnIdle { server.state.value !is PairingServer.State.Idle } }
+        val session = (server.state.value as? PairingServer.State.Listening)?.session
+        assumeTrue("needs a private LAN address to serve on", session != null)
+        val phone = thread { submitFromPhone(session!!) }
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+
+        Espresso.pressBack()
+
+        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        guide.release()
+        compose.waitUntil(5_000) {
+            compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
+        }
+        // The step stops the server as it goes, after the phone screen is back: in the app they share
+        // it, but here the step has the test graph's, so it's stopped as the step would.
+        compose.runOnIdle { server.stop() }
+        // Listening again, with its code showing, for the phone to send a provider again.
+        compose.waitUntil(5_000) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
+        compose.onNodeWithText("Then enter this code on your phone").assertExists()
+        phone.join(5_000)
+
+        // Sent again, it's the first provider again, so the phone carries on to OpenSubtitles too.
+        val again = (server.state.value as PairingServer.State.Listening).session
+        val second = thread { submitFromPhone(again) }
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        assertThat(compose.runOnIdle { server.state.value }).isInstanceOf(PairingServer.State.Listening::class.java)
+        second.join(5_000)
+        server.stop()
+    }
+
+    @Test
+    fun `a login that fails while the OpenSubtitles step is open goes back to the form, which says why`() {
+        panel.replies[""] = "#EXTM3U\n"
+        val playlist = panel.hold("")
+        openStep()
+
+        playlist.release()
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
+        compose.onNodeWithText("Playlist URL").assertExists()
+    }
+
+    @Test
+    fun `Back in Sign in on this TV's window closes the window and stays on the OpenSubtitles step`() {
+        openStep()
+        compose.onNodeWithText("Sign in on this TV").performClick()
+        compose.onNodeWithText("Username").assertExists()
+
+        Espresso.pressBack()
+
+        compose.onNodeWithText("Username").assertDoesNotExist()
+        assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
     }
 
     @Test
