@@ -196,9 +196,11 @@ class EpgRepository(
      * built-in list, and removes a provider feed whose source is gone. Insert-if-absent, so user
      * toggles survive every call. A built-in whose address has moved keeps its row, toggle included,
      * and takes the new address: matching by address alone would leave the dead one switched on
-     * beside a second, switched-off row of the same name.
+     * beside a second, switched-off row of the same name. True when a guide's channel list went with
+     * it, which leaves matches to redo.
      */
-    suspend fun ensureFeeds() {
+    suspend fun ensureFeeds(): Boolean {
+        var dropped = false
         // Against every source, not just the enabled ones: a provider that's only switched off keeps
         // its feed, toggle and all. A feed whose provider is gone would otherwise fail every refresh,
         // and the viewer can't remove it, since Settings only offers that for custom feeds. Feeds are
@@ -208,7 +210,10 @@ class EpgRepository(
         val sources = sourceDao.all().mapTo(HashSet()) { it.id }
         for (feed in feeds) {
             val provider = feed.providerSourceId ?: continue
-            if (provider !in sources) removeFeed(feed)
+            if (provider !in sources) {
+                removeFeed(feed)
+                dropped = true
+            }
         }
         for (source in sourceDao.enabled()) {
             if (feedDao.forProvider(source.id) == null) {
@@ -231,6 +236,7 @@ class EpgRepository(
                     // to ids whose programmes have aged out. Its programmes go by age as usual.
                     aliasDao.deleteForFeed(existing.id)
                     feedDao.update(existing.copy(url = url, lastResult = ""))
+                    dropped = true
                 }
             } else if (feedDao.byUrl(url) == null) {
                 // Off by default: shipping a switched-on 20 MB download for a country the
@@ -239,6 +245,7 @@ class EpgRepository(
                 feedDao.insert(EpgFeed(name = name, url = url, builtIn = true, enabled = false))
             }
         }
+        return dropped
     }
 
     // ---- Sync ------------------------------------------------------------------------------
@@ -256,7 +263,7 @@ class EpgRepository(
         channelsChanged: Boolean = true,
         progress: (SyncProgress) -> Unit = {},
     ): SyncSummary = withContext(Dispatchers.IO) {
-        ensureFeeds()
+        val guideDropped = ensureFeeds()
         maybeAutoEnableRegionalFeed()
 
         var succeeded = 0
@@ -312,7 +319,8 @@ class EpgRepository(
 
         // Matching reads and cleans every channel's name, so it's skipped when neither side has changed:
         // the launch's pass, which mostly finds every guide fresh, ran it each time (#582).
-        val (matched, total) = if (downloaded > 0 || channelsChanged) runMatcher() else countMatched()
+        val rematch = downloaded > 0 || channelsChanged || guideDropped
+        val (matched, total) = if (rematch) runMatcher() else countMatched()
         reporting.done()
         SyncSummary(succeeded, failed, written, matched, total)
     }

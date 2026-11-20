@@ -793,7 +793,12 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
     val ui: StateFlow<UiState> = _ui.asStateFlow()
 
     init {
-        viewModelScope.launch { graph.epgRepository.ensureFeeds() }
+        viewModelScope.launch {
+            // A guide whose channel list goes leaves matches to redo, which no later guide pass would
+            // notice (#582).
+            val guide = graph.epgRepository
+            if (guide.ensureFeeds()) withContext(Dispatchers.Default) { guide.runMatcher() }
+        }
         viewModelScope.launch {
             graph.epgRepository.observeFeeds().collect { feeds ->
                 _ui.value = _ui.value.copy(feeds = feeds)

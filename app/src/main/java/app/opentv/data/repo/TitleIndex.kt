@@ -122,9 +122,6 @@ class TitleIndex(
     suspend fun distinct(items: List<VodTitle>): List<VodTitle> =
         distinctIn(items, movies.groupedOrNone().first(), series.groupedOrNone().first())
 
-    private fun distinctIn(items: List<VodTitle>, movies: Titles, series: Titles): List<VodTitle> =
-        items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
-
     /**
      * Starts grouping now rather than when something first asks, for a screen about to: the first
      * screen opening, so the grouping is done while the viewer picks a Profile (#582). Not when the
@@ -183,6 +180,10 @@ class TitleIndex(
         return Titles(byId)
     }
 }
+
+/** [items] with each title once, by [movies]' and [series]' titles. */
+private fun distinctIn(items: List<VodTitle>, movies: TitleIndex.Titles, series: TitleIndex.Titles): List<VodTitle> =
+    items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
 
 /** How long a lookup waits for the first grouping, which takes a second or two on a Stick. */
 private const val FIRST_GROUPING_WAIT_MILLIS = 3_000L

@@ -80,11 +80,10 @@ class EpgMatcherWritesTest {
     private suspend fun guideFor(
         numbers: Iterable<Int>,
         populated: Iterable<Int> = numbers,
-        url: String = "https://example.com/guide.xml",
         epgIdOf: (Int) -> String = ::epgId,
-        providerSourceId: Long? = null,
+        feed: EpgFeed = EpgFeed(name = "Guide", url = "https://example.com/guide.xml"),
     ): Long {
-        val feedId = db.epgFeeds().insert(EpgFeed(name = "Guide", url = url, providerSourceId = providerSourceId))
+        val feedId = db.epgFeeds().insert(feed)
         db.epgAliases().upsertAll(
             numbers.map {
                 EpgChannelAlias(
@@ -160,6 +159,22 @@ class EpgMatcherWritesTest {
         }
 
     @Test
+    fun `a guide pass matches again when a built-in guide has moved, though it downloads nothing`() = runTest {
+        // A moved guide's channel list is dropped, as the new file names its channels differently.
+        db.channels().upsertAll(listOf(channel(0, matchedEpgId = epgId(0))))
+        val builtIn = EpgRepository.BUILT_IN_FEEDS.first().first
+        val moved = guideFor(
+            listOf(0),
+            feed = EpgFeed(name = builtIn, url = "https://example.com/old.xml", builtIn = true),
+        )
+        db.epgFeeds().markSynced(moved, NOW, "")
+
+        guide.syncAll(NOW, channelsChanged = false)
+
+        assertThat(db.channels().matcherInputs().single().matchedEpgId).isNull()
+    }
+
+    @Test
     fun `a guide pass after the channels changed matches them even when it downloads nothing`() = runTest {
         db.channels().upsertAll((0..2).map { channel(it) })
         db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
@@ -193,7 +208,7 @@ class EpgMatcherWritesTest {
     fun `a guide switched off takes no part in matching, and switching it on brings it back`() = runTest {
         db.channels().upsertAll((0..1).map { channel(it) })
         guideFor(listOf(0))
-        val second = guideFor(listOf(1), url = "https://example.com/second.xml")
+        val second = guideFor(listOf(1), feed = EpgFeed(name = "Guide", url = "https://example.com/second.xml"))
         guide.runMatcher()
         suspend fun matches() = db.channels().matcherInputs().associate { it.id to it.matchedEpgId }
 
@@ -208,7 +223,10 @@ class EpgMatcherWritesTest {
     fun `the provider's own guide wins a channel two guides name, whatever its feed id`() = runTest {
         db.channels().upsertAll(listOf(channel(0)))
         guideFor(listOf(0), epgIdOf = { "free$it.guide" })
-        guideFor(listOf(0), url = "https://example.com/provider.xml", providerSourceId = 1)
+        guideFor(
+            listOf(0),
+            feed = EpgFeed(name = "Guide", url = "https://example.com/provider.xml", providerSourceId = 1),
+        )
 
         guide.runMatcher()
 
