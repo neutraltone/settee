@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
     <string name="error_not_a_guide">ที่อยู่นั้นไม่ใช่ผังรายการ ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
     <string name="settings_guide_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ตามที่ลิงก์ของผังรายการแสดง เช่น example.com/guide.xml</string>
+    <string name="diagnostics_database_failed">Settee อ่านฐานข้อมูลของตัวเองไม่ได้ จึงไม่มีตัวเลขเหล่านี้</string>
+    <string name="diagnostics_table_failed">นับตารางนี้ไม่ได้ ฐานข้อมูลบางส่วนอาจเสียหาย</string>
+    <string name="diagnostics_storage_failed">Settee วัดพื้นที่จัดเก็บของตัวเองไม่ได้</string>
+    <string name="diagnostics_memory_failed">Settee วัดหน่วยความจำของตัวเองไม่ได้</string>
+    <string name="diagnostics_log_failed">Settee อ่านสิ่งที่จดไว้ไม่ได้ จึงไม่มีรายการนี้</string>
 </resources>

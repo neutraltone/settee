@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.repo.HomeRowKind
@@ -29,6 +30,8 @@ import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
 import app.opentv.ui.LiveNow
 import app.opentv.ui.LiveTile
+import app.opentv.ui.ProviderBanner
+import app.opentv.ui.ProviderFailure
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.design.SKELETON_CARD
 import com.google.common.truth.Truth.assertThat
@@ -61,13 +64,15 @@ class HomeSkeletonTest {
     private var loading by mutableStateOf(setOf(HomeRowKind.CONTINUE_WATCHING, HomeRowKind.RECENT_MOVIES))
     private var live by mutableStateOf<LiveTile?>(null)
     private var liveLoading by mutableStateOf(false)
+    private var favouriteMovies by mutableStateOf(emptyList<Cover>())
+    private var banner by mutableStateOf<ProviderBanner?>(null)
     private val resumed = mutableListOf<MediaKey>()
 
     private fun setHome() = compose.setTvContent {
         HomeContent(
             continueWatching = continueWatching,
             favouriteShows = emptyList(),
-            favouriteMovies = emptyList(),
+            favouriteMovies = favouriteMovies,
             favouriteChannels = emptyList(),
             onResume = { resumed += it },
             onOpenSeries = {},
@@ -78,6 +83,7 @@ class HomeSkeletonTest {
             live = live,
             loading = loading,
             liveLoading = liveLoading,
+            banner = banner,
         )
     }
 
@@ -145,6 +151,77 @@ class HomeSkeletonTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("Channel 4").assertIsFocused()
+    }
+
+    @Test
+    fun `Continue Watching coming back empty hands the Highlight to the row that leads Home now`() {
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        loading = setOf(HomeRowKind.CONTINUE_WATCHING)
+        setHome()
+        openingSkeleton().assertIsFocused()
+
+        loading = emptySet()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertIsFocused()
+    }
+
+    @Test
+    fun `Continue Watching coming back empty before the row below lands, that row takes the Highlight`() {
+        setHome()
+        openingSkeleton().assertIsFocused()
+
+        loading = setOf(HomeRowKind.RECENT_MOVIES)
+        compose.waitForIdle()
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        loading = emptySet()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertIsFocused()
+    }
+
+    @Test
+    fun `a row of covers leading Home takes the Highlight when its cards land`() {
+        loading = setOf(HomeRowKind.RECENT_MOVIES)
+        setHome()
+        openingSkeleton().assertIsFocused()
+        captureScreen("home_skeleton_covers_lead")
+
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        loading = emptySet()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertIsFocused()
+    }
+
+    @Test
+    fun `Continue Watching coming back empty leaves the Highlight where the viewer moved it`() {
+        banner = ProviderBanner(listOf(ProviderFailure(1, "Acme TV", ViewerError("Check your login", "LoginRejected"))))
+        loading = setOf(HomeRowKind.CONTINUE_WATCHING, HomeRowKind.RECENT_MOVIES)
+        setHome()
+        openingSkeleton().assertIsFocused()
+
+        press(Key.DirectionUp)
+        compose.onNodeWithText("Open Providers").assertIsFocused()
+        loading = setOf(HomeRowKind.RECENT_MOVIES)
+        compose.waitForIdle()
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        loading = emptySet()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Open Providers").assertIsFocused()
+    }
+
+    @Test
+    fun `a row landing above the place with the Highlight takes it, as the place no longer leads Home`() {
+        loading = setOf(HomeRowKind.FAVOURITE_MOVIES)
+        setHome()
+        openingSkeleton().assertIsFocused()
+
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertIsFocused()
     }
 
     private val channel4 = Channel(

@@ -6,6 +6,7 @@
 package app.opentv
 
 import app.opentv.data.repo.inBatches
+import app.opentv.data.repo.lookUpEach
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -114,5 +115,20 @@ class TitleLookupsTest {
 
         assertThat(titles.batches).hasSize(3)
         assertThat(testScheduler.currentTime).isEqualTo(120_000)
+    }
+
+    @Test
+    fun `what's found is saved fifty at a time`() = runTest {
+        val saves = mutableListOf<Int>()
+
+        lookUpEach(
+            titles = (1..120).toList(),
+            tag = "test",
+            ask = { it },
+            found = { _, answer -> answer },
+            save = { saves += it.size },
+        )
+
+        assertThat(saves).containsExactly(50, 50, 20).inOrder()
     }
 }

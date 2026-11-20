@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
     <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
+    <string name="diagnostics_database_failed">Settee अपना डेटाबेस नहीं पढ़ सका, इसलिए ये आंकड़े उपलब्ध नहीं हैं।</string>
+    <string name="diagnostics_table_failed">इस तालिका की गिनती नहीं हो सकी, इसलिए डेटाबेस का कुछ हिस्सा खराब हो सकता है।</string>
+    <string name="diagnostics_storage_failed">Settee अपनी स्टोरेज नहीं माप सका।</string>
+    <string name="diagnostics_memory_failed">Settee अपनी मेमोरी नहीं माप सका।</string>
+    <string name="diagnostics_log_failed">Settee अपने नोट किए गए विवरण नहीं पढ़ सका, इसलिए यह सूची उपलब्ध नहीं है।</string>
 </resources>

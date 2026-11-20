@@ -25,6 +25,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.SubtitlePreference
+import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.isRunningOnTelevision
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -129,6 +130,8 @@ class PlayerController(
         val buildPlayer: (ExoPlayer.Builder) -> ExoPlayer = ExoPlayer.Builder::build,
         /** What this device can decode, which decides the tracks it refuses. */
         val decoders: DecoderList = DeviceDecoders(),
+        /** Told how long each film and episode took to open, and every error shown. None for the preview. */
+        val diagnostics: PlaybackDiagnostics? = null,
     )
 
     /**
@@ -151,8 +154,9 @@ class PlayerController(
         val stepsForSound: Boolean = false,
     )
 
-    private val _state = MutableStateFlow<State>(State.Idle)
-    val state: StateFlow<State> = _state.asStateFlow()
+    private val opens = OpenTimer(options.diagnostics)
+    private val states = PlayerStates(options.diagnostics, opens)
+    val state: StateFlow<State> = states.flow
 
     /** The current stream's tracks (audio/text/video), for the in-player pickers. */
     private val _tracks = MutableStateFlow(Tracks.EMPTY)
@@ -205,7 +209,7 @@ class PlayerController(
         // first, so a state it's already reporting can't cover the sentence.
         gaveUp = true
         player.stop()
-        _state.value = State.Error(_title.value, reason, canRetry)
+        states.publish(State.Error(_title.value, reason, canRetry))
     }
 
     /** A short message for the viewer, up for about 5 seconds. It takes no focus. */
@@ -303,6 +307,7 @@ class PlayerController(
             setAudioAttributes(MEDIA_AUDIO, handleAudioFocus)
             addAnalyticsListener(DecoderLog.listener)
             addAnalyticsListener(guard.firstFrameListener)
+            addAnalyticsListener(opens)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
@@ -319,23 +324,25 @@ class PlayerController(
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (gaveUp) return
-                    _state.value = when (playbackState) {
-                        Player.STATE_BUFFERING -> State.Buffering(_title.value)
-                        Player.STATE_READY -> {
-                            counts.played()
-                            hadPlayed = true
-                            guard.arrived()
-                            State.Playing(_title.value)
-                        }
-                        Player.STATE_IDLE -> _state.value
-                        // A stream can end without ever being ready, such as one started at its very end.
-                        // The last stream ending while the next is on its way says nothing about that one.
-                        Player.STATE_ENDED -> {
-                            guard.arrived()
-                            if (isSwitching) _state.value else current?.let(::streamEnded) ?: State.Idle
-                        }
-                        else -> _state.value
-                    }
+                    states.publish(
+                        when (playbackState) {
+                            Player.STATE_BUFFERING -> State.Buffering(_title.value)
+                            Player.STATE_READY -> {
+                                counts.played()
+                                hadPlayed = true
+                                guard.arrived()
+                                State.Playing(_title.value)
+                            }
+                            Player.STATE_IDLE -> states.value
+                            // A stream can end without ever being ready, such as one started at its very end.
+                            // The last stream ending while the next is on its way says nothing about that one.
+                            Player.STATE_ENDED -> {
+                                guard.arrived()
+                                if (isSwitching) states.value else current?.let(::streamEnded) ?: State.Idle
+                            }
+                            else -> states.value
+                        },
+                    )
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -350,17 +357,19 @@ class PlayerController(
                     DecoderLog.logFailure(error)
                     val request = current
                     val recovery = counts.failed(error, hadPlayed)
-                    _state.value = State.Error(
-                        title = _title.value,
-                        // The last stream's format lingers until this one's tracks are known, so only a
-                        // selected video track's counts.
-                        reason = PlaybackErrors.describe(
-                            strings,
-                            error,
-                            onTelevision,
-                            player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
+                    states.publish(
+                        State.Error(
+                            title = _title.value,
+                            // The last stream's format lingers until this one's tracks are known, so only a
+                            // selected video track's counts.
+                            reason = PlaybackErrors.describe(
+                                strings,
+                                error,
+                                onTelevision,
+                                player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
+                            ),
+                            canRetry = recovery.canRetry,
                         ),
-                        canRetry = recovery.canRetry,
                     )
                     if (recovery.canRestart && request != null) restartLater(request)
                 }
@@ -434,13 +443,14 @@ class PlayerController(
         guard.leaving()
         // Live TV behind another app: nothing connects, and coming back plays the latest one asked for.
         if (hold == Hold.STOPPED) return
+        opens.asked(request.key, restart)
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
 
             // A restart keeps its title while it asks again; a new channel has none until it's known.
             if (request.key != titled) _title.value = ""
-            _state.value = State.Buffering(_title.value)
+            states.publish(State.Buffering(_title.value))
             val playable = when (val resolved = resolve(request.key)) {
                 is Playable.Ready -> resolved
                 is Playable.Failed -> {
@@ -453,14 +463,14 @@ class PlayerController(
                     // offered under the sentence mustn't be the last stream's.
                     _tracks.value = Tracks.EMPTY
                     val title = resolved.title.ifEmpty { _title.value }
-                    _state.value = State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true)
+                    states.publish(State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true))
                     return@launch
                 }
             }
             _title.value = playable.title
             titled = request.key
             httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))
-            _state.value = State.Buffering(playable.title)
+            states.publish(State.Buffering(playable.title))
 
             val mediaItem = MediaItem.Builder()
                 .setUri(playable.url)
@@ -627,7 +637,7 @@ class PlayerController(
         loaded = null
         player.stop()
         player.clearMediaItems()
-        _state.value = State.Idle
+        states.publish(State.Idle)
     }
 
     /**
@@ -651,18 +661,18 @@ class PlayerController(
                 hold = if (live) Hold.STOPPED else Hold.PAUSED
                 if (!live) {
                     player.playWhenReady = false
-                } else if (_state.value !is State.Error) {
+                } else if (states.value !is State.Error) {
                     switchJob?.cancel()
                     guard.leaving()
                     loaded = null
                     player.stop()
                     player.clearMediaItems()
-                    _state.value = State.Idle
+                    states.publish(State.Idle)
                 }
             } else {
                 val was = hold
                 hold = Hold.NONE
-                if (was == Hold.STOPPED && _state.value !is State.Error) {
+                if (was == Hold.STOPPED && states.value !is State.Error) {
                     // Asked for afresh, as a portal's link may have expired meanwhile.
                     current?.let { play(it, debounce = false) }
                 }

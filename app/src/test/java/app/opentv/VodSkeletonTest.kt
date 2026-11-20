@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
@@ -34,12 +37,15 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.repo.TitleCover
 import app.opentv.ui.design.SKELETON_CARD
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.CoverGrid
+import app.opentv.ui.vod.ForYou
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
+import app.opentv.ui.vod.TitleRow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -151,6 +157,36 @@ class VodSkeletonTest {
         catalogue.release()
         // Its card and its Favourite's: Continue Watching's is the first, at the top.
         compose.waitUntilNodeCount(hasText("Heat") and hasClickAction(), 2, 5_000)
+        compose.waitForIdle()
+
+        compose.onAllNodes(hasText("Heat") and hasClickAction())[0].assertIsFocused()
+    }
+
+    @Test
+    fun `Continue Watching coming back empty on For you hands the Highlight on to the row now leading`() {
+        var resumeLoading by mutableStateOf(true)
+        var favourites by mutableStateOf(emptyList<Movie>())
+        setBesideRail {
+            ScreenFrame {
+                ForYou(
+                    resume = emptyList(),
+                    rows = listOf(TitleRow("favourites", "Favourites", favourites)),
+                    onResume = {},
+                    cover = { TitleCover(it.id, it.name, it.name, posterUrl = null) },
+                    onOpen = {},
+                    onHighlight = {},
+                    options = { null },
+                    resumeLoading = resumeLoading,
+                )
+            }
+        }
+        intoTheScreen()
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
+
+        resumeLoading = false
+        compose.waitForIdle()
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
+        favourites = listOf(heat)
         compose.waitForIdle()
 
         compose.onAllNodes(hasText("Heat") and hasClickAction())[0].assertIsFocused()

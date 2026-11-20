@@ -5,7 +5,9 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.db.MOVIES_TABLE
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.SERIES_TABLE
 import app.opentv.data.model.SourceCategoryName
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
@@ -28,7 +30,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -52,9 +54,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  * main thread, and kept until the app closes. Grouping starts when something first asks, or [start].
  */
 class TitleIndex(
-    db: OpenTvDatabase,
+    private val db: OpenTvDatabase,
     private val decoders: DecoderList,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val regroupGap: (tookMillis: Long) -> Long = ::regroupGapMillis,
 ) {
     /** One title: its Versions' row ids, and its cover's badge (see [titleBadge]). */
     class Title internal constructor(val versionIds: LongArray, val badge: String?)
@@ -86,11 +89,11 @@ class TitleIndex(
 
     /** The films' titles, or null until they've first been grouped. */
     val movies: StateFlow<Titles?> =
-        titlesOf(db.movies().observeVersionRows(), db.categories().observeNames(StreamKind.MOVIE))
+        titlesOf(MOVIES_TABLE, db.movies()::versionRows, db.categories().observeNames(StreamKind.MOVIE))
 
     /** The shows' titles, or null until they've first been grouped. */
     val series: StateFlow<Titles?> =
-        titlesOf(db.series().observeVersionRows(), db.categories().observeNames(StreamKind.SERIES))
+        titlesOf(SERIES_TABLE, db.series()::versionRows, db.categories().observeNames(StreamKind.SERIES))
 
     /**
      * Each title's Versions for what plays and what's kept, waiting a moment for a first grouping. Past
@@ -140,19 +143,47 @@ class TitleIndex(
     // what made a Stick close the app (#180). Only the titles stay, a fraction of the size, and of the
     // rows only a hash, to skip a write that changes nothing grouping reads, such as a page filling in a
     // film's details.
+    //
+    // Read on a signal that the table changed, not with a Room Flow over the rows: that runs the whole
+    // read on every write, before anything downstream can settle or skip it, and the background pass
+    // that fills in films' details writes every ten films for hours. On a Stick each read of a large
+    // catalogue overflows SQLite's cursor window and churns the heap, so the pass alone kept two cores
+    // busy and starved playback. Reads also leave a gap after each grouping ([regroupGapMillis]),
+    // so steady writes regroup now and then rather than continually. The bound is per table: with
+    // both passes writing, films and shows together can take a tenth of a core. A change of category
+    // names, or a retry after a failed read, starts afresh without the gap; neither pass writes those.
+    //
+    // No gap after an empty table: on a first setup that's grouped before the catalogue arrives, and
+    // waiting out a gap then would leave every list showing each title's Versions apart for minutes.
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    private fun titlesOf(rows: Flow<List<VersionRow>>, categories: Flow<List<SourceCategoryName>>) = categories
+    private fun titlesOf(
+        table: String,
+        rows: suspend () -> List<VersionRow>,
+        categories: Flow<List<SourceCategoryName>>,
+    ) = categories
         .map { names -> names.associate { (it.sourceId to it.id) to it.name } }
         .distinctUntilChanged()
         .flatMapLatest { names ->
-            rows.distinctUntilChangedBy { it.hashCode() }
+            var grouped: Int? = null
+            db.invalidationTracker.createFlow(table)
                 // A refresh writes in batches: grouping once they settle is all that's wanted, but no
-                // longer than a few seconds into them, as a film-details lookup writes for minutes.
-                .settled(SETTLE_MILLIS, REGROUP_MILLIS)
-                // A grouping under way finishes, then the newest rows are grouped: replacing it with
-                // each batch meant one never finished while batches came faster than it (#582).
+                // longer than a few seconds into them, as plain debounce never fires while writes keep
+                // coming faster than it waits, which held up the first grouping, and Recently Added
+                // with it, for as long as a film-details lookup wrote (#582).
+                .settled(SETTLE_MILLIS, FIRST_GROUPING_MAX_WAIT_MILLIS)
                 .conflate()
-                .map { group(it, names) }
+                .transform {
+                    val started = System.nanoTime()
+                    val read = rows()
+                    val hash = read.hashCode()
+                    if (hash != grouped) {
+                        emit(group(read, names))
+                        grouped = hash
+                    }
+                    if (read.isNotEmpty()) {
+                        delay(regroupGap(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)))
+                    }
+                }
         }
         .flowOn(Dispatchers.Default)
         // A read that fails, or a database closed under it, leaves every row its own title for now,
@@ -181,15 +212,18 @@ class TitleIndex(
     }
 }
 
-/** [items] with each title once, by [movies]' and [series]' titles. */
-private fun distinctIn(items: List<VodTitle>, movies: TitleIndex.Titles, series: TitleIndex.Titles): List<VodTitle> =
-    items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
-
 /** How long a lookup waits for the first grouping, which takes a second or two on a Stick. */
 private const val FIRST_GROUPING_WAIT_MILLIS = 3_000L
 
 /** How long the catalogue stays unchanged before it's grouped again. */
 private const val SETTLE_MILLIS = 500L
+
+/** The longest a stream of writes holds off grouping, at first or after a regroup's gap. */
+private const val FIRST_GROUPING_MAX_WAIT_MILLIS = 3_000L
+
+/** [items] with each title once, by [movies]' and [series]' titles. */
+private fun distinctIn(items: List<VodTitle>, movies: TitleIndex.Titles, series: TitleIndex.Titles): List<VodTitle> =
+    items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
 
 /**
  * The titles once grouped, or every row its own title if the first grouping takes longer than a lookup
@@ -200,9 +234,6 @@ private fun StateFlow<TitleIndex.Titles?>.groupedOrNone(): Flow<TitleIndex.Title
     emit(withTimeoutOrNull(FIRST_GROUPING_WAIT_MILLIS) { filterNotNull().first() } ?: TitleIndex.Titles.NONE)
     emitAll(filterNotNull())
 }.distinctUntilChanged()
-
-/** The longest a stream of writes holds off grouping the rows so far. */
-private const val REGROUP_MILLIS = 3_000L
 
 /**
  * Each value once [quietMillis] pass with no newer one, as `debounce` does, except that a value
@@ -224,6 +255,23 @@ private const val NO_BURST = -1L
 
 // Not SystemClock, which stands still under Robolectric unless a test moves it.
 private fun nowMillis() = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
+
+/**
+ * How long after reading and grouping, which took [tookMillis], changes wait before the next: at least
+ * [MIN_REGROUP_GAP_MILLIS], and long enough that regrouping takes no more than a twentieth of a core
+ * however slow the device, up to [MAX_REGROUP_GAP_MILLIS].
+ */
+internal fun regroupGapMillis(tookMillis: Long): Long =
+    (tookMillis * BUSY_SHARE_INVERSE).coerceIn(MIN_REGROUP_GAP_MILLIS, MAX_REGROUP_GAP_MILLIS)
+
+/** For every millisecond spent grouping, this many are left for everything else. */
+private const val BUSY_SHARE_INVERSE = 19L
+
+/** The shortest gap between groupings while the catalogue keeps changing. */
+private const val MIN_REGROUP_GAP_MILLIS = 10_000L
+
+/** The longest: a title added during a slow device's long refresh still shows as one within this. */
+private const val MAX_REGROUP_GAP_MILLIS = 10 * 60_000L
 
 /** How long after a failed read grouping tries again. */
 private const val RETRY_MILLIS = 30_000L

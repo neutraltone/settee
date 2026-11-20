@@ -244,8 +244,11 @@ keeping the local id that resume points use and the first-seen time.
 With Settee's built-in TMDB Key, the background pass after a catalogue sync (`MovieGenres` for films,
 `SeriesTmdbPass` for series) asks TMDB about every title once, 200 at a time with a minute's rest
 between, and asks again once its answer is six months old: posters and casts change, and a title TMDB
-had no match for may have one since. Each title stores when TMDB last answered (`tmdbAnsweredAt`), a
-match or not; a refresh carries it across like every other looked-up detail, and a title TMDB couldn't
+had no match for may have one since. The same pass asks the provider `get_vod_info` about each film it
+hasn't answered about, at least a second apart (#591): back to back, a fast panel saw about 240 requests
+a minute, and providers throttle or block busy accounts. TMDB isn't held to that gap, and what's found is
+saved 50 at a time, since every write wakes each watcher of the table. Each title stores when TMDB
+last answered (`tmdbAnsweredAt`), a match or not; a refresh carries it across like every other looked-up detail, and a title TMDB couldn't
 be reached about keeps its old date, so it's asked again next time rather than in six months. TMDB only
 fills what the provider left empty, the second time as the first. Opening a series asks at once when
 its details are missing or that old, so a series the pass hasn't reached still fills in. In a build
@@ -266,10 +269,11 @@ nothing on that path reads a whole catalogue table (#582):
   screen opens (`OpenTvApp.onFirstOpen` calls `start()`), so it's done while the viewer picks a
   Profile. It doesn't start when it's made: a sync with nobody looking makes it too, and grouping
   a whole catalogue then takes memory from that sync on a 1 GB Stick.
-- Grouping waits for writes to settle, but never more than a few seconds into a stream of them,
-  and a grouping under way always finishes: a film-details lookup writes batches for minutes, and
-  restarting the grouping for each meant it never finished. Lists that show each title once stop
-  waiting for the first grouping after 3 s and show every row until it comes.
+- Grouping waits for writes to settle, but never more than a few seconds into a stream of them:
+  a film-details lookup writes batches for minutes, and a plain debounce held the first grouping
+  until it stopped. After each grouping the next waits out a gap (`regroupGapMillis`, #588), so
+  steady writes regroup now and then. Lists that show each title once stop waiting for the first
+  grouping after 3 s and show every row until it comes.
 - Continue Watching looks up every card's title at once, so an ungrouped index costs one wait,
   not one per card.
 - Played episodes are joined to their positions by the id read out of `mediaKey` (`ep:<id>`),

@@ -161,6 +161,7 @@ class SettingsScreenTest {
             "Your devices",
             "Add-ons",
             "Manage on phone or laptop",
+            "Diagnostics",
             "About",
         ).inOrder()
         compose.assertSectionWhollyOnScreen("About")

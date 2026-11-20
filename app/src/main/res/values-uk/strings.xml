@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
     <string name="settings_guide_bad_address">Це не вебадреса. Перевірте, чи її введено так, як у посиланні на програму, наприклад example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee не вдалося прочитати свою базу даних, тому цих чисел немає.</string>
+    <string name="diagnostics_table_failed">Не вдалося порахувати цю таблицю, можливо, частину бази даних пошкоджено.</string>
+    <string name="diagnostics_storage_failed">Settee не вдалося виміряти своє сховище.</string>
+    <string name="diagnostics_memory_failed">Settee не вдалося виміряти свою пам\'ять.</string>
+    <string name="diagnostics_log_failed">Settee не вдалося прочитати свої записи, тому цього списку немає.</string>
 </resources>

@@ -38,6 +38,9 @@ import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.diagnostics.DiagnosticsExport
+import app.opentv.diagnostics.DiagnosticsLog
+import app.opentv.diagnostics.DiagnosticsReporter
 import app.opentv.isRunningOnTelevision
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
@@ -272,6 +275,28 @@ object ServiceLocator {
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
         val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }
+
+        /** The last opens and errors, in files of their own so they're readable when the database isn't. */
+        val diagnosticsLog: DiagnosticsLog by lazy {
+            DiagnosticsLog(java.io.File(appContext.filesDir, "diagnostics"), appScope, Dispatchers.IO)
+        }
+
+        val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings) }
+
+        val diagnosticsReporter: DiagnosticsReporter by lazy {
+            DiagnosticsReporter(
+                appContext,
+                errorWording,
+                openDatabase = { database.openHelper.readableDatabase },
+                diagnosticsLog,
+                DiagnosticsReporter.Places(
+                    database = appContext.getDatabasePath(OpenTvDatabase.FILE_NAME),
+                    cache = appContext.cacheDir,
+                    files = appContext.filesDir,
+                ),
+                Dispatchers.IO,
+            )
+        }
 
         val catalogueRefresh: CatalogueRefresh by lazy {
             CatalogueRefresh(

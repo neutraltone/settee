@@ -64,6 +64,12 @@ import kotlinx.coroutines.flow.Flow
 /** Rows per upsert statement. Keeps a 40,000-channel playlist from building one huge query. */
 private const val WRITE_CHUNK = 500
 
+/** The films' table, named once for grouping's read and for watching that table change, by `TitleIndex`. */
+const val MOVIES_TABLE = "movies"
+
+/** The shows' table, as [MOVIES_TABLE]. */
+const val SERIES_TABLE = "series"
+
 @Dao
 // A query per column a refresh writes on its own (sync time, zone, failure), so an edit saved meanwhile
 // isn't put back: that's what grows the count, not the interface doing more than one thing.
@@ -1115,9 +1121,9 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Movie>
 
-    /** Every film as grouping into titles reads it, again whenever the table changes. */
-    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies ORDER BY id")
-    fun observeVersionRows(): Flow<List<VersionRow>>
+    /** Every film as grouping into titles reads it. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM $MOVIES_TABLE ORDER BY id")
+    suspend fun versionRows(): List<VersionRow>
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
@@ -1387,9 +1393,9 @@ interface SeriesDao {
     @Query("SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM series WHERE tmdbId IN (:tmdbIds)")
     suspend fun picksWithTmdbIds(tmdbIds: List<String>): List<TitlePick>
 
-    /** Every show as grouping into titles reads it, again whenever the table changes. */
-    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")
-    fun observeVersionRows(): Flow<List<VersionRow>>
+    /** Every show as grouping into titles reads it. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM $SERIES_TABLE ORDER BY id")
+    suspend fun versionRows(): List<VersionRow>
 
     /**
      * Series whose cast credits the person filed under [nameKey], best-rated first. See

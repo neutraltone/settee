@@ -230,6 +230,13 @@ isn't a web address. Check it's typed as the guide's link shows it, such as exam
 | Phone's setup page: the provider's channels didn't load | As Provider connection | The TV's sentence, with its detail line under it | As Provider connection | As Provider connection |
 | Update check couldn't reach a release (`Outcome.CouldNotCheck`) | `about_check_failed` | Couldn't check for updates. Try again later. | HTTP status, EmptyReply, NoApk, or exception type | GitHub, the network, or a release missing its APK |
 | Update download failed | `update_failed_tv` / `_device` | Couldn't download the update. Check this TV is online, then try again. | exception type | The network |
+| Diagnostics: the database wouldn't open or answer | `diagnostics_database_failed` | Settee couldn't read its database, so these numbers are missing. | exception type | This device's storage, or a damaged database |
+| Diagnostics: one table couldn't be counted (the others still are) | `diagnostics_table_failed` | Couldn't count this table, so part of the database may be damaged. | exception type | A damaged table |
+| Diagnostics: storage couldn't be measured | `diagnostics_storage_failed` | Settee couldn't measure its storage. | exception type | This device's storage |
+| Diagnostics: memory couldn't be measured | `diagnostics_memory_failed` | Settee couldn't measure its memory. | exception type | This device |
+| Diagnostics: the list of opens or errors couldn't be read | `diagnostics_log_failed` | Settee couldn't read what it noted down, so this list is missing. | exception type | A damaged file in `filesDir/diagnostics` |
+| Diagnostics: saving a report with no NAS set up | `sync_nas_needs_setup` | Set up your NAS under Settings → Recording first, then come back here. | none | Viewer's setup |
+| Diagnostics: saving a report to the NAS failed | `sync_nas_failed` | Couldn't reach your NAS. Check it's on and the details in Recording settings are right. | exception type | The NAS, or the network |
 
 ## Add-ons
 

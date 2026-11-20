@@ -13,8 +13,8 @@ import app.opentv.data.remote.TmdbMeta
 /**
  * Asks TMDB, in a build with a TMDB Key, about each series once, and again once its answer is six
  * months old ([tmdbDue]), so series nobody has opened get their posters, synopses and cast too.
- * [MovieGenres]' counterpart, at the same pace: [count] at a time, newest first, [pauseMillis]
- * between batches. A separate pass because series have no provider look-up to share it with:
+ * [MovieGenres]' counterpart, at the same [pace], newest first; it asks no provider, so the
+ * provider gap doesn't apply. A separate pass because series have no provider look-up to share it with:
  * `get_series_info` is asked when a series is opened, for its episodes.
  *
  * TMDB only fills what's empty ([Series.withTmdb]), the provider's own values winning, and an
@@ -23,8 +23,7 @@ import app.opentv.data.remote.TmdbMeta
 class SeriesTmdbPass(
     private val seriesDao: SeriesDao,
     private val tmdb: SeriesTmdb,
-    private val count: Int = MovieGenres.CANDIDATES,
-    private val pauseMillis: Long = MovieGenres.BATCH_PAUSE_MILLIS,
+    private val pace: LookupPace = LookupPace(),
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
@@ -35,8 +34,8 @@ class SeriesTmdbPass(
     suspend fun fillAll(source: Source) {
         if (!tmdb.ready) return
         inBatches(
-            count,
-            pauseMillis,
+            pace.batchSize,
+            pace.pauseMillis,
             Series::id,
             select = { seriesDao.newestTmdbDue(source.id, clock() - TMDB_REFRESH_MILLIS, it) },
             lookUp = { titles ->

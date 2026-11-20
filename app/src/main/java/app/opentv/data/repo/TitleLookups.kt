@@ -9,8 +9,12 @@ import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
-/** Saved together: one write per title would reload the whole catalogue on any screen showing it. */
-private const val SAVE_EVERY = 10
+/**
+ * Saved together: each write wakes every watcher of the table, and one per title would reload the
+ * whole catalogue on any screen showing it. Not more: a batch of 200 takes minutes, so this still
+ * shows progress every minute or so, and a process killed mid-batch redoes at most this many.
+ */
+private const val SAVE_EVERY = 50
 
 /**
  * Consecutive titles the provider doesn't answer about before giving up until the next sync. A
@@ -58,6 +62,15 @@ private suspend fun <R : Any> attempt(tag: String, block: suspend () -> R?): R? 
     .onFailure { if (it is CancellationException) throw it }
     .onFailure { Log.w(tag, "Lookup failed", it) }
     .getOrNull()
+
+/**
+ * How fast a background pass ([MovieGenres], [SeriesTmdbPass]) goes: [batchSize] titles a batch,
+ * [pauseMillis] between batches, and [providerGapMillis] between one provider request and the next.
+ * Without that gap a batch went back to back, as fast as the panel answered: about 240 requests a
+ * minute from one that answers in 100 ms, which providers that throttle busy accounts may not take
+ * (#591). TMDB isn't held to it; its limits are far above this pass's.
+ */
+data class LookupPace(val batchSize: Int = 200, val pauseMillis: Long = 60_000L, val providerGapMillis: Long = 1_000L)
 
 /**
  * Works through what [select] picks (given how many to pick, in an order that stays put), up to

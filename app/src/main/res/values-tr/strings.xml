@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
     <string name="error_not_a_guide">Bu adres bir rehber değil. Doğru bağlantı olduğunu kontrol edin veya Wi-Fi isterse oturum açın.</string>
     <string name="settings_guide_bad_address">Bu bir web adresi değil. Rehberin bağlantısında göründüğü gibi yazıldığını kontrol edin, örneğin example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee veritabanını okuyamadı, bu yüzden bu sayılar eksik.</string>
+    <string name="diagnostics_table_failed">Bu tablo sayılamadı, bu yüzden veritabanının bir kısmı bozulmuş olabilir.</string>
+    <string name="diagnostics_storage_failed">Settee depolama alanını ölçemedi.</string>
+    <string name="diagnostics_memory_failed">Settee belleğini ölçemedi.</string>
+    <string name="diagnostics_log_failed">Settee not ettiklerini okuyamadı, bu yüzden bu liste eksik.</string>
 </resources>

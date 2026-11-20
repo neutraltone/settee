@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles がこのデバイスをサインアウトしました。設定でもう一度サインインしてください。</string>
     <string name="error_not_a_guide">そのアドレスは番組表ではありません。正しいリンクか確認するか、Wi-Fiのログインを求められた場合はログインしてください。</string>
     <string name="settings_guide_bad_address">ウェブアドレスではありません。番組表のリンクのとおりに入力されているか確認してください（例：example.com/guide.xml）。</string>
+    <string name="diagnostics_database_failed">Settee がデータベースを読み込めなかったため、これらの数値はありません。</string>
+    <string name="diagnostics_table_failed">この表を数えられませんでした。データベースの一部が破損している可能性があります。</string>
+    <string name="diagnostics_storage_failed">Settee がストレージを測定できませんでした。</string>
+    <string name="diagnostics_memory_failed">Settee がメモリを測定できませんでした。</string>
+    <string name="diagnostics_log_failed">Settee が記録した内容を読み込めなかったため、この一覧はありません。</string>
 </resources>
