@@ -243,6 +243,13 @@ class ViewerLibrary(
         .flatMapLatest { pid -> cards.series(pid) }
         .map { list -> cards.oneCardPerTitle(list).map { it.card } }
 
+    /**
+     * Whether the active Profile has played anything, from its positions alone: quick enough for Home
+     * to hold Continue Watching's place before its cards are built.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun hasPlayed(): Flow<Boolean> = activeProfileId.flatMapLatest { positions.observeAny(it) }
+
     /** Home's Continue Watching: movies and series together, most recently played first. */
     fun continueWatching(): Flow<List<ContinueWatchingCard>> = home().map { it.continueWatching }
 

@@ -45,6 +45,7 @@ import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -1622,6 +1623,29 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
+/** A row's value once it has come; before it, the row is null in [HomeArrivals]. */
+private class Arrived<T>(val value: T)
+
+private fun <T> Flow<T>.arrival(): Flow<Arrived<T>?> = map<T, Arrived<T>?> { Arrived(it) }.onStart { emit(null) }
+
+/** Home's rows, each null until it has come. */
+private class HomeArrivals(
+    val watching: Arrived<Pair<List<ResumeItem>, CoverStatuses>>?,
+    val favourites: Arrived<List<VodTitle>>?,
+    val channels: Arrived<List<HomeChannel>>?,
+    val recentShows: Arrived<List<VodTitle>>?,
+    val recentMovies: Arrived<List<VodTitle>>?,
+) {
+    /** The rows whose cards have come. */
+    fun kinds(): Set<HomeRowKind> = buildSet {
+        if (watching != null) add(HomeRowKind.CONTINUE_WATCHING)
+        if (favourites != null) addAll(listOf(HomeRowKind.FAVOURITE_SHOWS, HomeRowKind.FAVOURITE_MOVIES))
+        if (channels != null) add(HomeRowKind.FAVOURITE_CHANNELS)
+        if (recentShows != null) add(HomeRowKind.RECENT_SHOWS)
+        if (recentMovies != null) add(HomeRowKind.RECENT_MOVIES)
+    }
+}
+
 /**
  * What Home shows, top to bottom: the Live Preview, the active Profile's Continue Watching, what the
  * providers have Recently Added (shows, then movies), then its Favourite shows, movies and channels.
@@ -1637,6 +1661,11 @@ data class HomeState(
     /** How the Profile arranged Home; the Live Preview is in [live] even when it turned it off, for Home's hint. */
     val arrangement: HomeArrangement = HomeArrangement.USUAL,
     val becauseYouWatched: BecauseYouWatched? = null,
+    /**
+     * The rows still on their way, each empty above until its cards arrive: Home holds their places
+     * with skeletons, so none moves a row below it when it lands (#581).
+     */
+    val loading: Set<HomeRowKind> = emptySet(),
 )
 
 /**
@@ -1858,37 +1887,69 @@ class HomeViewModel @JvmOverloads constructor(
         return LiveNow(preview, shows.now?.title, shows.next?.title)
     }
 
+    /**
+     * The rows Home holds places for before their cards are built: what a quick look at the Profile's
+     * own small tables says will have cards, never the cards' own reads, which on a big catalogue take
+     * seconds. Recently Added always does; a Profile's history or Favourites decide the rest (#581).
+     * Because you watched has none: it starts from the row it last had, at once.
+     */
+    private val expected: Flow<Set<HomeRowKind>> = combine(
+        graph.viewerLibrary.hasPlayed(),
+        graph.viewerLibrary.favourites.hasAny(StreamKind.SERIES),
+        graph.viewerLibrary.favourites.hasAny(StreamKind.MOVIE),
+        graph.viewerLibrary.favourites.hasAny(StreamKind.LIVE),
+        combine(settings.moviesEnabled, settings.seriesEnabled, settings.liveEnabled, ::Triple),
+    ) { played, shows, movies, channels, (moviesOn, showsOn, liveOn) ->
+        buildSet {
+            if (played && (moviesOn || showsOn)) add(HomeRowKind.CONTINUE_WATCHING)
+            if (showsOn) add(HomeRowKind.RECENT_SHOWS)
+            if (moviesOn) add(HomeRowKind.RECENT_MOVIES)
+            if (shows && showsOn) add(HomeRowKind.FAVOURITE_SHOWS)
+            if (movies && moviesOn) add(HomeRowKind.FAVOURITE_MOVIES)
+            if (channels && liveOn) add(HomeRowKind.FAVOURITE_CHANNELS)
+        }
+    }.distinctUntilChanged()
+
+    /** Each row as it arrives, none waiting on another: Home draws a row's cards over its place as they come. */
+    private val arrivals: Flow<HomeArrivals> = combine(
+        watching.arrival(),
+        favourites.arrival(),
+        favouriteChannels.arrival(),
+        recentShows.arrival(),
+        recentMovies.arrival(),
+        ::HomeArrivals,
+    )
+
+    // The quick reads first: combine starts collecting in this order, and Room has four threads, which
+    // the slow row reads queued ahead would otherwise take, leaving Home blank behind them.
     private val rows: Flow<HomeState> = combine(
-        combine(watching, favourites, favouriteChannels, recentShows, recentMovies) {
-                (continueWatching, statuses),
-                favourites,
-                channels,
-                shows,
-                movies,
-            ->
-            // Favourites carry no status: Home shows only their titles.
-            val (favouriteMovies, favouriteShows) = favourites.map(::Cover).partition { it.title is VodTitle.OfMovie }
-            HomeState(
-                continueWatching,
-                favouriteShows,
-                favouriteMovies,
-                channels,
-                shows.withStatuses(statuses),
-                movies.withStatuses(statuses),
-            ) to statuses
-        },
-        // In the same state as the rows, so Home is first drawn with it and highlights it.
-        live,
-        // And so is the arrangement, so Home is never drawn once in the usual order and then moved.
+        expected,
+        // The arrangement is in the same state as the places, so Home is never drawn once in the usual
+        // order and then moved.
         graph.profileSettings.homeArrangement,
+        // And so is the Live Preview, so Home is first drawn with it and highlights it.
+        live,
         becauseYouWatched,
-    ) { (rows, statuses), live, arrangement, because ->
-        rows.copy(
+        arrivals,
+    ) { expected, arrangement, live, because, arrived ->
+        // Covers show before their statuses have come, and gain them when they do.
+        val statuses = arrived.watching?.value?.second ?: CoverStatuses()
+        // Favourites carry no status: Home shows only their titles.
+        val (favouriteMovies, favouriteShows) = arrived.favourites?.value.orEmpty().map(::Cover)
+            .partition { it.title is VodTitle.OfMovie }
+        HomeState(
+            continueWatching = arrived.watching?.value?.first.orEmpty(),
+            favouriteShows = favouriteShows,
+            favouriteMovies = favouriteMovies,
+            favouriteChannels = arrived.channels?.value.orEmpty(),
+            recentShows = arrived.recentShows?.value.orEmpty().withStatuses(statuses),
+            recentMovies = arrived.recentMovies?.value.orEmpty().withStatuses(statuses),
             live = live,
             arrangement = arrangement,
             becauseYouWatched = because
                 ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
                 ?.takeIf { it.covers.isNotEmpty() },
+            loading = (expected - arrived.kinds()).filterTo(mutableSetOf(), arrangement::isShown),
         )
     }
 

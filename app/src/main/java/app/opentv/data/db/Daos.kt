@@ -1539,6 +1539,10 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
 
+    /** Whether a profile has played anything: Home's quick check for a Continue Watching row. */
+    @Query("SELECT EXISTS(SELECT 1 FROM playback_positions WHERE profileId = :profileId)")
+    fun observeAny(profileId: Long): Flow<Boolean>
+
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
     fun observeKind(profileId: Long, prefix: String): Flow<List<PlaybackPosition>>
@@ -1691,6 +1695,10 @@ interface FavouriteDao {
         """,
     )
     suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
+
+    /** Whether a profile has a Favourite of [kind]: Home's quick check for a Favourites row. */
+    @Query("SELECT EXISTS(SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND removed = 0)")
+    fun observeAny(profileId: Long, kind: StreamKind): Flow<Boolean>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(favourite: Favourite)

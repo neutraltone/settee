@@ -89,6 +89,13 @@ class Favourites internal constructor(
             db.versionsOf(title.series, versionIds).any { contains(StreamKind.SERIES, it.sourceId, it.seriesId) }
     }
 
+    /**
+     * Whether the active Profile has any Favourite of [kind], from the Favourites table alone: quick
+     * enough for Home to hold the row's place before its cards are built.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun hasAny(kind: StreamKind): Flow<Boolean> = activeProfileId.flatMapLatest { dao.observeAny(it, kind) }
+
     /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun channels(): Flow<List<Channel>> = activeProfileId.flatMapLatest { dao.observeChannels(it) }
