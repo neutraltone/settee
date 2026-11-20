@@ -369,8 +369,8 @@ and phone pairing; row and grid screens wait with skeletons.
 One line in the top-right of the main screen, inside the margin and clear of the first row's
 Highlight: Mushroom Body words on Surface with Card corners, the small aerial TV before them, or a
 short progress bar after them for the guide's download, the only work with real progress, and no
-percentage. Drawn over the screen, so nothing moves; never takes the Highlight. Appears only for work
-still running after a second, fading in on Arrive and out as it ends.
+percentage. Drawn over the screen, so nothing moves; never takes the Highlight, and never on Live TV. Appears
+once there has been work for a second, fading in on Arrive and out as it ends.
 
 ### Skeleton (waiting)
 A loading row's real title over blank cards in Surface with Card corners, each the size of the card it

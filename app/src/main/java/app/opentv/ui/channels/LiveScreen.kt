@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.core.StatusBus
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
@@ -69,7 +67,6 @@ import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
 import app.opentv.ui.design.Message
-import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
@@ -441,17 +438,16 @@ private fun LiveSidebar(
     )
 }
 
-/** A first sync's channels on their way, with the sync's own line and progress when it has them. */
+/**
+ * A first sync's channels on their way. In its own words, not the main screen corner's: the corner
+ * names the refresh's steps, and repeating them here only said the same thing twice.
+ */
 @Composable
 private fun Loading() {
-    val status by StatusBus.message.collectAsState()
-    val progress by StatusBus.progress.collectAsState()
     Message(
         title = stringResource(R.string.guide_loading_channels),
-        body = status ?: stringResource(R.string.guide_fetching_desc),
-    ) {
-        progress?.let { ProgressBar(it, Modifier.fillMaxWidth()) }
-    }
+        body = stringResource(R.string.guide_fetching_desc),
+    )
 }
 
 /** Favourites with none in them: how to add one, and a way to another category. */

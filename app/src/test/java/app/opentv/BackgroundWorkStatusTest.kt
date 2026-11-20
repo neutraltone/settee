@@ -17,11 +17,13 @@ import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -72,7 +74,7 @@ class BackgroundWorkStatusTest {
     }
 
     @Test
-    fun `a refresh says what it's updating, step by step, with a bar only for the guide`() = runBlocking {
+    fun `a refresh says what it's refreshing, step by step, with a bar only for the guide`() = runBlocking {
         graph.database.sources().insert(PANEL_SOURCE)
         viewModels.track(SourcesViewModel(app, graph))
         val channels = panel.hold("get_live_streams")
@@ -82,17 +84,17 @@ class BackgroundWorkStatusTest {
         withContext(Dispatchers.Default) {
             val refreshing = async { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             during(channels) {
-                assertThat(StatusBus.message.value).isEqualTo("Updating your channels")
+                assertThat(StatusBus.message.value).isEqualTo("Refreshing your channels")
                 assertThat(StatusBus.progress.value).isNull()
             }
             channels.release()
             during(films) {
-                assertThat(StatusBus.message.value).isEqualTo("Updating movies and shows")
+                assertThat(StatusBus.message.value).isEqualTo("Refreshing movies and shows")
                 assertThat(StatusBus.progress.value).isNull()
             }
             films.release()
             during(guide) {
-                assertThat(StatusBus.message.value).isEqualTo("Updating the TV guide")
+                assertThat(StatusBus.message.value).isEqualTo("Refreshing the TV guide")
                 assertThat(StatusBus.progress.value).isIn(Range.openClosed(0f, 1f))
             }
             guide.release()
@@ -100,5 +102,32 @@ class BackgroundWorkStatusTest {
         }
 
         assertThat(StatusBus.message.value).isNull()
+    }
+
+    @Test
+    fun `a step that starts while another runs shows, and the other comes back when it ends`() = runBlocking {
+        graph.database.sources().insert(PANEL_SOURCE)
+        viewModels.track(SourcesViewModel(app, graph))
+        val films = panel.hold("get_vod_streams")
+        val guide = panel.hold("xmltv.php")
+
+        withContext(Dispatchers.Default) {
+            val opening = async { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows) }
+            during(films) { assertThat(StatusBus.message.value).isEqualTo("Refreshing movies and shows") }
+            // Another provider, since one provider's downloads take turns.
+            val second = PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2")
+            graph.database.sources().insert(second)
+            graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(second))
+            during(guide) { assertThat(StatusBus.message.value).isEqualTo("Refreshing the TV guide") }
+            guide.release()
+            awaitStatus("Refreshing movies and shows")
+            films.release()
+            opening.await()
+            awaitStatus(null)
+        }
+    }
+
+    private suspend fun awaitStatus(message: String?) = withTimeout(5_000) {
+        while (StatusBus.message.value != message) delay(10)
     }
 }

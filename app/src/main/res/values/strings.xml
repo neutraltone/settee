@@ -821,15 +821,15 @@
     <string name="error_out_of_memory_device">This stream needs more memory than this device has.</string>
     <string name="playback_try_other_quality">A different quality may work.</string>
     <!-- Catalogue Refresh -->
-    <string name="refresh_saving_source">Saving source…</string>
+    <string name="refresh_saving_source">Saving source</string>
     <string name="refresh_save_failed">Could not save source.</string>
-    <string name="refresh_loading_channels">Loading channels…</string>
-    <string name="refresh_refreshing">Refreshing…</string>
+    <string name="refresh_loading_channels">Loading channels</string>
+    <string name="refresh_refreshing">Refreshing</string>
     <string name="status_syncing_devices">Syncing with your other devices</string>
-    <string name="refresh_updating_channels">Updating your channels</string>
-    <string name="refresh_updating_guide">Updating the TV guide</string>
-    <string name="refresh_updating_movies_and_shows">Updating movies and shows</string>
-    <string name="refresh_downloading_guides">Downloading guides…</string>
+    <string name="refresh_step_channels">Refreshing your channels</string>
+    <string name="refresh_step_guide">Refreshing the TV guide</string>
+    <string name="refresh_step_movies_and_shows">Refreshing movies and shows</string>
+    <string name="refresh_downloading_guides">Downloading guides</string>
     <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet. Add a free guide in Guide settings.</string>
     <string name="refresh_guide_and_failures">%1$s · %2$s</string>
     <plurals name="refresh_done">

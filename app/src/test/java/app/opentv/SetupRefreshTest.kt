@@ -302,12 +302,12 @@ class SetupRefreshTest {
         refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
 
         during(guide) {
-            assertThat(refresh.state.value.buildingGuide).isTrue()
+            assertThat(refresh.state.value.refreshingGuide).isTrue()
             guide.release()
         }
         test.awaitRefresh()
 
-        assertThat(refresh.state.value.buildingGuide).isFalse()
+        assertThat(refresh.state.value.refreshingGuide).isFalse()
     }
 
     @Test

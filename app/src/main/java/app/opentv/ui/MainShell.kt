@@ -156,7 +156,15 @@ internal fun MainShell(
                 }
             }
         }
-        BackgroundWork(Modifier.align(Alignment.TopEnd).padding(top = 27.dp, end = 48.dp))
+        // Not on Live TV: the programme details fill its top right, and its own messages say when
+        // the channels or guide are on their way.
+        if (current != Tab.LIVE) {
+            BackgroundWork(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = SetteeSpace.ScreenTopBottom, end = SetteeSpace.ScreenSide),
+            )
+        }
         Rail(
             tabs = tabs,
             current = current,

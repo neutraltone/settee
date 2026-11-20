@@ -116,13 +116,13 @@ class CatalogueRefresh(
      */
     data class State(
         val refreshing: Boolean = false,
-        val updatingChannels: Boolean = false,
+        val refreshingChannels: Boolean = false,
         /** Movies and shows downloading, whatever started it; [loadingVod] is only Movies or Shows opening. */
-        val updatingMoviesAndShows: Boolean = false,
+        val refreshingMoviesAndShows: Boolean = false,
         val loadingVod: Boolean = false,
-        val buildingGuide: Boolean = false,
+        val refreshingGuide: Boolean = false,
         /** How far through the running guide pass is, 0 to 1; null when there isn't one. */
-        val guideShare: Float? = null,
+        val guideProgress: Float? = null,
         val last: Outcome? = null,
         /** The running or latest [Trigger.Setup]; null until one starts. */
         val setup: Setup? = null,
@@ -457,7 +457,8 @@ class CatalogueRefresh(
      * caller doesn't write it twice: a later success replaces an old failure, and screens read it there.
      */
     private suspend fun live(source: Source): CatalogRepository.SyncResult = liveDownloads.share(source) {
-        marking(channelUpdates, { copy(updatingChannels = it) }) { catalog.fetchLive(source, clock()) }.also { result ->
+        val fetched = marking(channelUpdates, { copy(refreshingChannels = it) }) { catalog.fetchLive(source, clock()) }
+        fetched.also { result ->
             val failure = (result as? CatalogRepository.SyncResult.Failed)?.reason
             runCatching { sources.saveRefreshResult(source.id, failure) }.onFailure { e ->
                 if (e is CancellationException) throw e
@@ -474,7 +475,7 @@ class CatalogueRefresh(
                 // A refresh's list of providers can be minutes old by the time this one's turn comes,
                 // and the old account's titles would overwrite the new one's.
                 if (!catalog.holdsAccountOf(source)) return@share null
-                marking(vodUpdates, { copy(updatingMoviesAndShows = it) }) {
+                marking(vodUpdates, { copy(refreshingMoviesAndShows = it) }) {
                     setup?.fetchLists(source) ?: catalog.fetchVod(source, now)
                 }
             }.getOrElse { e ->
@@ -527,9 +528,9 @@ class CatalogueRefresh(
             val now = clock()
             guidePassStarted.set(now)
             try {
-                marking(guideBuilds, { copy(buildingGuide = it, guideShare = if (it) guideShare else null) }) {
+                marking(guideBuilds, { copy(refreshingGuide = it, guideProgress = if (it) guideProgress else null) }) {
                     guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }) { done ->
-                        _state.update { it.copy(guideShare = done.share) }
+                        _state.update { it.copy(guideProgress = done.share) }
                         progress(done)
                     }
                 }

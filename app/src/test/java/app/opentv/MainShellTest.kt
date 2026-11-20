@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
@@ -31,8 +32,10 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -184,12 +187,12 @@ class MainShellTest {
         val before = compose.onNodeWithText("Home 1").getUnclippedBoundsInRoot()
         compose.mainClock.autoAdvance = false
 
-        StatusBus.set("Updating your channels")
+        StatusBus.set("Refreshing your channels")
         compose.mainClock.advanceTimeBy(500)
-        compose.onNodeWithText("Updating your channels").assertDoesNotExist()
+        compose.onNodeWithText("Refreshing your channels").assertDoesNotExist()
         compose.mainClock.advanceTimeBy(1_000)
 
-        val line = compose.onNodeWithText("Updating your channels").getUnclippedBoundsInRoot()
+        val line = compose.onNodeWithText("Refreshing your channels").getUnclippedBoundsInRoot()
         assertThat(line.left).isGreaterThan(480.dp)
         assertThat(line.right).isAtMost(960.dp - 48.dp)
         assertThat(line.top).isAtLeast(27.dp)
@@ -209,19 +212,59 @@ class MainShellTest {
         setShellWithTitles(start = Tab.HOME)
         compose.mainClock.autoAdvance = false
 
-        StatusBus.set("Updating your channels")
+        StatusBus.set("Refreshing your channels")
         compose.mainClock.advanceTimeBy(500)
         StatusBus.set(null)
         compose.mainClock.advanceTimeBy(1_500)
-        compose.onNodeWithText("Updating your channels").assertDoesNotExist()
+        compose.onNodeWithText("Refreshing your channels").assertDoesNotExist()
 
-        StatusBus.set("Updating the TV guide", 0.3f)
+        StatusBus.set("Refreshing the TV guide", 0.3f)
         compose.mainClock.advanceTimeBy(1_500)
-        val withBar = compose.onNodeWithText("Updating the TV guide").getUnclippedBoundsInRoot()
+        val withBar = compose.onNodeWithText("Refreshing the TV guide").getUnclippedBoundsInRoot()
         assertThat(withBar.bottom).isAtMost(compose.onNodeWithText("Home 6").getUnclippedBoundsInRoot().top - 6.dp)
+        captureScreen("main_background_work_guide")
         StatusBus.set(null)
         compose.mainClock.advanceTimeBy(500)
-        compose.onNodeWithText("Updating the TV guide").assertDoesNotExist()
+        compose.onNodeWithText("Refreshing the TV guide").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a refresh made of quick steps still shows, once it has run for a second`() {
+        setShellWithTitles(start = Tab.HOME)
+        compose.mainClock.autoAdvance = false
+
+        StatusBus.show("Refreshing your channels")
+        compose.mainClock.advanceTimeBy(600)
+        StatusBus.clear("Refreshing your channels")
+        StatusBus.show("Refreshing movies and shows")
+        compose.mainClock.advanceTimeBy(600)
+
+        compose.onNodeWithText("Refreshing movies and shows").assertExists()
+    }
+
+    @Test
+    fun `the guide's line keeps its bar while it fades out`() {
+        setShellWithTitles(start = Tab.HOME)
+        compose.mainClock.autoAdvance = false
+        StatusBus.show("Refreshing the TV guide", 0.6f)
+        compose.mainClock.advanceTimeBy(1_500)
+
+        StatusBus.clear("Refreshing the TV guide")
+        compose.mainClock.advanceTimeBy(100)
+
+        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.6f, 0f..1f))).assertExists()
+        compose.onNodeWithContentDescription("Still working").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Live TV never shows the corner, since its guide has a top-right of its own`() {
+        setShellWithTitles(start = Tab.LIVE)
+        compose.mainClock.autoAdvance = false
+
+        StatusBus.show("Refreshing your channels")
+        compose.mainClock.advanceTimeBy(1_500)
+
+        compose.onNodeWithText("Refreshing your channels").assertDoesNotExist()
     }
 
     @Test

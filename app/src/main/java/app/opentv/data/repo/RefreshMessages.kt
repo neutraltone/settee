@@ -23,9 +23,9 @@ class RefreshMessages(private val context: Context) {
         SaveFailed(R.string.refresh_save_failed),
         LoadingChannels(R.string.refresh_loading_channels),
         Refreshing(R.string.refresh_refreshing),
-        UpdatingChannels(R.string.refresh_updating_channels),
-        UpdatingGuide(R.string.refresh_updating_guide),
-        UpdatingMoviesAndShows(R.string.refresh_updating_movies_and_shows),
+        RefreshingChannels(R.string.refresh_step_channels),
+        RefreshingGuide(R.string.refresh_step_guide),
+        RefreshingMoviesAndShows(R.string.refresh_step_movies_and_shows),
         DownloadingGuides(R.string.refresh_downloading_guides),
     }
 

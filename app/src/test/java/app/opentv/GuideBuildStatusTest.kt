@@ -100,7 +100,7 @@ class GuideBuildStatusTest {
 
     @Test
     fun `a background job's line stays up through the guide's first build`() = runTest {
-        StatusBus.set("Updating the guide", 0.3f)
+        StatusBus.set("Refreshing the TV guide", 0.3f)
         val viewModel = viewModels.track(ChannelsViewModel(app, graph))
         backgroundScope.launch { viewModel.guideRows.collect {} }
         builds.awaitHeld()
@@ -108,7 +108,7 @@ class GuideBuildStatusTest {
 
         viewModel.guideRows.first { it.rows.isNotEmpty() }
 
-        assertThat(StatusBus.message.value).isEqualTo("Updating the guide")
+        assertThat(StatusBus.message.value).isEqualTo("Refreshing the TV guide")
         assertThat(StatusBus.progress.value).isEqualTo(0.3f)
     }
 }

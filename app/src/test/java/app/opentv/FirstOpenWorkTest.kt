@@ -59,7 +59,7 @@ class FirstOpenWorkTest {
             },
             catchUpNormaliser = {},
             launchRefresh = {
-                StatusBus.during("Updating your channels") { yield() }
+                StatusBus.during("Refreshing your channels") { yield() }
                 refreshed.complete(Unit)
             },
             syncingNas = SYNCING,
@@ -130,6 +130,7 @@ class FirstOpenWorkTest {
             syncNas = {},
             catchUpNormaliser = { ran += "normaliser" },
             launchRefresh = { error("database full") },
+            syncingNas = SYNCING,
         )
 
         withContext(CoroutineExceptionHandler { _, t -> escaped += t }) { failing.run() }

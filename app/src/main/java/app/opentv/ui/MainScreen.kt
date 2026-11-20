@@ -221,21 +221,29 @@ internal fun ExitPrompt(onLeave: () -> Unit, onStay: () -> Unit) {
 internal fun BackgroundWork(modifier: Modifier = Modifier) {
     val message by StatusBus.message.collectAsState()
     val progress by StatusBus.progress.collectAsState()
-    var shown by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(message) {
-        if (message != null && shown == null) delay(APPEAR_AFTER_MILLIS)
-        shown = message
+    val busy = message != null
+    var visible by remember { mutableStateOf(false) }
+    // Keyed on there being work, not on its words: a refresh's steps can each be shorter than the
+    // wait, and restarting it at every step kept a refresh of several seconds from ever showing.
+    LaunchedEffect(busy) {
+        if (busy) delay(APPEAR_AFTER_MILLIS)
+        visible = busy
     }
-    // Kept through the fade out, which runs after the bus has already cleared.
-    var last by remember { mutableStateOf("") }
-    shown?.let { last = it }
+    // Words and bar both kept through the fade out, which runs after the bus has already cleared;
+    // reading the bar live turned the guide's bar into the aerial TV as it faded.
+    var lastMessage by remember { mutableStateOf("") }
+    var lastProgress by remember { mutableStateOf<Float?>(null) }
+    message?.let {
+        lastMessage = it
+        lastProgress = progress
+    }
     AnimatedVisibility(
-        visible = shown != null,
+        visible = visible,
         modifier = modifier,
         enter = fadeIn(tween(FADE_MILLIS, easing = SetteeMotion.Arrive)),
         exit = fadeOut(tween(FADE_MILLIS)),
     ) {
-        StatusLine(last, progress)
+        StatusLine(lastMessage, lastProgress)
     }
 }
 

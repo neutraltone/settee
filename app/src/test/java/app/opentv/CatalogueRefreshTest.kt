@@ -539,46 +539,46 @@ class CatalogueRefreshTest {
 
         withContext(Dispatchers.Default) {
             refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
-            during(hold) { assertThat(refresh.state.value.buildingGuide).isTrue() }
+            during(hold) { assertThat(refresh.state.value.refreshingGuide).isTrue() }
             hold.release()
             test.awaitRefresh()
         }
 
-        assertThat(refresh.state.value.buildingGuide).isFalse()
+        assertThat(refresh.state.value.refreshingGuide).isFalse()
     }
 
     @Test
-    fun `the periodic refresh says it's updating the channels only while it is`() = runTest {
+    fun `the periodic refresh says it's refreshing the channels only while it is`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_live_streams")
 
         withContext(Dispatchers.Default) {
             val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
-            during(hold) { assertThat(refresh.state.value.updatingChannels).isTrue() }
+            during(hold) { assertThat(refresh.state.value.refreshingChannels).isTrue() }
             hold.release()
             refreshing.await()
         }
 
-        assertThat(refresh.state.value.updatingChannels).isFalse()
+        assertThat(refresh.state.value.refreshingChannels).isFalse()
     }
 
     @Test
-    fun `the periodic refresh says the guide is updating, and how far through it is, only while it is`() = runTest {
+    fun `the periodic refresh says the guide is refreshing, and how far through it is, only while it is`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("xmltv.php")
 
         withContext(Dispatchers.Default) {
             val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             during(hold) {
-                assertThat(refresh.state.value.buildingGuide).isTrue()
-                assertThat(refresh.state.value.guideShare).isIn(Range.openClosed(0f, 1f))
+                assertThat(refresh.state.value.refreshingGuide).isTrue()
+                assertThat(refresh.state.value.guideProgress).isIn(Range.openClosed(0f, 1f))
             }
             hold.release()
             refreshing.await()
         }
 
-        assertThat(refresh.state.value.buildingGuide).isFalse()
-        assertThat(refresh.state.value.guideShare).isNull()
+        assertThat(refresh.state.value.refreshingGuide).isFalse()
+        assertThat(refresh.state.value.guideProgress).isNull()
     }
 
     @Test
@@ -605,13 +605,13 @@ class CatalogueRefreshTest {
         assertThat(
             listOf(
                 state.refreshing,
-                state.updatingChannels,
-                state.updatingMoviesAndShows,
+                state.refreshingChannels,
+                state.refreshingMoviesAndShows,
                 state.loadingVod,
-                state.buildingGuide,
+                state.refreshingGuide,
             ),
         ).containsExactly(false, false, false, false, false)
-        assertThat(state.guideShare).isNull()
+        assertThat(state.guideProgress).isNull()
     }
 
     @Test
