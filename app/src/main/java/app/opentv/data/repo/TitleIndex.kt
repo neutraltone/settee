@@ -5,7 +5,9 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.db.MOVIES_TABLE
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.SERIES_TABLE
 import app.opentv.data.model.SourceCategoryName
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
@@ -82,11 +84,11 @@ class TitleIndex(
 
     /** The films' titles, or null until they've first been grouped. */
     val movies: StateFlow<Titles?> =
-        titlesOf("movies", db.movies()::versionRows, db.categories().observeNames(StreamKind.MOVIE))
+        titlesOf(MOVIES_TABLE, db.movies()::versionRows, db.categories().observeNames(StreamKind.MOVIE))
 
     /** The shows' titles, or null until they've first been grouped. */
     val series: StateFlow<Titles?> =
-        titlesOf("series", db.series()::versionRows, db.categories().observeNames(StreamKind.SERIES))
+        titlesOf(SERIES_TABLE, db.series()::versionRows, db.categories().observeNames(StreamKind.SERIES))
 
     /**
      * Each title's Versions for what plays and what's kept, waiting a moment for a first grouping. Past
@@ -134,7 +136,12 @@ class TitleIndex(
     // that fills in films' details writes every ten films for hours. On a Stick each read of a large
     // catalogue overflows SQLite's cursor window and churns the heap, so the pass alone kept two cores
     // busy and starved playback. Reads also leave a gap after each grouping ([regroupGapMillis]),
-    // so steady writes regroup now and then rather than continually.
+    // so steady writes regroup now and then rather than continually. The bound is per table: with
+    // both passes writing, films and shows together can take a tenth of a core. A change of category
+    // names, or a retry after a failed read, starts afresh without the gap; neither pass writes those.
+    //
+    // No gap after an empty table: on a first setup that's grouped before the catalogue arrives, and
+    // waiting out a gap then would leave every list showing each title's Versions apart for minutes.
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private fun titlesOf(
         table: String,
@@ -157,7 +164,9 @@ class TitleIndex(
                         emit(group(read, names))
                         grouped = hash
                     }
-                    delay(regroupGap(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)))
+                    if (read.isNotEmpty()) {
+                        delay(regroupGap(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)))
+                    }
                 }
         }
         .flowOn(Dispatchers.Default)

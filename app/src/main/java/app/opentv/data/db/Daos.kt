@@ -63,6 +63,12 @@ import kotlinx.coroutines.flow.Flow
 /** Rows per upsert statement. Keeps a 40,000-channel playlist from building one huge query. */
 private const val WRITE_CHUNK = 500
 
+/** The films' table, named once for grouping's read and for watching that table change, by `TitleIndex`. */
+const val MOVIES_TABLE = "movies"
+
+/** The shows' table, as [MOVIES_TABLE]. */
+const val SERIES_TABLE = "series"
+
 @Dao
 // A query per column a refresh writes on its own (sync time, zone, failure), so an edit saved meanwhile
 // isn't put back: that's what grows the count, not the interface doing more than one thing.
@@ -1110,7 +1116,7 @@ interface MovieDao {
     suspend fun byTmdbId(tmdbId: String): List<Movie>
 
     /** Every film as grouping into titles reads it. */
-    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies ORDER BY id")
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM $MOVIES_TABLE ORDER BY id")
     suspend fun versionRows(): List<VersionRow>
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
@@ -1382,7 +1388,7 @@ interface SeriesDao {
     suspend fun picksWithTmdbIds(tmdbIds: List<String>): List<TitlePick>
 
     /** Every show as grouping into titles reads it. */
-    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM $SERIES_TABLE ORDER BY id")
     suspend fun versionRows(): List<VersionRow>
 
     /**
