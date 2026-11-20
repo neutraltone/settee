@@ -61,7 +61,7 @@ class SetupScreenTest {
         setScreen(Setup(SetupStep.entries))
 
         compose.onNodeWithText("Adding your channels").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Still working").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Loading your library").assertIsDisplayed()
         captureScreen("setup_adding_channels")
         compose.onRoot().performKeyInput {
             pressKey(Key.DirectionCenter)
@@ -180,7 +180,7 @@ class SetupScreenTest {
         ).assertIsDisplayed()
         compose.onNodeWithText("Watch live TV now").assertDoesNotExist()
         compose.onNodeWithText("Take me to Settee").assertIsFocused()
-        compose.onNodeWithContentDescription("Still working").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Loading your library").assertDoesNotExist()
         captureScreen("setup_finished")
         compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
 

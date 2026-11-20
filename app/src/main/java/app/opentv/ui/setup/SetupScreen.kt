@@ -72,13 +72,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                // The waiting TV while it works, so the screen is plainly busy, not stuck; the
-                // still mark once it's done, as a TV that kept moving would say it was still going.
-                if (setup.finished) {
-                    Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
-                } else {
-                    AerialTv(stringResource(R.string.progress_still_working))
-                }
+                SetupIcon(setup.finished)
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
                     Finished(setup)
@@ -102,6 +96,24 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The waiting TV while setup works, so the screen is plainly busy, not stuck; the still mark once
+ * it's done, as a TV that kept moving would say it was still going. Both sit in the mark's square,
+ * so the text under them doesn't jump when setup finishes.
+ */
+@Composable
+private fun SetupIcon(finished: Boolean) {
+    Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+        if (finished) {
+            Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.fillMaxSize())
+        } else {
+            // Not "Still working": the progress bar already says that, and a screen reader would
+            // hear it twice. The step line under it says which part is loading.
+            AerialTv(stringResource(R.string.setup_loading))
         }
     }
 }
