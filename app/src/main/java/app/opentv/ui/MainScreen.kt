@@ -5,14 +5,18 @@
  */
 package app.opentv.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
@@ -31,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -47,13 +52,15 @@ import app.opentv.ui.design.AerialTvSize
 import app.opentv.ui.design.ConfirmPanel
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeMotion
+import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.percentText
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
+import kotlinx.coroutines.delay
 
 /** The main screen's tabs, each an item in the rail ([MainShell]). */
 enum class Tab(val labelRes: Int, val icon: ImageVector) {
@@ -185,7 +192,6 @@ fun MainScreen(
                 Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
             }
         }
-        StatusBar()
     }
 }
 
@@ -203,42 +209,67 @@ internal fun ExitPrompt(onLeave: () -> Unit, onStay: () -> Unit) {
 }
 
 /**
- * A slim line along the bottom that says what the app is doing in the background, such as loading
- * channels or building the guide, so a slow moment on a big provider reads as work in progress, not
- * a frozen screen. Invisible when there's nothing to report.
+ * What the app is doing in the background (a Catalogue Refresh's steps, device sync), in the
+ * top-right corner inside the screen frame. Row titles start at the left, so that's free, and nothing
+ * there takes the Highlight: at the bottom it covered the ring of a card in the last row. Drawn over
+ * the screen rather than laid out under it: as a line along the foot it pushed every row, and the
+ * Highlight with them, up when work started and back down when it stopped. It waits a second before
+ * appearing, because most refreshes finish sooner and a line that blinks on and off reads as a
+ * flicker, not news.
  */
 @Composable
-private fun StatusBar() {
+internal fun BackgroundWork(modifier: Modifier = Modifier) {
     val message by StatusBus.message.collectAsState()
     val progress by StatusBus.progress.collectAsState()
-    message?.let { StatusLine(it, progress) }
+    var shown by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(message) {
+        if (message != null && shown == null) delay(APPEAR_AFTER_MILLIS)
+        shown = message
+    }
+    // Kept through the fade out, which runs after the bus has already cleared.
+    var last by remember { mutableStateOf("") }
+    shown?.let { last = it }
+    AnimatedVisibility(
+        visible = shown != null,
+        modifier = modifier,
+        enter = fadeIn(tween(FADE_MILLIS, easing = SetteeMotion.Arrive)),
+        exit = fadeOut(tween(FADE_MILLIS)),
+    ) {
+        StatusLine(last, progress)
+    }
 }
 
+private const val APPEAR_AFTER_MILLIS = 1_000L
+private const val FADE_MILLIS = 250
+
 /**
- * The status line itself: quiet text on Surface. Work that knows how far through it is shows the
- * percentage and a bar ([progress] from 0 to 1); work that doesn't shows the small aerial TV.
+ * The corner itself: quiet words on Surface, one line tall so it fits the band of the first row's
+ * title and stays clear of that row's highlighted card. Work that knows how far through it is (only
+ * the guide's download does) shows a short bar after the words, with no percentage to read; work that
+ * doesn't shows the small aerial TV before them.
  */
 @Composable
 internal fun StatusLine(message: String, progress: Float?, modifier: Modifier = Modifier) {
-    Column(
+    Row(
         modifier
-            .fillMaxWidth()
-            .background(SetteeColors.Surface)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            // Read out as one thing, the words and the aerial TV or bar together.
+            .semantics(mergeDescendants = true) {}
+            .widthIn(max = StatusLineMaxWidth)
+            .background(SetteeColors.Surface, SetteeShapes.Card)
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (progress == null) {
-                AerialTv(stringResource(R.string.progress_still_working), size = AerialTvSize.Small)
-            } else {
-                Text(
-                    percentText(progress),
-                    SetteeType.Body,
-                    color = SetteeColors.Accent,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(message, SetteeType.Body, color = SetteeColors.QuietText, maxLines = 1)
+        if (progress == null) {
+            AerialTv(stringResource(R.string.progress_still_working), size = AerialTvSize.Small)
+            Spacer(Modifier.width(10.dp))
         }
-        if (progress != null) ProgressBar(progress, Modifier.fillMaxWidth().padding(top = 4.dp))
+        Text(message, SetteeType.Body, Modifier.weight(1f, fill = false), color = SetteeColors.QuietText, maxLines = 1)
+        if (progress != null) {
+            Spacer(Modifier.width(12.dp))
+            ProgressBar(progress, Modifier.width(StatusBarWidth))
+        }
     }
 }
+
+private val StatusLineMaxWidth = 360.dp
+private val StatusBarWidth = 56.dp

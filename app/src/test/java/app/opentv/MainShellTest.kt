@@ -29,6 +29,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -39,6 +40,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
+import app.opentv.core.StatusBus
 import app.opentv.data.model.Movie
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.VodTitle
@@ -50,6 +52,7 @@ import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieShelves
 import com.google.common.truth.Truth.assertThat
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -170,6 +173,55 @@ class MainShellTest {
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Shows 11")
+    }
+
+    @After
+    fun clearStatus() = StatusBus.set(null)
+
+    @Test
+    fun `background work shows in the top-right corner after a second, and nothing on the screen moves`() {
+        setShellWithTitles(start = Tab.HOME)
+        val before = compose.onNodeWithText("Home 1").getUnclippedBoundsInRoot()
+        compose.mainClock.autoAdvance = false
+
+        StatusBus.set("Updating your channels")
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithText("Updating your channels").assertDoesNotExist()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        val line = compose.onNodeWithText("Updating your channels").getUnclippedBoundsInRoot()
+        assertThat(line.left).isGreaterThan(480.dp)
+        assertThat(line.right).isAtMost(960.dp - 48.dp)
+        assertThat(line.top).isAtLeast(27.dp)
+        assertThat(line.bottom).isLessThan(540.dp / 4)
+        assertThat(compose.onNodeWithText("Home 1").getUnclippedBoundsInRoot()).isEqualTo(before)
+        // Clear of the first row, whose highlighted card's ring stands a few dp proud of the card.
+        assertThat(line.bottom).isAtMost(compose.onNodeWithText("Home 6").getUnclippedBoundsInRoot().top - 6.dp)
+        compose.mainClock.autoAdvance = true
+        captureScreen("main_background_work")
+
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Home 1")
+    }
+
+    @Test
+    fun `work over within a second never shows, and the corner goes once the work ends`() {
+        setShellWithTitles(start = Tab.HOME)
+        compose.mainClock.autoAdvance = false
+
+        StatusBus.set("Updating your channels")
+        compose.mainClock.advanceTimeBy(500)
+        StatusBus.set(null)
+        compose.mainClock.advanceTimeBy(1_500)
+        compose.onNodeWithText("Updating your channels").assertDoesNotExist()
+
+        StatusBus.set("Updating the TV guide", 0.3f)
+        compose.mainClock.advanceTimeBy(1_500)
+        val withBar = compose.onNodeWithText("Updating the TV guide").getUnclippedBoundsInRoot()
+        assertThat(withBar.bottom).isAtMost(compose.onNodeWithText("Home 6").getUnclippedBoundsInRoot().top - 6.dp)
+        StatusBus.set(null)
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithText("Updating the TV guide").assertDoesNotExist()
     }
 
     @Test

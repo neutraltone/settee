@@ -204,8 +204,8 @@ A warm aubergine dark, lit by a single coral lamp.
 - **Picture Rail** (picture-rail): guide rules and a text field's resting border. Decoration only: too
   faint to carry text or the Highlight.
 - **Cream** (cream): text, 16.0:1 on Aubergine Dusk. Also the aerial TV drawn while waiting.
-- **Mushroom** (mushroom): quiet text, such as status lines, later programmes, values, notes and error
-  detail lines. 8.3:1 on Aubergine Dusk.
+- **Mushroom** (mushroom): quiet text, such as the corner's words, later programmes, values, notes and
+  error detail lines. 8.3:1 on Aubergine Dusk.
 
 ### Named Rules
 **The One Lamp Rule.** Coral marks where the remote is, or what's chosen. Never use it to decorate,
@@ -238,7 +238,7 @@ Both ship unmodified from Google Fonts, under the OFL.
 - **Row title** (Alegreya Sans Bold, 17 sp / 21): the title on a list row: an episode, a channel, a
   setting, a recording.
 - **Card title** (Alegreya Sans Bold, 16 sp / 19): the title on artwork, where there's less room.
-- **Body** (Alegreya Sans Medium, 16 sp / 21): labels, values, notes, status lines, buttons.
+- **Body** (Alegreya Sans Medium, 16 sp / 21): labels, values, notes, the corner's words, buttons.
 
 ### Named Rules
 **The Sofa Floor Rule.** Nothing is smaller than 16 sp. A test on the type tokens checks it.
@@ -364,6 +364,13 @@ size, at text height, sits at the end of a row, drawn in Plum Ink when the row h
 and the skeletons' pulse are the things that keep moving when the system's animations are off. When
 the work knows how far it is, a progress bar and percentage take its place. It waits for the players
 and phone pairing; row and grid screens wait with skeletons.
+
+### Corner (background work)
+One line in the top-right of the main screen, inside the margin and clear of the first row's
+Highlight: Mushroom Body words on Surface with Card corners, the small aerial TV before them, or a
+short progress bar after them for the guide's download, the only work with real progress, and no
+percentage. Drawn over the screen, so nothing moves; never takes the Highlight. Appears only for work
+still running after a second, fading in on Arrive and out as it ends.
 
 ### Skeleton (waiting)
 A loading row's real title over blank cards in Surface with Card corners, each the size of the card it

@@ -195,19 +195,24 @@ class SourcesViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             var shown = refresh.state.value.last
             var wasRefreshing = false
-            var announced: String? = null
+            var announced: Pair<String, Float?>? = null
             try {
                 refresh.state.collect { state ->
                     val news = state.last.takeIf { it !== shown || (wasRefreshing && !state.refreshing) }
                     shown = state.last
                     wasRefreshing = state.refreshing
-                    // On changes only: the channel list's own progress shares this status bar.
+                    // On changes only: the channel list's own progress shares this status bar. Only
+                    // the guide knows how far through it is, so only it brings a bar.
                     val status = when {
-                        state.loadingVod -> messages.of(RefreshMessages.Step.LoadingVod)
-                        state.buildingGuide -> messages.of(RefreshMessages.Step.BuildingGuide)
+                        state.updatingChannels -> messages.of(RefreshMessages.Step.UpdatingChannels) to null
+                        state.updatingMoviesAndShows -> messages.of(RefreshMessages.Step.UpdatingMoviesAndShows) to null
+                        state.buildingGuide -> messages.of(RefreshMessages.Step.UpdatingGuide) to state.guideShare
                         else -> null
                     }
-                    if (status != announced) StatusBus.set(status)
+                    if (status != announced) {
+                        announced?.let { (message, _) -> if (message != status?.first) StatusBus.clear(message) }
+                        status?.let { (message, share) -> StatusBus.show(message, share) }
+                    }
                     announced = status
                     _ui.update {
                         it.copy(
@@ -224,7 +229,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 }
             } finally {
                 // The bar outlives this screen model, and the next one can't know this one set it.
-                if (announced != null) StatusBus.set(null)
+                announced?.let { (message, _) -> StatusBus.clear(message) }
             }
         }
     }

@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.core.StatusBus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -25,17 +26,29 @@ internal class FirstOpenWork(
     private val catchUpNormaliser: suspend () -> Unit,
     private val launchRefresh: suspend () -> Unit,
     private val failed: (step: String, cause: Throwable) -> Unit = { _, _ -> },
+    /** What the main screen's corner says while the NAS sync runs. */
+    private val syncingNas: String? = null,
 ) {
     // Each its own child of a supervisor, so a catalogue that fails doesn't cancel a NAS sync
     // half-way through writing this device's bundle. Running the catalogue in the scope's own
     // block instead would: a supervisor still cancels its children when its block throws.
     suspend fun run() = supervisorScope {
-        if (nasAutoSync) launch { step("NAS sync") { syncNas() } }
+        if (nasAutoSync) launch { step("NAS sync") { announcing(syncingNas) { syncNas() } } }
         launch {
             // A catch-up that fails still leaves the refresh to run: it brings fresh rows, normalised
             // as they're saved, and the catch-up is tried again on the next launch.
             step("normaliser catch-up") { catchUpNormaliser() }
             step("launch refresh") { launchRefresh() }
+        }
+    }
+
+    private suspend fun announcing(message: String?, block: suspend () -> Unit) {
+        if (message == null) return block()
+        StatusBus.show(message)
+        try {
+            block()
+        } finally {
+            StatusBus.clear(message)
         }
     }
 

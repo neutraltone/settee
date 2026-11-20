@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.CatalogueRefresh
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -547,6 +548,40 @@ class CatalogueRefreshTest {
     }
 
     @Test
+    fun `the periodic refresh says it's updating the channels only while it is`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val hold = panel.hold("get_live_streams")
+
+        withContext(Dispatchers.Default) {
+            val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+            during(hold) { assertThat(refresh.state.value.updatingChannels).isTrue() }
+            hold.release()
+            refreshing.await()
+        }
+
+        assertThat(refresh.state.value.updatingChannels).isFalse()
+    }
+
+    @Test
+    fun `the periodic refresh says the guide is updating, and how far through it is, only while it is`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val hold = panel.hold("xmltv.php")
+
+        withContext(Dispatchers.Default) {
+            val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+            during(hold) {
+                assertThat(refresh.state.value.buildingGuide).isTrue()
+                assertThat(refresh.state.value.guideShare).isIn(Range.openClosed(0f, 1f))
+            }
+            hold.release()
+            refreshing.await()
+        }
+
+        assertThat(refresh.state.value.buildingGuide).isFalse()
+        assertThat(refresh.state.value.guideShare).isNull()
+    }
+
+    @Test
     fun `however refreshes and guide passes overlap, nothing stays marked as running`() = runTest {
         db.sources().insert(PANEL_SOURCE)
 
@@ -567,7 +602,16 @@ class CatalogueRefreshTest {
         }
 
         val state = refresh.state.value
-        assertThat(listOf(state.refreshing, state.loadingVod, state.buildingGuide)).containsExactly(false, false, false)
+        assertThat(
+            listOf(
+                state.refreshing,
+                state.updatingChannels,
+                state.updatingMoviesAndShows,
+                state.loadingVod,
+                state.buildingGuide,
+            ),
+        ).containsExactly(false, false, false, false, false)
+        assertThat(state.guideShare).isNull()
     }
 
     @Test

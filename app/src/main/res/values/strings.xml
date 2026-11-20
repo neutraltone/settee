@@ -825,8 +825,10 @@
     <string name="refresh_save_failed">Could not save source.</string>
     <string name="refresh_loading_channels">Loading channels…</string>
     <string name="refresh_refreshing">Refreshing…</string>
-    <string name="refresh_building_guide">Building the TV guide…</string>
-    <string name="refresh_loading_vod">Loading movies &amp; shows…</string>
+    <string name="status_syncing_devices">Syncing with your other devices</string>
+    <string name="refresh_updating_channels">Updating your channels</string>
+    <string name="refresh_updating_guide">Updating the TV guide</string>
+    <string name="refresh_updating_movies_and_shows">Updating movies and shows</string>
     <string name="refresh_downloading_guides">Downloading guides…</string>
     <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet. Add a free guide in Guide settings.</string>
     <string name="refresh_guide_and_failures">%1$s · %2$s</string>

@@ -28,11 +28,11 @@ class StatusLineTest {
     val compose = createComposeRule()
 
     @Test
-    fun `work that knows how far through it is shows the percentage and a bar`() {
-        compose.setTvContent { StatusLine("Building the guide", progress = 0.4f) }
+    fun `work that knows how far through it is shows a bar, with no percentage to read`() {
+        compose.setTvContent { StatusLine("Updating the TV guide", progress = 0.4f) }
 
-        compose.onNodeWithText("Building the guide").assertExists()
-        compose.onNodeWithText("40%").assertExists()
+        compose.onNodeWithText("Updating the TV guide").assertExists()
+        compose.onNodeWithText("%", substring = true).assertDoesNotExist()
         compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.4f, 0f..1f))).assertExists()
         compose.onNodeWithContentDescription("Still working").assertDoesNotExist()
         captureScreen("status_line_progress")
@@ -40,9 +40,9 @@ class StatusLineTest {
 
     @Test
     fun `work that doesn't know how far through it is shows the small aerial TV`() {
-        compose.setTvContent { StatusLine("Loading channels", progress = null) }
+        compose.setTvContent { StatusLine("Updating your channels", progress = null) }
 
-        compose.onNodeWithText("Loading channels").assertExists()
+        compose.onNodeWithText("Updating your channels").assertExists()
         compose.onNodeWithContentDescription("Still working").assertExists()
         compose.onNodeWithText("%", substring = true).assertDoesNotExist()
         captureScreen("status_line_working")

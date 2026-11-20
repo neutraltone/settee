@@ -156,6 +156,7 @@ internal fun MainShell(
                 }
             }
         }
+        BackgroundWork(Modifier.align(Alignment.TopEnd).padding(top = 27.dp, end = 48.dp))
         Rail(
             tabs = tabs,
             current = current,

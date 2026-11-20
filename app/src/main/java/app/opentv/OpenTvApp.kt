@@ -157,6 +157,7 @@ open class OpenTvApp :
                 graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
             },
             failed = { step, cause -> Log.w(TAG, "First-open $step failed", cause) },
+            syncingNas = getString(R.string.status_syncing_devices),
         )
         appScope.launch { work.run() }
     }
