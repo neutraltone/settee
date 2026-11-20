@@ -26,6 +26,9 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.knownTmdbId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -805,22 +808,27 @@ private class ContinueWatchingCards(
                 it.id to it.tmdbId
             }
         }
-        val seen = HashSet<String>()
-        return newestFirst.filter { played ->
-            // A title is its first Version's row id as lists group them, or else its TMDB id.
-            val title = when (val card = played.card) {
-                is ContinueWatchingCard.Movie -> versionIds.of(StreamKind.MOVIE, card.movieId)?.minOrNull()
-                    ?.let { "movie:#$it" }
-                    ?: knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
-                is ContinueWatchingCard.Series -> series.bySeriesId(card.episode.sourceId, card.episode.seriesId)
-                    ?.let { row ->
-                        versionIds.of(StreamKind.SERIES, row.id)?.minOrNull()?.let { "series:#$it" }
-                            ?: knownTmdbId(row.tmdbId)?.let { "series:$it" }
-                    }
-            }
-            title == null || seen.add(title)
+        // All at once: before the titles are first grouped, each lookup waits for them, and one
+        // after another that was a wait per card on Home's first frame (#582).
+        val titles = coroutineScope {
+            newestFirst.map { played -> async { titleOf(played.card, movieTitles) } }.awaitAll()
         }
+        val seen = HashSet<String>()
+        return newestFirst.zip(titles).filter { (_, title) -> title == null || seen.add(title) }.map { it.first }
     }
+
+    /** A card's title: its first Version's row id as lists group them, or else its TMDB id. */
+    private suspend fun titleOf(card: ContinueWatchingCard, movieTitles: Map<Long, String?>): String? =
+        when (card) {
+            is ContinueWatchingCard.Movie -> versionIds.of(StreamKind.MOVIE, card.movieId)?.minOrNull()
+                ?.let { "movie:#$it" }
+                ?: knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
+            is ContinueWatchingCard.Series -> series.bySeriesId(card.episode.sourceId, card.episode.seriesId)
+                ?.let { row ->
+                    versionIds.of(StreamKind.SERIES, row.id)?.minOrNull()?.let { "series:#$it" }
+                        ?: knownTmdbId(row.tmdbId)?.let { "series:$it" }
+                }
+        }
     fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map(::moviesFrom)
 
     /** [list] (one Profile's positions, newest first) as Continue Watching's movie cards. */

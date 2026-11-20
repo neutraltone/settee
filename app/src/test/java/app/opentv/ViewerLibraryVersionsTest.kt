@@ -23,6 +23,7 @@ import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.WatchStatus
 import app.opentv.data.repo.mediaKey
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -89,6 +90,31 @@ class ViewerLibraryVersionsTest {
 
         assertThat(library.continueWatching().first())
             .containsExactly(ContinueWatchingCard.Movie(english.id, 0.25f))
+    }
+
+    @Test
+    fun `Continue Watching doesn't wait for the grouping once per card`() = runTest {
+        // Before the titles are first grouped, each lookup waits for them, then gives up (#582).
+        val ungrouped = ViewerLibrary(
+            db,
+            MutableStateFlow(1L),
+            clock = { now },
+            versionIds = { _, _ ->
+                delay(GROUPING_WAIT)
+                null
+            },
+        )
+        val films = (10L..14L).map { movie(it, "EN - Film $it (2007)", tmdbId = "$it") }
+        db.movies().upsertAll(films)
+        films.forEach {
+            later()
+            played(it.mediaKey, fraction = 0.5)
+        }
+
+        val cards = ungrouped.continueWatching().first()
+
+        assertThat(cards).hasSize(5)
+        assertThat(testScheduler.currentTime).isLessThan(2 * GROUPING_WAIT)
     }
 
     @Test
@@ -202,3 +228,5 @@ class ViewerLibraryVersionsTest {
         const val DURATION = 6_000_000L
     }
 }
+
+private const val GROUPING_WAIT = 3_000L
