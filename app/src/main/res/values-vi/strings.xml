@@ -39,7 +39,6 @@
     <string name="guide_no_info">Chưa có thông tin chương trình</string>
     <string name="guide_loading_channels">Đang tải kênh của bạn</string>
     <string name="guide_fetching_desc">Đang lấy danh sách kênh và lịch phát từ nhà cung cấp của bạn. Với nhà cung cấp lớn, lần đầu có thể mất vài phút.</string>
-    <string name="guide_building_desc">Đang xây dựng lịch phát từ các kênh đã lưu trên thiết bị này. Với nhà cung cấp lớn, việc này mất một chút thời gian — lịch sẽ hiện ra ngay sau đó.</string>
     <string name="guide_no_favourites_title">Chưa có kênh yêu thích</string>
     <string name="guide_no_channels_title">Chưa có kênh nào</string>
     <string name="guide_add_provider_desc">Các kênh từ nhà cung cấp của bạn sẽ hiện ở đây. Thêm nhà cung cấp của bạn để bắt đầu.</string>

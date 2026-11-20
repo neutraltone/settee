@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import app.opentv.data.db.LivePlaybackDao
 import app.opentv.data.model.Channel
+import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.shownName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -61,22 +62,33 @@ class LiveWatching internal constructor(
      * watching one on another device doesn't.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun preview(): Flow<LivePreview?> = activeProfileId.flatMapLatest { pid ->
-        live.observe(pid).map { played ->
-            played?.takeIf { it.otherPlayedAtMillis == null || it.playedAtMillis > it.otherPlayedAtMillis }
-        }.distinctUntilChanged().flatMapLatest { played ->
-            if (played == null) {
-                flowOf(null)
-            } else {
-                live.observeChannel(played.source, played.streamId).map { channel ->
-                    when {
-                        channel == null -> LivePreview.Gone(played.name, played.logoUrl)
-                        // Hidden on purpose: Home doesn't bring it back up, not even as a reminder.
-                        channel.hidden -> null
-                        else -> LivePreview.Playable(channel)
-                    }
+    fun preview(): Flow<LivePreview?> = settled().flatMapLatest { played ->
+        if (played == null) {
+            flowOf(null)
+        } else {
+            live.observeChannel(played.source, played.streamId).map { channel ->
+                when {
+                    channel == null -> LivePreview.Gone(played.name, played.logoUrl)
+                    // Hidden on purpose: Home doesn't bring it back up, not even as a reminder.
+                    channel.hidden -> null
+                    else -> LivePreview.Playable(channel)
                 }
             }
         }
+    }
+
+    /**
+     * Whether the active Profile will likely have a Live Preview, from its own row alone, without the
+     * channel's: quick enough for Home to hold the tile's place before it's built (#581). A channel
+     * since hidden makes none, which only the channel's row can say.
+     */
+    fun hasPreview(): Flow<Boolean> = settled().map { it != null }.distinctUntilChanged()
+
+    /** The live channel the active Profile last settled on, while live was the last thing played here. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun settled(): Flow<LivePlayback?> = activeProfileId.flatMapLatest { pid ->
+        live.observe(pid).map { played ->
+            played?.takeIf { it.otherPlayedAtMillis == null || it.playedAtMillis > it.otherPlayedAtMillis }
+        }.distinctUntilChanged()
     }
 }

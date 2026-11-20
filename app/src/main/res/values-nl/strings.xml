@@ -39,7 +39,6 @@
     <string name="guide_no_info">Nog geen gidsinformatie</string>
     <string name="guide_loading_channels">Je zenders laden</string>
     <string name="guide_fetching_desc">De zenderlijst en gids van je provider ophalen. Bij een grote provider kan dit de eerste keer een paar minuten duren.</string>
-    <string name="guide_building_desc">Je gids samenstellen uit de zenders die op dit apparaat zijn opgeslagen. Bij een grote provider duurt dit even — het verschijnt binnenkort.</string>
     <string name="guide_no_favourites_title">Nog geen favorieten</string>
     <string name="guide_no_channels_title">Nog geen zenders</string>
     <string name="guide_add_provider_desc">De zenders van je provider verschijnen hier. Voeg je provider toe om te beginnen.</string>

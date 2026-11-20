@@ -39,7 +39,6 @@
     <string name="guide_no_info">Belum ada info panduan</string>
     <string name="guide_loading_channels">Memuat saluran Anda</string>
     <string name="guide_fetching_desc">Mengambil daftar saluran dan panduan dari penyedia Anda. Penyedia besar bisa memakan waktu beberapa menit pada percobaan pertama.</string>
-    <string name="guide_building_desc">Membuat panduan dari saluran yang tersimpan di perangkat ini. Untuk penyedia besar ini perlu waktu sebentar — akan segera muncul.</string>
     <string name="guide_no_favourites_title">Belum ada favorit</string>
     <string name="guide_no_channels_title">Belum ada saluran</string>
     <string name="guide_add_provider_desc">Saluran dari penyedia Anda akan muncul di sini. Tambahkan penyedia Anda untuk memulai.</string>

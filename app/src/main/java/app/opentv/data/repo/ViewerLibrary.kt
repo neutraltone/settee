@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.util.Log
 import androidx.room.withTransaction
 import app.opentv.data.db.EpisodeDao
+import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.MovieDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.PlaybackPositionDao
@@ -139,6 +140,9 @@ class ViewerLibrary(
 
     /** The active Profile's Favourites, and every Profile's for sync. */
     val favourites = Favourites(db, activeProfileId, clock, versionIds)
+
+    /** Which rows the active Profile will have, asked quickly, for screens' skeletons. */
+    val quickChecks = QuickChecks(positions, db.favourites(), activeProfileId)
 
     private val cards = ContinueWatchingCards(positions, episodes, dismissals, movies, series, versionIds)
 
@@ -345,6 +349,35 @@ class TitleStatus internal constructor(
             }
             .distinctUntilChanged()
     }
+}
+
+/**
+ * Quick looks at the active Profile's own small tables, for a screen to hold a row's place with a
+ * skeleton before the row's cards are built (#581): building them reads the catalogue, which on a
+ * big provider takes seconds, and these never do.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class QuickChecks internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val favourites: FavouriteDao,
+    private val activeProfileId: StateFlow<Long>,
+) {
+    /** Whether Home's Continue Watching will likely have a card: a film's or a show's. */
+    fun anythingToContinue(): Flow<Boolean> = combine(filmToContinue(), showToContinue()) { a, b -> a || b }
+
+    /** Whether Movies' Continue Watching will have a card: a film In Progress (a Watched one never makes one). */
+    fun filmToContinue(): Flow<Boolean> =
+        activeProfileId.flatMapLatest { positions.observeFilmInProgress(it, WATCHED_FRACTION) }
+
+    /**
+     * Whether Shows' Continue Watching will likely have a card: an episode In Progress, or Watched with
+     * an Up Next after it, which takes the episodes to tell, so any Watched episode counts.
+     */
+    fun showToContinue(): Flow<Boolean> = activeProfileId.flatMapLatest { positions.observeEpisodeToContinue(it) }
+
+    /** Whether it has a Favourite of [kind], from the Favourites table alone. */
+    fun hasFavourite(kind: StreamKind): Flow<Boolean> =
+        activeProfileId.flatMapLatest { favourites.observeAny(it, kind) }
 }
 
 /**

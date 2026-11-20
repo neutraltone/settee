@@ -360,9 +360,17 @@ Ink text, at 2 dp corners.
 ### Aerial TV (waiting)
 The TV from the mark in Cream, with coral arcs rising from its aerials over about 1.8 s and the eyes
 blinking about every 4 s. Full size (48 to 64 dp) is centred with what's loading named under it. Small
-size, at text height, sits at the end of a row, drawn in Plum Ink when the row has the Highlight. It's
-the one thing that keeps moving when the system's animations are off. When the work knows how far it
-is, a progress bar and percentage take its place.
+size, at text height, sits at the end of a row, drawn in Plum Ink when the row has the Highlight. It
+and the skeletons' pulse are the things that keep moving when the system's animations are off. When
+the work knows how far it is, a progress bar and percentage take its place. It waits for the players
+and phone pairing; row and grid screens wait with skeletons.
+
+### Skeleton (waiting)
+A loading row's real title over blank cards in Surface with Card corners, each the size of the card it
+stands for, filling the screen's width; a loading grid of blank covers; a guide of blank channel cells
+and programmes. The blank cards pulse as one layer, its opacity easing between full and 65% every 1.8 s,
+never a shimmer. Only the card a screen opens on can take the Highlight, outside the pulse so the
+Highlight holds steady, and OK does nothing on it.
 
 ### Error message
 A sentence in the Voice saying what happened and what to do, then a small Mushroom line with the code,
@@ -372,7 +380,8 @@ status and format. Never a provider URL, username, password or MAC.
 
 ### Do:
 - **Do** build from `ui/design` and Compose foundation: `HighlightSurface`, `PillButton`, `Pill`,
-  `ListRow`, `ArtCard`, `SidePanel`, `ScreenFrame`, `AerialTv`, `ErrorMessage`.
+  `ListRow`, `ArtCard`, `SidePanel`, `ScreenFrame`, `AerialTv`, `SkeletonShelf`, `SkeletonGrid`,
+  `SkeletonGuide`, `ErrorMessage`.
 - **Do** make every new element reachable and obvious with a D-pad. If it can take the Highlight, it
   draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else. The
   player's previous, play or pause and next are the one exception: bare icons that turn coral.

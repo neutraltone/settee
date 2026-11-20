@@ -1527,6 +1527,9 @@ interface EpisodeDao {
 }
 
 @Dao
+// Each reader of a Profile's positions asks its own question (one title, a kind, any at all), which
+// is what grows the count, not the interface doing more than one thing.
+@Suppress("TooManyFunctions")
 interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun get(profileId: Long, key: String): PlaybackPosition?
@@ -1538,6 +1541,34 @@ interface PlaybackPositionDao {
 
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
+
+    /**
+     * Whether a profile has a film In Progress: no hand mark, and not past [watched] of the way
+     * through, as Watched is worked out. The quick check for a film's Continue Watching card.
+     */
+    @Query(
+        """
+        SELECT EXISTS(
+          SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE 'movie:%'
+            AND mark IS NULL AND NOT (durationMillis > 0 AND positionMillis > durationMillis * :watched)
+        )
+        """,
+    )
+    fun observeFilmInProgress(profileId: Long, watched: Double): Flow<Boolean>
+
+    /**
+     * Whether a profile has an episode not marked Unwatched: In Progress, or Watched with perhaps an
+     * Up Next after it. The quick check for a show's Continue Watching card.
+     */
+    @Query(
+        """
+        SELECT EXISTS(
+          SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE 'ep:%'
+            AND (mark IS NULL OR mark = 'WATCHED')
+        )
+        """,
+    )
+    fun observeEpisodeToContinue(profileId: Long): Flow<Boolean>
 
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
@@ -1691,6 +1722,10 @@ interface FavouriteDao {
         """,
     )
     suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
+
+    /** Whether a profile has a Favourite of [kind]: Home's quick check for a Favourites row. */
+    @Query("SELECT EXISTS(SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND removed = 0)")
+    fun observeAny(profileId: Long, kind: StreamKind): Flow<Boolean>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(favourite: Favourite)

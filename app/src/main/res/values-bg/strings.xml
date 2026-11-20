@@ -39,7 +39,6 @@
     <string name="guide_no_info">Все още няма информация за програмата</string>
     <string name="guide_loading_channels">Зареждане на вашите канали</string>
     <string name="guide_fetching_desc">Извличане на списъка с канали и програмата от вашия доставчик. При голям доставчик първия път може да отнеме няколко минути.</string>
-    <string name="guide_building_desc">Изграждане на програмата от каналите, запазени на това устройство. При голям доставчик това отнема известно време — ще се появи скоро.</string>
     <string name="guide_no_favourites_title">Все още няма любими</string>
     <string name="guide_no_channels_title">Все още няма канали</string>
     <string name="guide_add_provider_desc">Каналите на вашия доставчик ще се появят тук. Добавете доставчика си, за да започнете.</string>

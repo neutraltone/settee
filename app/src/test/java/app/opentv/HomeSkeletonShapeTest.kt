@@ -1,0 +1,208 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv
+
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.model.Channel
+import app.opentv.data.model.Movie
+import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
+import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
+import app.opentv.ui.HomeState
+import app.opentv.ui.HomeViewModel
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * Which of Home's rows hold their place as skeletons before their cards are built (#581): worked out
+ * from quick checks of the Profile's own small tables, so a skeleton row never disappears and moves
+ * the rows below it. Every read of the catalogue is held here, the way a big one is slow on a Stick.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = android.app.Application::class)
+class HomeSkeletonShapeTest {
+
+    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val catalogue = HeldCatalogue(app, "home-skeleton-shape-test")
+    private val graph = catalogue.graph
+    private val db = graph.database
+    private val viewModels = ViewModelsInTest()
+
+    @Before
+    fun setUp() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
+        db.movies().upsertAll(listOf(superbad))
+        db.series().upsertAll(listOf(severance))
+    }
+
+    @After
+    fun tearDown() {
+        catalogue.release()
+        runBlocking { viewModels.stopAll() }
+        catalogue.close()
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `a Profile with something played and a Favourite show gets places for them and Recently Added`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
+        graph.viewerLibrary.favourites.set(severance, true)
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).containsExactly(
+            HomeRowKind.CONTINUE_WATCHING,
+            HomeRowKind.FAVOURITE_SHOWS,
+            HomeRowKind.RECENT_SHOWS,
+            HomeRowKind.RECENT_MOVIES,
+        )
+    }
+
+    @Test
+    fun `a Profile that has played nothing gets no place for Continue Watching`() = runTest {
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).containsExactly(HomeRowKind.RECENT_SHOWS, HomeRowKind.RECENT_MOVIES)
+    }
+
+    @Test
+    fun `a Profile whose only film is finished gets no place for Continue Watching`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).containsExactly(HomeRowKind.RECENT_SHOWS, HomeRowKind.RECENT_MOVIES)
+    }
+
+    @Test
+    fun `a finished episode still gets a place, for its Up Next`() = runTest {
+        graph.viewerLibrary.recordProgress("ep:5", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).contains(HomeRowKind.CONTINUE_WATCHING)
+    }
+
+    @Test
+    fun `a Profile whose last watch was live gets a place for the Live Preview`() = runTest {
+        db.channels().replaceCatalogue(1, listOf(bbcOne), syncStamp = 1)
+        graph.viewerLibrary.live.record(db.channels().everyRow().single())
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.liveLoading).isTrue()
+    }
+
+    @Test
+    fun `a Profile that has watched nothing live gets no place for the Live Preview`() = runTest {
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.liveLoading).isFalse()
+    }
+
+    @Test
+    fun `a row the Profile hid never gets a place`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
+        graph.profileSettings.arrangeHome(HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))
+        catalogue.hold()
+
+        val first = firstState()
+
+        assertThat(first.loading).containsExactly(HomeRowKind.RECENT_SHOWS, HomeRowKind.RECENT_MOVIES)
+    }
+
+    @Test
+    fun `each place goes as its row's cards come, Continue Watching's with the film in it`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
+        catalogue.hold()
+        val home = viewModels.track(HomeViewModel(app, graph))
+        withContext(Dispatchers.Default) { withTimeout(5_000) { home.state.filterNotNull().first() } }
+
+        catalogue.release()
+        val settled = withContext(Dispatchers.Default) {
+            withTimeout(5_000) { home.state.filterNotNull().first { it.loading.isEmpty() } }
+        }
+
+        assertThat(settled.continueWatching.map { it.name }).containsExactly("Superbad")
+    }
+
+    /** Home's first state, waiting in real time: the quick checks run on Room's own threads. */
+    private suspend fun firstState(): HomeState {
+        val home = viewModels.track(HomeViewModel(app, graph))
+        return withContext(Dispatchers.Default) { withTimeout(5_000) { home.state.filterNotNull().first() } }
+    }
+
+    private val superbad = Movie(
+        id = 1,
+        sourceId = 1,
+        streamId = "1",
+        name = "Superbad",
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = 2007,
+        plot = null,
+        durationSeconds = null,
+        containerExtension = "mkv",
+        streamUrl = "https://example.com/1",
+    )
+
+    private val bbcOne = Channel(
+        sourceId = 1,
+        streamId = "1",
+        name = "BBC One",
+        categoryId = null,
+        logoUrl = null,
+        epgChannelId = null,
+        number = 1,
+        streamUrl = "http://example.com/live/u/p/1.ts",
+    )
+
+    private val severance = Series(
+        id = 2,
+        sourceId = 1,
+        seriesId = "2",
+        name = "Severance",
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
+    )
+
+    private companion object {
+        const val FILM_MILLIS = 6_000_000L
+    }
+}

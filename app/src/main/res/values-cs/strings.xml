@@ -39,7 +39,6 @@
     <string name="guide_no_info">Zatím žádné informace o programu</string>
     <string name="guide_loading_channels">Načítání vašich kanálů</string>
     <string name="guide_fetching_desc">Načítá se seznam kanálů a programový průvodce od vašeho poskytovatele. U velkého poskytovatele to může poprvé trvat několik minut.</string>
-    <string name="guide_building_desc">Sestavuje se průvodce z kanálů uložených v tomto zařízení. U velkého poskytovatele to chvíli trvá — brzy se zobrazí.</string>
     <string name="guide_no_favourites_title">Zatím žádné oblíbené</string>
     <string name="guide_no_channels_title">Zatím žádné kanály</string>
     <string name="guide_add_provider_desc">Zde se zobrazí kanály vašeho poskytovatele. Pro začátek přidejte poskytovatele.</string>

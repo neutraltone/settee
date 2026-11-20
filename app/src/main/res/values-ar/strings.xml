@@ -39,7 +39,6 @@
     <string name="guide_no_info">لا توجد معلومات دليل البرامج بعد</string>
     <string name="guide_loading_channels">جارٍ تحميل قنواتك</string>
     <string name="guide_fetching_desc">جارٍ جلب قائمة القنوات ودليل البرامج من مزوّدك. قد يستغرق ذلك بضع دقائق في المرة الأولى مع مزوّد كبير.</string>
-    <string name="guide_building_desc">جارٍ إنشاء دليل البرامج من القنوات المحفوظة على هذا الجهاز. مع مزوّد كبير قد يستغرق هذا لحظة — سيظهر قريبًا.</string>
     <string name="guide_no_favourites_title">لا توجد مفضلة بعد</string>
     <string name="guide_no_channels_title">لا توجد قنوات بعد</string>
     <string name="guide_add_provider_desc">ستظهر قنوات مزوّدك هنا. أضف مزوّدك للبدء.</string>

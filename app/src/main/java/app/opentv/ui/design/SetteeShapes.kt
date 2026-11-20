@@ -36,4 +36,10 @@ object SetteeSpace {
 
     /** Between rows. */
     val RowGap = 14.dp
+
+    /**
+     * Above and below a row of cards, for a highlighted card's lift and glow. Shared by the rows and
+     * their skeletons, which must be exactly as tall so nothing moves when a row lands (#581).
+     */
+    val LiftRoom = 12.dp
 }

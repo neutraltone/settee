@@ -78,7 +78,7 @@ private fun ScreenFrameScope.ShelfRow(
     LazyRow(
         state = state,
         // The side padding is the bleed's, which puts the first card back on the margin.
-        contentPadding = PaddingValues(horizontal = SetteeSpace.ScreenSide, vertical = LIFT_ROOM),
+        contentPadding = PaddingValues(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.LiftRoom),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
         verticalAlignment = verticalAlignment,
         modifier = Modifier
@@ -158,6 +158,3 @@ private fun Modifier.fadeBehindTheMargin() = drawWithContent {
 
 /** Short of the 48 dp margin, so the first card's ring, at the margin, stays clear of it. */
 private val MARGIN_FADE = 36.dp
-
-/** Above and below a row's cards: half of a Portrait cover's 1.05 lift, plus the ring. */
-private val LIFT_ROOM = 12.dp

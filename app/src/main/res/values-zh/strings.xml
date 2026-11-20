@@ -39,7 +39,6 @@
     <string name="guide_no_info">暂无节目单信息</string>
     <string name="guide_loading_channels">正在加载你的频道</string>
     <string name="guide_fetching_desc">正在从你的提供商获取频道列表与节目单。若提供商频道较多，首次加载可能需要几分钟。</string>
-    <string name="guide_building_desc">正在根据本设备已保存的频道生成节目单。若提供商频道较多，需要一点时间——很快就会显示。</string>
     <string name="guide_no_favourites_title">还没有收藏</string>
     <string name="guide_no_channels_title">还没有频道</string>
     <string name="guide_add_provider_desc">你的提供商的频道会显示在这里。添加你的提供商以开始使用。</string>

@@ -217,7 +217,6 @@ class KeptShellTest {
         if (grid != null) {
             CoverGrid(
                 grid(),
-                loading = "Loading",
                 empty = "Empty",
                 onHighlight = {},
                 onOpen = { id -> open(movie(id, grid().first { it.id == id }.title)) },

@@ -23,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -173,7 +174,7 @@ class VodViewModelCatalogueTest {
         )
         watching.launch { viewModel.recentlyAddedMovies.collect {} }
 
-        val recent = withTimeout(5_000) { viewModel.recentlyAddedMovies.first { it.size == 2 } }
+        val recent = withTimeout(5_000) { viewModel.recentlyAddedMovies.filterNotNull().first { it.size == 2 } }
 
         assertThat(recent.map { it.id }).containsExactly(3L, 2L).inOrder()
     }

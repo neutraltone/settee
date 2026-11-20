@@ -76,6 +76,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.vod.rememberSidebarSlide
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -252,16 +253,24 @@ fun LiveScreen(
             )
             Spacer(Modifier.height(GUIDE_GAP))
             Box(Modifier.weight(1f)) {
+                // The guide's skeleton holds the Highlight while it shows; losing its cell as the rows
+                // come sent the Highlight back to the rail, where the guide wouldn't take it from.
+                val skeleton = rows.isEmpty() && !favouritesOnly && channelsPresent == true && !rowsBuilt
+                val opening = rememberOpeningPlace(placeNow = skeleton)
                 if (rows.isEmpty()) {
                     when {
                         favouritesOnly -> NoFavourites(openSidebar)
-                        // Work genuinely in progress: a sync is running, the catalogue check hasn't
-                        // returned yet, or channels are on disk and the guide is still building. A big
-                        // provider takes a while, and "No channels" during it reads as failure.
-                        isSyncing || channelsPresent == null -> Loading(isSyncing)
+                        // Channels on the device and the guide still being built from them, as on
+                        // every cold start: the guide's shape, its first row holding the Highlight,
+                        // so the rows fill in rather than replace a message (#581).
+                        skeleton -> OpeningGuideSkeleton(takeFocus, opening.modifierIf(true))
                         // Built, with channels on the device, and nothing here: every one is hidden.
-                        channelsPresent == true && rowsBuilt -> NothingToShow(openSidebar)
-                        channelsPresent == true -> Loading(isSyncing)
+                        channelsPresent == true -> NothingToShow(openSidebar)
+                        // No channels on the device yet and a sync under way: the first, which takes
+                        // a while on a big provider, and "No channels" during it reads as failure.
+                        isSyncing -> Loading()
+                        // The catalogue check is only a moment: nothing, rather than a flash of words.
+                        channelsPresent == null -> Unit
                         // Nothing is syncing and the catalogue is confirmed empty: with a provider set
                         // up, the last load failed or returned nothing.
                         hasSources -> LoadFailed(loadFailure, onRetry = onRefresh, onEditProvider = onAddSource)
@@ -295,7 +304,7 @@ fun LiveScreen(
                             viewModel.nudgeGuideDay(-1)
                         }.takeIf { guideDayOffset > 0 },
                         returnToChannelId = returnToChannelId,
-                        takeFocus = takeFocus,
+                        takeFocus = takeFocus || opening.held,
                         onReturnToRow = { highlighted = it to null },
                         landOnRow = landOn?.first,
                         landAtEnd = landOn?.second == true,
@@ -432,18 +441,14 @@ private fun LiveSidebar(
     )
 }
 
+/** A first sync's channels on their way, with the sync's own line and progress when it has them. */
 @Composable
-private fun Loading(isSyncing: Boolean) {
+private fun Loading() {
     val status by StatusBus.message.collectAsState()
     val progress by StatusBus.progress.collectAsState()
     Message(
         title = stringResource(R.string.guide_loading_channels),
-        body = status ?: if (isSyncing) {
-            stringResource(R.string.guide_fetching_desc)
-        } else {
-            // Channels are already on the device; the guide is being built from them.
-            stringResource(R.string.guide_building_desc)
-        },
+        body = status ?: stringResource(R.string.guide_fetching_desc),
     ) {
         progress?.let { ProgressBar(it, Modifier.fillMaxWidth()) }
     }

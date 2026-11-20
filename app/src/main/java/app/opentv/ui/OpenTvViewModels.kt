@@ -45,6 +45,7 @@ import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -105,7 +106,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -566,22 +566,6 @@ class ChannelsViewModel @JvmOverloads constructor(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
-    /** Whether the guide's first rows have reached the screen: after that, no loading line again. */
-    @Volatile
-    private var guideBuilt = false
-
-    /**
-     * Whether a start-up build has finished since the guide was last watched, decided on the build's
-     * own thread. [guideBuilt] is set only once its rows reach the screen, so a second build starting
-     * straight after the first, before then, would show the line again and leave it up (#359).
-     */
-    @Volatile
-    private var startupBuildDone = false
-
-    /** The start-up loading line while it's up, so taking it down never takes another job's line. */
-    @Volatile
-    private var startupLine: String? = null
-
     private val _rowsBuilt = MutableStateFlow(false)
 
     /**
@@ -611,77 +595,32 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // build instead; the guide's live progress bars advance off the screen's clock.
                 // guideBuilds paces rebuilds for more listings from the end of the last build, so
                 // a guide sync doesn't keep a slow build running back to back (#257).
+                // Building the guide is the screen being built, which its skeleton rows show; the
+                // status line is for background work (#581).
                 lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
-                    // Show the size-aware loading bar for the FIRST guide build only (start-up).
-                    // After that the guide is built and flicking between categories is cheap, so
-                    // don't flash a loading line on every tap — that bar was only ever meant for
-                    // the one-time heavy load, and leaking it per-category read as a stuck "100%".
-                    val firstBuild = !startupBuildDone
-                    if (firstBuild) {
-                        startupLine = sizeMessage(channels.size).also { StatusBus.set(it, 0f) }
-                    }
-                    val rows = buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild)
-                    startupBuildDone = true
-                    GuideRows(scope, rows)
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now()))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
             // enough to freeze the UI for a big provider — a category tap that took minutes. Run the
             // whole pipeline off the main thread so the list just appears when it's ready.
             .flowOn(Dispatchers.Default)
-            // Once the first guide is on screen, clear the start-up bar — and never show it for a
-            // plain category switch again.
-            .onEach {
-                if (!guideBuilt) {
-                    guideBuilt = true
-                    clearStartupLine()
-                }
-                _rowsBuilt.value = true
-            }
-            // Leaving Live, or covering it with Settings, before the first build arrives stops this
-            // with the line still up, under every tab (#359). Not a finally round the build: a
-            // cancelled build runs on to the end and only fails when it hands its rows on, outside
-            // it. Here, after flowOn, this runs once the build has finished, so no progress lands
-            // after the clear. Coming back before any build arrived puts the line up again.
-            .onCompletion {
-                if (!guideBuilt) {
-                    clearStartupLine()
-                    startupBuildDone = false
-                }
-            }
+            .onEach { _rowsBuilt.value = true }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
-
-    /** Takes the start-up line down, unless another job has put up its own line since. */
-    private fun clearStartupLine() {
-        startupLine?.let(StatusBus::clear)
-        startupLine = null
-    }
 
     private fun buildRows(
         channels: List<LineupChannel>,
         byEpgChannel: Map<String, List<GuideProgramme>>,
         now: Long,
-        reportProgress: Boolean = false,
     ): List<Row> {
         // The programme→channel grouping is done once upstream (see [programmeIndex]) and passed
         // in ready-made, rather than regrouping the whole EPG on every category tap. Grouping is
         // kept out of SQL because the programme query cannot take a channel-id list without
         // hitting SQLite's bound-variable cap.
-        val total = channels.size.coerceAtLeast(1)
-        var built = 0
         return channels.map { channel ->
             val list = channel.guideId { it in byEpgChannel }
                 ?.let { byEpgChannel.getValue(it).sortedBy { p -> p.startUtcMillis } }
                 .orEmpty()
-
-            // Feed the progress bar as rows come together — this is the slow part on a big
-            // provider, so it's what the percentage should actually track.
-            if (reportProgress) {
-                built++
-                if (built % 400 == 0 || built == total) {
-                    StatusBus.setProgress(built.toFloat() / total)
-                }
-            }
 
             Row(
                 channel,
@@ -690,15 +629,6 @@ class ChannelsViewModel @JvmOverloads constructor(
                 programmes = list,
             )
         }
-    }
-
-    /** A friendly, size-aware line for the load: a small provider gets a quick word, a huge one
-     * gets a "bear with us". Used at start-up so the wait always says what it's doing. */
-    private fun sizeMessage(count: Int): String = when {
-        count <= 0 -> "Building the guide…"
-        count < 2000 -> "Loading $count channels. It's a small one, so this'll be quick."
-        count < 8000 -> "Loading $count channels. That's a fair few, so give it a moment…"
-        else -> "Loading $count channels. It's a big one, so bear with us…"
     }
 
     /**
@@ -991,8 +921,27 @@ class VodViewModel @JvmOverloads constructor(
         viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
     }
 
-    // null until loaded, so Movies and Shows can wait for the rows at the top before drawing any:
-    // arriving after the Highlight, they pushed the row it was on down off the screen.
+    /**
+     * Which of For you's rows to hold places for before their cards come, from quick checks of the
+     * Profile's own small tables (#581); null until those are back. So a row never lands above the
+     * Highlight and pushes the row it was on off the screen.
+     */
+    val movieRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
+        graph.viewerLibrary.quickChecks.filmToContinue(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
+    )
+
+    /** As [movieRowsExpected], for Shows. */
+    val seriesRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
+        graph.viewerLibrary.quickChecks.showToContinue(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
+    )
+
+    private fun expectedRows(played: Flow<Boolean>, favourites: Flow<Boolean>) =
+        combine(played, favourites, ::ExpectedRows)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_EXPECTED_MILLIS), null)
+
+    // null until loaded, which For you shows as a skeleton when [movieRowsExpected] expects the row.
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingMovies()
@@ -1037,6 +986,9 @@ class VodViewModel @JvmOverloads constructor(
 
         /** As long as the tab's other flows, so a trip to a title's page and back doesn't ask again. */
         const val LOAD_FAILURE_KEEP_MILLIS = 5_000L
+
+        /** As long as the rows they hold places for, so coming back draws no skeleton the rows don't need. */
+        const val KEEP_EXPECTED_MILLIS = 5_000L
 
         /** Two genres keep the backdrop's line of facts to one line. */
         const val BACKDROP_GENRES = 2
@@ -1149,15 +1101,16 @@ class VodViewModel @JvmOverloads constructor(
 
     // Each title once, where its newest Version puts it (ADR 0007). A provider adds a title's Versions
     // together, so more rows are read than shown.
-    val recentlyAddedMovies: StateFlow<List<Movie>> =
+    /** Null until first read, while For you holds the row's place with a skeleton. */
+    val recentlyAddedMovies: StateFlow<List<Movie>?> =
         graph.titleIndex.distinctMovies(graph.catalogRepository.recentlyAddedMovies(RECENT_ROWS_READ)) { it.id }
             .map { it.take(RECENT_TITLES_SHOWN) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val recentlyAddedSeries: StateFlow<List<Series>> =
+    val recentlyAddedSeries: StateFlow<List<Series>?> =
         graph.titleIndex.distinctSeries(graph.catalogRepository.recentlyAddedSeries(RECENT_ROWS_READ)) { it.id }
             .map { it.take(RECENT_TITLES_SHOWN) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // True while Recommended is being worked out, which takes seconds on a big library, so the
     // screen can keep its place with a placeholder row rather than have it land above the others.
@@ -1693,6 +1646,32 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
+/** Which of For you's rows Movies or Shows hold places for while they load: Recently Added always does. */
+data class ExpectedRows(val continueWatching: Boolean, val favourites: Boolean)
+
+/** A row's value once it has come; before it, the row is null in [HomeArrivals]. */
+private class Arrived<T>(val value: T)
+
+private fun <T> Flow<T>.arrival(): Flow<Arrived<T>?> = map<T, Arrived<T>?> { Arrived(it) }.onStart { emit(null) }
+
+/** Home's rows, each null until it has come. */
+private class HomeArrivals(
+    val watching: Arrived<Pair<List<ResumeItem>, CoverStatuses>>?,
+    val favourites: Arrived<List<VodTitle>>?,
+    val channels: Arrived<List<HomeChannel>>?,
+    val recentShows: Arrived<List<VodTitle>>?,
+    val recentMovies: Arrived<List<VodTitle>>?,
+) {
+    /** The rows whose cards have come. */
+    fun kinds(): Set<HomeRowKind> = buildSet {
+        if (watching != null) add(HomeRowKind.CONTINUE_WATCHING)
+        if (favourites != null) addAll(listOf(HomeRowKind.FAVOURITE_SHOWS, HomeRowKind.FAVOURITE_MOVIES))
+        if (channels != null) add(HomeRowKind.FAVOURITE_CHANNELS)
+        if (recentShows != null) add(HomeRowKind.RECENT_SHOWS)
+        if (recentMovies != null) add(HomeRowKind.RECENT_MOVIES)
+    }
+}
+
 /**
  * What Home shows, top to bottom: the Live Preview, the active Profile's Continue Watching, what the
  * providers have Recently Added (shows, then movies), then its Favourite shows, movies and channels.
@@ -1708,6 +1687,13 @@ data class HomeState(
     /** How the Profile arranged Home; the Live Preview is in [live] even when it turned it off, for Home's hint. */
     val arrangement: HomeArrangement = HomeArrangement.USUAL,
     val becauseYouWatched: BecauseYouWatched? = null,
+    /**
+     * The rows still on their way, each empty above until its cards arrive: Home holds their places
+     * with skeletons, so none moves a row below it when it lands (#581).
+     */
+    val loading: Set<HomeRowKind> = emptySet(),
+    /** Whether the Live Preview is still on its way, which Home holds the place of above the rows. */
+    val liveLoading: Boolean = false,
 )
 
 /**
@@ -1752,9 +1738,10 @@ data class HomeChannel(val channel: LineupChannel, val nowOn: String? = null)
 
 /**
  * Home: the active Profile's Continue Watching across movies and series, its Favourites, and what
- * the providers have Recently Added. The state is null until all of it has loaded, so Home never
- * flashes its nothing-here hint at a Profile that has rows. A content type switched off in settings
- * is left off Home too, as its tab is from the side menu.
+ * the providers have Recently Added. The state is null only until quick checks say which rows to
+ * expect; then each row comes as its cards do, the rest held as skeletons ([HomeState.loading]), so
+ * Home is never blank for seconds and never flashes its nothing-here hint at a Profile that has rows.
+ * A content type switched off in settings is left off Home too, as its tab is from the side menu.
  */
 class HomeViewModel @JvmOverloads constructor(
     app: Application,
@@ -1929,37 +1916,76 @@ class HomeViewModel @JvmOverloads constructor(
         return LiveNow(preview, shows.now?.title, shows.next?.title)
     }
 
+    /**
+     * The rows Home holds places for before their cards are built: what a quick look at the Profile's
+     * own small tables says will have cards, never the cards' own reads, which on a big catalogue take
+     * seconds. Recently Added always does; a Profile's history or Favourites decide the rest (#581).
+     * Because you watched has none: it starts from the row it last had, at once.
+     */
+    private val expected: Flow<Set<HomeRowKind>> = combine(
+        graph.viewerLibrary.quickChecks.anythingToContinue(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.LIVE),
+        combine(settings.moviesEnabled, settings.seriesEnabled, settings.liveEnabled, ::Triple),
+    ) { played, shows, movies, channels, (moviesOn, showsOn, liveOn) ->
+        buildSet {
+            if (played && (moviesOn || showsOn)) add(HomeRowKind.CONTINUE_WATCHING)
+            if (showsOn) add(HomeRowKind.RECENT_SHOWS)
+            if (moviesOn) add(HomeRowKind.RECENT_MOVIES)
+            if (shows && showsOn) add(HomeRowKind.FAVOURITE_SHOWS)
+            if (movies && moviesOn) add(HomeRowKind.FAVOURITE_MOVIES)
+            if (channels && liveOn) add(HomeRowKind.FAVOURITE_CHANNELS)
+        }
+    }.distinctUntilChanged()
+
+    /** Each row as it arrives, none waiting on another: Home draws a row's cards over its place as they come. */
+    private val arrivals: Flow<HomeArrivals> = combine(
+        watching.arrival(),
+        favourites.arrival(),
+        favouriteChannels.arrival(),
+        recentShows.arrival(),
+        recentMovies.arrival(),
+        ::HomeArrivals,
+    )
+
+    // The quick reads first: combine starts collecting in this order, and Room has four threads, which
+    // the slow row reads queued ahead would otherwise take, leaving Home blank behind them.
+    /** Whether Home holds the Live Preview's place before its tile is built: as [expected] does for the rows. */
+    private val expectedLive: Flow<Boolean> = combine(
+        graph.viewerLibrary.live.hasPreview(),
+        settings.liveEnabled,
+    ) { preview, liveOn -> preview && liveOn }
+
     private val rows: Flow<HomeState> = combine(
-        combine(watching, favourites, favouriteChannels, recentShows, recentMovies) {
-                (continueWatching, statuses),
-                favourites,
-                channels,
-                shows,
-                movies,
-            ->
-            // Favourites carry no status: Home shows only their titles.
-            val (favouriteMovies, favouriteShows) = favourites.map(::Cover).partition { it.title is VodTitle.OfMovie }
-            HomeState(
-                continueWatching,
-                favouriteShows,
-                favouriteMovies,
-                channels,
-                shows.withStatuses(statuses),
-                movies.withStatuses(statuses),
-            ) to statuses
-        },
-        // In the same state as the rows, so Home is first drawn with it and highlights it.
-        live,
-        // And so is the arrangement, so Home is never drawn once in the usual order and then moved.
+        combine(expected, expectedLive, ::Pair),
+        // The arrangement is in the same state as the places, so Home is never drawn once in the usual
+        // order and then moved.
         graph.profileSettings.homeArrangement,
+        // The Live Preview comes as the rows do, its place held until then; Home opens on it either way.
+        live.arrival(),
         becauseYouWatched,
-    ) { (rows, statuses), live, arrangement, because ->
-        rows.copy(
-            live = live,
+        arrivals,
+    ) { (expected, expectedLive), arrangement, live, because, arrived ->
+        // Covers show before their statuses have come, and gain them when they do.
+        val statuses = arrived.watching?.value?.second ?: CoverStatuses()
+        // Favourites carry no status: Home shows only their titles.
+        val (favouriteMovies, favouriteShows) = arrived.favourites?.value.orEmpty().map(::Cover)
+            .partition { it.title is VodTitle.OfMovie }
+        HomeState(
+            continueWatching = arrived.watching?.value?.first.orEmpty(),
+            favouriteShows = favouriteShows,
+            favouriteMovies = favouriteMovies,
+            favouriteChannels = arrived.channels?.value.orEmpty(),
+            recentShows = arrived.recentShows?.value.orEmpty().withStatuses(statuses),
+            recentMovies = arrived.recentMovies?.value.orEmpty().withStatuses(statuses),
+            live = live?.value,
             arrangement = arrangement,
             becauseYouWatched = because
                 ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
                 ?.takeIf { it.covers.isNotEmpty() },
+            loading = (expected - arrived.kinds()).filterTo(mutableSetOf(), arrangement::isShown),
+            liveLoading = live == null && expectedLive && arrangement.livePreview,
         )
     }
 

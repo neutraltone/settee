@@ -36,13 +36,13 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.OnShellReturn
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeSpace
+import app.opentv.ui.design.SkeletonGrid
 import app.opentv.ui.railReturnTarget
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -57,20 +57,20 @@ import kotlinx.coroutines.flow.filterNotNull
 @Composable
 internal fun ScreenFrameScope.CoverGrid(
     covers: List<TitleCover>?,
-    loading: String,
     empty: String,
     onHighlight: (Long) -> Unit,
     onOpen: (Long) -> Unit,
     onOptions: ((Long) -> Unit)?,
 ) {
     when {
-        covers == null -> return EmptyBrowse(VodEmpty.Loading(loading))
+        // Still loading: the grid's shape, so the covers fill in rather than replace a message.
+        covers == null -> return SkeletonGrid()
         covers.isEmpty() -> return EmptyBrowse(VodEmpty.Hint(empty, body = null))
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
     val coverReturn = rememberCoverReturn(state, covers)
-    val room = with(LocalDensity.current) { GRID_LIFT_ROOM.toPx() }
+    val room = with(LocalDensity.current) { SetteeSpace.LiftRoom.toPx() }
     CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RowToTheTop(room) }) {
         CoverRows(state, covers, coverReturn, onHighlight, onOpen, onOptions)
     }
@@ -134,7 +134,7 @@ private fun ScreenFrameScope.CoverRows(
         // Columns as wide as a cover, so it's the size it is in a row. Adaptive ones share out the
         // width left over, which stretched each cover wider than For you's.
         columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
-        contentPadding = PaddingValues(vertical = GRID_LIFT_ROOM),
+        contentPadding = PaddingValues(vertical = SetteeSpace.LiftRoom),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
         verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
         modifier = Modifier.fillMaxSize().railReturnTarget(),
@@ -197,9 +197,6 @@ private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
 private data class ShownCovers(val first: Int, val last: Int, val columns: Int)
 
 private const val PREFETCH_ROWS = 4
-
-/** Above and below the grid's covers, for a highlighted one's lift and ring, as a Shelf leaves. */
-private val GRID_LIFT_ROOM = 12.dp
 
 /** A title's cover, the same in a row and a grid. */
 @Composable

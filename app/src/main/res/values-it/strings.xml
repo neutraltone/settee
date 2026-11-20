@@ -39,7 +39,6 @@
     <string name="guide_no_info">Ancora nessuna informazione sul programma</string>
     <string name="guide_loading_channels">Caricamento dei tuoi canali</string>
     <string name="guide_fetching_desc">Recupero dell\'elenco dei canali e della guida dal tuo provider. Con un provider di grandi dimensioni la prima volta può richiedere qualche minuto.</string>
-    <string name="guide_building_desc">Creazione della guida a partire dai canali salvati su questo dispositivo. Con un provider corposo ci vuole un momento — apparirà a breve.</string>
     <string name="guide_no_favourites_title">Nessun preferito ancora</string>
     <string name="guide_no_channels_title">Nessun canale ancora</string>
     <string name="guide_add_provider_desc">I canali del tuo provider compariranno qui. Aggiungi il tuo provider per iniziare.</string>

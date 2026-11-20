@@ -39,7 +39,6 @@
     <string name="guide_no_info">Данных телегида пока нет</string>
     <string name="guide_loading_channels">Загрузка ваших каналов</string>
     <string name="guide_fetching_desc">Загружаем список каналов и телегид от вашего провайдера. У крупных провайдеров это может занять пару минут при первом запуске.</string>
-    <string name="guide_building_desc">Формируем телегид на основе каналов, сохранённых на этом устройстве. Для крупного провайдера это займёт немного времени — гид скоро появится.</string>
     <string name="guide_no_favourites_title">Пока нет избранного</string>
     <string name="guide_no_channels_title">Пока нет каналов</string>
     <string name="guide_add_provider_desc">Здесь появятся каналы вашего провайдера. Добавьте провайдера, чтобы начать.</string>

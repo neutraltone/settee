@@ -70,6 +70,7 @@ import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
@@ -272,7 +273,7 @@ internal fun MovieDetailContent(
                 PeopleRows(movie, onOpenPerson, spot, Modifier.padding(top = SetteeSpace.RowGap))
                 if (similar == null) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
-                    PlaceholderShelf(stringResource(R.string.vod_more_like_this))
+                    SkeletonShelf(stringResource(R.string.vod_more_like_this))
                 } else if (similar.isNotEmpty()) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
                     MoreLikeThis(

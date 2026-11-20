@@ -39,7 +39,6 @@
     <string name="guide_no_info">Még nincs műsorinformáció</string>
     <string name="guide_loading_channels">Csatornák betöltése</string>
     <string name="guide_fetching_desc">A csatornalista és a műsorújság letöltése a szolgáltatótól. Nagyobb szolgáltató esetén ez első alkalommal néhány percet is igénybe vehet.</string>
-    <string name="guide_building_desc">A műsorújság összeállítása az eszközön mentett csatornákból. Nagyobb szolgáltatónál ez eltarthat egy ideig — hamarosan megjelenik.</string>
     <string name="guide_no_favourites_title">Még nincs kedvenc</string>
     <string name="guide_no_channels_title">Még nincsenek csatornák</string>
     <string name="guide_add_provider_desc">A szolgáltatója csatornái itt jelennek meg. Kezdéshez adja hozzá a szolgáltatóját.</string>

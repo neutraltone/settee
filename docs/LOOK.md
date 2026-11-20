@@ -329,14 +329,30 @@ One list, with Coming up, Recorded and Series links as headings, and a heading w
 
 ## Waiting
 
-Waiting is the aerial TV: the TV from the mark, with its face on the screen and coral arcs rising from its aerials, fading as they spread. It's drawn in cream rather than in its tile, because the arcs need the dark screen behind them.
+Row and grid screens wait with **skeletons**; everything else waits with the **aerial TV**.
+
+### Skeletons
+
+Home, Movies, Shows and Live draw their own shape while their rows load, so the cards fill in where they'll be rather than the screen arriving all at once (#581).
+
+- **The look:** a row's real title over blank cards in Surface with Card corners, each the size of the card it stands for (a cover, a Continue Watching card, the large first one, the Live Preview's picture, a guide row's channel cell and programmes), as many as reach the screen's edge. A row's skeleton is exactly as tall as the row, so nothing moves when it lands. A category still loading is a grid of blank covers, and the guide a column of blank channel cells beside blank programmes of a few lengths.
+- **From the first frame,** with no delay: the shape holds the real layout, so fast data reads as cards filling in, not a flash.
+- **Which rows:** only those a quick check of the Profile's own small tables says will have cards (a film In Progress or an episode not marked Unwatched, any Favourites of that kind, live last played for the Live Preview), never the cards' own slow reads, so a skeleton row never disappears and moves the rows below it. Recently Added always has one. A row the Profile hid never does, and nor does Because you watched, which starts from the row it last had.
+- **Live:** skeleton guide rows only when channels are on the device and the guide is still being built from them, as on every cold start. With no channels on the device (a first sync, a failed load, no provider) Live says why in words.
+- **One slow pulse,** one layer over a skeleton's blank cards: its opacity eases between full and 65% and back every 1.8 s, about the aerial TV's beat. Never a shimmer across the cards: alive from the sofa, not a flashing light in a dark room. Like the aerial TV it keeps moving with the system's animations removed, the same essential-motion exception.
+- **The opening card can take the Highlight:** the first card of the top row while it's a skeleton (Home's Live Preview or first Continue Watching card, For you's top row on Movies and Shows) and the first row of Live's guide. It stands outside the pulse, so the Highlight on it holds steady. OK does nothing on it, and nothing else in the skeleton can take the Highlight, so Right and Down find nothing; Back and the tabs work. When the real row arrives the Highlight is already in place, on its first card. Every other skeleton card is out of the Highlight's reach.
+- **Never the status line:** building a screen is what the skeleton shows. The status line is for background work only (a Catalogue Refresh, sync, film details filling in).
+
+### The aerial TV
+
+The aerial TV: the TV from the mark, with its face on the screen and coral arcs rising from its aerials, fading as they spread. It's drawn in cream rather than in its tile, because the arcs need the dark screen behind them.
 
 - **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, phone pairing's two waits, and Setup while it works. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
 - **Small size,** at text height, in the status line at the foot of the main screen, and at the end of a row whose thing is being fetched, such as an OpenSubtitles result downloading: no face, thicker aerials, one arc. A row already done shows its icon there instead (Downloaded, for a subtitle already on the box).
 - **On the Highlight,** at the end of a highlighted row, it's drawn all in plum, as the row's text is: coral arcs would vanish into the coral and leave a TV that looks stuck.
-- **Always animated,** even when the system's animations are removed. It's the one exception in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
+- **Always animated,** even when the system's animations are removed. It and the skeletons' pulse are the exceptions in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
 - **Drawn, not laid out:** a frame redraws only the indicator, so it stays within the budget below.
-- **Nothing at app start.** The wait before the saved providers and Profiles have loaded shows only the background: it's usually a frame or two, and anything drawn there would flicker.
+- **Nothing at app start.** The wait before Profiles have loaded shows only the background: it's usually a frame or two, and anything drawn there would flicker. From then on, the screens' skeletons show the wait.
 - **A bar only for real progress.** When the work knows how far through it is, it shows the percentage and a bar instead of the TV. A bar never stands in for a spinner. Setup is the one screen with both: its bar measures the whole setup, but a step can sit still for a long time (a big guide), and the TV shows it hasn't stuck.
 - **The still parts come from the mark:** `tools/launcher-art/mark.py` writes them as drawables, and only the arcs and eyes are drawn in code, in the mark's coordinates.
 

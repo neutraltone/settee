@@ -39,7 +39,6 @@
     <string name="guide_no_info">Încă nu există informații de ghid</string>
     <string name="guide_loading_channels">Se încarcă canalele tale</string>
     <string name="guide_fetching_desc">Se preiau lista de canale și ghidul de la furnizorul tău. Un furnizor mare poate dura câteva minute prima dată.</string>
-    <string name="guide_building_desc">Se construiește ghidul din canalele salvate pe acest dispozitiv. La un furnizor mare, acest lucru durează puțin — va apărea în curând.</string>
     <string name="guide_no_favourites_title">Încă nu ai favorite</string>
     <string name="guide_no_channels_title">Încă nu există canale</string>
     <string name="guide_add_provider_desc">Canalele furnizorului tău vor apărea aici. Adaugă-ți furnizorul ca să începi.</string>

@@ -39,7 +39,6 @@
     <string name="guide_no_info">아직 편성표 정보 없음</string>
     <string name="guide_loading_channels">채널을 불러오는 중</string>
     <string name="guide_fetching_desc">공급자로부터 채널 목록과 편성표를 가져오는 중입니다. 채널이 많은 공급자는 처음 로드할 때 몇 분 정도 걸릴 수 있습니다.</string>
-    <string name="guide_building_desc">이 기기에 저장된 채널로 편성표를 만드는 중입니다. 채널이 많은 공급자는 시간이 조금 걸릴 수 있습니다. 곧 표시됩니다.</string>
     <string name="guide_no_favourites_title">아직 즐겨찾기가 없습니다</string>
     <string name="guide_no_channels_title">아직 채널이 없습니다</string>
     <string name="guide_add_provider_desc">공급자의 채널이 여기에 표시됩니다. 공급자를 추가하여 시작하세요.</string>

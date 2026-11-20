@@ -6,16 +6,12 @@
 package app.opentv.ui.vod
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -36,8 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.dp
+import app.opentv.R
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.ContinueWatchingShelf
@@ -47,20 +44,23 @@ import app.opentv.ui.ResumeItem
 import app.opentv.ui.RowPick
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
-import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
-import app.opentv.ui.design.Text
+import app.opentv.ui.design.SkeletonCards
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.railReturnItem
+import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.restoreTarget
 
-/** For you's rows, top to bottom: Continue Watching, then [rows]. */
+/**
+ * For you's rows, top to bottom: Continue Watching, then [rows]. While [resumeLoading], Continue
+ * Watching's place is held by a skeleton, as a pending row's is.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun <T> ScreenFrameScope.ForYou(
@@ -71,12 +71,13 @@ internal fun <T> ScreenFrameScope.ForYou(
     onOpen: (T) -> Unit,
     onHighlight: (Long) -> Unit,
     options: @Composable (T) -> (() -> Unit)?,
+    resumeLoading: Boolean = false,
 ) {
     val column = rememberLazyListState()
     // Until the viewer moves down, a row that lands above the first (Recommended, worked out after
     // the others) is shown at the top, rather than the list holding on to the row that was first.
     var atTheTop by remember { mutableStateOf(true) }
-    val rowKeys = rowKeys(resume, rows)
+    val rowKeys = rowKeys(resume, rows, resumeLoading)
     LaunchedEffect(rowKeys.all.firstOrNull()) { if (atTheTop) column.scrollToItem(0) }
 
     // The highlighted cover's row goes to the top ([RowToTheTop]): a cover sits its row's title and
@@ -85,7 +86,8 @@ internal fun <T> ScreenFrameScope.ForYou(
     val titles = rememberTextMeasurer()
     val density = LocalDensity.current
     val coverTop = remember(density) {
-        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height + with(density) { SHELF_LIFT_ROOM.toPx() }
+        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height +
+            with(density) { SetteeSpace.LiftRoom.toPx() }
     }
     val toTheTop = remember(coverTop) { RowToTheTop(coverTop) }
 
@@ -97,7 +99,11 @@ internal fun <T> ScreenFrameScope.ForYou(
     val back = rememberForYouReturn()
     val target = back.rememberTarget(column, rowKeys) { pickRows(rowKeys, resume, rows, cover) }
     val focus = remember(target) { target?.let { CardFocus(it.index) { back.restoring = null } } }
-    fun focusIn(row: String) = focus?.takeIf { target?.row == row }
+    // The top row's place holds the Highlight For you opens on until the row lands (#581).
+    val topRow = rowKeys.all.firstOrNull()
+    val opening = rememberOpeningPlace(placeNow = rowKeys.topIsPlace)
+    fun focusIn(row: String) = opening.focusFor(row == topRow, otherwise = focus?.takeIf { target?.row == row })
+    fun openingIn(row: String) = opening.modifierIf(row == topRow)
     fun highlighted(row: String, item: String, index: Int) =
         back.highlighted(RowPick(row, rowKeys.withCards.indexOf(row), item, index))
 
@@ -115,7 +121,7 @@ internal fun <T> ScreenFrameScope.ForYou(
     // end with the row above part-shown. Always there, sized for a row of covers: worked out from
     // the last row once it was on screen, it came too late for the press that brought it on, which
     // stopped short on a Stick.
-    val rowHeight = coverTop + with(density) { (ArtCardSize.Portrait.height + SHELF_LIFT_ROOM).toPx() }
+    val rowHeight = coverTop + with(density) { (ArtCardSize.Portrait.height + SetteeSpace.LiftRoom).toPx() }
     val roomUnderLast by remember(column, rowHeight) {
         derivedStateOf { (column.layoutInfo.viewportSize.height - rowHeight).coerceAtLeast(0f) }
     }
@@ -126,10 +132,19 @@ internal fun <T> ScreenFrameScope.ForYou(
             verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
             modifier = Modifier.fillMaxSize().focusGroup(),
         ) {
-            val first = if (resume.isNotEmpty()) 1 else 0
-            if (resume.isNotEmpty()) {
+            // Continue Watching's place, with its cards or a skeleton, comes before the other rows.
+            val first = rowKeys.all.size - rows.size
+            if (first == 1) {
                 railReturnItem(key = CONTINUE_WATCHING, contentType = "continue-watching") {
                     RowAtTop(0) {
+                        if (resume.isEmpty()) {
+                            SkeletonShelf(
+                                stringResource(R.string.vod_continue_watching),
+                                SkeletonCards.ContinueWatching(largeFirst = false),
+                                opening = openingIn(CONTINUE_WATCHING),
+                            )
+                            return@RowAtTop
+                        }
                         ContinueWatchingShelf(
                             resume,
                             large = false,
@@ -149,7 +164,7 @@ internal fun <T> ScreenFrameScope.ForYou(
                 railReturnItem(key = row.key, contentType = "covers") {
                     RowAtTop(first + i, row.modifier) {
                         if (row.titles.isEmpty()) {
-                            PlaceholderShelf(row.title)
+                            SkeletonShelf(row.title, opening = openingIn(row.key))
                             return@RowAtTop
                         }
                         val covers = remember(row.titles) { row.titles.map { it to cover(it) } }
@@ -229,11 +244,15 @@ private fun rememberForYouReturn(): ForYouReturn {
 }
 
 /** For you's rows by key, top to bottom: [all] as the list draws them, [withCards] as a [RowPick] counts them. */
-private class RowKeys(val all: List<String>, val withCards: List<String>)
+private class RowKeys(val all: List<String>, val withCards: List<String>) {
+    /** Whether the top row is still a place held by a skeleton, which takes the opening Highlight. */
+    val topIsPlace get() = all.isNotEmpty() && all.first() !in withCards
+}
 
-private fun rowKeys(resume: List<ResumeItem>, rows: List<TitleRow<*>>): RowKeys {
+private fun rowKeys(resume: List<ResumeItem>, rows: List<TitleRow<*>>, resumeLoading: Boolean): RowKeys {
     val cw = listOfNotNull(CONTINUE_WATCHING.takeIf { resume.isNotEmpty() })
-    return RowKeys(cw + rows.map { it.key }, cw + rows.filter { it.titles.isNotEmpty() }.map { it.key })
+    val cwPlace = listOfNotNull(CONTINUE_WATCHING.takeIf { resume.isNotEmpty() || resumeLoading })
+    return RowKeys(cwPlace + rows.map { it.key }, cw + rows.filter { it.titles.isNotEmpty() }.map { it.key })
 }
 
 /** For you's rows with cards in them, as [restoreTarget] takes them. */
@@ -254,29 +273,4 @@ private fun <T> pickRows(
 /** A cover's key wherever For you keeps one: its list, its row's memory, a remembered pick. */
 private val TitleCover.cardKey get() = "$id"
 
-/** A row still being worked out: its title over blank covers, which can't take the Highlight. */
-@Composable
-internal fun ScreenFrameScope.PlaceholderShelf(title: String) {
-    Column {
-        Text(title, SetteeType.Section, maxLines = 1)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
-            modifier = Modifier.bleed().padding(bleedPadding).padding(vertical = SHELF_LIFT_ROOM),
-        ) {
-            repeat(PLACEHOLDER_COVERS) {
-                Box(
-                    Modifier
-                        .size(ArtCardSize.Portrait.width, ArtCardSize.Portrait.height)
-                        .background(SetteeColors.Surface, SetteeShapes.Card),
-                )
-            }
-        }
-    }
-}
-
-private const val PLACEHOLDER_COVERS = 8
-
 private const val CONTINUE_WATCHING = "cw"
-
-/** As much as a Shelf leaves above and below its covers: placeholders are as tall as a row. */
-private val SHELF_LIFT_ROOM = 12.dp
