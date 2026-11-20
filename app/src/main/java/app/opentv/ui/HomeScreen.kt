@@ -17,6 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,6 +56,8 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.SkeletonCards
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
@@ -86,6 +91,8 @@ internal fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val banner by viewModel.providerBanner.collectAsState()
+    // Null only until the quick checks of which rows to expect are back: then every row is drawn,
+    // as its cards or as a skeleton holding its place.
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
     // A Live Preview the Profile turned off doesn't play unseen; Home still hears of it, for its hint.
@@ -116,6 +123,7 @@ internal fun HomeScreen(
         arrangement = state.arrangement,
         banner = banner,
         onOpenProviders = onOpenProviders,
+        loading = state.loading,
     )
 }
 
@@ -148,6 +156,8 @@ internal fun HomeContent(
     becauseYouWatched: BecauseYouWatched? = null,
     banner: ProviderBanner? = null,
     onOpenProviders: (sourceId: Long) -> Unit = {},
+    /** The rows still on their way, which hold their places as skeletons ([HomeState.loading]). */
+    loading: Set<HomeRowKind> = emptySet(),
 ) {
     val all =
         remember(
@@ -160,6 +170,7 @@ internal fun HomeContent(
             recentShows,
             recentMovies,
             arrangement,
+            loading,
         ) {
             homeShelves(
                 live,
@@ -167,6 +178,7 @@ internal fun HomeContent(
                 HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies, becauseYouWatched),
                 favouriteChannels,
                 arrangement,
+                loading,
             )
         }
     val shelves = all.shown
@@ -285,6 +297,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
         runCatching { start.requestFocus() }
     }
     LaunchedEffect(target?.rowIndex) { target?.let { column.scrollToItem(it.rowIndex) } }
+    val opening = rememberOpeningHandOver(shelves)
     LazyColumn(
         state = column,
         verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
@@ -293,7 +306,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
         shelves.forEachIndexed { rowIndex, shelf ->
             // Each kind of shelf draws its own composable, so its class is its content type.
             railReturnItem(key = shelf.row.key, contentType = shelf::class) {
-                val rowFocus = focus?.takeIf { target?.row == shelf.row.key }
+                val rowFocus = focus?.takeIf { target?.row == shelf.row.key } ?: opening.focusFor(shelf)
                 fun pick(item: String, open: () -> Unit) {
                     picked = RowPick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
                     // Before the next screen starts: a second stream can cut off a single-connection
@@ -303,6 +316,15 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                 }
                 val leave: (String) -> LeaveScreen = { item -> { go -> pick(item, go) } }
                 when (shelf) {
+                    is HomeShelf.Skeleton -> SkeletonShelf(
+                        stringResource(shelf.title),
+                        if (shelf.kind == HomeRowKind.CONTINUE_WATCHING) {
+                            SkeletonCards.ContinueWatching(largeFirst = shelves.first() === shelf)
+                        } else {
+                            SkeletonCards.Covers
+                        },
+                        opening = opening.modifierFor(shelf, isTop = shelves.first() === shelf),
+                    )
                     is HomeShelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         shelf.tile.open(
                             { channel -> confirmLive { pick(LIVE_PICK) { actions.onWatchLive(channel) } } },
@@ -379,6 +401,44 @@ private sealed class HomeShelf(key: String, items: List<String>) {
 
     class Channels(val channels: List<HomeChannel>) :
         HomeShelf(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey })
+
+    /** A row still on its way, its place held by blank cards under its real [title]. */
+    class Skeleton(val kind: HomeRowKind, val title: Int) : HomeShelf(kind.key, emptyList())
+}
+
+/**
+ * The Highlight on Home's opening card while it's a skeleton: the top row's first card when that row
+ * is Continue Watching, still loading. It holds the Highlight so the remote has somewhere to be, and
+ * when the row's cards land the Highlight goes to its first card, where it would have opened.
+ */
+@Stable
+private class OpeningHandOver(private val skeletonNow: State<Boolean>) {
+    /** Whether the opening skeleton card had the Highlight when it went, so its row's first card takes it. */
+    var held by mutableStateOf(false)
+        private set
+
+    private var handing: CardFocus? = null
+
+    fun modifierFor(shelf: HomeShelf.Skeleton, isTop: Boolean): Modifier? =
+        if (isTop && shelf.kind == HomeRowKind.CONTINUE_WATCHING) {
+            // Losing it as the skeleton goes isn't the viewer moving: the real row takes it over.
+            Modifier.onFocusChanged { if (it.isFocused) held = true else if (skeletonNow.value) held = false }
+        } else {
+            null
+        }
+
+    fun focusFor(shelf: HomeShelf): CardFocus? {
+        if (!held || shelf !is HomeShelf.Resume) return null
+        return handing ?: CardFocus(0) { held = false; handing = null }.also { handing = it }
+    }
+}
+
+@Composable
+private fun rememberOpeningHandOver(shelves: List<HomeShelf>): OpeningHandOver {
+    val skeletonNow = rememberUpdatedState(
+        shelves.any { it is HomeShelf.Skeleton && it.kind == HomeRowKind.CONTINUE_WATCHING },
+    )
+    return remember { OpeningHandOver(skeletonNow) }
 }
 
 /** Home's rows of covers, by kind. */
@@ -400,6 +460,7 @@ private fun homeShelves(
     titles: HomeTitles,
     favouriteChannels: List<HomeChannel>,
     arrangement: HomeArrangement,
+    loading: Set<HomeRowKind> = emptySet(),
 ): HomeShelves {
     fun shelf(row: HomeRowKind): HomeShelf = when (row) {
         HomeRowKind.CONTINUE_WATCHING -> HomeShelf.Resume(continueWatching)
@@ -422,10 +483,32 @@ private fun homeShelves(
         HomeRowKind.FAVOURITE_CHANNELS -> HomeShelf.Channels(favouriteChannels)
     }
     val (shownRows, hiddenRows) = arrangement.rows.partition(arrangement::isShown)
-    val shown = listOfNotNull(live?.takeIf { arrangement.livePreview }?.let(HomeShelf::Live)) + shownRows.map(::shelf)
+    // A row still on its way holds its place, so it never pushes the rows below down when it lands.
+    fun shelfOrPlace(row: HomeRowKind): HomeShelf? {
+        val shelf = shelf(row)
+        return when {
+            shelf.row.items.isNotEmpty() -> shelf
+            row in loading -> HomeShelf.Skeleton(row, skeletonTitle(row))
+            else -> null
+        }
+    }
+    val shown = listOfNotNull(live?.takeIf { arrangement.livePreview }?.let(HomeShelf::Live)) +
+        shownRows.mapNotNull(::shelfOrPlace)
     val anyHidden = (live != null && !arrangement.livePreview) ||
         hiddenRows.any { shelf(it).row.items.isNotEmpty() }
-    return HomeShelves(shown.filter { it.row.items.isNotEmpty() }, anyHidden)
+    return HomeShelves(shown, anyHidden)
+}
+
+/** A loading row's title, the one its cards will come under. */
+private fun skeletonTitle(row: HomeRowKind): Int = when (row) {
+    HomeRowKind.CONTINUE_WATCHING -> R.string.vod_continue_watching
+    // Never loading: it starts from the row it last had, at once.
+    HomeRowKind.BECAUSE_YOU_WATCHED -> R.string.home_because_you_watched
+    HomeRowKind.RECENT_SHOWS -> R.string.home_recently_added_shows
+    HomeRowKind.RECENT_MOVIES -> R.string.home_recently_added_movies
+    HomeRowKind.FAVOURITE_SHOWS -> R.string.home_favourite_shows
+    HomeRowKind.FAVOURITE_MOVIES -> R.string.home_favourite_movies
+    HomeRowKind.FAVOURITE_CHANNELS -> R.string.home_favourite_channels
 }
 
 private const val LIVE_PICK = "live"

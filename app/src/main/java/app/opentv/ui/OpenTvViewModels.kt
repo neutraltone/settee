@@ -1710,9 +1710,10 @@ data class HomeChannel(val channel: LineupChannel, val nowOn: String? = null)
 
 /**
  * Home: the active Profile's Continue Watching across movies and series, its Favourites, and what
- * the providers have Recently Added. The state is null until all of it has loaded, so Home never
- * flashes its nothing-here hint at a Profile that has rows. A content type switched off in settings
- * is left off Home too, as its tab is from the side menu.
+ * the providers have Recently Added. The state is null only until quick checks say which rows to
+ * expect; then each row comes as its cards do, the rest held as skeletons ([HomeState.loading]), so
+ * Home is never blank for seconds and never flashes its nothing-here hint at a Profile that has rows.
+ * A content type switched off in settings is left off Home too, as its tab is from the side menu.
  */
 class HomeViewModel @JvmOverloads constructor(
     app: Application,

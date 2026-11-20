@@ -31,51 +31,64 @@ import kotlin.math.cos
 
 /** Which cards a [SkeletonShelf] holds the place of. */
 sealed interface SkeletonCards {
-    /** The width of the card at [index]. */
-    fun width(index: Int): Dp
+    /** The card at [index]. */
+    fun card(index: Int): ArtCardSize
 
-    /** How tall the cards are. */
-    val height: Dp
+    /** Where cards of different heights line up, as the real row lines them up. */
+    val alignment: Alignment.Vertical get() = Alignment.Bottom
 
     /** Shows' and movies' covers. */
     data object Covers : SkeletonCards {
-        override fun width(index: Int) = ArtCardSize.Portrait.width
-        override val height = ArtCardSize.Portrait.height
+        override fun card(index: Int) = ArtCardSize.Portrait
     }
 
     /** Continue Watching's cards, the first one large when Home has no Live Preview above it. */
     data class ContinueWatching(val largeFirst: Boolean) : SkeletonCards {
-        override fun width(index: Int) =
-            if (index == 0 && largeFirst) ArtCardSize.Large.width else ArtCardSize.Landscape.width
-        override val height = if (largeFirst) ArtCardSize.Large.height else ArtCardSize.Landscape.height
+        override fun card(index: Int) = if (index == 0 && largeFirst) ArtCardSize.Large else ArtCardSize.Landscape
+
+        // As Continue Watching hangs its cards from the top under a large first card.
+        override val alignment: Alignment.Vertical get() = if (largeFirst) Alignment.Top else Alignment.Bottom
     }
 }
 
 /**
- * A row still loading: its real [title] over blank cards, as many as reach the screen's edge, which
- * can't take the Highlight. The cards pulse slowly as one ([skeletonPulse]); the title is real, so
- * it stays still.
+ * A row still loading: its real [title] over blank cards, as many as reach the screen's edge. The
+ * cards pulse slowly as one ([skeletonPulse]); the title is real, so it stays still.
+ *
+ * No card can take the Highlight, except the first when [opening] is given: the card a screen opens
+ * on, which holds the Highlight until the real row arrives to take it over. OK does nothing on it.
+ * [opening] goes on that card, for the screen to ask for the Highlight and hear it go.
  */
 @Composable
-fun ScreenFrameScope.SkeletonShelf(title: String, cards: SkeletonCards = SkeletonCards.Covers) {
+fun ScreenFrameScope.SkeletonShelf(
+    title: String,
+    cards: SkeletonCards = SkeletonCards.Covers,
+    opening: Modifier? = null,
+) {
+    val pulse = rememberSkeletonPulse()
     Column {
         Text(title, SetteeType.Section, maxLines = 1)
         BoxWithConstraints(Modifier.bleed().padding(vertical = SHELF_LIFT_ROOM)) {
             val count = cardsToFill(maxWidth - SetteeSpace.ScreenSide, cards)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
+                verticalAlignment = cards.alignment,
                 // Unbounded, or the Row squeezes the card that runs past the edge to fit.
-                modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true)
-                    .padding(bleedPadding)
-                    .skeletonPulse(),
+                modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true).padding(bleedPadding),
             ) {
                 repeat(count) { index ->
-                    Box(
-                        Modifier
-                            .testTag(SKELETON_CARD)
-                            .size(cards.width(index), cards.height)
-                            .background(SetteeColors.Surface, SetteeShapes.Card),
-                    )
+                    val size = cards.card(index)
+                    val blank = Modifier
+                        .size(size.width, size.height)
+                        .then(pulse)
+                        .background(SetteeColors.Surface, SetteeShapes.Card)
+                    if (index == 0 && opening != null) {
+                        HighlightSurface(onClick = {}, style = size.style, modifier = opening.testTag(SKELETON_CARD)) {
+                            Box(blank)
+                        }
+                    } else {
+                        Box(Modifier.testTag(SKELETON_CARD).then(blank))
+                    }
                 }
             }
         }
@@ -87,29 +100,31 @@ private fun cardsToFill(width: Dp, cards: SkeletonCards): Int {
     var reached = 0.dp
     var count = 0
     while (reached < width) {
-        reached += cards.width(count) + SetteeSpace.CardGap
+        reached += cards.card(count).width + SetteeSpace.CardGap
         count++
     }
     return count
 }
 
 /**
- * Settee's skeleton pulse: the whole layer's opacity easing between full and [PULSE_LOW] and back
- * every [PULSE_MILLIS], about the aerial TV's beat. One slow breath on the layer, not a shimmer
- * across each card: alive from the sofa, never a flashing light in a dark room. Opacity on a layer
- * redraws nothing beneath it, so the pulse costs the Stick no layout or drawing.
+ * Settee's skeleton pulse, for each blank card of a skeleton: its opacity easing between full and [PULSE_LOW] and back
+ * every [PULSE_MILLIS], about the aerial TV's beat. One slow breath on every card at once, not a
+ * shimmer across them: alive from the sofa, never a flashing light in a dark room. Opacity on a layer
+ * redraws nothing inside it, so the pulse costs the Stick no layout or drawing.
  *
  * It follows the frame clock's own time, not the time since it appeared, so every skeleton on the
  * screen breathes together. Like [AerialTv] it ignores the animation scale: the motion is the only
  * sign the screen isn't frozen, which WCAG counts as essential (docs/LOOK.md, Waiting).
  */
 @Composable
-fun Modifier.skeletonPulse(): Modifier {
+fun rememberSkeletonPulse(): Modifier {
     val millis = rememberFrameMillis()
-    return graphicsLayer {
-        // A cosine, so it eases in and out at both ends of the breath and never snaps.
-        val phase = (millis.longValue % PULSE_MILLIS).toFloat() / PULSE_MILLIS
-        alpha = 1f - (1f - PULSE_LOW) * (1f - cos(phase * 2 * PI.toFloat())) / 2f
+    return remember(millis) {
+        Modifier.graphicsLayer {
+            // A cosine, so it eases in and out at both ends of the breath and never snaps.
+            val phase = (millis.longValue % PULSE_MILLIS).toFloat() / PULSE_MILLIS
+            alpha = 1f - (1f - PULSE_LOW) * (1f - cos(phase * 2 * PI.toFloat())) / 2f
+        }
     }
 }
 
