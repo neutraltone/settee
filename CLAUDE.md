@@ -27,6 +27,7 @@ tools/check/check.py test M3uParserTest     # named test classes; prints each fa
 tools/check/check.py test 'M3uParserTest.some test name'  # one test (backticked names)
 tools/check/check.py quick                  # ktlintFormat + detekt, after each change
 tools/check/check.py sweep                  # kill test processes an abandoned run left spinning, in any checkout of this project
+tools/check/check.py ci                     # what CI's Unit tests step runs: ./gradlew test, both variants (not on this Mac, see below)
 ./gradlew test                              # all unit tests (what CI runs; not on this Mac, see below)
 ./gradlew assembleDebug                     # APK → app/build/outputs/apk/debug/
 ./gradlew installDebug                      # install on the connected emulator/device
@@ -62,13 +63,16 @@ script prints the reason and exits with Gradle's result. It also deals with a te
 happens on this Mac when it's short of memory (swap nearly full, several sessions building): one thread
 sticks in the kernel re-faulting a page of compiled code, the JVM waits on it for ever, and nothing but
 SIGKILL stops it, so a run cut off by a timeout leaves it spinning for hours and makes the next freeze
-likelier. The script reports `FROZEN` after two minutes without a test finishing and kills the process.
-Give the call that runs it more than its own eight minutes (25 for `all`), or run it in the background:
+likelier. After two minutes without a test finishing it asks the test JVM for a thread dump, then kills
+it. Give the call that runs it more than its own eight minutes (25 for `all`), or run it in the background:
 terminated, it stops its Gradle run first, but killed outright it can't.
-`FROZEN` is the machine, not the test it stopped in (it has always been somewhere in a long run, most
-often as `LiveBrowseTest` starts): run it again, and don't go looking for a bug in the test. If runs are
-slow or UI tests time out, run `tools/check/check.py sweep` and check `sysctl vm.swapusage` before
-suspecting the change. A test it lists as `SLOW` is waiting on real time and needs fixing, not a longer
+A JVM that doesn't answer the dump has frozen, and the script reports `FROZEN`: that is the machine, not
+the test it stopped in, so run it again and don't go looking for a bug in the test. One that answers
+was waiting for ever in a test, and the script reports `HUNG` with that thread's top frames and the
+dump's path (`app/build/threads-<pid>.txt`): that is a real bug, so fix it. CI runs `check.py ci`
+(`./gradlew test`, five minutes without a finished test before it dumps), and uploads the dumps with
+the test reports. If runs are slow or UI tests time out, run `tools/check/check.py sweep` and check
+`sysctl vm.swapusage` before suspecting the change. A test it lists as `SLOW` is waiting on real time and needs fixing, not a longer
 timeout.
 
 ### PR checks
