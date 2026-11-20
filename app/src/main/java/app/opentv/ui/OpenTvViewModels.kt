@@ -1699,6 +1699,11 @@ data class HomeState(
     val loading: Set<HomeRowKind> = emptySet(),
     /** Whether the Live Preview is still on its way, which Home holds the place of above the rows. */
     val liveLoading: Boolean = false,
+    /**
+     * Whether [live] is the one Home last saved, drawn while the fresh one comes (#595): a still tile,
+     * as nothing has checked its channel can play yet.
+     */
+    val liveStill: Boolean = false,
 )
 
 /**
@@ -2004,8 +2009,28 @@ class HomeViewModel @JvmOverloads constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<HomeState?> = settings.activeProfileId
-        .flatMapLatest { rows.onStart<HomeState?> { emit(null) } }
+        .flatMapLatest(::homeOf)
         .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
+
+    /**
+     * [profileId]'s Home: the rows it last finished seeing, drawn in the places of rows still on their
+     * way, so a cold start shows cards at once rather than skeletons for seconds (#595). Each fresh row
+     * replaces its saved one as it comes. Once every row has come and Home has settled, it's kept for
+     * next time; never before, or the next cold start would bring back half a Home.
+     */
+    @OptIn(FlowPreview::class)
+    private fun homeOf(profileId: Long): Flow<HomeState?> = channelFlow {
+        val saved = graph.homeSnapshots.read(profileId)
+        send(saved)
+        val finished = MutableStateFlow<HomeState?>(null)
+        launch {
+            finished.filterNotNull().debounce(SAVE_PAUSE_MILLIS).collect { graph.homeSnapshots.save(profileId, it) }
+        }
+        rows.collect { fresh ->
+            if (fresh.loading.isEmpty() && !fresh.liveLoading) finished.value = fresh
+            send(saved?.let(fresh::over) ?: fresh)
+        }
+    }
 
     /** Apart from [state], so a provider failing or coming right never holds up or redraws the rows. */
     val providerBanner: StateFlow<ProviderBanner?> = graph.sourceRepository.observeAll()
@@ -2026,6 +2051,44 @@ class HomeViewModel @JvmOverloads constructor(
 
     private companion object {
         const val MINUTE_MILLIS = 60L * 1000
+
+        /** How long Home stays as it is before it's kept: the Live Preview's guide and statuses land late. */
+        const val SAVE_PAUSE_MILLIS = 2_000L
+    }
+}
+
+/**
+ * These fresh rows, with each row still on its way drawn from [saved] instead, when it has cards
+ * there. A row [saved] has that's no longer expected stays off: it would only vanish a moment later.
+ */
+private fun HomeState.over(saved: HomeState): HomeState {
+    fun <T> pick(kind: HomeRowKind, fresh: List<T>, kept: List<T>): List<T> =
+        if (kind in loading && kept.isNotEmpty()) kept else fresh
+    val continueWatching = pick(HomeRowKind.CONTINUE_WATCHING, continueWatching, saved.continueWatching)
+    val favouriteShows = pick(HomeRowKind.FAVOURITE_SHOWS, favouriteShows, saved.favouriteShows)
+    val favouriteMovies = pick(HomeRowKind.FAVOURITE_MOVIES, favouriteMovies, saved.favouriteMovies)
+    val favouriteChannels = pick(HomeRowKind.FAVOURITE_CHANNELS, favouriteChannels, saved.favouriteChannels)
+    val recentShows = pick(HomeRowKind.RECENT_SHOWS, recentShows, saved.recentShows)
+    val recentMovies = pick(HomeRowKind.RECENT_MOVIES, recentMovies, saved.recentMovies)
+    val drawnFromSaved = buildSet {
+        if (continueWatching !== this@over.continueWatching) add(HomeRowKind.CONTINUE_WATCHING)
+        if (favouriteShows !== this@over.favouriteShows) add(HomeRowKind.FAVOURITE_SHOWS)
+        if (favouriteMovies !== this@over.favouriteMovies) add(HomeRowKind.FAVOURITE_MOVIES)
+        if (favouriteChannels !== this@over.favouriteChannels) add(HomeRowKind.FAVOURITE_CHANNELS)
+        if (recentShows !== this@over.recentShows) add(HomeRowKind.RECENT_SHOWS)
+        if (recentMovies !== this@over.recentMovies) add(HomeRowKind.RECENT_MOVIES)
+    }
+    return copy(
+        continueWatching = continueWatching,
+        favouriteShows = favouriteShows,
+        favouriteMovies = favouriteMovies,
+        favouriteChannels = favouriteChannels,
+        recentShows = recentShows,
+        recentMovies = recentMovies,
+        loading = loading - drawnFromSaved,
+    ).let { rows ->
+        val live = saved.live?.takeIf { liveLoading } ?: return@let rows
+        rows.copy(live = live, liveLoading = false, liveStill = true)
     }
 }
 

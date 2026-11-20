@@ -8,6 +8,7 @@ package app.opentv.core
 import android.content.Context
 import android.util.Log
 import app.opentv.BuildConfig
+import app.opentv.data.db.DATABASE_VERSION
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
@@ -47,6 +48,7 @@ import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
+import app.opentv.ui.HomeSnapshots
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -98,6 +100,11 @@ object ServiceLocator {
          * player covers it with the app in front. Set by [app.opentv.KeepHomeLive] (#192).
          */
         val homeKeptLive = MutableStateFlow(false)
+
+        /** Each Profile's last finished Home, drawn at once on a cold start (#595). */
+        val homeSnapshots: HomeSnapshots by lazy {
+            HomeSnapshots(java.io.File(appContext.filesDir, "home"), DATABASE_VERSION, clock)
+        }
 
         val database: OpenTvDatabase by lazy {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
