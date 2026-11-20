@@ -11,6 +11,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogueRefresh
+import app.opentv.data.repo.LookupPace
 import app.opentv.data.repo.MovieGenres
 import app.opentv.data.repo.MovieTmdb
 import com.google.common.truth.Truth.assertThat
@@ -180,7 +181,7 @@ class MovieGenresTest {
     fun `filling in keeps going a batch at a time until every film has been asked about`() = runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
-        val inTwos = MovieGenres(test.db.movies(), XtreamApi(panel.http), count = 2, pauseMillis = 0)
+        val inTwos = MovieGenres(test.db.movies(), XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0))
 
         inTwos.fillAll(PANEL_SOURCE)
 
@@ -200,14 +201,25 @@ class MovieGenresTest {
         val unreachable = MovieGenres(
             test.db.movies(),
             XtreamApi(panel.http),
-            count = 2,
-            pauseMillis = 0,
+            pace = LookupPace(count = 2, pauseMillis = 0),
             tmdb = tmdb { Result.failure(Exception("offline")) },
         )
 
         unreachable.fillAll(PANEL_SOURCE)
 
         assertThat(panel.asked).containsExactly("get_vod_info:1", "get_vod_info:2", "get_vod_info:3")
+    }
+
+    @Test
+    fun `the provider is asked about one film a second at most`() = runTest {
+        test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
+
+        step.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked).hasSize(3)
+        // A second between each request, none after the last.
+        assertThat(testScheduler.currentTime).isEqualTo(2_000)
     }
 
     /** The films' DAO, recording every limit the pass asks for films due a lookup with. */
@@ -229,7 +241,7 @@ class MovieGenresTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
-        MovieGenres(counted, XtreamApi(panel.http), count = 2, pauseMillis = 0).fillAll(PANEL_SOURCE)
+        MovieGenres(counted, XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0)).fillAll(PANEL_SOURCE)
 
         assertThat(limits).containsExactly(2, 2, 2).inOrder()
     }
@@ -240,7 +252,7 @@ class MovieGenresTest {
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
         panel.replies["get_vod_info:4"] = "!"
 
-        MovieGenres(counted, XtreamApi(panel.http), count = 2, pauseMillis = 0).fillAll(PANEL_SOURCE)
+        MovieGenres(counted, XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0)).fillAll(PANEL_SOURCE)
 
         assertThat(limits).containsExactly(2, 2, 3, 3).inOrder()
         assertThat(panel.asked).containsExactly(
@@ -437,6 +449,16 @@ class MovieGenresTest {
 
         assertThat(genre("7")).isEqualTo("Western")
         assertThat(panel.asked).isEmpty()
+    }
+
+    @Test
+    fun `films the provider has already answered about are asked TMDB without waiting`() = runTest {
+        test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong(), genre = "", lookedUp = true) })
+
+        withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
+
+        assertThat(tmdbAsked).isEqualTo(3)
+        assertThat(testScheduler.currentTime).isEqualTo(0)
     }
 
     private companion object {

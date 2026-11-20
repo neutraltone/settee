@@ -10,6 +10,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.recommendedTmdbIds
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.LookupPace
 import app.opentv.data.repo.SeriesTmdb
 import app.opentv.data.repo.SeriesTmdbPass
 import com.google.common.truth.Truth.assertThat
@@ -78,7 +79,7 @@ class SeriesTmdbTest {
                 return answer(series)
             }
         },
-        pauseMillis = 0,
+        pace = LookupPace(pauseMillis = 0),
         clock = { NOW },
     )
 
@@ -192,8 +193,7 @@ class SeriesTmdbTest {
                     return Result.success(null)
                 }
             },
-            count = 2,
-            pauseMillis = 0,
+            pace = LookupPace(count = 2, pauseMillis = 0),
             clock = { NOW },
         ).fillAll(PANEL_SOURCE)
 

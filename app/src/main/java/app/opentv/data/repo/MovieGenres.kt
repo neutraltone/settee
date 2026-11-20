@@ -10,6 +10,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
+import kotlinx.coroutines.delay
 
 /**
  * Asks the provider, and TMDB in a build with a key, about each film neither has answered
@@ -24,26 +25,25 @@ import app.opentv.data.remote.XtreamApi
  * again, except TMDB once its answer is six months old ([tmdbDue]); one that couldn't be reached is
  * asked again next time.
  *
- * [fillAll] works through every film not looked up, newest first, [count] at a time with
- * [pauseMillis] between batches, so a struggling panel never gets a flood of calls and a provider
- * that blocks busy accounts sees a steady trickle. Tied to the film list's 12-hourly fetch, 200 at a
- * time, a 30,000-film catalogue took months.
+ * [fillAll] works through every film not looked up, newest first, at [pace], so a struggling panel
+ * never gets a flood of calls and a provider that blocks busy accounts sees a steady trickle of at
+ * most one `get_vod_info` a second. Tied to the film list's 12-hourly fetch, 200 at a time, a
+ * 30,000-film catalogue took months; this way its provider look-ups take about nine hours.
  */
 class MovieGenres(
     private val movieDao: MovieDao,
     private val api: XtreamApi,
-    private val count: Int = CANDIDATES,
-    private val pauseMillis: Long = BATCH_PAUSE_MILLIS,
+    private val pace: LookupPace = LookupPace(),
     private val tmdb: MovieTmdb = MovieTmdb.None,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** One batch of the newest films not looked up. False if the provider stopped answering. */
-    suspend fun refresh(source: Source): Boolean = lookUpBatch(source, dueFilms(source, count))
+    suspend fun refresh(source: Source): Boolean = lookUpBatch(source, dueFilms(source, pace.count))
 
     /** Every film not looked up, a batch at a time, until none is left or the provider stops answering. */
     suspend fun fillAll(source: Source) {
         val due: suspend (Int) -> List<Movie> = { dueFilms(source, it) }
-        inBatches(count, pauseMillis, Movie::id, due) { lookUpBatch(source, it) }
+        inBatches(pace.count, pace.pauseMillis, Movie::id, due) { lookUpBatch(source, it) }
     }
 
     /** The [limit] newest films the provider, or with a key TMDB, is due to be asked about. */
@@ -53,10 +53,16 @@ class MovieGenres(
     private suspend fun lookUpBatch(source: Source, titles: List<Movie>): Boolean {
         val withTmdb = tmdb.ready
         val now = clock()
+        var providerAsked = false
+        val askProvider: suspend (Movie) -> XtreamApi.VodInfo? = { movie ->
+            if (providerAsked) delay(pace.providerGapMillis)
+            providerAsked = true
+            api.movieInfo(source, movie.streamId)
+        }
         return lookUpEach(
             titles = titles,
             tag = TAG,
-            ask = { lookUp(source, it, withTmdb, now) },
+            ask = { lookUp(it, askProvider, withTmdb, now) },
             found = { _, found -> found },
             save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },
         )
@@ -67,11 +73,16 @@ class MovieGenres(
      * answered before; null if neither answered. All of the provider's answer is kept, not just the
      * genre: it's the only way films nobody opens get the people a person's page lists them by.
      */
-    private suspend fun lookUp(source: Source, movie: Movie, withTmdb: Boolean, now: Long): Movie? {
+    private suspend fun lookUp(
+        movie: Movie,
+        askProvider: suspend (Movie) -> XtreamApi.VodInfo?,
+        withTmdb: Boolean,
+        now: Long,
+    ): Movie? {
         var found = movie
         var answered = false
         if (!movie.detailsLookedUp) {
-            api.movieInfo(source, movie.streamId)?.let {
+            askProvider(movie)?.let {
                 found = found.filledFrom(it)
                 answered = true
             }
@@ -92,12 +103,6 @@ class MovieGenres(
 
     companion object {
         private const val TAG = "MovieGenres"
-
-        /** How many films not looked up each batch asks about. */
-        const val CANDIDATES = 200
-
-        /** Between batches: a minute's rest after each 200. */
-        const val BATCH_PAUSE_MILLIS = 60_000L
     }
 }
 
