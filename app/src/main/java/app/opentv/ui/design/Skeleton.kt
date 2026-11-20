@@ -148,8 +148,9 @@ fun SkeletonGuide(
                             onClick = {},
                             style = HighlightStyle.Cell,
                             modifier = cell.then(opening).testTag(SKELETON_CARD),
-                        ) {
-                            Box(blankCell)
+                        ) { highlighted ->
+                            // A highlighted cell is the Highlight's coral fill, as the guide's own is.
+                            if (!highlighted) Box(blankCell)
                         }
                     } else {
                         Box(cell) { Box(blankCell.testTag(SKELETON_CARD)) }
