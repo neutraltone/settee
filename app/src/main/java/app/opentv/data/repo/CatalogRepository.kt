@@ -190,7 +190,7 @@ class CatalogRepository(
         MovieGenres(
             movieDao,
             api,
-            pace = genrePace,
+            pace = lookupPace,
             tmdb = object : MovieTmdb {
                 override val ready get() = tmdb.isConfigured()
 
@@ -208,7 +208,7 @@ class CatalogRepository(
 
                 override suspend fun lookUp(series: Series) = withContext(Dispatchers.IO) { tmdbMetaOf(series) }
             },
-            pace = genrePace,
+            pace = lookupPace,
         )
     }
 
@@ -218,11 +218,11 @@ class CatalogRepository(
      * otherwise sleeps for six minutes between batches and twenty between provider requests.
      * A property and not a constructor parameter, as the constructor has more than enough.
      */
-    internal var genrePace = LookupPace()
+    internal var lookupPace = LookupPace()
 
     /**
      * Where a live list is staged, decoded, before it's saved; null is the JVM's temp folder, the
-     * app's cache on Android. A property for the reason [genrePace] is.
+     * app's cache on Android. A property for the reason [lookupPace] is.
      */
     internal var staging: File? = null
 

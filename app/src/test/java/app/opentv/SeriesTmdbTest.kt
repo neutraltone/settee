@@ -193,7 +193,7 @@ class SeriesTmdbTest {
                     return Result.success(null)
                 }
             },
-            pace = LookupPace(count = 2, pauseMillis = 0),
+            pace = LookupPace(batchSize = 2, pauseMillis = 0),
             clock = { NOW },
         ).fillAll(PANEL_SOURCE)
 

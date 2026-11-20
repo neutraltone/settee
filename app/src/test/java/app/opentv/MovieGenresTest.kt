@@ -181,7 +181,8 @@ class MovieGenresTest {
     fun `filling in keeps going a batch at a time until every film has been asked about`() = runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
-        val inTwos = MovieGenres(test.db.movies(), XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0))
+        val inTwos =
+            MovieGenres(test.db.movies(), XtreamApi(panel.http), pace = LookupPace(batchSize = 2, pauseMillis = 0))
 
         inTwos.fillAll(PANEL_SOURCE)
 
@@ -201,7 +202,7 @@ class MovieGenresTest {
         val unreachable = MovieGenres(
             test.db.movies(),
             XtreamApi(panel.http),
-            pace = LookupPace(count = 2, pauseMillis = 0),
+            pace = LookupPace(batchSize = 2, pauseMillis = 0),
             tmdb = tmdb { Result.failure(Exception("offline")) },
         )
 
@@ -219,6 +220,17 @@ class MovieGenresTest {
 
         assertThat(panel.asked).hasSize(3)
         // A second between each request, none after the last.
+        assertThat(testScheduler.currentTime).isEqualTo(2_000)
+    }
+
+    @Test
+    fun `a film the provider couldn't answer about still holds the next request back a second`() = runTest {
+        test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = "!"
+
+        step.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked).hasSize(3)
         assertThat(testScheduler.currentTime).isEqualTo(2_000)
     }
 
@@ -241,7 +253,11 @@ class MovieGenresTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
-        MovieGenres(counted, XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0)).fillAll(PANEL_SOURCE)
+        MovieGenres(
+            counted,
+            XtreamApi(panel.http),
+            pace = LookupPace(batchSize = 2, pauseMillis = 0),
+        ).fillAll(PANEL_SOURCE)
 
         assertThat(limits).containsExactly(2, 2, 2).inOrder()
     }
@@ -252,7 +268,11 @@ class MovieGenresTest {
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
         panel.replies["get_vod_info:4"] = "!"
 
-        MovieGenres(counted, XtreamApi(panel.http), pace = LookupPace(count = 2, pauseMillis = 0)).fillAll(PANEL_SOURCE)
+        MovieGenres(
+            counted,
+            XtreamApi(panel.http),
+            pace = LookupPace(batchSize = 2, pauseMillis = 0),
+        ).fillAll(PANEL_SOURCE)
 
         assertThat(limits).containsExactly(2, 2, 3, 3).inOrder()
         assertThat(panel.asked).containsExactly(
@@ -459,6 +479,20 @@ class MovieGenresTest {
 
         assertThat(tmdbAsked).isEqualTo(3)
         assertThat(testScheduler.currentTime).isEqualTo(0)
+    }
+
+    @Test
+    fun `only the films still due the provider wait their turn for it`() = runTest {
+        test.db.movies().upsertAll(
+            listOf(movie("1", added = 3), movie("2", added = 2, genre = "", lookedUp = true), movie("3", added = 1)),
+        )
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
+
+        withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked).containsExactly("get_vod_info:1", "get_vod_info:3").inOrder()
+        assertThat(tmdbAsked).isEqualTo(3)
+        assertThat(testScheduler.currentTime).isEqualTo(1_000)
     }
 
     private companion object {

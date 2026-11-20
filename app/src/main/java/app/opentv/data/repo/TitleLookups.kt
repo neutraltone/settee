@@ -11,8 +11,8 @@ import kotlinx.coroutines.delay
 
 /**
  * Saved together: each write wakes every watcher of the table, and one per title would reload the
- * whole catalogue on any screen showing it. Fifty, not ten (#591): a batch of 200 takes minutes, so
- * this still shows progress often, and a process killed mid-batch redoes at most this many.
+ * whole catalogue on any screen showing it. Not more: a batch of 200 takes minutes, so this still
+ * shows progress every minute or so, and a process killed mid-batch redoes at most this many.
  */
 private const val SAVE_EVERY = 50
 
@@ -64,13 +64,13 @@ private suspend fun <R : Any> attempt(tag: String, block: suspend () -> R?): R? 
     .getOrNull()
 
 /**
- * How fast a background pass ([MovieGenres], [SeriesTmdbPass]) goes: [count] titles a batch,
+ * How fast a background pass ([MovieGenres], [SeriesTmdbPass]) goes: [batchSize] titles a batch,
  * [pauseMillis] between batches, and [providerGapMillis] between one provider request and the next.
  * Without that gap a batch went back to back, as fast as the panel answered: about 240 requests a
  * minute from one that answers in 100 ms, which providers that throttle busy accounts may not take
  * (#591). TMDB isn't held to it; its limits are far above this pass's.
  */
-data class LookupPace(val count: Int = 200, val pauseMillis: Long = 60_000L, val providerGapMillis: Long = 1_000L)
+data class LookupPace(val batchSize: Int = 200, val pauseMillis: Long = 60_000L, val providerGapMillis: Long = 1_000L)
 
 /**
  * Works through what [select] picks (given how many to pick, in an order that stays put), up to

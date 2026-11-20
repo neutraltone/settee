@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
  * [fillAll] works through every film not looked up, newest first, at [pace], so a struggling panel
  * never gets a flood of calls and a provider that blocks busy accounts sees a steady trickle of at
  * most one `get_vod_info` a second. Tied to the film list's 12-hourly fetch, 200 at a time, a
- * 30,000-film catalogue took months; this way its provider look-ups take about nine hours.
+ * 30,000-film catalogue took months; this way the provider has answered about it in under half a day.
  */
 class MovieGenres(
     private val movieDao: MovieDao,
@@ -38,12 +38,12 @@ class MovieGenres(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** One batch of the newest films not looked up. False if the provider stopped answering. */
-    suspend fun refresh(source: Source): Boolean = lookUpBatch(source, dueFilms(source, pace.count))
+    suspend fun refresh(source: Source): Boolean = lookUpBatch(source, dueFilms(source, pace.batchSize))
 
     /** Every film not looked up, a batch at a time, until none is left or the provider stops answering. */
     suspend fun fillAll(source: Source) {
         val due: suspend (Int) -> List<Movie> = { dueFilms(source, it) }
-        inBatches(pace.count, pace.pauseMillis, Movie::id, due) { lookUpBatch(source, it) }
+        inBatches(pace.batchSize, pace.pauseMillis, Movie::id, due) { lookUpBatch(source, it) }
     }
 
     /** The [limit] newest films the provider, or with a key TMDB, is due to be asked about. */
@@ -53,12 +53,8 @@ class MovieGenres(
     private suspend fun lookUpBatch(source: Source, titles: List<Movie>): Boolean {
         val withTmdb = tmdb.ready
         val now = clock()
-        var providerAsked = false
-        val askProvider: suspend (Movie) -> XtreamApi.VodInfo? = { movie ->
-            if (providerAsked) delay(pace.providerGapMillis)
-            providerAsked = true
-            api.movieInfo(source, movie.streamId)
-        }
+        val provider = SpacedRequests(pace.providerGapMillis)
+        val askProvider: suspend (Movie) -> XtreamApi.VodInfo? = { provider.ask { api.movieInfo(source, it.streamId) } }
         return lookUpEach(
             titles = titles,
             tag = TAG,
@@ -103,6 +99,20 @@ class MovieGenres(
 
     companion object {
         private const val TAG = "MovieGenres"
+    }
+}
+
+/**
+ * Requests at least [gapMillis] apart, counted from when the last one finished, so a slow answer
+ * doesn't bring the next one sooner. The first goes at once: a batch starts a run or follows a rest.
+ */
+private class SpacedRequests(private val gapMillis: Long) {
+    private var asked = false
+
+    suspend fun <R> ask(request: suspend () -> R): R {
+        if (asked) delay(gapMillis)
+        asked = true
+        return request()
     }
 }
 

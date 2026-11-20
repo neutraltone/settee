@@ -80,7 +80,7 @@ class TestCatalog(
         tmdbKey = tmdbKey,
         wording = ErrorWording(context, onTelevision = false),
     ).apply {
-        genrePace = LookupPace(pauseMillis = 0, providerGapMillis = 0)
+        lookupPace = LookupPace(pauseMillis = 0, providerGapMillis = 0)
         staging = this@TestCatalog.staging
     }
 

@@ -34,7 +34,7 @@ class SeriesTmdbPass(
     suspend fun fillAll(source: Source) {
         if (!tmdb.ready) return
         inBatches(
-            pace.count,
+            pace.batchSize,
             pace.pauseMillis,
             Series::id,
             select = { seriesDao.newestTmdbDue(source.id, clock() - TMDB_REFRESH_MILLIS, it) },
