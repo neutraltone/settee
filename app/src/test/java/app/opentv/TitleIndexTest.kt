@@ -100,10 +100,22 @@ class TitleIndexTest {
     }
 
     @Test
-    fun `titles are grouped before anything asks for them`(): Unit = runBlocking {
+    fun `nothing is grouped until something asks or the index is started`(): Unit = runBlocking {
+        // A sync with nobody looking builds the index too: grouping a whole catalogue then would take a
+        // Stick's memory from the recording or refresh that started the process (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+
+        delay(1_500)
+
+        assertThat(index.movies.value).isNull()
+    }
+
+    @Test
+    fun `a started index groups titles before anything asks for them`(): Unit = runBlocking {
         // So the grouping is done while the viewer picks a Profile, not after Home asks (#582).
         db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
 
+        index.start()
         // Read, never collected: nothing subscribes.
         val grouped = withTimeoutOrNull(5_000) {
             while (index.movies.value?.of(1) == null) delay(20)

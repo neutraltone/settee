@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -48,8 +49,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Held in memory rather than looked up per cover: a category's grid holds one shelf's rows, while a
  * cover's badge and whether it's shown once depend on Versions in other categories, and the tables have
  * no index on the TMDB id, which a schema change would add. Built from a light projection, off the
- * main thread, and kept until the app closes. Grouping starts as soon as it's made, not when
- * something first asks (#582).
+ * main thread, and kept until the app closes. Grouping starts when something first asks, or [start].
  */
 class TitleIndex(
     db: OpenTvDatabase,
@@ -125,6 +125,17 @@ class TitleIndex(
     private fun distinctIn(items: List<VodTitle>, movies: Titles, series: Titles): List<VodTitle> =
         items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
 
+    /**
+     * Starts grouping now rather than when something first asks, for a screen about to: the first
+     * screen opening, so the grouping is done while the viewer picks a Profile (#582). Not when the
+     * index is made, as a sync with nobody looking makes it too.
+     */
+    fun start() {
+        // Grouping, once started, runs until the index closes: holding a subscription is all it needs.
+        scope.launch { movies.collect {} }
+        scope.launch { series.collect {} }
+    }
+
     /** Stops regrouping, for a test that closes its database. */
     fun close() = scope.cancel()
 
@@ -154,7 +165,7 @@ class TitleIndex(
             delay(RETRY_MILLIS)
             true
         }
-        .stateIn(scope, SharingStarted.Eagerly, null)
+        .stateIn(scope, SharingStarted.Lazily, null)
 
     private suspend fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
         val byId = HashMap<Long, Title>(rows.size)
