@@ -148,6 +148,9 @@ class VodViewModelCatalogueTest {
                 movie(3, "EN - Superbad Too (2009)", tmdbId = "9999"),
             ),
         )
+        // Grouped first: the search's clock, moved on below, would otherwise outrun the grouping's wait,
+        // and lists show every row until the grouping comes.
+        withTimeout(5_000) { graph.titleIndex.movies.first { it?.of(3) != null } }
         watching.launch { viewModel.movieResults.collect {} }
 
         viewModel.setVodSearchQuery("Superbad")

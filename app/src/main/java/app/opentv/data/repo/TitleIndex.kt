@@ -10,6 +10,8 @@ import app.opentv.data.model.SourceCategoryName
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.player.DecoderList
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,15 +25,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
@@ -103,19 +108,19 @@ class TitleIndex(
 
     /** [items], a list of films, with each title once: the first of its Versions there. */
     fun <T> distinctMovies(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
-        items.combine(movies.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+        items.combine(movies.groupedOrNone()) { list, titles -> titles.distinct(list, idOf) }
 
     /** [items], a list of shows, with each title once: the first of its Versions there. */
     fun <T> distinctSeries(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
-        items.combine(series.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+        items.combine(series.groupedOrNone()) { list, titles -> titles.distinct(list, idOf) }
 
     /** [items], films and shows together, with each title once: the first of its Versions there. */
     fun distinctTitles(items: Flow<List<VodTitle>>): Flow<List<VodTitle>> =
-        combine(items, movies.filterNotNull(), series.filterNotNull(), ::distinctIn)
+        combine(items, movies.groupedOrNone(), series.groupedOrNone(), ::distinctIn)
 
     /** As [distinctTitles], for a list read once. */
     suspend fun distinct(items: List<VodTitle>): List<VodTitle> =
-        distinctIn(items, movies.filterNotNull().first(), series.filterNotNull().first())
+        distinctIn(items, movies.groupedOrNone().first(), series.groupedOrNone().first())
 
     private fun distinctIn(items: List<VodTitle>, movies: Titles, series: Titles): List<VodTitle> =
         items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
@@ -133,9 +138,13 @@ class TitleIndex(
         .distinctUntilChanged()
         .flatMapLatest { names ->
             rows.distinctUntilChangedBy { it.hashCode() }
-                // A refresh writes in batches: grouping once they settle is all that's wanted.
-                .debounce(SETTLE_MILLIS)
-                .mapLatest { group(it, names) }
+                // A refresh writes in batches: grouping once they settle is all that's wanted, but no
+                // longer than a few seconds into them, as a film-details lookup writes for minutes.
+                .settled(SETTLE_MILLIS, REGROUP_MILLIS)
+                // A grouping under way finishes, then the newest rows are grouped: replacing it with
+                // each batch meant one never finished while batches came faster than it (#582).
+                .conflate()
+                .map { group(it, names) }
         }
         .flowOn(Dispatchers.Default)
         // A read that fails, or a database closed under it, leaves every row its own title for now,
@@ -150,7 +159,7 @@ class TitleIndex(
     private suspend fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
         val byId = HashMap<Long, Title>(rows.size)
         val titles = groupVersions(rows, VersionRow::tmdbId, VersionRow::name, VersionRow::year)
-        // Checked as it goes, so newer rows replace a grouping still under way instead of queuing behind it.
+        // Checked as it goes, so new category names, or the index closing, stop a grouping under way.
         val job = currentCoroutineContext()
         for ((i, versions) in titles.withIndex()) {
             if (i % CHECK_EVERY == 0) job.ensureActive()
@@ -169,6 +178,40 @@ private const val FIRST_GROUPING_WAIT_MILLIS = 3_000L
 
 /** How long the catalogue stays unchanged before it's grouped again. */
 private const val SETTLE_MILLIS = 500L
+
+/**
+ * The titles once grouped, or every row its own title if the first grouping takes longer than a lookup
+ * waits, then the grouping when it comes: a list shown with a title twice for a moment beats Home
+ * waiting on a grouping a busy refresh holds up (#582).
+ */
+private fun StateFlow<TitleIndex.Titles?>.groupedOrNone(): Flow<TitleIndex.Titles> = flow {
+    emit(withTimeoutOrNull(FIRST_GROUPING_WAIT_MILLIS) { filterNotNull().first() } ?: TitleIndex.Titles.NONE)
+    emitAll(filterNotNull())
+}.distinctUntilChanged()
+
+/** The longest a stream of writes holds off grouping the rows so far. */
+private const val REGROUP_MILLIS = 3_000L
+
+/**
+ * Each value once [quietMillis] pass with no newer one, as `debounce` does, except that a value
+ * waiting when [maxWaitMillis] have passed since the first of its burst goes through then: plain
+ * `debounce` never emits while values keep coming faster than [quietMillis].
+ */
+@OptIn(FlowPreview::class)
+private fun <T> Flow<T>.settled(quietMillis: Long, maxWaitMillis: Long): Flow<T> {
+    val burstStart = AtomicLong(NO_BURST)
+    return onEach { burstStart.compareAndSet(NO_BURST, nowMillis()) }
+        .debounce {
+            val waited = nowMillis() - burstStart.get()
+            quietMillis.coerceAtMost((maxWaitMillis - waited).coerceAtLeast(0))
+        }
+        .onEach { burstStart.set(NO_BURST) }
+}
+
+private const val NO_BURST = -1L
+
+// Not SystemClock, which stands still under Robolectric unless a test moves it.
+private fun nowMillis() = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
 
 /** How long after a failed read grouping tries again. */
 private const val RETRY_MILLIS = 30_000L

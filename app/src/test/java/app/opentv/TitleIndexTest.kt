@@ -15,12 +15,20 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.VodTitle
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Test
@@ -103,6 +111,37 @@ class TitleIndexTest {
         }
 
         assertThat(grouped).isTrue()
+    }
+
+    @Test
+    fun `titles are grouped while a refresh keeps writing`(): Unit = runBlocking {
+        // A refresh filling in films' details writes a batch every moment; waiting for it to settle
+        // left Recently Added waiting until it finished (#582).
+        db.movies().upsertAll(listOf(movie(1, "EN - Superbad (2007)", "en")))
+        val writing = launch(Dispatchers.Default) {
+            var n = 2L
+            while (isActive) {
+                db.movies().upsertAll(listOf(movie(n, "EN - Film $n (2007)", "en", tmdbId = "$n")))
+                n++
+                delay(200)
+            }
+        }
+
+        val grouped = withTimeoutOrNull(8_000) { index.movies.filterNotNull().first() }
+        writing.cancel()
+
+        assertThat(grouped?.of(1)).isNotNull()
+    }
+
+    @Test
+    fun `a list doesn't wait for ever on titles that haven't been grouped`() = runTest {
+        // A scope that never runs: the grouping never starts.
+        val stalled = TitleIndex(db, stick, CoroutineScope(StandardTestDispatcher()))
+        val films = listOf(VodTitle.OfMovie(movie(1, "NF - Superbad (2007)", "nf")))
+
+        val shown = withTimeoutOrNull(60_000) { stalled.distinctTitles(flowOf(films)).first() }
+
+        assertThat(shown).isEqualTo(films)
     }
 
     private fun movie(id: Long, name: String, category: String, tmdbId: String = "8363") = Movie(
