@@ -38,6 +38,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -70,15 +71,41 @@ class CutOff:
     TIMED_OUT = "TIMED OUT"
     FROZEN = "FROZEN"
 
+
+@dataclass
+class CutOffRun:
+    """A run stopped before Gradle finished: why, the last test to finish, the thread dumps taken
+    before killing it, and how long without a finished test counted as stopped."""
+
+    reason: str
+    last: str = ""
+    dumps: list = field(default_factory=list)
+    frozen_after: int = FROZEN_SECONDS
+
+
+
+@dataclass(frozen=True)
+class Mode:
+    """What a mode runs and how it watches the run: the Gradle tasks, the minutes it may take, where
+    its tests write results, how long without a finished test means it has stopped, and whether
+    Gradle's output is printed as it runs rather than kept to the log."""
+
+    tasks: tuple
+    minutes: int
+    results: tuple = (RESULTS,)
+    frozen_seconds: int = FROZEN_SECONDS
+    streams: bool = False
+
+
 MODES = {
-    "test": ["testDebugUnitTest"],
-    "quick": ["ktlintFormat", "detekt"],
-    "all": ["testDebugUnitTest", "ktlintCheck", "detekt", "lintDebug", "--continue"],
-    "ci": ["test", "--stacktrace"],
-    "sweep": [],
+    "test": Mode(("testDebugUnitTest",), 8),
+    "quick": Mode(("ktlintFormat", "detekt"), 8),
+    "all": Mode(("testDebugUnitTest", "ktlintCheck", "detekt", "lintDebug", "--continue"), 25),
+    # Both variants, like `./gradlew test`. Stops before the Unit tests step's own 25 minutes, so
+    # the report and dumps still get uploaded; a CI log is read after the fact, so it streams.
+    "ci": Mode(("test", "--stacktrace"), 22, (RESULTS, RELEASE_RESULTS), CI_FROZEN_SECONDS, streams=True),
+    "sweep": Mode((), 1),
 }
-# ci stops before the Unit tests step's own 25 minutes, so its report and dumps still get uploaded.
-TIMEOUT_MINUTES = {"test": 8, "quick": 8, "all": 25, "ci": 22, "sweep": 1}
 
 
 @dataclass
@@ -102,28 +129,31 @@ class Dump:
     process answered at all, and the threads that were in a test when it did."""
 
     pid: int
-    path: str
-    answered: bool
-    stuck: str
+    path: str | None = None
+    stuck: str = ""
+
+    @property
+    def answered(self):
+        return self.path is not None
 
 
 @dataclass
 class Worker:
-    """A Gradle test process: how many minutes it has run, and the directory it runs in."""
+    """A Gradle test process: how many minutes it has run, the directory it runs in, and its
+    command line (which names the java it runs)."""
 
     pid: int
     minutes: float
     cwd: str
+    command: str = field(default="", compare=False)
 
 
 def read_results(directories, since):
-    """This run's unit test results, from one results directory or a list of them: Gradle leaves an
-    earlier run's files behind when it fails before the tests start, so anything written before
-    `since` isn't counted."""
+    """This run's unit test results, from each of its results directories: Gradle leaves an earlier
+    run's files behind when it fails before the tests start, so anything written before `since`
+    isn't counted."""
     results = Results()
-    if isinstance(directories, (str, Path)):
-        directories = [directories]
-    for path in [path for directory in map(Path, directories) for path in sorted(directory.glob("TEST-*.xml"))]:
+    for path in [path for directory in directories for path in sorted(Path(directory).glob("TEST-*.xml"))]:
         if path.stat().st_mtime < since:
             continue
         try:
@@ -217,15 +247,6 @@ def read_record(record):
         return b""
 
 
-def result_dirs(mode):
-    """Where the mode's tests write their results: ci runs both variants', like `./gradlew test`."""
-    return [RESULTS, RELEASE_RESULTS] if mode == "ci" else [RESULTS]
-
-
-def frozen_seconds(mode):
-    return CI_FROZEN_SECONDS if mode == "ci" else FROZEN_SECONDS
-
-
 def frozen(last_progress, started, now, limit=FROZEN_SECONDS):
     """Whether a run has frozen: its tests have started (`last_progress` is when one last finished,
     None before any has) and none has finished for `limit` seconds. Progress from before `started`
@@ -241,7 +262,7 @@ def jcmd_for(command):
 def stuck_in(dump):
     """The threads of a thread dump that are in one of this project's tests, at most a screenful
     of each: its top frames, which on a hang are what it waits on, and the test's own frame."""
-    test_frame = re.compile(rf"^\tat {re.escape(PACKAGE)}\.[\w$]*Test\b", flags=re.MULTILINE)
+    test_frame = re.compile(rf"^\tat {re.escape(PACKAGE)}\.[\w.$]*Test\b", flags=re.MULTILINE)
     threads = []
     for block in re.split(r"\n\s*\n", dump):
         lines = block.strip("\n").splitlines()
@@ -259,26 +280,24 @@ def dump_threads(root, out_dir):
     a test answers with where it waits; one frozen in the kernel can't reach the point where it
     would, so no answer is the machine and an answer is the test."""
     listed = subprocess.run(["ps", "-axo", "pid=,etime=,command="], capture_output=True, text=True).stdout
-    commands = {int(m.group(1)): m.group(2) for m in re.finditer(r"^\s*(\d+)\s+\S+\s+(.*)$", listed, re.MULTILINE)}
-    dumps = []
-    for worker in leftover(test_workers(listed, _cwd_of), root, minutes=0):
-        try:
-            answer = subprocess.run(
-                [jcmd_for(commands[worker.pid]), str(worker.pid), "Thread.print", "-l"],
-                capture_output=True,
-                text=True,
-                timeout=DUMP_SECONDS,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            dumps.append(Dump(worker.pid, "", answered=False, stuck=""))
-            continue
-        if answer.returncode != 0 or "Full thread dump" not in answer.stdout:
-            dumps.append(Dump(worker.pid, "", answered=False, stuck=""))
-            continue
-        path = Path(out_dir) / f"threads-{worker.pid}.txt"
-        path.write_text(answer.stdout)
-        dumps.append(Dump(worker.pid, str(path), answered=True, stuck=stuck_in(answer.stdout)))
-    return dumps
+    return [_dump(worker, out_dir) for worker in leftover(test_workers(listed, _cwd_of), root, minutes=0)]
+
+
+def _dump(worker, out_dir):
+    try:
+        answer = subprocess.run(
+            [jcmd_for(worker.command), str(worker.pid), "Thread.print", "-l"],
+            capture_output=True,
+            text=True,
+            timeout=DUMP_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return Dump(worker.pid)
+    if answer.returncode != 0 or "Full thread dump" not in answer.stdout:
+        return Dump(worker.pid)
+    path = Path(out_dir) / f"threads-{worker.pid}.txt"
+    path.write_text(answer.stdout)
+    return Dump(worker.pid, str(path), stuck_in(answer.stdout))
 
 
 def test_workers(ps_output, cwd_of):
@@ -289,7 +308,7 @@ def test_workers(ps_output, cwd_of):
         if not match or "Gradle Test Executor" not in match.group(3):
             continue
         pid = int(match.group(1))
-        workers.append(Worker(pid, _minutes(match.group(2)), cwd_of(pid) or ""))
+        workers.append(Worker(pid, _minutes(match.group(2)), cwd_of(pid) or "", match.group(3)))
     return workers
 
 
@@ -339,7 +358,7 @@ def stop_leftover(root, minutes):
 
 
 def gradle_tasks(mode, names, rerun=False):
-    tasks = list(MODES[mode])
+    tasks = list(MODES[mode].tasks)
     if rerun:
         tasks.append("--rerun")
     for name in names:
@@ -364,7 +383,7 @@ def parse_args(args):
         return None
     if rerun and args[0] != "test":
         return None
-    return args[0], args[1:], minutes or TIMEOUT_MINUTES[args[0]], rerun
+    return args[0], args[1:], minutes or MODES[args[0]].minutes, rerun
 
 
 def _age(minutes):
@@ -379,10 +398,7 @@ def verdict(
     log_path,
     reasons=(),
     stopped=(),
-    cut_off="",
-    last="",
-    dumps=(),
-    frozen_after=FROZEN_SECONDS,
+    cut_off=None,
 ):
     """What to print, and the exit code: Gradle's, whatever else was or wasn't found. A run that was
     cut off has no exit code and has failed; the thread dumps taken before killing it say whether a
@@ -398,28 +414,8 @@ def verdict(
     for seconds, name in results.slow:
         out.append(f"SLOW  {seconds:.0f}s  {name}")
     ran = f"{results.tests} tests in {results.seconds:.0f}s" if results.tests else "tests up to date or not run"
-    answered = [dump for dump in dumps if dump.answered]
-    if cut_off and answered:
-        after = f"; the last test to finish was {last}" if last else ""
-        stalled = f"no test finished for {frozen_after}s" if cut_off == CutOff.FROZEN else "the run outlasted its time"
-        out.append(
-            f"HUNG  {stalled}, and the test JVM answered a thread dump, so a test is waiting for ever: "
-            f"it is the test, not the machine{after}  full output: {log_path}"
-        )
-        for dump in answered:
-            out.append(f"    thread dump of test process {dump.pid}: {dump.path}")
-            stuck = dump.stuck or "no thread was in a test; see the dump"
-            out += [f"    {line}" for line in stuck.splitlines()]
-    elif cut_off:
-        after = f"; the last test to finish was {last}" if last else ""
-        silent = " (it didn't answer a thread dump)" if dumps else ""
-        why = (
-            f"no test finished for {frozen_after}s, so the test JVM had frozen and was killed{silent}. "
-            "That is the machine running short of memory, not a test failure: run it again"
-            if cut_off == CutOff.FROZEN
-            else "the run outlasted its time and was stopped"
-        )
-        out.append(f"{cut_off}  {why}{after}  full output: {log_path}")
+    if cut_off:
+        out += _cut_off(cut_off, log_path)
     elif gradle_exit == 0:
         out.append(f"PASSED  {ran}")
     else:
@@ -429,12 +425,53 @@ def verdict(
     return "\n".join(out), 0 if gradle_exit == 0 and not cut_off else 1
 
 
+def _cut_off(run, log_path):
+    """Why a cut-off run was stopped. A JVM that answered a thread dump was waiting in a test for
+    ever, so it is the test; one that couldn't had frozen, which is the machine."""
+    after = f"; the last test to finish was {run.last}" if run.last else ""
+    answered = [dump for dump in run.dumps if dump.answered]
+    stalled = f"no test finished for {run.frozen_after}s"
+    if answered:
+        stalled = stalled if run.reason == CutOff.FROZEN else "the run outlasted its time"
+        out = [
+            f"HUNG  {stalled}, and the test JVM answered a thread dump, so a test is waiting for ever: "
+            f"it is the test, not the machine{after}  full output: {log_path}"
+        ]
+        for dump in answered:
+            out.append(f"    thread dump of test process {dump.pid}: {dump.path}")
+            out += [f"    {line}" for line in (dump.stuck or "no thread was in a test; see the dump").splitlines()]
+        return out
+    silent = " (it didn't answer a thread dump)" if run.dumps else ""
+    why = (
+        f"{stalled}, so the test JVM had frozen and was killed{silent}. "
+        "That is the machine running short of memory, not a test failure: run it again"
+        if run.reason == CutOff.FROZEN
+        else "the run outlasted its time and was stopped"
+    )
+    return [f"{run.reason}  {why}{after}  full output: {log_path}"]
+
+
 def _sweep():
     stopped = stop_leftover(root=None, minutes=STALE_MINUTES)
     for w in stopped:
         print(f"STOPPED  test process {w.pid}, left running for {_age(w.minutes)} in {w.cwd}")
     print(f"{len(stopped)} leftover test processes stopped")
     return 0
+
+
+def _copy_output(source, log):
+    """Copies Gradle's output to the log and to this script's own output as it comes."""
+
+    def copy():
+        for line in iter(source.readline, b""):
+            log.write(line.decode(errors="replace"))
+            log.flush()
+            sys.stdout.write(line.decode(errors="replace"))
+            sys.stdout.flush()
+
+    copying = threading.Thread(target=copy, daemon=True)
+    copying.start()
+    return copying
 
 
 def _terminated(signum, _frame):
@@ -457,25 +494,29 @@ def main(argv):
     command = ["./gradlew", "--console=plain", *gradle_tasks(mode, names, rerun)]
     stopped = stop_leftover(root, STALE_MINUTES)
     started = time.time()
-    cut_off, last, gradle_exit, dumps = "", "", None, []
-    in_progress = [Path(root) / directory / IN_PROGRESS for directory in result_dirs(mode)]
-    limit = frozen_seconds(mode)
+    settings = MODES[mode]
+    cut_off, gradle_exit = None, None
+    results = [Path(root) / directory for directory in settings.results]
+    in_progress = [directory / IN_PROGRESS for directory in results]
     for stop in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(stop, _terminated)
     with open(log_path, "w") as log:
-        gradle = subprocess.Popen(command, cwd=root, stdout=log, stderr=subprocess.STDOUT)
+        gradle = subprocess.Popen(
+            command, cwd=root, stdout=subprocess.PIPE if settings.streams else log, stderr=subprocess.STDOUT
+        )
+        copying = _copy_output(gradle.stdout, log) if settings.streams else None
         try:
-            while cut_off == "":
+            while cut_off is None:
                 try:
                     gradle_exit = gradle.wait(timeout=POLL_SECONDS)
                     break
                 except subprocess.TimeoutExpired:
                     now = time.time()
                     progress = [at for at in map(modified, in_progress) if at is not None]
-                    if frozen(max(progress, default=None), started, now, limit):
-                        cut_off = CutOff.FROZEN
+                    if frozen(max(progress, default=None), started, now, settings.frozen_seconds):
+                        cut_off = CutOffRun(CutOff.FROZEN, frozen_after=settings.frozen_seconds)
                     elif now - started > minutes * 60:
-                        cut_off = CutOff.TIMED_OUT
+                        cut_off = CutOffRun(CutOff.TIMED_OUT, frozen_after=settings.frozen_seconds)
         except BaseException:
             # Terminated or interrupted: after this nothing is left to stop what this started.
             gradle.kill()
@@ -483,10 +524,13 @@ def main(argv):
             stop_leftover(root, minutes=0)
             raise
         if cut_off:
-            last = next(filter(None, (last_finished(read_record(record)) for record in in_progress)), "")
-            dumps = dump_threads(root, log_path.parent)
+            cut_off.last = next(filter(None, (last_finished(read_record(record)) for record in in_progress)), "")
+            cut_off.dumps = dump_threads(root, log_path.parent)
             gradle.kill()
             gradle.wait()
+        if copying:
+            # The Gradle daemon can hold the pipe open after the client has gone, so don't wait on it for ever.
+            copying.join(timeout=10)
     # The run is over, so any test process still in this checkout is one that didn't stop.
     stopped += stop_leftover(root, minutes=0)
     log_text = log_path.read_text(errors="replace")
@@ -495,20 +539,14 @@ def main(argv):
         log_text += "\n" + lint.read_text(errors="replace")
     report, code = verdict(
         gradle_exit,
-        read_results([Path(root) / directory for directory in result_dirs(mode)], since=started),
+        read_results(results, since=started),
         findings(log_text, root),
         failed_tasks(log_text),
         log_path,
         gradle_reasons(log_text),
         stopped,
         cut_off,
-        last,
-        dumps,
-        limit,
     )
-    if mode == "ci":
-        # A CI log is read after the fact, so it keeps Gradle's whole output ahead of the summary.
-        print(log_text)
     print(report)
     print(f"({time.time() - started:.0f}s: {' '.join(command)})")
     return code

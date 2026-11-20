@@ -46,7 +46,7 @@ class ResultsTest(unittest.TestCase):
         self.write("TEST-app.opentv.QuickTest.xml", PASSING)
         self.write("TEST-app.opentv.RowTest.xml", FAILING)
 
-        results = check.read_results(self.dir, since=0)
+        results = check.read_results([self.dir], since=0)
 
         self.assertEqual(results.tests, 4)
         self.assertEqual(len(results.failures), 1)
@@ -58,7 +58,7 @@ class ResultsTest(unittest.TestCase):
     def test_results_left_by_an_earlier_run_are_not_this_runs(self):
         self.write("TEST-app.opentv.RowTest.xml", FAILING, mtime=1_000)
 
-        results = check.read_results(self.dir, since=2_000)
+        results = check.read_results([self.dir], since=2_000)
 
         self.assertEqual(results.tests, 0)
         self.assertEqual(results.failures, [])
@@ -67,12 +67,12 @@ class ResultsTest(unittest.TestCase):
         self.write("TEST-app.opentv.QuickTest.xml", PASSING)
         self.write("TEST-app.opentv.RowTest.xml", FAILING)
 
-        results = check.read_results(self.dir, since=0)
+        results = check.read_results([self.dir], since=0)
 
         self.assertEqual(results.slow, [(61.0, "RowTest > OK plays it")])
 
     def test_a_missing_results_directory_is_no_results(self):
-        results = check.read_results(self.dir / "never-ran", since=0)
+        results = check.read_results([self.dir / "never-ran"], since=0)
 
         self.assertEqual(results.tests, 0)
 
@@ -80,7 +80,7 @@ class ResultsTest(unittest.TestCase):
         self.write("TEST-app.opentv.QuickTest.xml", PASSING)
         self.write("TEST-app.opentv.RowTest.xml", FAILING[:200])
 
-        results = check.read_results(self.dir, since=0)
+        results = check.read_results([self.dir], since=0)
 
         self.assertEqual(results.tests, 2)
 
@@ -189,8 +189,7 @@ class VerdictTest(unittest.TestCase):
             found=[],
             tasks=[],
             log_path="x.log",
-            cut_off=check.CutOff.TIMED_OUT,
-            last="LiveBrowseTest > while the rows load, it stays put",
+            cut_off=check.CutOffRun(check.CutOff.TIMED_OUT, last="LiveBrowseTest > while the rows load, it stays put"),
         )
 
         self.assertEqual(code, 1)
@@ -204,8 +203,7 @@ class VerdictTest(unittest.TestCase):
             found=[],
             tasks=[],
             log_path="x.log",
-            cut_off=check.CutOff.FROZEN,
-            last="LauncherArtworkTest > keeps the adaptive icon",
+            cut_off=check.CutOffRun(check.CutOff.FROZEN, last="LauncherArtworkTest > keeps the adaptive icon"),
         )
 
         self.assertEqual(code, 1)
@@ -294,6 +292,11 @@ class ThreadDumpTest(unittest.TestCase):
         self.assertNotIn("Finalizer", stuck)
         self.assertNotIn("Test worker", stuck)
 
+    def test_finds_a_test_in_one_of_the_projects_subpackages_too(self):
+        dump = '"main" #1\n\tat java.lang.Object.wait(Native Method)\n\tat app.opentv.recording.RecordingFilesTest.keeps it(RecordingFilesTest.kt:9)\n'
+
+        self.assertIn("RecordingFilesTest.keeps it", check.stuck_in(dump))
+
     def test_a_dump_with_no_test_on_any_thread_says_so_rather_than_nothing(self):
         self.assertEqual(check.stuck_in('"Finalizer" #3\n\tat java.lang.Object.wait(Native Method)\n'), "")
 
@@ -310,9 +313,11 @@ class ThreadDumpTest(unittest.TestCase):
             found=[],
             tasks=[],
             log_path="x.log",
-            cut_off=check.CutOff.FROZEN,
-            last="LiveBrowseTest > the rows load",
-            dumps=[check.Dump(731, "threads-731.txt", answered=True, stuck=check.stuck_in(DUMP))],
+            cut_off=check.CutOffRun(
+                check.CutOff.FROZEN,
+                last="LiveBrowseTest > the rows load",
+                dumps=[check.Dump(731, "threads-731.txt", check.stuck_in(DUMP))],
+            ),
         )
 
         self.assertEqual(code, 1)
@@ -328,8 +333,7 @@ class ThreadDumpTest(unittest.TestCase):
             found=[],
             tasks=[],
             log_path="x.log",
-            cut_off=check.CutOff.FROZEN,
-            dumps=[check.Dump(731, "", answered=False, stuck="")],
+            cut_off=check.CutOffRun(check.CutOff.FROZEN, dumps=[check.Dump(731)]),
         )
 
         self.assertIn("FROZEN", report)
@@ -474,8 +478,8 @@ class FrozenTest(unittest.TestCase):
 
     def test_ci_waits_longer_as_its_first_test_on_each_sdk_downloads_that_sdk(self):
         now = 1_000 + check.FROZEN_SECONDS + 1
-        self.assertFalse(check.frozen(last_progress=1_000, started=900, now=now, limit=check.frozen_seconds("ci")))
-        self.assertEqual(check.frozen_seconds("test"), check.FROZEN_SECONDS)
+        self.assertFalse(check.frozen(last_progress=1_000, started=900, now=now, limit=check.MODES["ci"].frozen_seconds))
+        self.assertEqual(check.MODES["test"].frozen_seconds, check.FROZEN_SECONDS)
 
     def test_progress_left_by_an_earlier_run_doesnt_count_against_this_one(self):
         self.assertFalse(check.frozen(last_progress=500, started=900, now=9_000))
@@ -520,10 +524,10 @@ class CommandTest(unittest.TestCase):
 
     def test_ci_mode_watches_both_variants_tests_and_the_others_only_debug(self):
         self.assertEqual(
-            check.result_dirs("ci"),
-            ["app/build/test-results/testDebugUnitTest", "app/build/test-results/testReleaseUnitTest"],
+            check.MODES["ci"].results,
+            ("app/build/test-results/testDebugUnitTest", "app/build/test-results/testReleaseUnitTest"),
         )
-        self.assertEqual(check.result_dirs("test"), ["app/build/test-results/testDebugUnitTest"])
+        self.assertEqual(check.MODES["test"].results, ("app/build/test-results/testDebugUnitTest",))
 
     def test_all_mode_runs_every_pr_check_without_stopping_at_the_first_failure(self):
         self.assertEqual(
