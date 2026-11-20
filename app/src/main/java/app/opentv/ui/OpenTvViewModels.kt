@@ -927,19 +927,19 @@ class VodViewModel @JvmOverloads constructor(
      * Highlight and pushes the row it was on off the screen.
      */
     val movieRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
-        graph.viewerLibrary.hasPlayedFilms(),
-        graph.viewerLibrary.favourites.hasAny(StreamKind.MOVIE),
+        graph.viewerLibrary.quickChecks.playedFilms(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
     )
 
     /** As [movieRowsExpected], for Shows. */
     val seriesRowsExpected: StateFlow<ExpectedRows?> = expectedRows(
-        graph.viewerLibrary.hasPlayedEpisodes(),
-        graph.viewerLibrary.favourites.hasAny(StreamKind.SERIES),
+        graph.viewerLibrary.quickChecks.playedEpisodes(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
     )
 
     private fun expectedRows(played: Flow<Boolean>, favourites: Flow<Boolean>) =
         combine(played, favourites, ::ExpectedRows)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_EXPECTED_MILLIS), null)
 
     // null until loaded, which For you shows as a skeleton when [movieRowsExpected] expects the row.
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -986,6 +986,9 @@ class VodViewModel @JvmOverloads constructor(
 
         /** As long as the tab's other flows, so a trip to a title's page and back doesn't ask again. */
         const val LOAD_FAILURE_KEEP_MILLIS = 5_000L
+
+        /** As long as the rows they hold places for, so coming back draws no skeleton the rows don't need. */
+        const val KEEP_EXPECTED_MILLIS = 5_000L
 
         /** Two genres keep the backdrop's line of facts to one line. */
         const val BACKDROP_GENRES = 2
@@ -1918,10 +1921,10 @@ class HomeViewModel @JvmOverloads constructor(
      * Because you watched has none: it starts from the row it last had, at once.
      */
     private val expected: Flow<Set<HomeRowKind>> = combine(
-        graph.viewerLibrary.hasPlayed(),
-        graph.viewerLibrary.favourites.hasAny(StreamKind.SERIES),
-        graph.viewerLibrary.favourites.hasAny(StreamKind.MOVIE),
-        graph.viewerLibrary.favourites.hasAny(StreamKind.LIVE),
+        graph.viewerLibrary.quickChecks.played(),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.SERIES),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.MOVIE),
+        graph.viewerLibrary.quickChecks.hasFavourite(StreamKind.LIVE),
         combine(settings.moviesEnabled, settings.seriesEnabled, settings.liveEnabled, ::Triple),
     ) { played, shows, movies, channels, (moviesOn, showsOn, liveOn) ->
         buildSet {

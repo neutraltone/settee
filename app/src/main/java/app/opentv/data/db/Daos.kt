@@ -1527,6 +1527,9 @@ interface EpisodeDao {
 }
 
 @Dao
+// Each reader of a Profile's positions asks its own question (one title, a kind, any at all), which
+// is what grows the count, not the interface doing more than one thing.
+@Suppress("TooManyFunctions")
 interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun get(profileId: Long, key: String): PlaybackPosition?
@@ -1543,7 +1546,10 @@ interface PlaybackPositionDao {
      * Whether a profile has played anything whose key starts [prefix] ("" for anything, "movie:",
      * "ep:"): the quick check for a Continue Watching row.
      */
-    @Query("SELECT EXISTS(SELECT 1 FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%')")
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM playback_positions " +
+            "WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%')",
+    )
     fun observeAny(profileId: Long, prefix: String): Flow<Boolean>
 
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */

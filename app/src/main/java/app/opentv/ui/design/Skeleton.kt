@@ -12,13 +12,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.LongState
@@ -33,28 +33,6 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
-
-/** Which cards a [SkeletonShelf] holds the place of. */
-sealed interface SkeletonCards {
-    /** The card at [index]. */
-    fun card(index: Int): ArtCardSize
-
-    /** Where cards of different heights line up, as the real row lines them up. */
-    val alignment: Alignment.Vertical get() = Alignment.Bottom
-
-    /** Shows' and movies' covers. */
-    data object Covers : SkeletonCards {
-        override fun card(index: Int) = ArtCardSize.Portrait
-    }
-
-    /** Continue Watching's cards, the first one large when Home has no Live Preview above it. */
-    data class ContinueWatching(val largeFirst: Boolean) : SkeletonCards {
-        override fun card(index: Int) = if (index == 0 && largeFirst) ArtCardSize.Large else ArtCardSize.Landscape
-
-        // As Continue Watching hangs its cards from the top under a large first card.
-        override val alignment: Alignment.Vertical get() = if (largeFirst) Alignment.Top else Alignment.Bottom
-    }
-}
 
 /**
  * A row still loading: its real [title] over blank cards, as many as reach the screen's edge. The
@@ -161,7 +139,10 @@ fun SkeletonGuide(
                         .width(channelColumn - GUIDE_GAP)
                         .fillMaxHeight()
                         .padding(vertical = GUIDE_GAP / 2)
-                    val blankCell = Modifier.fillMaxSize().then(pulse).background(SetteeColors.Surface, SetteeShapes.Cell)
+                    val blankCell = Modifier
+                        .fillMaxSize()
+                        .then(pulse)
+                        .background(SetteeColors.Surface, SetteeShapes.Cell)
                     if (row == 0 && opening != null) {
                         HighlightSurface(
                             onClick = {},

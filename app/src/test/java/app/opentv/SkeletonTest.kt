@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import app.opentv.ui.design.SKELETON_CARD
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SkeletonCards
 import app.opentv.ui.design.SkeletonShelf
@@ -69,14 +70,11 @@ class SkeletonTest {
         compose.setTvContent { ScreenFrame { SkeletonShelf("Row", cards = cards) } }
         compose.mainClock.advanceTimeBy(100)
         val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.right
-        val rights = compose.onAllNodesWithTag(SKELETON_CARD).fetchSemanticsNodes().map { it.positionInRoot.x + it.size.width }
+        val cards = compose.onAllNodesWithTag(SKELETON_CARD).fetchSemanticsNodes()
+        val rights = cards.map { it.positionInRoot.x + it.size.width }
 
         // The last card reaches the screen's edge; the one before it doesn't, or the last is wasted.
         assertThat(rights.last()).isAtLeast(width)
         assertThat(rights[rights.size - 2]).isLessThan(width)
-    }
-
-    private companion object {
-        const val SKELETON_CARD = "skeleton-card"
     }
 }

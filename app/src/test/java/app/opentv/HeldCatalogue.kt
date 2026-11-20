@@ -55,13 +55,12 @@ class HeldCatalogue(private val app: Application, private val name: String) {
     }
 
     private fun onStatement(sql: String) {
-        val read = sql.trimStart()
-        // A count or an EXISTS is a quick check, however big the table: only reads of rows are held.
-        val quick = QUICK.containsMatchIn(read)
-        if (holding && read.startsWith("SELECT", ignoreCase = true) && !quick && CATALOGUE.containsMatchIn(read)) {
-            released.await(HELD_SECONDS, TimeUnit.SECONDS)
-        }
+        if (holding && readsCatalogueRows(sql.trimStart())) released.await(HELD_SECONDS, TimeUnit.SECONDS)
     }
+
+    // A count or an EXISTS is a quick check, however big the table: only reads of rows are held.
+    private fun readsCatalogueRows(sql: String): Boolean =
+        sql.startsWith("SELECT", ignoreCase = true) && !QUICK.containsMatchIn(sql) && CATALOGUE.containsMatchIn(sql)
 
     private companion object {
         val QUICK = Regex("""^SELECT\s+(COUNT\(|EXISTS\()""", RegexOption.IGNORE_CASE)

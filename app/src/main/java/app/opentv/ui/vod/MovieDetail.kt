@@ -64,13 +64,13 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
-import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.SkeletonShelf
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard

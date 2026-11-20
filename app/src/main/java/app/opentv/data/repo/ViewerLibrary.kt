@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.util.Log
 import androidx.room.withTransaction
 import app.opentv.data.db.EpisodeDao
+import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.MovieDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.PlaybackPositionDao
@@ -140,6 +141,9 @@ class ViewerLibrary(
     /** The active Profile's Favourites, and every Profile's for sync. */
     val favourites = Favourites(db, activeProfileId, clock, versionIds)
 
+    /** Which rows the active Profile will have, asked quickly, for screens' skeletons. */
+    val quickChecks = QuickChecks(positions, db.favourites(), activeProfileId)
+
     private val cards = ContinueWatchingCards(positions, episodes, dismissals, movies, series, versionIds)
 
     /** The live channel the active Profile last settled on, and its Live Preview. */
@@ -242,22 +246,6 @@ class ViewerLibrary(
     fun continueWatchingSeries(): Flow<List<ContinueWatchingCard>> = activeProfileId
         .flatMapLatest { pid -> cards.series(pid) }
         .map { list -> cards.oneCardPerTitle(list).map { it.card } }
-
-    /**
-     * Whether the active Profile has played anything, from its positions alone: quick enough for a
-     * screen to hold Continue Watching's place before its cards are built.
-     */
-    fun hasPlayed(): Flow<Boolean> = hasPlayedKeyed("")
-
-    /** As [hasPlayed], films only, for Movies. */
-    fun hasPlayedFilms(): Flow<Boolean> = hasPlayedKeyed(MOVIE_PREFIX)
-
-    /** As [hasPlayed], episodes only, for Shows. */
-    fun hasPlayedEpisodes(): Flow<Boolean> = hasPlayedKeyed(EPISODE_PREFIX)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun hasPlayedKeyed(prefix: String): Flow<Boolean> =
-        activeProfileId.flatMapLatest { positions.observeAny(it, prefix) }
 
     /** Home's Continue Watching: movies and series together, most recently played first. */
     fun continueWatching(): Flow<List<ContinueWatchingCard>> = home().map { it.continueWatching }
@@ -367,6 +355,34 @@ class TitleStatus internal constructor(
  * Removes a Profile from every table the library owns, in one transaction so a removal cut short
  * leaves the Profile whole rather than half forgotten. Reached as `viewerLibrary.profileRemoval`.
  */
+/**
+ * Quick looks at the active Profile's own small tables, for a screen to hold a row's place with a
+ * skeleton before the row's cards are built (#581): building them reads the catalogue, which on a
+ * big provider takes seconds, and these never do.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class QuickChecks internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val favourites: FavouriteDao,
+    private val activeProfileId: StateFlow<Long>,
+) {
+    /** Whether it has played anything: Home's Continue Watching. */
+    fun played(): Flow<Boolean> = playedKeyed("")
+
+    /** Whether it has played a film: Movies' Continue Watching. */
+    fun playedFilms(): Flow<Boolean> = playedKeyed(MOVIE_PREFIX)
+
+    /** Whether it has played an episode: Shows' Continue Watching. */
+    fun playedEpisodes(): Flow<Boolean> = playedKeyed(EPISODE_PREFIX)
+
+    /** Whether it has a Favourite of [kind], from the Favourites table alone. */
+    fun hasFavourite(kind: StreamKind): Flow<Boolean> =
+        activeProfileId.flatMapLatest { favourites.observeAny(it, kind) }
+
+    private fun playedKeyed(prefix: String): Flow<Boolean> =
+        activeProfileId.flatMapLatest { positions.observeAny(it, prefix) }
+}
+
 class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
     suspend fun forget(profileId: Long) = db.withTransaction {
         db.positions().deleteFor(profileId)

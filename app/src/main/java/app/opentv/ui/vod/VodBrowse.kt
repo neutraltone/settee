@@ -57,8 +57,8 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
-import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ExpectedRows
+import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
@@ -360,7 +360,7 @@ internal data class ForYouLoading(
 ) {
     private val any get() = continueWatching || favourites || recentlyAdded
 
-    /** What Movies or Shows draws: nothing for the moment until the checks are back, else rows or why there are none. */
+    /** What Movies or Shows draws: nothing until the checks are back (a moment), then rows or why there are none. */
     fun shown(hasForYou: Boolean): ForYouShown = when {
         !known -> ForYouShown.WAITING
         any || hasForYou -> ForYouShown.ROWS

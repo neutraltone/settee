@@ -449,22 +449,6 @@ private fun Loading() {
     }
 }
 
-/**
- * The guide's skeleton, its first row taking the Highlight when the guide is to ([takeFocus]), as the
- * real guide's first row would. When the rows come the guide takes it over as it opens.
- */
-@Composable
-private fun OpeningGuideSkeleton(takeFocus: Boolean) {
-    val opening = remember { FocusRequester() }
-    LaunchedEffect(takeFocus) {
-        if (!takeFocus) return@LaunchedEffect
-        // Once laid out, which is when it can take the Highlight.
-        withFrameNanos {}
-        runCatching { opening.requestFocus() }
-    }
-    GuideSkeleton(opening = Modifier.focusRequester(opening))
-}
-
 /** Favourites with none in them: how to add one, and a way to another category. */
 @Composable
 private fun NoFavourites(openSidebar: () -> Unit) {

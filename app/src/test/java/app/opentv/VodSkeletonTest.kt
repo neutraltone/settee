@@ -17,11 +17,11 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
-import app.opentv.ui.vod.ProvidersCarry
-import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SKELETON_CARD
+import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.CoverGrid
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking

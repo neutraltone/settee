@@ -5,20 +5,13 @@
  */
 package app.opentv.ui.vod
 
-import app.opentv.R
-import androidx.compose.ui.res.stringResource
-
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -39,8 +32,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import app.opentv.R
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.ContinueWatchingShelf
@@ -50,14 +45,11 @@ import app.opentv.ui.ResumeItem
 import app.opentv.ui.RowPick
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
-import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
 import app.opentv.ui.design.SkeletonCards
 import app.opentv.ui.design.SkeletonShelf
-import app.opentv.ui.design.Text
 import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.LeaveDirectly
@@ -135,20 +127,18 @@ internal fun <T> ScreenFrameScope.ForYou(
             verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
             modifier = Modifier.fillMaxSize().focusGroup(),
         ) {
-            val first = if (resume.isNotEmpty() || resumeLoading) 1 else 0
-            if (resume.isEmpty() && resumeLoading) {
+            // Continue Watching's place, with its cards or a skeleton, comes before the other rows.
+            val first = rowKeys.all.size - rows.size
+            if (first == 1) {
                 railReturnItem(key = CONTINUE_WATCHING, contentType = "continue-watching") {
                     RowAtTop(0) {
-                        SkeletonShelf(
-                            stringResource(R.string.vod_continue_watching),
-                            SkeletonCards.ContinueWatching(largeFirst = false),
-                        )
-                    }
-                }
-            }
-            if (resume.isNotEmpty()) {
-                railReturnItem(key = CONTINUE_WATCHING, contentType = "continue-watching") {
-                    RowAtTop(0) {
+                        if (resume.isEmpty()) {
+                            SkeletonShelf(
+                                stringResource(R.string.vod_continue_watching),
+                                SkeletonCards.ContinueWatching(largeFirst = false),
+                            )
+                            return@RowAtTop
+                        }
                         ContinueWatchingShelf(
                             resume,
                             large = false,
@@ -275,7 +265,6 @@ private fun <T> pickRows(
 private val TitleCover.cardKey get() = "$id"
 
 private const val CONTINUE_WATCHING = "cw"
-
 
 /** As much as a Shelf leaves above and below its covers. */
 private val SHELF_LIFT_ROOM = 12.dp
