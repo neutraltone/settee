@@ -93,6 +93,10 @@ interface SourceDao {
     @Query("UPDATE sources SET lastCatalogSyncMillis = :millis WHERE id = :id")
     suspend fun markCatalogSynced(id: Long, millis: Long)
 
+    /** When any provider's channels were last saved, 0 if never. */
+    @Query("SELECT IFNULL(MAX(lastCatalogSyncMillis), 0) FROM sources")
+    suspend fun latestCatalogSync(): Long
+
     /**
      * Saves what the viewer edited. The panel's time zone is the panel's to give when a refresh signs
      * in, never the edit screen's: a draft read before a refresh heard it would put back an older one,

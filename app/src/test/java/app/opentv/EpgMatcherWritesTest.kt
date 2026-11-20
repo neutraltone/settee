@@ -16,6 +16,8 @@ import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.EpgRepository
@@ -146,13 +148,13 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `a guide pass that downloads nothing and follows no channel change leaves the matches, and counts them`() =
+    fun `a guide pass that downloads nothing after no catalogue refresh leaves the matches, and counts them`() =
         runTest {
             // The launch's guide pass: matching again would read and clean every channel's name (#582).
             db.channels().upsertAll(listOf(channel(0, matchedEpgId = epgId(0))) + (1..2).map { channel(it) })
             db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
 
-            val summary = guide.syncAll(NOW, channelsChanged = false)
+            val summary = guide.syncAll(NOW)
 
             assertThat(channels.writes).isEmpty()
             assertThat(summary.channelsMatched to summary.channelsTotal).isEqualTo(1 to 3)
@@ -169,17 +171,23 @@ class EpgMatcherWritesTest {
         )
         db.epgFeeds().markSynced(moved, NOW, "")
 
-        guide.syncAll(NOW, channelsChanged = false)
+        guide.syncAll(NOW)
 
         assertThat(db.channels().matcherInputs().single().matchedEpgId).isNull()
     }
 
     @Test
-    fun `a guide pass after the channels changed matches them even when it downloads nothing`() = runTest {
+    fun `channels a refresh saved are matched by the next guide pass, even when it downloads nothing`() = runTest {
+        // Also when the refresh's own guide pass never ran, the process gone before it got there.
+        db.sources().insert(
+            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+        )
         db.channels().upsertAll((0..2).map { channel(it) })
+        db.sources().markCatalogSynced(1, NOW)
         db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
 
-        val summary = guide.syncAll(NOW, channelsChanged = true)
+        val summary = guide.syncAll(NOW)
+        guide.syncAll(NOW)
 
         assertThat(channels.writes).containsExactly(3)
         assertThat(summary.channelsMatched to summary.channelsTotal).isEqualTo(3 to 3)

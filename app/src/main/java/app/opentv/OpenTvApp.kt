@@ -126,9 +126,11 @@ open class OpenTvApp :
         val catchUpNormaliser = NormaliserCatchUp(
             this,
             renormalise = {
-                // New keys need matching to the guide; the launch's guide pass only matches when a guide
-                // comes in (#582).
-                if (graph.catalogRepository.renormalizeAll() > 0) graph.epgRepository.runMatcher()
+                // New keys need matching to the guide, and the launch's guide pass doesn't know they
+                // changed (#582). Matched even when nothing changed: a launch that stopped between the
+                // two runs both again.
+                graph.catalogRepository.renormalizeAll()
+                graph.epgRepository.runMatcher()
             },
             carryLocks = { from ->
                 if (from <= LAST_ASCII_KEY_NORMALIZER) {
