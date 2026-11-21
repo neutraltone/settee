@@ -20,7 +20,6 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
@@ -36,8 +35,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,16 +53,19 @@ import org.robolectric.shadows.ShadowToast
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsProvidersRefreshTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val own = OwnGraph("settings-providers-refresh-test")
+
+    @get:Rule(order = 1)
     val compose = createComposeRule()
 
-    @get:Rule
+    @get:Rule(order = 1)
     val secrets = FixedServerSecrets()
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
-    private val graph get() = ServiceLocator.get(app())
+    private val graph get() = own.graph
 
     private fun app() = ApplicationProvider.getApplicationContext<Application>()
 
@@ -83,18 +83,6 @@ class SettingsProvidersRefreshTest {
     }
 
     /** A provider nothing will reach: port 9 refuses at once. */
-    /** Every provider a test saved, removed after it: the process's database outlives each test. */
-    private val saved = mutableListOf<Long>()
-
-    @Before
-    fun removeOtherTestsProviders() = runBlocking {
-        // Other test classes' providers share the process's database, and a refresh would try them too.
-        graph.sourceRepository.all().forEach { graph.catalogRepository.deleteSource(it.id) }
-    }
-
-    @After
-    fun removeProviders() = runBlocking { saved.forEach { graph.catalogRepository.deleteSource(it) } }
-
     private fun saveProvider(
         name: String,
         failure: ViewerError? = null,
@@ -109,7 +97,7 @@ class SettingsProvidersRefreshTest {
                 enabled = enabled,
                 lastRefreshFailure = failure?.stored(),
             ),
-        ).also { saved += it }
+        )
     }
 
     /** Channels from an earlier refresh that worked: a later failure keeps them, so the guide isn't empty. */
