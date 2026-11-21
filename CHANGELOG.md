@@ -2,6 +2,45 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.4.0](https://github.com/neutraltone/settee/compare/v1.3.1...v1.4.0) (2026-11-21)
+
+
+### Features
+
+* **#579:** setup shows the moving TV while it loads your library ([#580](https://github.com/neutraltone/settee/issues/580)) ([a96dc20](https://github.com/neutraltone/settee/commit/a96dc20f47b79fa9054c30049601b1ed06a1393d))
+* **#581:** reopening Settee shows the shape of your rows while they load, never a black screen ([#585](https://github.com/neutraltone/settee/issues/585)) ([62d1574](https://github.com/neutraltone/settee/commit/62d1574c0fb22731038480d8b1d33a66d24d0181))
+* **#583:** what Settee is updating in the background shows quietly in the top-right corner, and nothing on the screen moves ([#596](https://github.com/neutraltone/settee/issues/596)) ([8e37495](https://github.com/neutraltone/settee/commit/8e37495faefd78dc7cf0f421de8c10c0d2bbe1d6))
+* **#586:** Settings has a Diagnostics section that shows how Settee is doing and saves a report to your NAS ([#590](https://github.com/neutraltone/settee/issues/590)) ([0c55255](https://github.com/neutraltone/settee/commit/0c55255ad771f0b13e2e359ad96a12df1a6ceebb))
+* **#595:** Home appears straight away after reopening, from the rows you last saw ([#597](https://github.com/neutraltone/settee/issues/597)) ([67855a9](https://github.com/neutraltone/settee/commit/67855a98fe518e7a0785d1d2db809c75381c830e))
+
+
+### Bug fixes
+
+* **#432:** coming back to Movies, Shows or Recordings from a recording or after a restore puts the highlight where you left it ([#549](https://github.com/neutraltone/settee/issues/549)) ([50fe294](https://github.com/neutraltone/settee/commit/50fe29469de70fd02f359e961fda70302d60300e))
+* **#434:** Back on Setup's OpenSubtitles step goes back to the provider form, still filled in, without saving a second copy ([#566](https://github.com/neutraltone/settee/issues/566)) ([2afafbd](https://github.com/neutraltone/settee/commit/2afafbda938b92f191d748fdd18476844c9d69f2))
+* **#435:** when the programme you're on in the guide ends, the highlight moves to the one now on instead of vanishing ([#564](https://github.com/neutraltone/settee/issues/564)) ([dea2c32](https://github.com/neutraltone/settee/commit/dea2c3279337f7f33ac32327663d04696c509cd7))
+* **#436:** a provider that finishes saving after you've left its page leaves you where you are ([#554](https://github.com/neutraltone/settee/issues/554)) ([821c5be](https://github.com/neutraltone/settee/commit/821c5beed403b60e8009ffdd441128e2d7695392))
+* **#437:** the warning before the screen switches to a recording takes the highlight, so Keep watching is one press away ([#562](https://github.com/neutraltone/settee/issues/562)) ([e7b4497](https://github.com/neutraltone/settee/commit/e7b44977ad64629189f4f6163319a6fc764341a6))
+* **#464:** a provider whose refresh failed says why under it in Settings, and Home says when its login or address needs fixing ([#546](https://github.com/neutraltone/settee/issues/546)) ([44e98c0](https://github.com/neutraltone/settee/commit/44e98c0594926af3b88d4e3802486c4425d22b16))
+* **#465:** Settings › OpenSubtitles says why the account stopped working, and offers Sign in again when OpenSubtitles signed the TV out ([#558](https://github.com/neutraltone/settee/issues/558)) ([e95af04](https://github.com/neutraltone/settee/commit/e95af0418e5426ba85c601f71e395d9ee531fcf7))
+* **#466:** Movies and Shows say when only an Xtream login can fill them, with a way forward ([#560](https://github.com/neutraltone/settee/issues/560)) ([929570a](https://github.com/neutraltone/settee/commit/929570a932ec7c6a7695d0a439e33f92d23d5bb6))
+* **#467:** an add-on that can't be reached or fails says so, in Settings › Add-ons and a film's Add-on sources, with Try again ([#565](https://github.com/neutraltone/settee/issues/565)) ([eabbdc6](https://github.com/neutraltone/settee/commit/eabbdc61f18bcdef1c6593191de1fd2c2453ff54))
+* **#469:** Test connection checks a playlist really is one, and Test and the phone's setup page speak the app's language ([#561](https://github.com/neutraltone/settee/issues/561)) ([a42c5bf](https://github.com/neutraltone/settee/commit/a42c5bf5238fa91c5c5631a29a9d922d2ad1eee8))
+* **#470:** an Xtream address that answers with a web page or a 404 says to check the address and port, not to try again ([#559](https://github.com/neutraltone/settee/issues/559)) ([ae7bafe](https://github.com/neutraltone/settee/commit/ae7bafedf38bf111eedcd5aed2b97de70d0ec54e))
+* **#471:** a guide address that is wrong, dead or a web page says so, instead of "try again" ([#563](https://github.com/neutraltone/settee/issues/563)) ([220a06f](https://github.com/neutraltone/settee/commit/220a06f2feadfbed7f1625b66c96c7c725454433))
+* **#472:** a live channel whose stream ends tries again by itself, then says it stopped with Try again ([#550](https://github.com/neutraltone/settee/issues/550)) ([639a0f1](https://github.com/neutraltone/settee/commit/639a0f102f481eb54014385b17c7e9ce9e54f2f1))
+* **#496:** saving a provider again after its channels failed no longer adds a second copy ([#553](https://github.com/neutraltone/settee/issues/553)) ([fcfcfd3](https://github.com/neutraltone/settee/commit/fcfcfd3acaa5211e851c5ae0812281446e2fb758))
+* **#497:** channels, films, episodes and catch-up play when the provider password has characters such as #, ?, / or a space ([#552](https://github.com/neutraltone/settee/issues/552)) ([aa25db1](https://github.com/neutraltone/settee/commit/aa25db1162cd58a833f13f1fbc93b9041143ce6e))
+* **#498:** pressing Record twice quickly records the channel once, instead of opening two connections to your provider ([#548](https://github.com/neutraltone/settee/issues/548)) ([3d58750](https://github.com/neutraltone/settee/commit/3d58750bd5eb284590655daf0dcaaf979562e757))
+* **#581:** Home opens with the Highlight when Continue Watching is empty or another row leads ([#593](https://github.com/neutraltone/settee/issues/593)) ([10a2b0a](https://github.com/neutraltone/settee/commit/10a2b0a3c6bf2c60bead78caf10fedaf2ea746b4))
+* **#588:** the app no longer slows down and stops playing episodes while it fills in film and show details ([#589](https://github.com/neutraltone/settee/issues/589)) ([94929df](https://github.com/neutraltone/settee/commit/94929dfbbcce40d8ff8897ea67703afea3f82fc6))
+* **#591:** filling in film details no longer sends your provider bursts of requests ([#592](https://github.com/neutraltone/settee/issues/592)) ([1cd4ee4](https://github.com/neutraltone/settee/commit/1cd4ee49d8739563e100c3e8b5646c8919aaff84))
+
+
+### Performance
+
+* **#582:** Home, Movies and Shows load quickly after reopening, however much you're part-way through ([#594](https://github.com/neutraltone/settee/issues/594)) ([8b0b5af](https://github.com/neutraltone/settee/commit/8b0b5affa00ff9a4bdd8dfc4f2d2b4fd3a8b3b8a))
+
 ## [1.3.1](https://github.com/neutraltone/settee/compare/v1.3.0...v1.3.1) (2026-11-18)
 
 
