@@ -195,8 +195,13 @@ object ServiceLocator {
                 settings.hiddenCategories,
                 settings.hiddenUnlocked,
                 decoders,
+                lineupSharing,
             )
         }
+
+        // Held here rather than inside the lineup so stopBackgroundWork can end its shared reads, which
+        // outlive the last screen by ChannelLineup.SHARE_MILLIS.
+        private val lineupSharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         /** Every film and show grouped into titles, for lists and covers (ADR 0007). */
         val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
@@ -248,10 +253,10 @@ object ServiceLocator {
          */
         @VisibleForTesting
         suspend fun stopBackgroundWork() {
-            channelLineup.close()
+            lineupSharing.coroutineContext.job.cancelAndJoin()
             titleIndex.close()
             waitingProgress.close()
-            catalogRepository.closeBackground()
+            catalogRepository.awaitBackground()
             appScope.coroutineContext.job.cancelAndJoin()
         }
 

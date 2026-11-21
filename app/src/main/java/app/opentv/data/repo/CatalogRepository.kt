@@ -6,7 +6,6 @@
 package app.opentv.data.repo
 
 import android.util.Log
-import androidx.annotation.VisibleForTesting
 import androidx.room.withTransaction
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -49,7 +48,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -182,10 +180,6 @@ class CatalogRepository(
      * sync, and work still reading it then fails into whichever test runs next.
      */
     internal suspend fun awaitBackground() = background.coroutineContext.job.children.toList().joinAll()
-
-    /** Stops the work [background] is doing and waits for it, for a test about to close its database. */
-    @VisibleForTesting
-    internal suspend fun closeBackground() = background.coroutineContext.job.cancelAndJoin()
 
     /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
