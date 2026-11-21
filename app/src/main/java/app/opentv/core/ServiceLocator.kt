@@ -7,6 +7,7 @@ package app.opentv.core
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import app.opentv.BuildConfig
 import app.opentv.data.db.DATABASE_VERSION
 import app.opentv.data.db.OpenTvDatabase
@@ -54,7 +55,9 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.job
 import okhttp3.OkHttpClient
 
 /**
@@ -192,8 +195,13 @@ object ServiceLocator {
                 settings.hiddenCategories,
                 settings.hiddenUnlocked,
                 decoders,
+                lineupSharing,
             )
         }
+
+        // Held here rather than inside the lineup so stopBackgroundWork can end its shared reads, which
+        // outlive the last screen by ChannelLineup.SHARE_MILLIS.
+        private val lineupSharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         /** Every film and show grouped into titles, for lists and covers (ADR 0007). */
         val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
@@ -237,6 +245,20 @@ object ServiceLocator {
             SupervisorJob() + Dispatchers.IO +
                 CoroutineExceptionHandler { _, e -> Log.w("ServiceLocator", "Background work failed", e) },
         )
+
+        /**
+         * Stops everything the graph runs in the background, and waits for it, for a test about to
+         * close the database: work still reading it then throws into whichever test runs next. Only
+         * tests close a graph's database, so anything given its own scope stops here too.
+         */
+        @VisibleForTesting
+        suspend fun stopBackgroundWork() {
+            lineupSharing.coroutineContext.job.cancelAndJoin()
+            titleIndex.close()
+            waitingProgress.close()
+            catalogRepository.awaitBackground()
+            appScope.coroutineContext.job.cancelAndJoin()
+        }
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
 
