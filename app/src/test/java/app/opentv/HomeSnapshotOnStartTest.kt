@@ -173,9 +173,12 @@ class HomeSnapshotOnStartTest {
             advanceTimeBy(15_000)
             catalogue.hold()
 
-            val again = home.whenDrawn { HomeRowKind.RECENT_SHOWS in it.loading }
+            // The first Home drawn again, whatever it is: waiting for a particular one could miss it, as
+            // the state keeps only the latest, and a later one would only show what came after.
+            val again = home.whenDrawn { true }
 
             assertThat(again.loading).contains(HomeRowKind.RECENT_MOVIES)
+            assertThat(again.recentMovies).isEmpty()
         }
 
     @Test

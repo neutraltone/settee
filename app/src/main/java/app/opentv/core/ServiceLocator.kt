@@ -78,6 +78,14 @@ object ServiceLocator {
     }
 
     /**
+     * Puts [graph] in the app's place and returns the one it replaced, for a test of a screen that
+     * builds its own view models: otherwise it shares the process's graph with every test class
+     * before it, whose leftover locks and work a provider given the same id then waits on for ever.
+     */
+    @VisibleForTesting
+    fun swap(graph: Graph?): Graph? = synchronized(this) { instance.also { instance = graph } }
+
+    /**
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
