@@ -5,10 +5,12 @@
  */
 package app.opentv
 
+import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.job
+import org.robolectric.Shadows.shadowOf
 
 /**
  * View models a test builds, stopped before it closes the database. Their `stateIn(WhileSubscribed)`
@@ -21,8 +23,25 @@ class ViewModelsInTest {
 
     fun <VM : ViewModel> track(viewModel: VM): VM = viewModel.also { tracked += it }
 
-    suspend fun stopAll() {
-        tracked.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
+    /**
+     * Not a join: their work ends on the main thread, which a test's teardown runs on, so blocking it
+     * to wait never let that work finish and hung the run (#547's CI). The main looper runs while
+     * waiting instead, up to a limit.
+     */
+    fun stopAll() {
+        val work = tracked.map { it.viewModelScope.coroutineContext.job }
+        tracked.forEach { it.viewModelScope.cancel() }
+        val onMain = Looper.myLooper() == Looper.getMainLooper()
+        val until = System.currentTimeMillis() + STOP_MILLIS
+        while (work.any { !it.isCompleted } && System.currentTimeMillis() < until) {
+            if (onMain) shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(5)
+        }
         tracked.clear()
+    }
+
+    private companion object {
+        /** Long enough for a read already running to come back, short enough not to hang a run. */
+        const val STOP_MILLIS = 5_000L
     }
 }
