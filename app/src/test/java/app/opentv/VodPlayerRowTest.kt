@@ -58,7 +58,8 @@ class VodPlayerRowTest {
     private val controller = players.controller()
 
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
 
     @After
@@ -67,6 +68,10 @@ class VodPlayerRowTest {
         SleepTimer.clear()
         controller.release()
         players.close()
+        // Before the database closes: the player's reads outlive the test, and one that ran on the
+        // closed database threw into the next test (release PR 547's CI).
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 
@@ -475,7 +480,7 @@ class VodPlayerRowTest {
     fun `episode buttons found while the controls show wait until they next open`() {
         val panel = FakePanel()
         val fetching = ServiceLocator.Graph(app, http = panel.http)
-        val loading = VodPlayerViewModel(app, fetching)
+        val loading = viewModels.track(VodPlayerViewModel(app, fetching))
         try {
             runBlocking {
                 fetching.database.sources().insert(PANEL_SOURCE)
@@ -501,6 +506,8 @@ class VodPlayerRowTest {
             compose.onNodeWithContentDescription("Next episode").assertExists()
             compose.onNodeWithContentDescription("Previous episode").assertExists()
         } finally {
+            viewModels.stopAll()
+            runBlocking { fetching.stopBackgroundWork() }
             fetching.database.close()
         }
     }
