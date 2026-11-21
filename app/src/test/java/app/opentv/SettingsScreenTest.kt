@@ -335,12 +335,12 @@ class SettingsScreenTest {
         show(SettingsMemory(SettingsSection.Guide))
         waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        // The screen makes sure every provider has its guide row in the background; done here too, so
-        // a provider an earlier test saved can't gain its row between the two reads.
-        val before = runBlocking {
-            graph.epgRepository.ensureFeeds()
-            graph.epgRepository.observeFeeds().first()
+        // Only guides the viewer adds: an earlier test's background work can still save a provider,
+        // with its own guide row, or switch on a built-in guide for its region, while this one runs.
+        fun ownFeeds() = runBlocking {
+            graph.epgRepository.observeFeeds().first().filter { !it.builtIn && it.providerSourceId == null }
         }
+        val before = ownFeeds()
 
         compose.onNodeWithText("Add your own guide").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -352,7 +352,7 @@ class SettingsScreenTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasText(app.getString(R.string.common_save))).assertExists()
         captureScreen("settings_guide_bad_address")
-        assertThat(runBlocking { graph.epgRepository.observeFeeds().first() }).isEqualTo(before)
+        assertThat(ownFeeds()).isEqualTo(before)
         // Still on the box, to put it right (Down from it to Save is EntryScreenTest's).
         assertThat(entry.highlighted()).isTrue()
     }

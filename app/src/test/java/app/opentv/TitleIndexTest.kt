@@ -66,7 +66,7 @@ class TitleIndexTest {
 
     @After
     fun close() {
-        index.close()
+        runBlocking { index.close() }
         db.close()
         queryLog.shutdown()
     }
