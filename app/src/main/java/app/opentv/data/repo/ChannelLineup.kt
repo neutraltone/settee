@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import androidx.annotation.VisibleForTesting
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Category
@@ -225,7 +226,8 @@ constructor(
      * they outlive the last screen by [SHARE_MILLIS], and a read on the closed database throws into
      * whichever test is running then.
      */
-    suspend fun stop() = sharing.coroutineContext.job.cancelAndJoin()
+    @VisibleForTesting
+    suspend fun close() = sharing.coroutineContext.job.cancelAndJoin()
 
     /** The scope channel up and down follow: All until a screen says otherwise. */
     private val zapScope = MutableStateFlow<LineupScope>(LineupScope.All())

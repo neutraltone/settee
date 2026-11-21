@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import androidx.annotation.VisibleForTesting
 import app.opentv.data.db.MOVIES_TABLE
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.SERIES_TABLE
@@ -19,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -138,11 +138,9 @@ class TitleIndex(
         scope.launch { series.collect {} }
     }
 
-    /** Stops regrouping, for a test that closes its database. */
-    fun close() = scope.cancel()
-
     /** Stops regrouping and waits for a read still running, for a test about to close its database. */
-    suspend fun stop() = scope.coroutineContext.job.cancelAndJoin()
+    @VisibleForTesting
+    suspend fun close() = scope.coroutineContext.job.cancelAndJoin()
 
     // Rows go straight into titles and aren't kept: holding every row of a catalogue in memory is
     // what made a Stick close the app (#180). Only the titles stay, a fraction of the size, and of the

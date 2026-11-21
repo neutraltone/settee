@@ -13,8 +13,6 @@ import app.opentv.data.db.OpenTvDatabase
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -51,17 +49,13 @@ class HeldCatalogue(private val app: Application, private val name: String) {
     fun release() = released.countDown()
 
     /**
-     * Releases anything held, stops the graph's background reads, and removes the database. The reads
-     * outlive the screens that started them by a few seconds, and one that ran on the closed database
-     * threw into whichever test came next (LiveSkeletonTest failed that way on CI).
+     * Releases anything held, stops the graph's background work, and removes the database. The work
+     * outlives the screens that started it by a few seconds, and a read that ran on the closed
+     * database threw into whichever test came next.
      */
     fun close() {
         release()
-        runBlocking {
-            graph.channelLineup.stop()
-            graph.titleIndex.stop()
-            graph.appScope.coroutineContext.job.cancelAndJoin()
-        }
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         app.deleteDatabase("$name.db")
     }

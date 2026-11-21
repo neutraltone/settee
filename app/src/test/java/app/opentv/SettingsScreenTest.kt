@@ -336,9 +336,9 @@ class SettingsScreenTest {
         waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         // Only guides the viewer adds: an earlier test's background work can still save a provider,
-        // and its own guide row, in the shared database while this one runs.
+        // with its own guide row, or switch on a built-in guide for its region, while this one runs.
         fun ownFeeds() = runBlocking {
-            graph.epgRepository.observeFeeds().first().filter { it.providerSourceId == null }
+            graph.epgRepository.observeFeeds().first().filter { !it.builtIn && it.providerSourceId == null }
         }
         val before = ownFeeds()
 
