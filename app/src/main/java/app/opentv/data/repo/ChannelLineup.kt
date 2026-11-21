@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
 
 /** Which Channels a viewer is looking at. Scope decides which Channels appear, never their Qualities. */
@@ -217,6 +219,13 @@ constructor(
     private val manageable: Flow<Catalogue> = everyRow.map { Catalogue(it, decoders) }
         .flowOn(Dispatchers.Default)
         .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
+
+    /**
+     * Stops the shared reads and waits for one still running, for a test that closes its database:
+     * they outlive the last screen by [SHARE_MILLIS], and a read on the closed database throws into
+     * whichever test is running then.
+     */
+    suspend fun stop() = sharing.coroutineContext.job.cancelAndJoin()
 
     /** The scope channel up and down follow: All until a screen says otherwise. */
     private val zapScope = MutableStateFlow<LineupScope>(LineupScope.All())

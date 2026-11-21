@@ -20,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -138,6 +140,9 @@ class TitleIndex(
 
     /** Stops regrouping, for a test that closes its database. */
     fun close() = scope.cancel()
+
+    /** Stops regrouping and waits for a read still running, for a test about to close its database. */
+    suspend fun stop() = scope.coroutineContext.job.cancelAndJoin()
 
     // Rows go straight into titles and aren't kept: holding every row of a catalogue in memory is
     // what made a Stick close the app (#180). Only the titles stay, a fraction of the size, and of the
