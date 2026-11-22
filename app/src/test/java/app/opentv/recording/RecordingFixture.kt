@@ -63,5 +63,6 @@ class RecordingFixture(context: Context, now: Long = NOW) : AutoCloseable {
 
     companion object {
         const val NOW = 1_763_217_000_000L
+        const val HOUR = 3_600_000L
     }
 }
