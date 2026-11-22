@@ -83,7 +83,7 @@ class OpenSubtitlesStepTest {
             pressAction()
         }
 
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Signed in as u").assertExists()
@@ -111,7 +111,9 @@ class OpenSubtitlesStepTest {
             type("p")
             pressAction()
         }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Signed in as u")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Signed in as u")).fetchSemanticsNodes().isNotEmpty()
+        }
 
         Espresso.pressBack()
 

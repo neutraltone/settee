@@ -133,7 +133,7 @@ class HomeProviderBannerTest {
     private fun shown(text: String) =
         compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
 
-    private fun waitFor(text: String) = compose.waitUntil(5_000) { shown(text) }
+    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) { shown(text) }
 
     private fun highlighted() = compose.onNode(isFocused())
 
@@ -146,7 +146,7 @@ class HomeProviderBannerTest {
         compose.onNodeWithText("Acme TV: ${login.sentence}").assertExists()
         compose.onNode(hasText("LoginRejected", substring = true)).assertDoesNotExist()
         // The banner doesn't take the opening Highlight: Home opens on its first card, as it always has.
-        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
         highlighted().assertTextContains("Superbad", substring = true)
         captureScreen("home_provider_banner")
 
@@ -154,8 +154,8 @@ class HomeProviderBannerTest {
         highlighted().assertTextContains("Open Providers")
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        compose.waitUntil(5_000) { compose.runOnIdle { nav.currentDestination?.route } == Routes.SETTINGS }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { nav.currentDestination?.route } == Routes.SETTINGS }
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Acme TV") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -198,7 +198,7 @@ class HomeProviderBannerTest {
 
         runBlocking { graph.catalogRepository.deleteSource(ACME) }
 
-        compose.waitUntil(5_000) { !shown("Open Providers") }
+        compose.waitUntil(UI_WAIT_MILLIS) { !shown("Open Providers") }
         assertThat(shown("Other TV")).isFalse()
     }
 

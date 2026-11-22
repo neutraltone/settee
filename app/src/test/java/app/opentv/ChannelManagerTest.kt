@@ -176,7 +176,7 @@ class ChannelManagerTest {
         compose.onNode(hasText("Add to Favourites") and hasClickAction()).performKeyInput {
             pressKey(Key.DirectionCenter)
         }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             shadowOf(Looper.getMainLooper()).idle()
             runBlocking { graph.viewerLibrary.favourites.channelIds().first().isNotEmpty() }
         }

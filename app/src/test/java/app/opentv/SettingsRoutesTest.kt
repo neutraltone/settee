@@ -74,7 +74,7 @@ class SettingsRoutesTest {
     private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
     private fun openFrom(row: String) {
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText(row)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText(row)).fetchSemanticsNodes().isNotEmpty() }
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithText(row).requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -83,7 +83,7 @@ class SettingsRoutesTest {
     private fun backReturnsTo(row: String) {
         Espresso.pressBack()
         assertThat(route()).isEqualTo(Routes.SETTINGS)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText(row) and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -110,7 +110,9 @@ class SettingsRoutesTest {
 
         openFrom("Routes 168")
 
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Edit provider")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Edit provider")).fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(compose.runOnIdle { nav.currentBackStackEntry?.arguments?.getString("sourceId") })
             .isEqualTo(id.toString())
     }
@@ -128,7 +130,7 @@ class SettingsRoutesTest {
     @Test
     fun `Display's Home rows, noted with the Profile, opens on a screen of its own, and Back returns to its row`() {
         setApp(SettingsMemory(SettingsSection.Display))
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             // A Profile's setting, noted with its name, whichever that is.
             val row = hasText("Home rows") and hasText("For ", substring = true)
             compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
@@ -137,7 +139,7 @@ class SettingsRoutesTest {
         openFrom("Home rows")
 
         assertThat(route()).isEqualTo(Routes.HOME_ROWS)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Restore the usual order")).fetchSemanticsNodes().isNotEmpty()
         }
         backReturnsTo("Home rows")

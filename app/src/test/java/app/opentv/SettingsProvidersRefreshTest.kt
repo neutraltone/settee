@@ -78,7 +78,7 @@ class SettingsProvidersRefreshTest {
 
     private fun highlighted() = compose.onNode(isFocused())
 
-    private fun waitFor(text: String) = compose.waitUntil(5_000) {
+    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -171,7 +171,7 @@ class SettingsProvidersRefreshTest {
         letGo.countDown()
         refreshing.join(20_000)
         silent.close()
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
         highlighted().assertTextContains(refreshRow)
@@ -186,7 +186,7 @@ class SettingsProvidersRefreshTest {
         show()
         waitFor("Unreachable films on 464")
         runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -218,7 +218,9 @@ class SettingsProvidersRefreshTest {
         compose.onNodeWithText("Refresh again").requestFocus()
 
         runBlocking { graph.sourceRepository.saveRefreshResult(id, null) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Refresh again")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Refresh again")).fetchSemanticsNodes().isEmpty()
+        }
 
         highlighted().assertTextContains("Mended films on 464")
     }

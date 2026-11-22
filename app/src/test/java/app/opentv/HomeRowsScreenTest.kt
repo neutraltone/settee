@@ -228,7 +228,7 @@ class HomeRowsScreenTest {
 
         press(KeyEvent.KEYCODE_MENU)
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(5_000) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(showOnHome).assertTextContains("On")
         captureScreen("home_rows_show_on_home_panel")
 
@@ -336,7 +336,7 @@ class HomeRowsScreenTest {
         show()
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MENU)
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(5_000) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
         storeLags = true
 
         compose.onNode(showOnHome).performClick()
@@ -372,7 +372,7 @@ class HomeRowsScreenTest {
         compose.onNodeWithText("Favourite shows").performTouchInput { longClick() }
 
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(5_000) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private companion object {

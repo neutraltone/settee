@@ -137,7 +137,7 @@ class PlayerScreenRecordingSwitchTest {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 5_000L
+        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
 
         // Past the player's 350 ms zap debounce.
         const val ZAP_SETTLE_MILLIS = 1_000L

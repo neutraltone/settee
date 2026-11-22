@@ -190,6 +190,6 @@ class VodPlayerEpisodeStepsTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = 5_000L
+        const val WAIT_MILLIS = UI_WAIT_MILLIS
     }
 }

@@ -589,7 +589,7 @@ class VodPlayerContentTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = 5_000L
+        const val WAIT_MILLIS = UI_WAIT_MILLIS
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L

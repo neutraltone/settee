@@ -121,11 +121,13 @@ class ProviderRoutesTest {
      * Waits for the save to reach [hold]. Through runOnIdle: the save runs on the main looper, and
      * a condition that doesn't idle Compose never lets it turn.
      */
-    private fun held(hold: FakePanel.Hold) = compose.waitUntil(5_000) { compose.runOnIdle { hold.reached.count == 0L } }
+    private fun held(hold: FakePanel.Hold) = compose.waitUntil(UI_WAIT_MILLIS) {
+        compose.runOnIdle { hold.reached.count == 0L }
+    }
 
     /** Waits for the save started from a provider's form to finish, channels and all. */
     private fun saveFinishes(sources: SourcesViewModel) {
-        compose.waitUntil(5_000) { compose.runOnIdle { !sources.ui.value.adding } }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { !sources.ui.value.adding } }
     }
 
     /** Saves a playlist from its form, as the viewer would on the TV. */
@@ -165,8 +167,10 @@ class ProviderRoutesTest {
 
         savePlaylist()
 
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.SETUP }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Take me to Settee").performClick()
         compose.onNodeWithText("Main on HOME").assertExists()
         // Nothing to go back to: Setup and the page are gone.
@@ -179,7 +183,9 @@ class ProviderRoutesTest {
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
 
         savePlaylist()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Watch live TV now").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Watch live TV now").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Watch live TV now").performClick()
 
         compose.onNodeWithText("Main on LIVE").assertExists()
@@ -193,7 +199,7 @@ class ProviderRoutesTest {
 
         savePlaylist()
 
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
@@ -206,14 +212,16 @@ class ProviderRoutesTest {
         panel.replies[""] = "#EXTM3U\n"
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
         savePlaylist()
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
         panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
         compose.onNodeWithText("Save and load").performClick()
 
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(route()).isEqualTo(Routes.SETUP)
     }
 
@@ -226,8 +234,10 @@ class ProviderRoutesTest {
 
         savePlaylist()
 
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.SETUP }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(runBlocking { graph.sourceRepository.observeAll().first() }.map { it.kind })
             .containsExactly(SourceKind.M3U)
     }
@@ -240,7 +250,9 @@ class ProviderRoutesTest {
 
         savePlaylist()
 
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind })
             .containsExactly(SourceKind.XTREAM, SourceKind.M3U)
     }
@@ -273,7 +285,7 @@ class ProviderRoutesTest {
     private fun openStep() {
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
         savePlaylist()
-        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
     }
 
     /** Sends a playlist from the phone's form to the pairing server's [session], as the viewer would. */
@@ -296,14 +308,14 @@ class ProviderRoutesTest {
         compose.onNodeWithText("5 a day work without an account", substring = true).assertExists()
         compose.onNodeWithText("Sign in on this TV").assertExists()
         compose.onNodeWithText("Subtitles provided by OpenSubtitles.com").assertExists()
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Not now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
         captureScreen("onboarding_opensubtitles_step")
 
         openSubtitlesStepButton("Not now").performClick()
 
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.SETUP }
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
     }
@@ -318,11 +330,13 @@ class ProviderRoutesTest {
         // Undoing waits for the download it stopped to let go.
         guide.release()
 
-        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
         }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(device.textShownBy(device.box(1))).isEqualTo("http://example.com/list.m3u")
         assertThat(compose.runOnIdle { withOpenSubtitles.settings.setupSourceId }).isEqualTo(0L)
     }
@@ -331,13 +345,17 @@ class ProviderRoutesTest {
     fun `saving again after Back on the OpenSubtitles step adds the provider once`() {
         openStep()
         Espresso.pressBack()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty()
+        }
 
         compose.onNodeWithText("Save and load").performClick()
 
-        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
         openSubtitlesStepButton("Not now").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty()
+        }
         assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
     }
 
@@ -351,31 +369,31 @@ class ProviderRoutesTest {
         compose.onNodeWithText("Set up from your phone").performClick()
         // The phone screen's server is the app's own, not the test graph's.
         val server = ServiceLocator.get(app).pairingServer
-        compose.waitUntil(5_000) { compose.runOnIdle { server.state.value !is PairingServer.State.Idle } }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { server.state.value !is PairingServer.State.Idle } }
         val session = (server.state.value as? PairingServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         val phone = thread { submitFromPhone(session!!) }
-        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
 
         Espresso.pressBack()
 
-        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.ADD_SOURCE }
         guide.release()
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.runOnIdle { runBlocking { withOpenSubtitles.sourceRepository.all() } }.isEmpty()
         }
         // The step stops the server as it goes, after the phone screen is back: in the app they share
         // it, but here the step has the test graph's, so it's stopped as the step would.
         compose.runOnIdle { server.stop() }
         // Listening again, with its code showing, for the phone to send a provider again.
-        compose.waitUntil(5_000) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
         compose.onNodeWithText("Then enter this code on your phone").assertExists()
         phone.join(5_000)
 
         // Sent again, it's the first provider again, so the phone carries on to OpenSubtitles too.
         val again = (server.state.value as PairingServer.State.Listening).session
         val second = thread { submitFromPhone(again) }
-        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
         assertThat(compose.runOnIdle { server.state.value }).isInstanceOf(PairingServer.State.Listening::class.java)
         second.join(5_000)
         server.stop()
@@ -389,7 +407,7 @@ class ProviderRoutesTest {
 
         playlist.release()
 
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
@@ -517,7 +535,9 @@ class ProviderRoutesTest {
 
     /** Saves the provider on the form already open, once it has filled in from the provider. */
     private fun saveEdited() {
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Edit provider").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodesWithText("Edit provider").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Save and load").performClick()
     }
 
@@ -612,7 +632,7 @@ class ProviderRoutesTest {
     fun `Setup restored by Android with nothing running opens on the provider choice when there's no provider`() {
         setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
 
-        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.ADD_SOURCE }
         compose.onNodeWithText("Add your provider").assertExists()
     }
 
@@ -621,7 +641,7 @@ class ProviderRoutesTest {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
 
-        compose.waitUntil(5_000) { route() == Routes.MAIN }
+        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.MAIN }
         compose.onNodeWithText("Main on HOME").assertExists()
     }
 

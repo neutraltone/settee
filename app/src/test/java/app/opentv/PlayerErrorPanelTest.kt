@@ -79,7 +79,7 @@ class PlayerErrorPanelTest {
     }
 
     private fun waitForSentence(text: String) {
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             players.advance(100)
             compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
@@ -148,7 +148,7 @@ class PlayerErrorPanelTest {
     @Test
     fun `a failure trying again could fix lands on Try again, with Back beside it`() {
         show(players.controller { key -> Playable.Failed(key, Playable.Failure.GONE, "Film") })
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             players.advance(100)
             compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
         }
@@ -163,7 +163,7 @@ class PlayerErrorPanelTest {
         val controller = players.controller(failing = TestPlayers.AUTO_TRIES)
         show(controller)
         players.untilItStopsRestarting(controller)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             players.advance(100)
             compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
         }

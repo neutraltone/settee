@@ -126,9 +126,9 @@ class HomeBackTest {
 
     /** Opens [route] over Home and stays there for longer than Home once kept its rows. */
     private fun awayAt(route: String, until: String) {
-        compose.waitUntil(5_000) { shown("Superbad") }
+        compose.waitUntil(UI_WAIT_MILLIS) { shown("Superbad") }
         compose.runOnIdle { nav.navigate(route) }
-        compose.waitUntil(5_000) { shown(until) && !homeShown() }
+        compose.waitUntil(UI_WAIT_MILLIS) { shown(until) && !homeShown() }
         scheduler.advanceTimeBy(15_000)
     }
 
@@ -162,7 +162,7 @@ class HomeBackTest {
 
         compose.onNode(hasText("Superbad", substring = true)).assertDoesNotExist()
         compose.mainClock.autoAdvance = true
-        compose.waitUntil(5_000) { shown("Superbad") }
+        compose.waitUntil(UI_WAIT_MILLIS) { shown("Superbad") }
     }
 
     private val superbad = Movie(

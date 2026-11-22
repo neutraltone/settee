@@ -519,7 +519,7 @@ class LiveBrowseTest {
 
         val sport = viewModel.visibleCategoryGroups.value.first { it.label == "Sport" }.key
         viewModel.selectCategory(sport)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
         viewModel.selectCategory(null)
         compose.waitUntilAtLeastOneExists(hasText("Channel One") and hasClickAction(), 5_000)
         compose.waitForIdle()
@@ -535,13 +535,13 @@ class LiveBrowseTest {
         compose.waitForIdle()
 
         press(Key.DirectionRight)
-        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 3 }
+        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 3 }
         compose.waitUntilDoesNotExist(programme("Day after on 1"), 5_000)
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
 
         press(Key.DirectionRight)
-        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 4 }
+        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 4 }
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
     }
@@ -586,7 +586,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("News") and hasClickAction()).assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             shadowOf(Looper.getMainLooper()).idle()
             viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" }
         }
@@ -603,7 +603,7 @@ class LiveBrowseTest {
         compose.waitForIdle()
 
         press(Key.DirectionLeft)
-        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 0 }
+        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 0 }
         compose.waitUntilAtLeastOneExists(programme("Now on 1"), 5_000)
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
@@ -624,7 +624,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("Sport") and hasClickAction()).assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
         press(Key.DirectionRight)
 
         channelCell("Sport Four").assertIsFocused()

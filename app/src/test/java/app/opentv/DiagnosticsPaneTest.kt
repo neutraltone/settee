@@ -59,7 +59,7 @@ class DiagnosticsPaneTest {
 
         compose.onNodeWithText("Save a report to your NAS").assertIsFocused()
         // Gathered from the app's own database and files, not left saying it's still gathering.
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Gathering…")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Gathering…")).fetchSemanticsNodes().isEmpty() }
         listOf("Database", "Storage", "Memory", "Opens", "Errors", "This device").forEach {
             compose.onNodeWithText(it).performScrollTo()
         }
@@ -114,7 +114,7 @@ class DiagnosticsPaneTest {
         SettingsScreen(memory = memory, onBack = {}, onOpenDiagnostics = onOpenDiagnostics, openSubtitles = null)
     }
 
-    private fun waitFor(text: String) = compose.waitUntil(5_000) {
+    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
     }
 
