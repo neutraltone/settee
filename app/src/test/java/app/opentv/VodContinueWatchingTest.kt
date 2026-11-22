@@ -18,6 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -41,8 +42,12 @@ class VodContinueWatchingTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -65,7 +70,7 @@ class VodContinueWatchingTest {
         graph.database.episodes().upsertAll(listOf(testEpisode(2, 4)))
         graph.viewerLibrary.recordProgress("ep:24", positionMillis = 600_000, durationMillis = 2_400_000)
 
-        val cards = VodViewModel(app, graph).continueWatchingSeries.first { !it.isNullOrEmpty() }
+        val cards = viewModels.track(VodViewModel(app, graph)).continueWatchingSeries.first { !it.isNullOrEmpty() }
 
         assertThat(cards).containsExactly(
             ResumeItem(

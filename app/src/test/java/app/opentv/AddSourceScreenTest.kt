@@ -66,7 +66,7 @@ class AddSourceScreenTest {
     private fun show(tv: Boolean = false, editing: Long? = null) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         if (tv) shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
-        viewModel = SourcesViewModel(app)
+        viewModel = viewModels.track(SourcesViewModel(app))
         compose.setTvContent {
             view = LocalView.current
             AddSourceScreen(viewModel = viewModel, onFinished = {}, editingSourceId = editing)
@@ -106,7 +106,7 @@ class AddSourceScreenTest {
     fun `editing a provider that has gone leaves the screen rather than showing nothing`() {
         var finished = false
         val app = ApplicationProvider.getApplicationContext<Application>()
-        val viewModel = SourcesViewModel(app)
+        val viewModel = viewModels.track(SourcesViewModel(app))
         compose.setTvContent {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
@@ -187,7 +187,7 @@ class AddSourceScreenTest {
     @Test
     fun `what's typed survives the screen being rebuilt, as a phone turning round does`() {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        viewModel = SourcesViewModel(app)
+        viewModel = viewModels.track(SourcesViewModel(app))
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         restoration.setContent {
@@ -244,9 +244,15 @@ class AddSourceScreenTest {
     }
     private val panelGraph by openPanelGraph
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun closePanelGraph() {
-        if (openPanelGraph.isInitialized()) panelGraph.database.close()
+        viewModels.stopAll()
+        if (openPanelGraph.isInitialized()) {
+            runBlocking { panelGraph.stopBackgroundWork() }
+            panelGraph.database.close()
+        }
     }
 
     /** The M3U form on [panelGraph], filled in, with a provider already added so this isn't Setup. */
@@ -262,7 +268,7 @@ class AddSourceScreenTest {
                 ),
             )
         }
-        viewModel = SourcesViewModel(app, panelGraph)
+        viewModel = viewModels.track(SourcesViewModel(app, panelGraph))
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         restoration.setContent {

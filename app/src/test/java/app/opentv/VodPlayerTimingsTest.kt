@@ -14,6 +14,7 @@ import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -51,9 +52,13 @@ class VodPlayerTimingsTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
         graph.settings.setSkipIntrosAndCredits(true)
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -61,7 +66,7 @@ class VodPlayerTimingsTest {
     private suspend fun startSeries(): VodPlayerViewModel {
         graph.database.series().upsertAll(listOf(show))
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        return VodPlayerViewModel(app, graph).apply { attach(testEpisode(1, 1).key, playback) }
+        return viewModels.track(VodPlayerViewModel(app, graph)).apply { attach(testEpisode(1, 1).key, playback) }
     }
 
     private suspend fun VodPlayerViewModel.at(millis: Long): Overlay {

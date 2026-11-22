@@ -23,6 +23,7 @@ import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -49,7 +50,8 @@ class VodPlayerPickerTest {
     private val players = TestPlayers(app)
     private val controller = players.controller()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private var backs = 0
 
     @After
@@ -57,6 +59,8 @@ class VodPlayerPickerTest {
         SleepTimer.clear()
         controller.release()
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

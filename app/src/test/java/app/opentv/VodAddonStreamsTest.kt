@@ -76,9 +76,13 @@ class VodAddonStreamsTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
         graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -97,7 +101,7 @@ class VodAddonStreamsTest {
             addon("films.example.com", "Films", "503")
             addon("more.example.com", "More films", "!")
 
-            val found = VodViewModel(app, graph).addonStreams(heat)
+            val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
 
             assertThat(found).isEqualTo(
                 AddonStreams.Failed(
@@ -111,7 +115,7 @@ class VodAddonStreamsTest {
         addon("broken.example.com", "Broken", "!")
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = VodViewModel(app, graph).addonStreams(heat)
+        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
 
         assertThat(found).isEqualTo(
             AddonStreams.Found(
@@ -124,7 +128,7 @@ class VodAddonStreamsTest {
     fun `a film TMDB can't match to IMDb finds no match, without asking the add-ons`() = runBlocking {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = VodViewModel(app, graph).addonStreams(heat.copy(tmdbId = "1"))
+        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat.copy(tmdbId = "1"))
 
         assertThat(found).isEqualTo(AddonStreams.NoneFound)
         assertThat(network.hosts()).doesNotContain("films.example.com")
@@ -135,7 +139,7 @@ class VodAddonStreamsTest {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
         tmdbDown = true
 
-        val found = VodViewModel(app, graph).addonStreams(heat)
+        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
 
         assertThat(found).isEqualTo(
             AddonStreams.Failed(

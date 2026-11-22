@@ -45,15 +45,19 @@ class AddonsViewModelTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
 
     @Test
     fun `an add-on that can't be reached says so, rather than that the address is wrong`() = runBlocking {
-        val addons = AddonsViewModel(app, graph)
+        val addons = viewModels.track(AddonsViewModel(app, graph))
 
         addons.add("https://example.com/addon/manifest.json")
         val failed = withTimeout(5_000) { addons.status.first { it is AddonsViewModel.Status.Failed } }

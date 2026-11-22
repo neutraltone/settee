@@ -23,7 +23,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -41,7 +40,6 @@ import app.opentv.ui.VodViewModel
 import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -298,12 +296,16 @@ class RecentSearchesScreenTest {
             vodGraph.database.movies().upsertAll(movies)
             vodGraph.database.series().upsertAll(series)
         }
-        val vod = VodViewModel(app, vodGraph)
+        val viewModels = ViewModelsInTest()
+        val vod = viewModels.track(VodViewModel(app, vodGraph))
         try {
             block(vod)
         } finally {
-            // Nothing clears a model built outside a ViewModelStore, so stop its flows by hand.
-            vod.viewModelScope.cancel()
+            // Nothing clears a model built outside a ViewModelStore, so it's stopped by hand, and its
+            // reads and the graph's background work waited for: one running when the database closed
+            // threw into whichever test came next.
+            viewModels.stopAll()
+            runBlocking { vodGraph.stopBackgroundWork() }
             vodGraph.database.close()
         }
     }

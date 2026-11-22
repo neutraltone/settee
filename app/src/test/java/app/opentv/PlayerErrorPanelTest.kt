@@ -32,6 +32,7 @@ import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -53,7 +54,8 @@ class PlayerErrorPanelTest {
     private val app: android.app.Application = ApplicationProvider.getApplicationContext()
     private val players = TestPlayers(app)
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
     private val toRelease = mutableListOf<PlayerController>()
 
@@ -61,6 +63,8 @@ class PlayerErrorPanelTest {
     fun release() {
         toRelease.forEach { it.release() }
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

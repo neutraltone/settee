@@ -57,12 +57,15 @@ class NextEpisodeOverlayTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
     private val playback = FakePlayback()
-    private val vm = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val vm = viewModels.track(VodPlayerViewModel(app, graph))
     private var stopped = false
 
     @After
     fun close() {
         graph.settings.setPlayNextAutomatically(true)
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

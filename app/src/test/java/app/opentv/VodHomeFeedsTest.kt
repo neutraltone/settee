@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -64,6 +65,8 @@ class VodHomeFeedsTest {
 
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -100,12 +103,14 @@ class VodHomeFeedsTest {
     private fun episodeOf(seriesId: Long) =
         testEpisode(1, 1).copy(id = seriesId, seriesId = "$seriesId", episodeId = "$seriesId")
 
-    private suspend fun openWithTwoMovies() = VodViewModel(app, graph).also {
+    private val viewModels = ViewModelsInTest()
+
+    private suspend fun openWithTwoMovies() = viewModels.track(VodViewModel(app, graph)).also {
         graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
         it.loadHomeFeeds().join()
     }
 
-    private suspend fun openWithTwoSeries() = VodViewModel(app, graph).also {
+    private suspend fun openWithTwoSeries() = viewModels.track(VodViewModel(app, graph)).also {
         graph.database.series().upsertAll(listOf(series(1, rating = 9.0), series(2, rating = 8.0)))
         graph.database.episodes().upsertAll(listOf(episodeOf(1)))
         it.loadHomeFeeds().join()
@@ -139,7 +144,7 @@ class VodHomeFeedsTest {
     fun `nothing reads either library until Movies or Shows opens, whatever Profile is switched to`() = runTest {
         withTwoOfEach()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         graph.settings.setActiveProfile(OTHER_PROFILE)
         assertThat(vod.recommendingMovies.value).isTrue()
         assertThat(vod.recommendingSeries.value).isTrue()
@@ -155,7 +160,7 @@ class VodHomeFeedsTest {
     fun `switching Profile once Movies has opened rebuilds the rows for the new Profile`() = runTest {
         withTwoOfEach()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         vod.loadHomeFeeds().join()
         assertThat(vod.recommendedMovieIds()).containsExactly(2L)
 
@@ -180,7 +185,7 @@ class VodHomeFeedsTest {
         graph.database.movies().upsertAll(
             listOf(movie(1, 9.0).copy(tmdbId = "8363"), movie(2, 9.0).copy(tmdbId = "8363"), movie(3, 8.0)),
         )
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         vod.loadHomeFeeds().join()
         assertThat(vod.recommendedMovieIds()).hasSize(2)
 
@@ -283,7 +288,7 @@ class VodHomeFeedsTest {
 
     @Test
     fun `a movie the Profile has started is gone from its genre row the next time Movies opens`() = runTest {
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         graph.database.movies().upsertAll(movies("Drama", from = 1))
         vod.loadHomeFeeds().join()
 
@@ -295,7 +300,7 @@ class VodHomeFeedsTest {
 
     @Test
     fun `the genre of the movie watched last moves to the top of the genre rows`() = runTest {
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         graph.database.movies().upsertAll(movies("Drama", from = 100, count = 10) + movies("Comedy", from = 1))
         vod.loadHomeFeeds().join()
         assertThat(vod.movieGenreRows.value.map { it.genre }).containsExactly("Drama", "Comedy").inOrder()
@@ -308,7 +313,7 @@ class VodHomeFeedsTest {
 
     @Test
     fun `the genre of the show watched last moves to the top of the genre rows`() = runTest {
-        val vod = VodViewModel(app, graph)
+        val vod = viewModels.track(VodViewModel(app, graph))
         graph.database.series().upsertAll(
             (100L..109L).map { series(it, rating = 7.0, genre = "Drama") } +
                 (1L..9L).map { series(it, rating = 7.0, genre = "Comedy") },

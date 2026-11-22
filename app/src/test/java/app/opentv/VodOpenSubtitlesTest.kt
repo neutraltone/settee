@@ -81,7 +81,8 @@ class VodOpenSubtitlesTest {
         replies["GET /f.srt"] = "1\n00:00:00,000 --> 01:00:00,000\nHello\n"
     }
     private val graph = ServiceLocator.Graph(app, http = site.http).apply { openSubtitlesKey = "k" }
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** The film player's OpenSubtitles side, on a device in English. */
@@ -130,6 +131,8 @@ class VodOpenSubtitlesTest {
         scope.cancel()
         controller.release()
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

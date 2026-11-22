@@ -51,7 +51,8 @@ class VodPlayerSkipIntroTest {
     private val players = TestPlayers(app)
     private val controller = players.controller()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val playback = FakePlayback()
 
     @After
@@ -59,6 +60,8 @@ class VodPlayerSkipIntroTest {
         SleepTimer.clear()
         controller.release()
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 
