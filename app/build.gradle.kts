@@ -55,8 +55,16 @@ val isLocalRelease = providers.environmentVariable("KEYSTORE_PATH").orNull == nu
 // (setup-gradle on CI), and Robolectric is run offline on them. The versions are Robolectric's own
 // for the SDKs the tests pin with @Config(sdk = ...), from its DefaultSdkProvider: a Robolectric bump
 // that changes them fails every test naming the jar it couldn't find, so move them with it.
-val robolectricSdks: Configuration by configurations.creating {
-    isTransitive = false
+// One configuration each: they're versions of one module, of which Gradle keeps only the newest.
+val robolectricSdks = mapOf(
+    // Nearly every test.
+    34 to "14-robolectric-10818077-i7",
+    // Fire OS 6, for the few that check an old device.
+    25 to "7.1.0_r7-robolectric-r1-i7",
+).map { (sdk, version) ->
+    configurations.create("robolectricSdk$sdk") { isTransitive = false }.also {
+        dependencies.add(it.name, "org.robolectric:android-all-instrumented:$version")
+    }
 }
 val robolectricSdkDir = layout.buildDirectory.dir("robolectric-sdks")
 val syncRobolectricSdks =
@@ -330,9 +338,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.robolectric)
-    // SDK 34, which nearly every test runs on, and 25 (Fire OS 6), for the few that check an old device.
-    robolectricSdks("org.robolectric:android-all-instrumented:14-robolectric-10818077-i7")
-    robolectricSdks("org.robolectric:android-all-instrumented:7.1.0_r7-robolectric-r1-i7")
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.room.testing)
