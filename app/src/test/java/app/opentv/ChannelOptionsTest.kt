@@ -24,6 +24,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -45,7 +46,8 @@ class ChannelOptionsTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
     private val db = graph.database
-    private val viewModel = ItemOptionsViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(ItemOptionsViewModel(app, graph))
     private val now = System.currentTimeMillis()
 
     @Before
@@ -70,6 +72,8 @@ class ChannelOptionsTest {
 
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         db.close()
         Dispatchers.resetMain()
     }

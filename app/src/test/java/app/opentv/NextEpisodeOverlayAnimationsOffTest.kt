@@ -43,10 +43,15 @@ class NextEpisodeOverlayAnimationsOffTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
     private val playback = FakePlayback()
-    private val vm = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val vm = viewModels.track(VodPlayerViewModel(app, graph))
 
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
+        graph.database.close()
+    }
 
     // Its very first frame is drawn before the animation has had a frame to finish on, so it's
     // checked from the second: one invisible frame, which nobody sees.

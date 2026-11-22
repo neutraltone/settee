@@ -49,9 +49,13 @@ class SourcesSaveTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
         Dispatchers.resetMain()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 
@@ -61,7 +65,7 @@ class SourcesSaveTest {
             graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1))
             val failure = CompletableDeferred<ViewerError?>()
 
-            SourcesViewModel(app, graph).saveAndSync(
+            viewModels.track(SourcesViewModel(app, graph)).saveAndSync(
                 Source(name = "", kind = SourceKind.M3U, url = "http://example.com/list.m3u"),
                 keepIfFails = false,
                 onChannels = { failure.complete(it) },
@@ -79,7 +83,7 @@ class SourcesSaveTest {
             graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, name = "First", lastCatalogSyncMillis = 1))
             panel.replies[""] = """{"user_info": {"status": "Active"}}"""
             panel.replies["v/get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}]"""
-            val viewModel = SourcesViewModel(app, graph)
+            val viewModel = viewModels.track(SourcesViewModel(app, graph))
             val wrong = PANEL_SOURCE.copy(id = 0, name = "Second", username = "w")
 
             save(viewModel, wrong)

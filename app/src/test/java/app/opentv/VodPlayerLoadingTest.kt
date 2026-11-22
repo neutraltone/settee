@@ -41,13 +41,16 @@ class VodPlayerLoadingTest {
     private val players = TestPlayers(app)
     private val controller = players.controller()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val spinner = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
 
     @After
     fun release() {
         controller.release()
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

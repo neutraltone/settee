@@ -20,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -49,8 +50,12 @@ class VodPlayerEpisodeStepsTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -79,7 +84,7 @@ class VodPlayerEpisodeStepsTest {
     fun `an episode in the middle has episodes either side, a show's first none before, and its last none after`() =
         runTest {
             graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-            val vm = VodPlayerViewModel(app, graph)
+            val vm = viewModels.track(VodPlayerViewModel(app, graph))
 
             vm.attach(testEpisode(1, 2).key, playback)
             assertThat(vm.steps).isEqualTo(Steps(previous = true, next = true))
@@ -94,7 +99,7 @@ class VodPlayerEpisodeStepsTest {
     @Test
     fun `a film has no episodes either side`() = runTest {
         graph.database.movies().upsertAll(listOf(film(1, "Film")))
-        val vm = VodPlayerViewModel(app, graph)
+        val vm = viewModels.track(VodPlayerViewModel(app, graph))
 
         vm.attach(MediaKey.Movie(1), playback)
 
@@ -106,7 +111,7 @@ class VodPlayerEpisodeStepsTest {
         runTest {
             graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
             graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
-            val vm = VodPlayerViewModel(app, graph)
+            val vm = viewModels.track(VodPlayerViewModel(app, graph))
             vm.attach(testEpisode(1, 1).key, playback)
             playback.positionMillis = 300_000
 
@@ -122,7 +127,7 @@ class VodPlayerEpisodeStepsTest {
     fun `Previous episode starts a Watched episode from the start, and the episodes either side follow it`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         graph.viewerLibrary.recordProgress("ep:11", EPISODE_MILLIS, EPISODE_MILLIS)
-        val vm = VodPlayerViewModel(app, graph)
+        val vm = viewModels.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 2).key, playback)
 
         vm.toPreviousEpisode()
@@ -134,7 +139,7 @@ class VodPlayerEpisodeStepsTest {
     @Test
     fun `Previous episode on a show's first episode does nothing`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = VodPlayerViewModel(app, graph)
+        val vm = viewModels.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
 
         vm.toPreviousEpisode()
@@ -145,7 +150,7 @@ class VodPlayerEpisodeStepsTest {
     @Test
     fun `two quick presses of Next move on two episodes, starting each once`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = VodPlayerViewModel(app, graph)
+        val vm = viewModels.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
 
         listOf(launch { vm.toNextEpisode() }, launch { vm.toNextEpisode() }).joinAll()
@@ -164,7 +169,7 @@ class VodPlayerEpisodeStepsTest {
             fetching.database.episodes().upsertAll(listOf(testEpisode(1, 2)))
             panel.replies["get_series_info:s"] = SERIES_OF_THREE
             val hold = panel.hold("get_series_info:s")
-            val vm = VodPlayerViewModel(app, fetching)
+            val vm = viewModels.track(VodPlayerViewModel(app, fetching))
 
             vm.attach(testEpisode(1, 2).key, playback)
             during(hold) { assertThat(vm.steps).isEqualTo(Steps(previous = false, next = false)) }
@@ -173,6 +178,8 @@ class VodPlayerEpisodeStepsTest {
             withContext(Dispatchers.Default) { withTimeout(WAIT_MILLIS) { vm.episodeSteps.first { it.next } } }
             assertThat(vm.steps).isEqualTo(Steps(previous = true, next = true))
         } finally {
+            viewModels.stopAll()
+            fetching.stopBackgroundWork()
             fetching.database.close()
         }
     }
@@ -181,7 +188,7 @@ class VodPlayerEpisodeStepsTest {
     fun `a last episode keeps its Previous episode when loading the rest of its series finds nothing`() = runTest {
         // No source stored, so there's no provider to ask: the fetch finds nothing.
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = VodPlayerViewModel(app, graph)
+        val vm = viewModels.track(VodPlayerViewModel(app, graph))
 
         vm.attach(testEpisode(1, 3).key, playback)
         vm.toPreviousEpisode()

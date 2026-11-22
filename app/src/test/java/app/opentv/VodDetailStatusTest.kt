@@ -16,6 +16,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -40,8 +41,12 @@ class VodDetailStatusTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }
@@ -84,7 +89,7 @@ class VodDetailStatusTest {
         withEpisodes()
         graph.viewerLibrary.recordProgress("ep:22", positionMillis = 600_000, durationMillis = 2_400_000)
 
-        val status = VodViewModel(app, graph).seriesStatus(episodes).first { it != null }
+        val status = viewModels.track(VodViewModel(app, graph)).seriesStatus(episodes).first { it != null }
 
         assertThat(status).isEqualTo(
             CoverStatus.InProgress(progress = 0.25f, remainingMillis = 1_800_000, episode = testEpisode(2, 2)),
@@ -96,7 +101,7 @@ class VodDetailStatusTest {
         withEpisodes()
         graph.viewerLibrary.catchUp.markSeasonWatched((1..2).flatMap { s -> (1..3).map { testEpisode(s, it) } })
 
-        val status = VodViewModel(app, graph).seriesStatus(episodes).first { it != null }
+        val status = viewModels.track(VodViewModel(app, graph)).seriesStatus(episodes).first { it != null }
 
         assertThat(status).isEqualTo(CoverStatus.Watched)
     }
@@ -105,7 +110,7 @@ class VodDetailStatusTest {
     fun `a show never started says nothing`() = runTest {
         withEpisodes()
 
-        assertThat(VodViewModel(app, graph).seriesStatus(episodes).first()).isNull()
+        assertThat(viewModels.track(VodViewModel(app, graph)).seriesStatus(episodes).first()).isNull()
     }
 
     @Test
@@ -113,7 +118,7 @@ class VodDetailStatusTest {
         graph.database.movies().upsertAll(listOf(film))
         graph.viewerLibrary.recordProgress("movie:7", positionMillis = 3_000_000, durationMillis = 6_000_000)
 
-        val status = VodViewModel(app, graph).movieStatus(film.id).first { it != null }
+        val status = viewModels.track(VodViewModel(app, graph)).movieStatus(film.id).first { it != null }
 
         assertThat(status).isEqualTo(CoverStatus.InProgress(progress = 0.5f, remainingMillis = 3_000_000))
     }
@@ -123,13 +128,13 @@ class VodDetailStatusTest {
         graph.database.movies().upsertAll(listOf(film, film.copy(id = 70, streamId = "m70")))
         graph.viewerLibrary.recordProgress("movie:70", positionMillis = 3_000_000, durationMillis = 6_000_000)
 
-        assertThat(VodViewModel(app, graph).movieStatus(film.id).first()).isNull()
+        assertThat(viewModels.track(VodViewModel(app, graph)).movieStatus(film.id).first()).isNull()
     }
 
     @Test
     fun `a film never started says nothing`() = runTest {
         graph.database.movies().upsertAll(listOf(film))
 
-        assertThat(VodViewModel(app, graph).movieStatus(film.id).first()).isNull()
+        assertThat(viewModels.track(VodViewModel(app, graph)).movieStatus(film.id).first()).isNull()
     }
 }

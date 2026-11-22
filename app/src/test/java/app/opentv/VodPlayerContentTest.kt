@@ -65,7 +65,8 @@ class VodPlayerContentTest {
 
     // Never attached to an episode, so no Next Episode card: these tests are about the transport.
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
 
     @After
@@ -74,6 +75,8 @@ class VodPlayerContentTest {
         SleepTimer.clear()
         controller.release()
         players.close()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 

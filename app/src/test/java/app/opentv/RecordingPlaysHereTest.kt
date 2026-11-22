@@ -30,6 +30,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -57,7 +58,8 @@ class RecordingPlaysHereTest {
         decoders = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088)),
     )
     private val db = graph.database
-    private val viewModel = ItemOptionsViewModel(app, graph)
+    private val viewModels = ViewModelsInTest()
+    private val viewModel = viewModels.track(ItemOptionsViewModel(app, graph))
     private val now = System.currentTimeMillis()
     private val laterStart = now + 2 * HOUR
 
@@ -95,6 +97,8 @@ class RecordingPlaysHereTest {
 
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         db.close()
         Dispatchers.resetMain()
     }

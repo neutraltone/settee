@@ -35,13 +35,16 @@ class VodBackdropTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel by lazy { VodViewModel(app, graph) }
+    private val viewModels = ViewModelsInTest()
+    private val viewModel by lazy { viewModels.track(VodViewModel(app, graph)) }
 
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
     @After
     fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         Dispatchers.resetMain()
     }

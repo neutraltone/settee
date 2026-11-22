@@ -27,6 +27,7 @@ import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +50,8 @@ class PlayerNoticeTest {
     private val players = TestPlayers(app)
     private val surface = Surface(SurfaceTexture(0))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
+
+    private val viewModels = ViewModelsInTest()
 
     @After
     fun close() {
@@ -132,7 +135,7 @@ class PlayerNoticeTest {
         )
         val controller = players.realDecoderController(surface = surface)
         val graph = ServiceLocator.Graph(app)
-        val viewModel = VodPlayerViewModel(app, graph)
+        val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
         compose.setTvContent {
             VodPlayerContent(controller, viewModel, false, noPicks, onBack = {})
         }
@@ -148,6 +151,8 @@ class PlayerNoticeTest {
         compose.onNodeWithText("This device can't play this audio format (E-AC-3)", substring = true).assertExists()
         assertThat(focusedId()).isEqualTo(focusedBefore)
         controller.release()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
     }
 }

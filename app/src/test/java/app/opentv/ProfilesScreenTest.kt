@@ -70,8 +70,14 @@ class ProfilesScreenTest {
         },
     )
 
+    private val viewModels = ViewModelsInTest()
+
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
+        graph.database.close()
+    }
 
     private lateinit var viewModel: ProfilesViewModel
 
@@ -97,7 +103,7 @@ class ProfilesScreenTest {
         // A name already there is refused, which leaves it as it is.
         runBlocking { names.forEach { graph.profiles.create(it) } }
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
-        viewModel = ProfilesViewModel(app, graph)
+        viewModel = viewModels.track(ProfilesViewModel(app, graph))
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = {}, viewModel = viewModel)
@@ -233,7 +239,7 @@ class ProfilesScreenTest {
     @Test
     fun `Back leaves Profiles`() {
         var left = 0
-        viewModel = ProfilesViewModel(app, graph)
+        viewModel = viewModels.track(ProfilesViewModel(app, graph))
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = { left++ }, viewModel = viewModel)

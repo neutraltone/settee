@@ -58,10 +58,14 @@ class ProfileStillsTest {
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    private val viewModels = ViewModelsInTest()
+
     @After
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
         watching.cancel()
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
         graph.database.close()
         // Left in place, the test dispatcher stays Main for every test after this one in the same JVM,
         // and those driving a player on the main looper (QualityStepDownTest) stop seeing their time pass.
@@ -108,7 +112,7 @@ class ProfileStillsTest {
         played(Profiles.BASE_PROFILE_ID, movieId = 1, at = 1_000)
         played(Profiles.BASE_PROFILE_ID, movieId = 2, at = 2_000)
 
-        val stills = ProfilesViewModel(app, graph).stillsWhen { it.isNotEmpty() }
+        val stills = viewModels.track(ProfilesViewModel(app, graph)).stillsWhen { it.isNotEmpty() }
 
         assertThat(stills).containsExactly(Profiles.BASE_PROFILE_ID, "https://example.com/2-backdrop.jpg")
         assertThat(stills).doesNotContainKey(kids)
@@ -122,7 +126,7 @@ class ProfileStillsTest {
         played(Profiles.BASE_PROFILE_ID, movieId = 1, at = 1_000)
         played(Profiles.BASE_PROFILE_ID, movieId = 2, at = 2_000)
 
-        val stills = ProfilesViewModel(app, graph).stillsWhen { it.isNotEmpty() }
+        val stills = viewModels.track(ProfilesViewModel(app, graph)).stillsWhen { it.isNotEmpty() }
 
         assertThat(stills).containsExactly(Profiles.BASE_PROFILE_ID, "https://example.com/1-backdrop.jpg")
     }

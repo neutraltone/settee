@@ -88,9 +88,15 @@ class ProviderRoutesTest {
     )
 
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.stopAll()
+        runBlocking { graph.stopBackgroundWork() }
+        graph.database.close()
+    }
 
-    private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) =
+    private val viewModels = ViewModelsInTest()
+
+    private fun setApp(start: String, sources: SourcesViewModel = viewModels.track(SourcesViewModel(app))) =
         compose.setTvContent(appContent(start, sources))
 
     /** The app [setApp] shows, in a screen Android can rebuild, as it does when a phone turns round. */
@@ -163,7 +169,7 @@ class ProviderRoutesTest {
 
     @Test
     fun `saving the first provider opens Setup, and Take me to Settee goes to Home`() {
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         savePlaylist()
 
@@ -180,7 +186,7 @@ class ProviderRoutesTest {
     @Test
     fun `Watch live TV now goes to Live TV with setup carrying on`() {
         val guide = panel.hold("xmltv.php")
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         savePlaylist()
         compose.waitUntil(UI_WAIT_MILLIS) {
@@ -195,7 +201,7 @@ class ProviderRoutesTest {
     @Test
     fun `a first provider whose login fails goes back to its form, which says why`() {
         panel.replies[""] = "#EXTM3U\n"
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         savePlaylist()
 
@@ -210,7 +216,7 @@ class ProviderRoutesTest {
     @Test
     fun `after a failed login, trying again from the form opens Setup and stays there`() {
         panel.replies[""] = "#EXTM3U\n"
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
         savePlaylist()
         compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
@@ -230,7 +236,7 @@ class ProviderRoutesTest {
         // As Setup leaves it when Settee closes during its first step.
         val left = runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
         graph.settings.setSetupSourceId(left)
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         savePlaylist()
 
@@ -246,7 +252,7 @@ class ProviderRoutesTest {
     fun `a provider that never loaded but wasn't left by Setup is kept when the next is saved`() {
         // Added before Setup existed, while its panel was down, say.
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         savePlaylist()
 
@@ -260,7 +266,11 @@ class ProviderRoutesTest {
     @After
     fun closeOpenSubtitles() {
         // At the end, as [graph]'s is: closed mid-test, Setup's provider list could still be reading it.
-        if (openSubtitlesGraph.isInitialized()) openSubtitlesGraph.value.database.close()
+        if (openSubtitlesGraph.isInitialized()) {
+            viewModels.stopAll()
+            runBlocking { openSubtitlesGraph.value.stopBackgroundWork() }
+            openSubtitlesGraph.value.database.close()
+        }
     }
 
     /** The same app as [graph], in a build with an OpenSubtitles key. */
@@ -283,7 +293,7 @@ class ProviderRoutesTest {
 
     /** Saves a first playlist in a build with OpenSubtitles, and waits for its step. */
     private fun openStep() {
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, withOpenSubtitles)))
         savePlaylist()
         compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
     }
@@ -365,7 +375,7 @@ class ProviderRoutesTest {
         shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
         // The guide keeps Setup going, so taking it back waits while the phone screen comes back.
         val guide = panel.hold("xmltv.php")
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        setApp(start = Routes.ADD_SOURCE, sources = viewModels.track(SourcesViewModel(app, withOpenSubtitles)))
         compose.onNodeWithText("Set up from your phone").performClick()
         // The phone screen's server is the app's own, not the test graph's.
         val server = ServiceLocator.get(app).pairingServer
@@ -429,7 +439,7 @@ class ProviderRoutesTest {
     @Test
     fun `a provider added in Settings while there's one already goes back to Settings, not to Setup`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -447,7 +457,7 @@ class ProviderRoutesTest {
     fun `a provider added again after its channels failed goes back to Settings once they're in`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         panel.replies[""] = "#EXTM3U\n"
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -469,7 +479,7 @@ class ProviderRoutesTest {
     @Test
     fun `a provider added on an add page with nothing under it goes to Home`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.ADD_SOURCE, sources = sources)
 
         savePlaylist()
@@ -482,7 +492,7 @@ class ProviderRoutesTest {
     @Test
     fun `a provider added from Live TV while there's one already goes back to Live TV`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.selectShellTab(Tab.LIVE)
@@ -500,7 +510,7 @@ class ProviderRoutesTest {
     fun `a save that finishes after the viewer left the add page doesn't take them anywhere`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         val playlist = panel.hold("")
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -545,7 +555,7 @@ class ProviderRoutesTest {
     fun `an add page opened again while the last save runs goes back once that save is in`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         val playlist = panel.hold("")
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -571,7 +581,7 @@ class ProviderRoutesTest {
     fun `an add page rebuilt while its save runs, as a phone turning round does, still goes back once it's in`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         val playlist = panel.hold("")
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         val screen = setRebuildableApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -592,7 +602,7 @@ class ProviderRoutesTest {
     fun `a save that finishes after the viewer left a provider's form doesn't close the screen they went to`() {
         val id = savedPlaylist()
         val channels = panel.hold("")
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle { nav.openEditProvider(id) }
 
@@ -613,7 +623,7 @@ class ProviderRoutesTest {
     @Test
     fun `a provider's form saved while still on it goes back to Settings`() {
         val id = savedPlaylist()
-        val sources = SourcesViewModel(app, graph)
+        val sources = viewModels.track(SourcesViewModel(app, graph))
         setApp(start = Routes.MAIN, sources = sources)
         compose.runOnIdle {
             nav.navigate(Routes.SETTINGS)
@@ -630,7 +640,7 @@ class ProviderRoutesTest {
 
     @Test
     fun `Setup restored by Android with nothing running opens on the provider choice when there's no provider`() {
-        setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.SETUP, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.ADD_SOURCE }
         compose.onNodeWithText("Add your provider").assertExists()
@@ -639,7 +649,7 @@ class ProviderRoutesTest {
     @Test
     fun `Setup restored by Android with nothing running opens on Home once the channels were in`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
-        setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.SETUP, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.MAIN }
         compose.onNodeWithText("Main on HOME").assertExists()
@@ -648,7 +658,7 @@ class ProviderRoutesTest {
     @Test
     fun `Provider setup on Movies or Shows that failed opens that provider's form`() {
         runBlocking { graph.database.sources().insert(PANEL_SOURCE) }
-        setApp(start = Routes.MAIN, sources = SourcesViewModel(app, graph))
+        setApp(start = Routes.MAIN, sources = viewModels.track(SourcesViewModel(app, graph)))
 
         compose.runOnIdle { nav.openEditProvider(PANEL_SOURCE.id) }
 
