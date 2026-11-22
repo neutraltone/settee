@@ -18,13 +18,16 @@ on:
 
 permissions:
   contents: write
+  # To read Build's "Test and assemble" result for the tagged commit.
+  checks: read
 
 jobs:
   release:
     name: Build and publish APK
     runs-on: ubuntu-latest
-    # A hung test run fails the release rather than sitting for six hours; it usually takes 7 minutes.
-    timeout-minutes: 40
+    # A hung test run fails the release rather than sitting for six hours. Waiting for Build takes up
+    # to 30 minutes, and a test run here usually 7.
+    timeout-minutes: 60
     env:
       TAG: ${{ inputs.tag }}
 
@@ -56,7 +59,37 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
+      # The tagged commit is on main, where Build's "Test and assemble" runs the whole suite on it. A
+      # second run here could only re-roll a flaky test, and that blocked v1.4.0, which Build had
+      # passed, three times. So Build's verdict is used, waiting for it if it is still running, and the
+      # suite runs here only when there is no pass to use: Build failed, was cancelled, never ran (an
+      # old tag), or hasn't finished within 30 minutes.
+      - name: Did Build pass this commit?
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          while :; do
+            # The newest run of the check, as "status conclusion url"; "none none none" when there is none.
+            read -r status conclusion url < <(gh api \
+              "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?check_name=Test%20and%20assemble" \
+              --jq '(.check_runs | sort_by(.started_at) | last) // {} | "\(.status // "none") \(.conclusion // "none") \(.html_url // "none")"')
+            if [ "$status" = completed ]; then break; fi
+            # Build starts on the same push as this, so a missing check is one that never ran.
+            if [ "$status" = none ] && [ "$SECONDS" -ge 120 ]; then break; fi
+            if [ "$SECONDS" -ge 1800 ]; then break; fi
+            sleep 30
+          done
+          if [ "$conclusion" = success ]; then
+            echo "Build's Test and assemble passed ${SHA}: ${url}"
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No passing Test and assemble for ${SHA} (${status}, ${conclusion}), so the tests run here."
+          fi
+
       - name: Unit tests
+        if: steps.build.outputs.passed != 'true'
         run: ./gradlew test
 
       - name: Assemble release APK

@@ -9,8 +9,11 @@ on:
 permissions:
   contents: read
 
+# A PR's newer push replaces its older run. Every commit on main runs to the end, each in its own
+# group: a release commit's Test and assemble result is what the Release workflow builds on, and
+# sharing main's group would let the next merge cancel it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 # Each check is its own job so it shows as its own required status, and they run in parallel.
