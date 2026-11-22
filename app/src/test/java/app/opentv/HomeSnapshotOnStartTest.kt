@@ -81,6 +81,9 @@ class HomeSnapshotOnStartTest {
         graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen(heat))
         catalogue.hold()
         val home = viewModels.track(HomeViewModel(app, graph))
+        // Drawn throughout, as Home is: between two looks with nothing collecting, its rows could stop
+        // and the saved Home go with them, while the test's clock skipped ahead.
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { home.state.collect {} }
 
         // Once the quick checks are back: Recently Added shows, which nothing saved, holds its place.
         val first = home.whenDrawn { HomeRowKind.RECENT_SHOWS in it.loading }
@@ -150,6 +153,9 @@ class HomeSnapshotOnStartTest {
         graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen().copy(live = saved))
         catalogue.hold()
         val home = viewModels.track(HomeViewModel(app, graph))
+        // Drawn throughout, as Home is: between two looks with nothing collecting, its rows could stop
+        // and the saved Home go with them, while the test's clock skipped ahead.
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { home.state.collect {} }
 
         // Once the quick checks are back, which hold Recently Added's place: the saved tile, not a skeleton.
         val first = home.whenDrawn { HomeRowKind.RECENT_MOVIES in it.loading }
