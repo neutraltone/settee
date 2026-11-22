@@ -11,6 +11,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
@@ -171,6 +172,34 @@ class StartUpLimitTest {
         players.advance(LIMIT_MILLIS * 2)
 
         assertThat(controller.state.value).isEqualTo(PlayerController.State.Buffering("Film"))
+    }
+
+    @Test
+    fun `a NAS recording that never starts says to check the NAS, not the provider`() {
+        players.hanging = true
+        val controller = players.controller { key ->
+            Playable.Ready(
+                key,
+                "smb://nas.example.com/recordings/film.ts",
+                userAgent = "",
+                title = "Film",
+                isLive = false,
+            )
+        }
+        start(controller, PlayerController.Request(MediaKey.Recording(1)))
+
+        players.advance(LIMIT_MILLIS)
+
+        assertThat(controller.state.value).isEqualTo(
+            PlayerController.State.Error(
+                title = "Film",
+                reason = ViewerError(
+                    "Couldn't reach your NAS. Check it's on and the details in Recording settings are right.",
+                    "StartUpLimit",
+                ),
+                canRetry = true,
+            ),
+        )
     }
 
     private fun hangingController(failing: Int = 0): PlayerController {

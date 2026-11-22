@@ -7,7 +7,9 @@ package app.opentv.player
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -34,6 +36,11 @@ internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
     override fun getRetryDelayMsFor(info: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
         val statusCode = (info.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return when {
+            // ExoPlayer counts a FileNotFoundException as hopeless, but its file and content sources wrap
+            // theirs, so a recording whose file is gone spun through every backoff before saying so (#475).
+            (info.exception as? DataSourceException)?.reason == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+                C.TIME_UNSET
+
             statusCode == null -> if (super.getRetryDelayMsFor(info) == C.TIME_UNSET) {
                 C.TIME_UNSET
             } else {

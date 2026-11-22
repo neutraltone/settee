@@ -8,6 +8,7 @@ package app.opentv
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.upstream.Loader
+import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.player.PlaybackRecovery
 import app.opentv.player.Recovery
 import com.google.common.truth.Truth.assertThat
@@ -75,6 +76,22 @@ class PlaybackRecoveryTest {
 
         assertThat(PlaybackRecovery.after(outOfMemory, failuresInARow = 1, hadPlayed = true))
             .isEqualTo(Recovery(canRetry = true, canRestart = false))
+    }
+
+    @Test
+    fun `a recording whose file is gone isn't restarted, and only one on a USB drive offers Try again`() {
+        val gone = error(PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
+        val expected = mapOf(
+            RecordingTarget.INTERNAL to Recovery(canRetry = false, canRestart = false),
+            RecordingTarget.SMB to Recovery(canRetry = false, canRestart = false),
+            // Plugging the drive back in brings the file back.
+            RecordingTarget.USB to Recovery(canRetry = true, canRestart = false),
+        )
+
+        expected.forEach { (storage, recovery) ->
+            assertThat(PlaybackRecovery.after(gone, failuresInARow = 1, hadPlayed = false, recordedOn = storage))
+                .isEqualTo(recovery)
+        }
     }
 
     @Test

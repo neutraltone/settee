@@ -20,6 +20,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -27,6 +28,8 @@ import app.opentv.data.repo.Playable
 import app.opentv.data.repo.SubtitlePreference
 import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.isRunningOnTelevision
+import app.opentv.recording.RecordingStorage
+import app.opentv.recording.SmbClient
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -232,6 +235,9 @@ class PlayerController(
     /** Whether the stream on the player has played since it loaded, for [PlaybackRecovery]. */
     private var hadPlayed = false
 
+    /** Where the stream on the player is kept, if it's a finished recording, so its failures say so. */
+    private var recordedOn: RecordingTarget? = null
+
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
@@ -356,7 +362,7 @@ class PlayerController(
                     guard.leaving()
                     DecoderLog.logFailure(error)
                     val request = current
-                    val recovery = counts.failed(error, hadPlayed)
+                    val recovery = counts.failed(error, hadPlayed, recordedOn)
                     states.publish(
                         State.Error(
                             title = _title.value,
@@ -367,6 +373,7 @@ class PlayerController(
                                 error,
                                 onTelevision,
                                 player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
+                                recordedOn,
                             ),
                             canRetry = recovery.canRetry,
                         ),
@@ -472,26 +479,15 @@ class PlayerController(
             httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))
             states.publish(State.Buffering(playable.title))
 
-            val mediaItem = MediaItem.Builder()
-                .setUri(playable.url)
-                .apply {
-                    // Only meaningful for live streams; setting it on VOD skews seeking.
-                    if (playable.isLive) {
-                        setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(LIVE_TARGET_OFFSET_MILLIS)
-                                .build(),
-                        )
-                    }
-                }
-                .build()
+            val mediaItem = playable.mediaItem()
 
             with(player) {
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
                 gaveUp = false
                 hadPlayed = false
-                guard.started(limitStartUp)
+                recordedOn = recordingKeptOn(request.key, playable.url)
+                guard.started(limitStartUp, recordedOn)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the
@@ -698,8 +694,6 @@ class PlayerController(
         // to every channel in passing.
         private const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
 
-        private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
-
         /** Live TV, films and episodes alike: the system treats them all as a film's sound. */
         private val MEDIA_AUDIO = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -714,4 +708,32 @@ private fun Player.seekBy(deltaMillis: Long) {
     if (!isCurrentMediaItemSeekable) return
     val end = duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
     seekTo((currentPosition + deltaMillis).coerceIn(0L, end))
+}
+
+private fun Playable.Ready.mediaItem(): MediaItem = MediaItem.Builder()
+    .setUri(url)
+    .apply {
+        // Only meaningful for live streams; setting it on VOD skews seeking.
+        if (isLive) {
+            setLiveConfiguration(
+                MediaItem.LiveConfiguration.Builder()
+                    .setTargetOffsetMs(LIVE_TARGET_OFFSET_MILLIS)
+                    .build(),
+            )
+        }
+    }
+    .build()
+
+private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
+
+/**
+ * Where the finished recording [key] is kept, by the address [app.opentv.data.repo.PlaybackSources] gave it
+ * ([url]); null for anything else, a recording still being written (`optvrec://`) included.
+ */
+private fun recordingKeptOn(key: MediaKey, url: String): RecordingTarget? = when {
+    key !is MediaKey.Recording -> null
+    SmbClient.isSmb(url) -> RecordingTarget.SMB
+    RecordingStorage.isContent(url) -> RecordingTarget.USB
+    url.startsWith("file:") -> RecordingTarget.INTERNAL
+    else -> null
 }
