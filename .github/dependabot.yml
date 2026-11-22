@@ -9,6 +9,10 @@ updates:
       interval: weekly
     commit-message:
       prefix: build
+    ignore:
+      # Robolectric's SDK jars (app/build.gradle.kts) are the versions Robolectric itself asks for,
+      # one per SDK the tests pin, so they move by hand with a Robolectric bump, never to the newest.
+      - dependency-name: 'org.robolectric:android-all-instrumented'
     groups:
       # Dependabot puts each dependency in the first group that matches, so toolchain comes
       # first and media3 precedes the androidx catch-all.

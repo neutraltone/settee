@@ -332,7 +332,7 @@ class VodBrowseTest {
 
         compose.mainClock.advanceTimeBy(200)
         // The paused clock has to be stepped for the screen to draw what the database sent back.
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.mainClock.advanceTimeByFrame()
             compose.onAllNodesWithText(synopsisOf(second)).fetchSemanticsNodes().isNotEmpty()
         }
@@ -434,7 +434,7 @@ class VodBrowseTest {
         val lastShown = covers.maxOf { it.config[SemanticsProperties.Text].first().text.removePrefix("Film ").toInt() }
         fun rowsOn(rows: Int) = "https://example.com/${lastShown + rows * columns}.jpg"
 
-        compose.waitUntil(5_000) { artwork.requests.any { it.first == rowsOn(4) } }
+        compose.waitUntil(UI_WAIT_MILLIS) { artwork.requests.any { it.first == rowsOn(4) } }
         assertThat(artwork.requests.map { it.first }).doesNotContain(rowsOn(8))
         // The Stick's 1080p at xhdpi: a 118 x 177 dp cover is 236 x 354 pixels.
         assertThat(artwork.requests.first { it.first == rowsOn(4) }.second).isEqualTo(Size(236, 354))

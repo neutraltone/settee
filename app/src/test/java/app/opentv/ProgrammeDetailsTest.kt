@@ -338,6 +338,6 @@ class ProgrammeDetailsTest {
         const val NOW = 1_000_000L
         const val HOUR = 3_600_000L
         const val FEED = 266L
-        const val TIMEOUT_MILLIS = 5_000L
+        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
     }
 }

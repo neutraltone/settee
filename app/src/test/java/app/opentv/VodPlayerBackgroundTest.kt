@@ -125,7 +125,7 @@ class VodPlayerBackgroundTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = 5_000L
+        const val WAIT_MILLIS = UI_WAIT_MILLIS
         const val TEN_MINUTES = 600_000L
     }
 }

@@ -98,7 +98,7 @@ class CoverGridPrefetchTest {
             val last = started.filter(::onScreen).maxOfOrNull(::numberOf) ?: return emptyList()
             return started.filter { numberOf(it) > last + MORE_THAN_A_ROW }
         }
-        compose.waitUntil(5_000) { ahead().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { ahead().isNotEmpty() }
         compose.waitForIdle()
         return ahead()
     }
@@ -107,7 +107,7 @@ class CoverGridPrefetchTest {
         // Idled each time round: the test runs on the main thread, and a cancelled request only
         // reports it once its coroutine resumes there. waitUntil alone never lets the looper run.
         runCatching {
-            compose.waitUntil(5_000) {
+            compose.waitUntil(UI_WAIT_MILLIS) {
                 compose.waitForIdle()
                 cancelled.containsAll(urls)
             }

@@ -100,7 +100,7 @@ class OpenSubtitlesSettingsTest {
 
     private fun row(label: String) = compose.onNode(hasText(label) and hasClickAction())
 
-    private fun waitFor(text: String, substring: Boolean = false) = compose.waitUntil(5_000) {
+    private fun waitFor(text: String, substring: Boolean = false) = compose.waitUntil(UI_WAIT_MILLIS) {
         compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
     }
 

@@ -287,7 +287,7 @@ class KeptShellTest {
         }
         railItem("Settings").assertIsFocused()
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Settings option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Settings option 1") }
     }
 
     @Test
@@ -308,13 +308,13 @@ class KeptShellTest {
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Added 3")
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         // Play from the page, then Back from the player, which puts the page back: the player let
         // the main screen go, so it was built again under the page.
         compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Movie(3))) }
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, Routes.movieDetail(3)) }
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
 
         back()
         press(Key.DirectionCenter)
@@ -354,13 +354,13 @@ class KeptShellTest {
         setApp()
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
         press(Key.DirectionDown, times = 2)
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Drama 22")
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
 
         back()
         press(Key.DirectionCenter)
@@ -376,7 +376,7 @@ class KeptShellTest {
     }
 
     private fun homeShowing() =
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
 
     /** Stops the clock, so a screen change can be looked at frame by frame. */
     private fun holdTheClock() {
@@ -462,7 +462,7 @@ class KeptShellTest {
     private fun openGrid() {
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Grid 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Grid 1")).fetchSemanticsNodes().isNotEmpty() }
     }
 
     /**
@@ -471,9 +471,9 @@ class KeptShellTest {
      */
     private fun playAndLeave(id: Long) {
         compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Movie(id))) }
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, Routes.movieDetail(id)) }
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
     }
 
     private fun gridCover(title: String) = compose.onNode(hasText(title) and hasClickAction())
@@ -487,7 +487,7 @@ class KeptShellTest {
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
         val picked = opened
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         playAndLeave(openedId)
 
         back()
@@ -506,7 +506,7 @@ class KeptShellTest {
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Grid 3")
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         playAndLeave(3)
         grid = grid.filterNot { it.title == "Grid 3" }
         compose.waitForIdle()
@@ -522,10 +522,10 @@ class KeptShellTest {
         setApp()
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         playAndLeave(1)
 
         back()
@@ -543,12 +543,12 @@ class KeptShellTest {
         setApp(favourites = { favourites })
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Favourite 3")
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         favourites = favourites.filterNot { it.name == "Favourite 3" }
         compose.waitForIdle()
 
@@ -564,11 +564,11 @@ class KeptShellTest {
         setApp(favourites = { favourites })
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Movie option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Movie option 1") }
         playAndLeave(3)
         favourites = favourites.filterNot { it.name == "Favourite 3" }
         compose.waitForIdle()
@@ -582,7 +582,9 @@ class KeptShellTest {
     private fun openRecordings() {
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.RECORDINGS) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     private fun recordingRow(title: String) = compose.onNode(hasText(title) and hasClickAction())
@@ -590,7 +592,7 @@ class KeptShellTest {
     /** Plays the highlighted recording, then Back from the player, which has no title page to go to. */
     private fun playRecordingAndLeave() {
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
         compose.waitForIdle()
     }
@@ -615,7 +617,7 @@ class KeptShellTest {
         openRecordings()
         recordingRow("Recording 2").requestFocus()
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         recordings = recordings.filterNot { it.id == 2L }
 
         compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
@@ -632,7 +634,7 @@ class KeptShellTest {
         openRecordings()
         recordingRow("Recording 1").requestFocus()
         press(Key.DirectionCenter)
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         recordings = emptyList()
 
         compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
@@ -646,10 +648,10 @@ class KeptShellTest {
         setApp()
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.SHOWS) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Show 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Show 1")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasText("Show 3") and hasClickAction()).requestFocus()
         compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Episode(30))) }
-        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.waitUntil(UI_WAIT_MILLIS) { focused("Player option 1") }
         shows = shows.filterNot { it.id == 3L }
 
         // The series has gone, so the episode has no title page to go back to.
@@ -705,7 +707,7 @@ class KeptShellTest {
         val restoration = setRestorableApp(recordings)
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(tab) }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText(shown, substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
         highlight?.let { compose.onNode(hasText(it) and hasClickAction()).requestFocus() }
@@ -728,7 +730,9 @@ class KeptShellTest {
         val restoration = setRestorableApp(recordingsLoadLate = true)
         homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.RECORDINGS) }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty()
+        }
         recordingRow("Recording 2").requestFocus()
 
         restoration.emulateSavedInstanceStateRestore()

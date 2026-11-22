@@ -99,7 +99,7 @@ class SettingsHideAddressesTest {
 
         compose.onNodeWithText("Odd add-on 487").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Remove") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -123,7 +123,7 @@ class SettingsHideAddressesTest {
         )
     }
 
-    private fun waitFor(text: String) = compose.waitUntil(5_000) {
+    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
     }
 }

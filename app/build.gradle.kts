@@ -48,6 +48,31 @@ val releaseApplicationId = "uk.neutraltone.settee"
 // branch on a device. It falls back to the debug key, so it gets its own id, label and badge.
 val isLocalRelease = providers.environmentVariable("KEYSTORE_PATH").orNull == null
 
+// Robolectric runs each test on an android-all jar, which it otherwise downloads from Maven Central
+// itself the first time a test JVM needs it, into ~/.m2, which CI doesn't keep. Maven Central turns
+// those big downloads away at times (HTTP 429), and one refused failed every test class in that JVM
+// (262 in one release run). Resolved here they're Gradle dependencies instead, cached with the rest
+// (setup-gradle on CI), and Robolectric is run offline on them. The versions are Robolectric's own
+// for the SDKs the tests pin with @Config(sdk = ...), from its DefaultSdkProvider: a Robolectric bump
+// that changes them fails every test naming the jar it couldn't find, so move them with it.
+// One configuration each: they're versions of one module, of which Gradle keeps only the newest.
+val robolectricSdks = mapOf(
+    // Nearly every test.
+    34 to "14-robolectric-10818077-i7",
+    // Fire OS 6, for the few that check an old device.
+    25 to "7.1.0_r7-robolectric-r1-i7",
+).map { (sdk, version) ->
+    configurations.create("robolectricSdk$sdk") { isTransitive = false }.also {
+        dependencies.add(it.name, "org.robolectric:android-all-instrumented:$version")
+    }
+}
+val robolectricSdkDir = layout.buildDirectory.dir("robolectric-sdks")
+val syncRobolectricSdks =
+    tasks.register<Sync>("syncRobolectricSdks") {
+        from(robolectricSdks)
+        into(robolectricSdkDir)
+    }
+
 android {
     namespace = "app.opentv"
     compileSdk = 37
@@ -181,6 +206,9 @@ android {
             // device with plenty of memory: two minutes, whatever machine runs them.
             all {
                 it.maxHeapSize = "4g"
+                it.dependsOn(syncRobolectricSdks)
+                it.systemProperty("robolectric.offline", "true")
+                it.systemProperty("robolectric.dependency.dir", robolectricSdkDir.get().asFile.absolutePath)
                 // BaselineProfileTest reads the committed profile, so a regenerated one reruns it.
                 it.inputs
                     .dir("src/main/generated/baselineProfiles")

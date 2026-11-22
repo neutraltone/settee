@@ -245,7 +245,7 @@ class ItemOptionsHostTest {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 5_000L
+        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
         const val POLL_MILLIS = 50L
     }
 }

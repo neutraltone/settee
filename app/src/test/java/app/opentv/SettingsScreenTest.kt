@@ -109,7 +109,7 @@ class SettingsScreenTest {
 
     private fun highlighted() = compose.onNode(isFocused())
 
-    private fun waitFor(text: String) = compose.waitUntil(5_000) {
+    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -126,7 +126,7 @@ class SettingsScreenTest {
         // A key goes to whatever has the Highlight, so wait for it to reach the row first: a panel
         // moves it there a frame after it opens.
         val row = hasText(text) and hasAnyAncestor(isDialog())
-        compose.waitUntil(5_000) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(row).performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
@@ -300,7 +300,9 @@ class SettingsScreenTest {
         compose.onNode(hasText("Yes, remove Old films on 168") and isFocused()).assertExists()
         pressInPanel("Yes, remove Old films on 168", Key.DirectionCenter)
         compose.waitUntilSaved { runBlocking { graph.sourceRepository.byId(id) } == null }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Old films on 168")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Old films on 168")).fetchSemanticsNodes().isEmpty()
+        }
         // The row that had the Highlight has gone, so it moves on rather than vanishing with it.
         highlighted().assertExists()
     }
@@ -349,7 +351,7 @@ class SettingsScreenTest {
         entry.pressAction()
 
         val why = app.getString(R.string.settings_guide_bad_address)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasText(app.getString(R.string.common_save))).assertExists()
         captureScreen("settings_guide_bad_address")
         assertThat(ownFeeds()).isEqualTo(before)
@@ -380,7 +382,7 @@ class SettingsScreenTest {
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
         compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") == null }
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
         paneTitle().assertTextContains("TV guide")
@@ -601,7 +603,7 @@ class SettingsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER)
 
         // Sharing needs a network address, which a test machine may not have.
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Stop sharing")).fetchSemanticsNodes().isNotEmpty() ||
                 compose.onAllNodes(hasText("isn't on a network", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
@@ -665,7 +667,7 @@ class SettingsScreenTest {
         show(SettingsMemory(SettingsSection.Manager))
 
         // Serving needs a network address, which a test machine may not have.
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodesWithTag(SettingsTags.CODE_BLOCK).fetchSemanticsNodes().isNotEmpty() ||
                 compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
         }
@@ -720,7 +722,7 @@ class SettingsScreenTest {
     fun `Subtitles says which Profile it belongs to, and choosing Off turns them off for that Profile`() {
         runBlocking { graph.profileSettings.setSubtitlesOn(true) }
         show(SettingsMemory(SettingsSection.Display))
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             // Its Profile's name, whichever that is: asking Profiles for it would block on its lock.
             val row = hasText("Subtitles") and hasText("For ", substring = true) and hasText("On")
             compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()

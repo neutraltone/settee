@@ -206,10 +206,10 @@ class LiveCoveredTest {
     /** Opens Settings over Live TV and waits until it has finished covering it. */
     private fun openSettings() {
         compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasTestTag("Settings option") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.waitUntil(5_000) { !liveShown() }
+        compose.waitUntil(UI_WAIT_MILLIS) { !liveShown() }
     }
 
     /** Back as the remote sends it, through the activity. */

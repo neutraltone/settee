@@ -95,7 +95,7 @@ class AddSourceScreenTest {
         device.replaceAll("Old films", device.box(0))
         compose.onNodeWithText("Save and load").performClick()
 
-        compose.waitUntil(5_000) { runBlocking { graph.sourceRepository.byId(id)?.name == "Old films" } }
+        compose.waitUntil(UI_WAIT_MILLIS) { runBlocking { graph.sourceRepository.byId(id)?.name == "Old films" } }
         val named = runBlocking {
             graph.sourceRepository.observeAll().first()
         }.filter { it.name.endsWith("films", ignoreCase = true) }
@@ -111,7 +111,7 @@ class AddSourceScreenTest {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
 
-        compose.waitUntil(5_000) { finished }
+        compose.waitUntil(UI_WAIT_MILLIS) { finished }
     }
 
     @Test
@@ -125,7 +125,7 @@ class AddSourceScreenTest {
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            compose.waitUntil(5_000) { viewModel.ui.value.testing }
+            compose.waitUntil(UI_WAIT_MILLIS) { viewModel.ui.value.testing }
 
             compose.onNodeWithText("Working…").assertIsFocused()
         }
@@ -143,7 +143,7 @@ class AddSourceScreenTest {
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
             // The answer comes back on the main looper, which nothing else runs while this waits.
-            compose.waitUntil(5_000) {
+            compose.waitUntil(UI_WAIT_MILLIS) {
                 shadowOf(Looper.getMainLooper()).idle()
                 viewModel.ui.value.let { !it.testing && it.testResult != null }
             }
@@ -173,7 +173,7 @@ class AddSourceScreenTest {
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(5_000) { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.ui.value.let { !it.testing && it.testError != null } }
         val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
         captureScreen("add_source_test_failed")

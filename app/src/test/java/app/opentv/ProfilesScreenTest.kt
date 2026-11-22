@@ -91,7 +91,7 @@ class ProfilesScreenTest {
      * write is finishing can hold that write up, so a wait polling the database could time out.
      */
     private fun waitForRow(row: SemanticsMatcher) =
-        compose.waitUntil(5_000) { compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty() }
 
     private fun show(vararg names: String) {
         // A name already there is refused, which leaves it as it is.
@@ -103,13 +103,13 @@ class ProfilesScreenTest {
             ProfilesScreen(onBack = {}, viewModel = viewModel)
         }
         // "Watching now" marks the first Profile, the active one: it's there once the list is.
-        compose.waitUntil(5_000) {
+        compose.waitUntil(UI_WAIT_MILLIS) {
             (names.toList() + "Watching now").all {
                 compose.onAllNodes(hasText(it, substring = true)).fetchSemanticsNodes().isNotEmpty()
             }
         }
         // The list's first Highlight lands a frame after it loads.
-        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun baseName() = stored().first { it.id == Profiles.BASE_PROFILE_ID }.name
@@ -118,7 +118,7 @@ class ProfilesScreenTest {
 
     private fun pressInPanel(text: String, key: Key) {
         val row = hasText(text) and hasAnyAncestor(isDialog())
-        compose.waitUntil(5_000) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(row).performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
@@ -186,7 +186,7 @@ class ProfilesScreenTest {
         entryKeyboard().run {
             type("New one 168")
             // As a viewer's keyboard does, Done comes once the name is in the box.
-            compose.waitUntil(5_000) { textShownBy() == "New one 168" }
+            compose.waitUntil(UI_WAIT_MILLIS) { textShownBy() == "New one 168" }
             pressAction()
         }
 
@@ -217,10 +217,12 @@ class ProfilesScreenTest {
         captureScreen("profiles_remove_question")
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Remove me 168", Key.DirectionCenter)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Remove me 168")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) {
+            compose.onAllNodes(hasText("Remove me 168")).fetchSemanticsNodes().isEmpty()
+        }
         assertThat(profile("Remove me 168")).isNull()
         // Its row has gone, and the Highlight goes back into the list rather than vanishing.
-        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 
         val base = baseName()
         holdSelectOn(base)
@@ -236,7 +238,7 @@ class ProfilesScreenTest {
             view = LocalView.current
             ProfilesScreen(onBack = { left++ }, viewModel = viewModel)
         }
-        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 
         Espresso.pressBack()
 

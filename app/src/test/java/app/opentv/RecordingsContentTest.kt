@@ -550,7 +550,7 @@ class RecordingsContentTest {
     )
 
     private companion object {
-        const val TIMEOUT_MILLIS = 5_000L
+        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
         const val NOW = 1_800_000_000_000L
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE

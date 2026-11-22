@@ -9,13 +9,17 @@ Releases are cut by merging the release PR. GitHub Actions does the rest.
    `x-release-please-version`) and `.release-please-manifest.json`, and adds a `CHANGELOG.md` entry
    from the `feat`, `fix` and `perf` commits since the last release. Other types don't appear.
 3. Merge the release PR when you want to ship. release-please tags `vx.y.z` and creates the GitHub
-   release, then calls `.github/workflows/release.yml`, which runs the tests, assembles the release
-   APK and attaches `settee-vx.y.z.apk` and `settee.apk`. For the few minutes that takes, the
-   release exists without an APK: the in-app updater ignores it until the APK lands, but the
+   release, then calls `.github/workflows/release.yml`, which assembles the release APK and
+   attaches `settee-vx.y.z.apk` and `settee.apk`. It doesn't run the tests a second time: it waits
+   for Build's Test and assemble on the release commit and uses its verdict, running the tests
+   itself only when that check failed, was cancelled or never ran. For the few minutes that takes,
+   the release exists without an APK: the in-app updater ignores it until the APK lands, but the
    `releases/latest/download/settee.apk` link 404s.
 
 Don't bump the version, write the changelog entry or push a tag by hand. To rebuild an existing
-release's APKs, run the Release workflow from the Actions tab with its tag.
+release's APKs, run the Release workflow from the Actions tab with its tag. Re-running the Release
+Please run doesn't do it: on a re-run release-please finds no new release, so it skips the build and
+still shows green.
 
 Before 1.0, a breaking change (`feat(#12)!: …`) bumps the minor version and a `feat` bumps the minor
 version too; a `fix` or `perf` bumps the patch.
