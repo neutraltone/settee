@@ -92,9 +92,10 @@ class HomeSnapshotOnStartTest {
         assertThat(first.loading).doesNotContain(HomeRowKind.RECENT_MOVIES)
 
         catalogue.release()
-        // For the fresh movies themselves, not for nothing loading: a row drawn from what was saved
-        // isn't loading, so that's true as soon as the others come, with Heat still showing.
-        val fresh = home.whenDrawn { "Heat" !in it.recentMovies.names() }
+        // For the fresh movies themselves, not for nothing loading (a row drawn from what was saved
+        // isn't loading, so that's true as soon as the others come, with Heat still showing) nor for
+        // Heat going (a restarted Home has nothing saved to draw, so its row is empty until they come).
+        val fresh = home.whenDrawn { "Superbad" in it.recentMovies.names() }
         assertThat(fresh.recentMovies.names()).containsExactly("Superbad")
     }
 
