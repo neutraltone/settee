@@ -5,28 +5,23 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.platform.app.InstrumentationRegistry
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
@@ -38,7 +33,6 @@ import java.net.ServerSocket
 import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,23 +46,32 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi", application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class AddSourceScreenTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
+
+    // A playlist with no channels in it, answered at once, so each Save fails without reaching out.
+    private val panel = FakePanel("" to "#EXTM3U\n")
+
+    /** A graph of its own on [panel], for the screens a test builds on it; the app's stays [testGraph]. */
+    @get:Rule(order = 0)
+    val panelGraph = TestGraph(name = "add-source-again-test", http = panel.http, swapIn = false)
+
+    @get:Rule(order = 1)
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val secrets = FixedServerSecrets()
 
+    private val app = testGraph.app
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
     private lateinit var viewModel: SourcesViewModel
 
-    private fun show(tv: Boolean = false, editing: Long? = null) {
-        val app = ApplicationProvider.getApplicationContext<Application>()
+    private fun show(tv: Boolean = false, editing: Long? = null, on: TestGraph = testGraph) {
         if (tv) shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
-        viewModel = viewModels.track(SourcesViewModel(app))
+        if (on !== testGraph) compose.registerIdlingResource(on)
+        viewModel = on.viewModel { SourcesViewModel(app, on.graph) }
         compose.setTvContent {
             view = LocalView.current
             AddSourceScreen(viewModel = viewModel, onFinished = {}, editingSourceId = editing)
@@ -77,7 +80,7 @@ class AddSourceScreenTest {
 
     @Test
     fun `editing a provider opens its kind's form filled in, and saving keeps its id`() {
-        val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+        val graph = testGraph.graph
         // Port 9 refuses at once, so the refresh after saving fails fast rather than reaching out.
         val id = runBlocking {
             graph.sourceRepository.save(
@@ -99,7 +102,8 @@ class AddSourceScreenTest {
         device.replaceAll("Old films", device.box(0))
         compose.onNodeWithText("Save and load").performClick()
 
-        compose.waitUntil(UI_WAIT_MILLIS) { runBlocking { graph.sourceRepository.byId(id)?.name == "Old films" } }
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.sourceRepository.byId(id)?.name }).isEqualTo("Old films")
         val named = runBlocking {
             graph.sourceRepository.observeAll().first()
         }.filter { it.name.endsWith("films", ignoreCase = true) }
@@ -109,8 +113,7 @@ class AddSourceScreenTest {
     @Test
     fun `editing a provider that has gone leaves the screen rather than showing nothing`() {
         var finished = false
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        val viewModel = viewModels.track(SourcesViewModel(app))
+        val viewModel = testGraph.viewModel { SourcesViewModel(app, testGraph.graph) }
         compose.setTvContent {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
@@ -122,18 +125,21 @@ class AddSourceScreenTest {
 
     @Test
     fun `Test connection keeps the Highlight while it runs`() {
-        // A portal that takes the connection and never answers, so the test stays running.
-        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { portal ->
-            show()
+        // A portal that holds the handshake until the test ends, so the test stays running.
+        val portal = panel.hold("handshake")
+        try {
+            show(on = panelGraph)
             compose.onNodeWithText(STALKER).performClick()
-            device.type("http://127.0.0.1:${portal.localPort}/c/", device.box(SERVER))
+            device.type("http://example.com/c/", device.box(SERVER))
             device.type("00:1A:79:00:00:01", device.box(MAC))
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            compose.waitUntil(UI_WAIT_MILLIS) { viewModel.ui.value.testing }
+            assertThat(viewModel.ui.value.testing).isTrue()
 
             compose.onNodeWithText("Working…").assertIsFocused()
+        } finally {
+            portal.release()
         }
     }
 
@@ -148,7 +154,8 @@ class AddSourceScreenTest {
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testResult != null } }
+            compose.waitForIdle()
+            assertThat(viewModel.ui.value.let { !it.testing && it.testResult != null }).isTrue()
 
             compose.onNodeWithText("Found your playlist. Save to load its channels.").assertExists()
             captureScreen("add_source_test_ok")
@@ -175,7 +182,8 @@ class AddSourceScreenTest {
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        compose.waitForIdle()
+        assertThat(viewModel.ui.value.let { !it.testing && it.testError != null }).isTrue()
         val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
         captureScreen("add_source_test_failed")
@@ -188,8 +196,7 @@ class AddSourceScreenTest {
 
     @Test
     fun `what's typed survives the screen being rebuilt, as a phone turning round does`() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        viewModel = viewModels.track(SourcesViewModel(app))
+        viewModel = testGraph.viewModel { SourcesViewModel(app, testGraph.graph) }
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         restoration.setContent {
@@ -222,46 +229,21 @@ class AddSourceScreenTest {
         val loading = panel.hold("")
 
         compose.onNodeWithText("Save and load").performClick()
-        compose.waitUntilSaved { loading.reached.count == 0L }
+        compose.waitForIdle()
+        assertThat(loading.reached.count).isEqualTo(0L)
         restoration.emulateSavedInstanceStateRestore()
         loading.release()
-        compose.waitUntilSaved { viewModel.ui.value.let { !it.adding && it.addFailure != null } }
+        compose.waitForIdle()
+        assertThat(viewModel.ui.value.let { !it.adding && it.addFailure != null }).isTrue()
         saveAndWaitForFailure()
 
         assertThat(storedUrls()).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
     }
 
-    // A playlist with no channels in it, answered at once, so each Save fails without reaching out.
-    private val panel = FakePanel("" to "#EXTM3U\n")
-    private val openPanelGraph = lazy {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        ServiceLocator.Graph(
-            app,
-            http = panel.http,
-            settingsFile = "add-source-again-test",
-            openDatabase = {
-                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
-            },
-        )
-    }
-    private val panelGraph by openPanelGraph
-
-    private val viewModels = ViewModelsInTest()
-
-    @After
-    fun closePanelGraph() {
-        viewModels.stopAll()
-        if (openPanelGraph.isInitialized()) {
-            runBlocking { panelGraph.stopBackgroundWork() }
-            panelGraph.database.close()
-        }
-    }
-
     /** The M3U form on [panelGraph], filled in, with a provider already added so this isn't Setup. */
     private fun showM3uFormBesideAnother(): StateRestorationTester {
-        val app = ApplicationProvider.getApplicationContext<Application>()
         runBlocking {
-            panelGraph.sourceRepository.save(
+            panelGraph.graph.sourceRepository.save(
                 Source(
                     name = "First",
                     kind = SourceKind.M3U,
@@ -270,7 +252,8 @@ class AddSourceScreenTest {
                 ),
             )
         }
-        viewModel = viewModels.track(SourcesViewModel(app, panelGraph))
+        compose.registerIdlingResource(panelGraph)
+        viewModel = panelGraph.viewModel { SourcesViewModel(app, panelGraph.graph) }
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         restoration.setContent {
@@ -282,11 +265,12 @@ class AddSourceScreenTest {
         return restoration
     }
 
-    private fun storedUrls() = runBlocking { panelGraph.sourceRepository.all() }.map { it.url }
+    private fun storedUrls() = runBlocking { panelGraph.graph.sourceRepository.all() }.map { it.url }
 
     private fun saveAndWaitForFailure() {
         compose.onNodeWithText("Save and load").performClick()
-        compose.waitUntilSaved { viewModel.ui.value.let { !it.adding && it.addFailure != null } }
+        compose.waitForIdle()
+        assertThat(viewModel.ui.value.let { !it.adding && it.addFailure != null }).isTrue()
     }
 
     private fun showXtreamForm() {
@@ -356,7 +340,7 @@ class AddSourceScreenTest {
 
         compose.onNodeWithText(XTREAM).assertDoesNotExist()
         // The QR screen waits for the providers list too, as the edit form does.
-        compose.waitUntilAtLeastOneExists(hasText("Then enter this code on your phone"), UI_WAIT_MILLIS)
+        compose.onAllNodes(hasText("Then enter this code on your phone")).onFirst().assertExists()
         captureScreen("add_source_qr")
 
         Espresso.pressBack()
@@ -412,7 +396,7 @@ class AddSourceScreenTest {
     @Test
     fun `OK on a box's Paste button pastes rather than opening the keyboard`() {
         showXtreamForm()
-        ApplicationProvider.getApplicationContext<Application>().getSystemService(ClipboardManager::class.java)
+        app.getSystemService(ClipboardManager::class.java)
             .setPrimaryClip(ClipData.newPlainText(null, "http://example.com"))
         compose.onAllNodesWithContentDescription("Paste")[0].requestFocus()
 

@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.os.Looper
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -18,9 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
@@ -35,7 +32,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -50,16 +46,23 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodPlayerRowTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    // A provider for the test that fetches an episode's neighbours, on a graph of its own.
+    private val panel = FakePanel()
+
+    @get:Rule(order = 0)
+    val panelGraph = TestGraph(name = "vod-player-row-panel", http = panel.http, swapIn = false)
+
+    @get:Rule(order = 1)
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
 
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel = testGraph.viewModel { VodPlayerViewModel(app, graph) }
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
 
     @After
@@ -68,11 +71,6 @@ class VodPlayerRowTest {
         SleepTimer.clear()
         controller.release()
         players.close()
-        // Before the database closes: the player's reads outlive the test, and one that ran on the
-        // closed database threw into the next test (release PR 547's CI).
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     private fun showFilm(growingRec: Boolean = false) {
@@ -153,17 +151,6 @@ class VodPlayerRowTest {
         compose.onNode(seekBar).performTouchInput {
             down(center)
             moveBy(Offset(100f, 0f))
-        }
-        compose.waitForIdle()
-    }
-
-    /** Waits for [done], running the main thread's queue meanwhile. */
-    private fun untilOnMain(done: () -> Boolean) {
-        val until = System.currentTimeMillis() + WAIT_MILLIS
-        while (!done()) {
-            check(System.currentTimeMillis() < until) { "Still waiting after $WAIT_MILLIS ms" }
-            Thread.sleep(POLL_MILLIS)
-            Shadows.shadowOf(Looper.getMainLooper()).idle()
         }
         compose.waitForIdle()
     }
@@ -447,7 +434,8 @@ class VodPlayerRowTest {
 
         press(Key.DirectionCenter)
         // The buttons follow once the move has worked out the new episode's neighbours, after it starts.
-        compose.waitUntil(WAIT_MILLIS) { viewModel.episodeSteps.value.of == testEpisode(1, 3).key }
+        compose.waitForIdle()
+        assertThat(viewModel.episodeSteps.value.of).isEqualTo(testEpisode(1, 3).key)
 
         compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
         compose.onNodeWithContentDescription("Pause").assertIsFocused()
@@ -455,7 +443,8 @@ class VodPlayerRowTest {
         press(Key.DirectionCenter)
         // The move finishes on whichever thread the database answered on, so what's playing can
         // change a moment before the player is asked: wait for the player itself.
-        compose.waitUntil(WAIT_MILLIS) { fake.played.size == 3 }
+        compose.waitForIdle()
+        assertThat(fake.played).hasSize(3)
         assertThat(fake.played.map { it.first }).containsExactly(
             testEpisode(1, 2).key,
             testEpisode(1, 3).key,
@@ -469,49 +458,45 @@ class VodPlayerRowTest {
         hideControls()
 
         press(Key.MediaNext)
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 3).key }
+        compose.waitForIdle()
+        assertThat(viewModel.current.value).isEqualTo(testEpisode(1, 3).key)
         press(Key.MediaPrevious)
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 2).key }
+        compose.waitForIdle()
+        assertThat(viewModel.current.value).isEqualTo(testEpisode(1, 2).key)
         press(Key.MediaPrevious)
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 1).key }
+        compose.waitForIdle()
+        assertThat(viewModel.current.value).isEqualTo(testEpisode(1, 1).key)
     }
 
     @Test
     fun `episode buttons found while the controls show wait until they next open`() {
-        val panel = FakePanel()
-        val fetching = ServiceLocator.Graph(app, http = panel.http)
-        val loading = viewModels.track(VodPlayerViewModel(app, fetching))
-        try {
-            runBlocking {
-                fetching.database.sources().insert(PANEL_SOURCE)
-                fetching.database.episodes().upsertAll(listOf(testEpisode(1, 2)))
-            }
-            panel.replies["get_series_info:s"] = SERIES_OF_THREE
-            val hold = panel.hold("get_series_info:s")
-            compose.setTvContent { VodPlayerContent(controller, loading, false, noPicks, onBack = {}) }
-            players.play(controller)
-            runBlocking { loading.attach(testEpisode(1, 2).key, FakePlayback()) }
-            settle()
-
-            hold.release()
-            // The reply comes back on another thread and finishes on the main one, whose queue
-            // waitUntil doesn't run, so this runs it while waiting. Not waitRunningMainLooper: its
-            // waitUntil steps Compose's clock a frame per check, and a slow reply would let the controls
-            // hide, so the checks below would pass without the buttons having had a chance to show.
-            untilOnMain { loading.episodeSteps.value.next }
-            compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
-            compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()
-
-            hideControls()
-            press(Key.DirectionCenter)
-            settle()
-            compose.onNodeWithContentDescription("Next episode").assertExists()
-            compose.onNodeWithContentDescription("Previous episode").assertExists()
-        } finally {
-            viewModels.stopAll()
-            runBlocking { fetching.stopBackgroundWork() }
-            fetching.database.close()
+        val fetching = panelGraph.graph
+        compose.registerIdlingResource(panelGraph)
+        val loading = panelGraph.viewModel { VodPlayerViewModel(app, fetching) }
+        runBlocking {
+            fetching.database.sources().insert(PANEL_SOURCE)
+            fetching.database.episodes().upsertAll(listOf(testEpisode(1, 2)))
         }
+        panel.replies["get_series_info:s"] = SERIES_OF_THREE
+        val hold = panel.hold("get_series_info:s")
+        compose.setTvContent { VodPlayerContent(controller, loading, false, noPicks, onBack = {}) }
+        players.play(controller)
+        runBlocking { loading.attach(testEpisode(1, 2).key, FakePlayback()) }
+        settle()
+
+        hold.release()
+        // Not a waitUntil: that steps Compose's clock a frame per check, and a slow reply would let the
+        // controls hide, so the checks below would pass without the buttons having had a chance to show.
+        compose.waitForIdle()
+        assertThat(loading.episodeSteps.value.next).isTrue()
+        compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()
+
+        hideControls()
+        press(Key.DirectionCenter)
+        settle()
+        compose.onNodeWithContentDescription("Next episode").assertExists()
+        compose.onNodeWithContentDescription("Previous episode").assertExists()
     }
 
     @Test
@@ -525,13 +510,11 @@ class VodPlayerRowTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = UI_WAIT_MILLIS
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L
         const val STEP = 10_000L
         const val WITHIN_GRACE_MILLIS = 2_800L
         const val PAST_GRACE_MILLIS = 3_200L
-        const val POLL_MILLIS = 20L
     }
 }

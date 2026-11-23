@@ -5,11 +5,8 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -18,11 +15,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.StatusBus
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.design.SKELETON_CARD
 import com.google.common.truth.Truth.assertThat
@@ -43,24 +40,20 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class LiveSkeletonTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val catalogue = HeldCatalogue(app, "live-skeleton-test")
-    private val graph = catalogue.graph
-    private val viewModels = TestViewModels()
+    @get:Rule
+    val testGraph = TestGraph(compose, name = "live-skeleton-test")
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val played = mutableListOf<Channel>()
 
     @After
     fun tearDown() {
         StatusBus.set(null)
-        catalogue.release()
-        viewModels.clear()
-        catalogue.close()
     }
 
     private fun channelsOnTheDevice() = runBlocking {
@@ -92,7 +85,7 @@ class LiveSkeletonTest {
                 onPlayChannel = { played += it },
                 onAddSource = {},
                 onRefresh = {},
-                viewModel = viewModels.channels(app, graph),
+                viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) },
             )
         }
     }
@@ -105,9 +98,9 @@ class LiveSkeletonTest {
     @Test
     fun `with channels on the device and the guide still building, skeleton rows show, the first highlighted`() {
         channelsOnTheDevice()
-        catalogue.hold()
+        testGraph.hold()
         setLive()
-        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertExists()
 
         compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
         assertThat(compose.onAllNodes(hasText("Loading your channels")).fetchSemanticsNodes()).isEmpty()
@@ -121,12 +114,12 @@ class LiveSkeletonTest {
     @Test
     fun `when the guide is built its first channel takes the Highlight from the skeleton`() {
         channelsOnTheDevice()
-        catalogue.hold()
+        testGraph.hold()
         setLive()
-        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertExists()
 
-        catalogue.release()
-        compose.waitUntilAtLeastOneExists(hasText("BBC One"), 5_000)
+        testGraph.release()
+        compose.onAllNodes(hasText("BBC One")).onFirst().assertExists()
         compose.waitForIdle()
 
         compose.onNode(hasText("BBC One") and androidx.compose.ui.test.isFocusable()).assertIsFocused()
@@ -136,7 +129,7 @@ class LiveSkeletonTest {
     fun `with no channels on the device and no provider, it still says there are none`() {
         setLive(hasSources = false)
 
-        compose.waitUntilAtLeastOneExists(hasText("No channels yet"), 5_000)
+        compose.onAllNodes(hasText("No channels yet")).onFirst().assertExists()
         assertThat(compose.onAllNodesWithTag(SKELETON_CARD).fetchSemanticsNodes()).isEmpty()
     }
 
@@ -145,7 +138,7 @@ class LiveSkeletonTest {
         StatusBus.show("Refreshing your channels")
         setLive(isSyncing = true)
 
-        compose.waitUntilAtLeastOneExists(hasText("Loading your channels"), 5_000)
+        compose.onAllNodes(hasText("Loading your channels")).onFirst().assertExists()
         compose.onNodeWithText("A large provider can take a couple of minutes", substring = true).assertExists()
         compose.onNodeWithText("Refreshing your channels").assertDoesNotExist()
     }
