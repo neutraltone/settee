@@ -16,8 +16,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -85,10 +87,8 @@ class PairingServerTest {
         timing.start()
         assumeTrue("needs a private LAN address to serve on", timing.state.value is PairingServer.State.Listening)
 
-        val deadline = System.currentTimeMillis() + 5_000
-        while (timing.state.value !is PairingServer.State.Failed && System.currentTimeMillis() < deadline) {
-            Thread.sleep(20)
-        }
+        // The server says when its session ends; the limit only decides how long a failure takes.
+        runBlocking { withTimeoutOrNull(5_000) { timing.state.first { it is PairingServer.State.Failed } } }
         watching.cancel()
         timing.stop()
 
@@ -123,14 +123,7 @@ class PairingServerTest {
     }
 
     /** The details the TV got, once it has them. */
-    private fun received(): PairingServer.State.Received {
-        val deadline = System.currentTimeMillis() + 10_000
-        while (System.currentTimeMillis() < deadline) {
-            (server.state.value as? PairingServer.State.Received)?.let { return it }
-            Thread.sleep(20)
-        }
-        error("the TV never got the details")
-    }
+    private fun received(): PairingServer.State.Received = arrived() ?: error("the TV never got the details")
 
     @Test
     fun `the phone waits until the channels are in, then says it's all done`() {
@@ -355,13 +348,15 @@ class PairingServerTest {
             .newCall(request).execute().use { it.code to it.body.string() }
     }
 
-    private fun receivedSignIn(): PairingServer.State.SignInReceived {
-        val deadline = System.currentTimeMillis() + 10_000
-        while (System.currentTimeMillis() < deadline) {
-            (server.state.value as? PairingServer.State.SignInReceived)?.let { return it }
-            Thread.sleep(20)
-        }
-        error("the TV never got the sign-in")
+    private fun receivedSignIn(): PairingServer.State.SignInReceived =
+        arrived() ?: error("the TV never got the sign-in")
+
+    /**
+     * The server's state once it's a [T], which it says the moment the phone's request has been read
+     * on its own threads. The limit only decides how long a failure takes.
+     */
+    private inline fun <reified T : PairingServer.State> arrived(): T? = runBlocking {
+        withTimeoutOrNull(10_000) { server.state.first { it is T } as T }
     }
 
     @Test

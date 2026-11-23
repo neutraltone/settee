@@ -8,9 +8,6 @@ package app.opentv
 import android.app.AlarmManager
 import android.app.Application
 import android.content.Intent
-import android.os.Looper
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
@@ -18,7 +15,7 @@ import app.opentv.recording.RecordingScheduler
 import app.opentv.reminders.ReminderScheduler
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.runBlocking
-import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,43 +32,28 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class AlarmsAfterUpdateTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.get(app)
+    @get:Rule
+    val testGraph = TestGraph()
+
+    private val app: Application = testGraph.app
+    private val graph = testGraph.graph
     private val alarms = shadowOf(app.getSystemService(AlarmManager::class.java))
     private val inAnHour = System.currentTimeMillis() + 60 * 60 * 1000L
 
-    private var bookingId = 0L
-    private var reminderId = 0L
-
-    @After
-    fun forget() = runBlocking {
-        if (bookingId > 0) graph.recordingRepository.delete(bookingId)
-        if (reminderId > 0) graph.reminderRepository.delete(reminderId)
-    }
-
+    // The receivers set alarms on the graph's io dispatcher, so settling waits for them.
     private fun updateInstalled() {
         app.sendBroadcast(Intent(Intent.ACTION_MY_PACKAGE_REPLACED).setPackage(app.packageName))
-        shadowOf(Looper.getMainLooper()).idle()
+        testGraph.awaitIdle()
     }
 
-    /** The receivers set alarms off the main thread, so this waits a little for one to appear. */
-    private fun alarmIsSet(action: String, extra: String, id: Long): Boolean {
-        val deadline = System.currentTimeMillis() + 5_000
-        while (System.currentTimeMillis() < deadline) {
-            val set = alarms.scheduledAlarms.any { alarm ->
-                val intent = shadowOf(alarm.operation).savedIntent
-                intent.action == action && intent.getLongExtra(extra, -1L) == id
-            }
-            if (set) return true
-            Thread.sleep(20)
-            shadowOf(Looper.getMainLooper()).idle()
-        }
-        return false
+    private fun alarmIsSet(action: String, extra: String, id: Long): Boolean = alarms.scheduledAlarms.any { alarm ->
+        val intent = shadowOf(alarm.operation).savedIntent
+        intent.action == action && intent.getLongExtra(extra, -1L) == id
     }
 
     @Test
     fun `an upcoming booking's alarm is set again when an update installs`() {
-        bookingId = runBlocking {
+        val bookingId = runBlocking {
             graph.recordingRepository.insert(
                 Recording(
                     channelId = 1,
@@ -96,7 +78,7 @@ class AlarmsAfterUpdateTest {
 
     @Test
     fun `an upcoming reminder's alarm is set again when an update installs`() {
-        reminderId = runBlocking {
+        val reminderId = runBlocking {
             graph.database.reminders().insert(
                 Reminder(
                     channelId = 1,
