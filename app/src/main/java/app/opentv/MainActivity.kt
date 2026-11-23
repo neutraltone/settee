@@ -232,6 +232,7 @@ object Routes {
     const val ADD_SOURCE = "add-source"
     const val SETUP = "setup"
     const val OPENSUBTITLES_STEP = "opensubtitles-step"
+    const val CRASH_REPORTS_STEP = "crash-reports-step"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
     const val SETTINGS = "settings"
