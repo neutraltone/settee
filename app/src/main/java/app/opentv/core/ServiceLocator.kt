@@ -341,7 +341,7 @@ object ServiceLocator {
             DiagnosticsLog(java.io.File(appContext.filesDir, "diagnostics"), appScope, dispatchers.io)
         }
 
-        val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings) }
+        val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings, dispatchers.io) }
 
         val diagnosticsReporter: DiagnosticsReporter by lazy {
             DiagnosticsReporter(

@@ -79,7 +79,8 @@ class EpisodeRowTest {
                 Box(Modifier.size(10.dp).testTag("elsewhere").focusable())
             }
         }
-        compose.waitUntil { artwork.hasLoaded }
+        compose.waitForIdle()
+        check(artwork.hasLoaded) { "The artwork never loaded" }
         return state
     }
 

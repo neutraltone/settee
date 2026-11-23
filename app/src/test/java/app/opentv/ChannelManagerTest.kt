@@ -16,17 +16,17 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.ChannelManagerScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
@@ -46,24 +46,24 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class ChannelManagerTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.channels(app, graph) }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { ChannelsViewModel(app, graph) } }
     private lateinit var view: View
     private var left = false
 
+    // The process's settings, so what one test hides would reach the next.
     @After
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
-        viewModels.clear()
-        graph.database.close()
     }
 
     private fun channel(id: Long, name: String, source: Long, category: String) = Channel(
@@ -110,8 +110,8 @@ class ChannelManagerTest {
             view = LocalView.current
             ChannelManagerScreen(onBack = { left = true }, viewModel = viewModel)
         }
-        compose.waitRunningMainLooper { viewModel.managerRows.value.isNotEmpty() }
         compose.waitForIdle()
+        assertThat(viewModel.managerRows.value).isNotEmpty()
     }
 
     private fun press(key: Key, times: Int = 1) = repeat(times) {
@@ -144,17 +144,15 @@ class ChannelManagerTest {
         row("Channel One").assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(
+        compose.onAllNodes(
             hasText("Channel One", substring = true) and hasText("Hidden", substring = true),
-            5_000,
-        )
+        ).onFirst().assertExists()
         captureScreen("channel_manager_hidden")
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(
+        compose.onAllNodes(
             hasText("Channel One", substring = true) and hasText("Showing", substring = true),
-            5_000,
-        )
+        ).onFirst().assertExists()
     }
 
     @Test
@@ -167,13 +165,11 @@ class ChannelManagerTest {
             advanceEventTime(1_000)
             keyUp(Key.DirectionCenter)
         }
-        compose.waitUntilAtLeastOneExists(hasText("Add to Favourites") and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText("Add to Favourites") and hasClickAction()).onFirst().assertExists()
         compose.onNode(hasText("Add to Favourites") and hasClickAction()).performKeyInput {
             pressKey(Key.DirectionCenter)
         }
-        compose.waitRunningMainLooper {
-            runBlocking { graph.viewerLibrary.favourites.channelIds().first().isNotEmpty() }
-        }
+        compose.waitForIdle()
 
         assertThat(runBlocking { graph.viewerLibrary.favourites.channelIds().first() }).containsExactly(1L)
         compose.onNode(hasText("Channel One", substring = true) and hasText("Showing", substring = true)).assertExists()

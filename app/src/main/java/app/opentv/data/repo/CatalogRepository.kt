@@ -878,7 +878,7 @@ class CatalogRepository(
         // transaction, they held SQLite's writer for the length of the decode, and progress and guide
         // writes queued behind it (#328). A reply cut off partway throws here, before anything's saved.
         val staged = api.liveStreams(source).use { list ->
-            StagedBatches.stage(staging, Channel.serializer()) { stage ->
+            StagedBatches.stage(staging, Channel.serializer(), dispatchers.io) { stage ->
                 list.forEachBatch { batch -> stage(normalized(batch, categoryNames)) }
             }
         }

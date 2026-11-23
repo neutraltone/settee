@@ -45,6 +45,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -196,6 +198,20 @@ class TestGraph(
             compose != null -> compose.waitForIdle()
             else -> drain("the graph's work to finish") { isIdleNow && RoomWork.isIdleNow }
         }
+    }
+
+    /**
+     * The first value of [flow] that [predicate] accepts, collected on the main thread as a screen
+     * would, once nothing is running: a view model's state shared on its own scope can't be waited
+     * for by blocking the main thread it's shared on.
+     */
+    fun <T> firstWhenIdle(flow: Flow<T>, predicate: (T) -> Boolean = { true }): T {
+        val found = mutableListOf<T>()
+        val looking = launch { found += flow.first(predicate) }
+        awaitIdle()
+        looking.cancel()
+        check(found.isNotEmpty()) { "Nothing matched once the graph's work had finished" }
+        return found.single()
     }
 
     /** Moves the clock on by [millis] once nothing is running, then waits for what that sets off. */

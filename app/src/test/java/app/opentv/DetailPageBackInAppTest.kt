@@ -5,23 +5,20 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
+import androidx.compose.ui.test.onFirst
 import app.opentv.PageBack.Companion.isClickable
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,27 +35,22 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class DetailPageBackInAppTest {
 
+    private val panel = FakePanel()
+
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, http = panel.http)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
     private val page = PageBack(compose)
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val panel = FakePanel()
-    private val graph = ServiceLocator.Graph(app, http = panel.http)
-    private val viewModels = TestViewModels()
-
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private val film = Movie(
         id = 7,
@@ -96,14 +88,14 @@ class DetailPageBackInAppTest {
     private val otherShows = (8L..10L).map { show.copy(id = it, seriesId = "$it", name = "Show $it") }
 
     private fun waitForHighlightOn(text: String) =
-        compose.waitUntilAtLeastOneExists(isClickable(text) and isFocused(), TIMEOUT_MILLIS)
+        compose.onAllNodes(isClickable(text) and isFocused()).onFirst().assertExists()
 
     private fun showFilmPage() {
         runBlocking {
             graph.database.sources().insert(PANEL_SOURCE)
             graph.database.movies().upsertAll(listOf(film) + otherFilms)
         }
-        val viewModel = viewModels.vod(app, graph)
+        val viewModel = testGraph.viewModel { VodViewModel(app, graph) }
         page.show { leave ->
             MovieDetailScreen(
                 movieId = film.id,
@@ -131,7 +123,7 @@ class DetailPageBackInAppTest {
                                 {"id": "1-3", "episode_num": 3, "title": "Episode 3"},
                                 {"id": "1-4", "episode_num": 4, "title": "Episode 4"}]}}
         """.trimIndent()
-        val viewModel = viewModels.vod(app, graph)
+        val viewModel = testGraph.viewModel { VodViewModel(app, graph) }
         page.show { leave ->
             SeriesDetailScreen(
                 seriesId = show.id,
@@ -162,7 +154,7 @@ class DetailPageBackInAppTest {
     @Test
     fun `Back from a film opened from More like this puts the highlight back on its cover`() {
         showFilmPage()
-        compose.waitUntilAtLeastOneExists(isClickable("Film 8"), TIMEOUT_MILLIS)
+        compose.onAllNodes(isClickable("Film 8")).onFirst().assertExists()
         page.press(Key.DirectionDown)
         page.press(Key.DirectionDown)
         page.press(Key.DirectionRight)
@@ -193,7 +185,7 @@ class DetailPageBackInAppTest {
     @Test
     fun `Back from a show opened from More like this puts the highlight back on its cover`() {
         showShowPage()
-        compose.waitUntilAtLeastOneExists(isClickable("More like this"), TIMEOUT_MILLIS)
+        compose.onAllNodes(isClickable("More like this")).onFirst().assertExists()
         page.press(Key.DirectionDown)
         page.press(Key.DirectionUp)
         page.press(Key.DirectionRight)
@@ -206,9 +198,5 @@ class DetailPageBackInAppTest {
 
         waitForHighlightOn(picked)
         page.clickable("More like this").assertIsSelected()
-    }
-
-    private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
     }
 }

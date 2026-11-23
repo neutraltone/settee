@@ -8,9 +8,11 @@ package app.opentv
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import app.opentv.core.ViewerError
@@ -42,8 +44,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DiagnosticsPaneTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
@@ -59,7 +63,7 @@ class DiagnosticsPaneTest {
 
         compose.onNodeWithText("Save a report to your NAS").assertIsFocused()
         // Gathered from the app's own database and files, not left saying it's still gathering.
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Gathering…")).fetchSemanticsNodes().isEmpty() }
+        compose.onAllNodes(hasText("Gathering…")).assertCountEquals(0)
         listOf("Database", "Storage", "Memory", "Opens", "Errors", "This device").forEach {
             compose.onNodeWithText(it).performScrollTo()
         }
@@ -114,9 +118,7 @@ class DiagnosticsPaneTest {
         SettingsScreen(memory = memory, onBack = {}, onOpenDiagnostics = onOpenDiagnostics, openSubtitles = null)
     }
 
-    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
-        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun waitFor(text: String) = compose.onAllNodes(hasText(text)).onFirst().assertExists()
 
     private companion object {
         val REPORT = DiagnosticsReport(
