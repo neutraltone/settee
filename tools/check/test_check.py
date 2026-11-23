@@ -493,7 +493,7 @@ class CommandTest(unittest.TestCase):
         )
 
     def test_quick_mode_formats_then_runs_the_static_check_that_fails_soonest(self):
-        self.assertEqual(check.gradle_tasks("quick", []), ["ktlintFormat", "detekt"])
+        self.assertEqual(check.gradle_tasks("quick", []), ["ktlintFormat", "detekt", "detektTestWaits"])
 
     def test_a_run_gets_long_enough_to_finish_and_no_longer(self):
         self.assertEqual(check.parse_args(["test", "QuickTest"]), ("test", ["QuickTest"], 8, False))
@@ -532,7 +532,7 @@ class CommandTest(unittest.TestCase):
     def test_all_mode_runs_every_pr_check_without_stopping_at_the_first_failure(self):
         self.assertEqual(
             check.gradle_tasks("all", []),
-            ["testDebugUnitTest", "ktlintCheck", "detekt", "lintDebug", "--continue"],
+            ["testDebugUnitTest", "ktlintCheck", "detekt", "detektTestWaits", "lintDebug", "--continue"],
         )
 
 

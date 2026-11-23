@@ -22,7 +22,7 @@ killed outright, so give whatever runs it longer than its own time, or run it in
 
 Usage, from anywhere in a checkout (a worktree included):
   tools/check/check.py test RecordingsContentTest [OtherTest ...]   the named test classes
-  tools/check/check.py quick      ktlintFormat and detekt: after each change, before the long checks
+  tools/check/check.py quick      ktlintFormat, detekt and detektTestWaits: after each change, before the long checks
   tools/check/check.py all        what a PR's checks run, in one pass that doesn't stop at the first failure
   tools/check/check.py ci         CI's `./gradlew test`, both variants, with Gradle's whole output printed
   tools/check/check.py sweep      kill test processes left running for over half an hour, in any checkout
@@ -99,8 +99,8 @@ class Mode:
 
 MODES = {
     "test": Mode(("testDebugUnitTest",), 8),
-    "quick": Mode(("ktlintFormat", "detekt"), 8),
-    "all": Mode(("testDebugUnitTest", "ktlintCheck", "detekt", "lintDebug", "--continue"), 25),
+    "quick": Mode(("ktlintFormat", "detekt", "detektTestWaits"), 8),
+    "all": Mode(("testDebugUnitTest", "ktlintCheck", "detekt", "detektTestWaits", "lintDebug", "--continue"), 25),
     # Both variants, like `./gradlew test`. Stops before the Unit tests step's own 25 minutes, so
     # the report and dumps still get uploaded; a CI log is read after the fact, so it streams.
     "ci": Mode(("test", "--stacktrace"), 22, (RESULTS, RELEASE_RESULTS), CI_FROZEN_SECONDS, streams=True),

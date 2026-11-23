@@ -1,0 +1,42 @@
+# detektTestWaits (app/build.gradle.kts): the ways a test used to wait for the app's work, banned in
+# test sources (#616, ADR 0008). Only this rule runs here: it needs type resolution, which plain
+# `detekt` hasn't got, so it would be skipped there without a word. The uses that genuinely can't
+# move (ExoPlayer's readiness, plain server threads, TestGraph's own internals) are in
+# app/detekt-baseline.xml; a new test gets no entry there.
+
+style:
+  active: true
+  ForbiddenMethodCall:
+    active: true
+    includes: ['**/test/**']
+    methods:
+      - value: 'java.lang.Thread.sleep'
+        reason: 'A test never waits a set amount of real time: settle through TestGraph (awaitIdle, or any Compose assertion) and then check. See ADR 0008.'
+      - value: 'androidx.compose.ui.test.junit4.ComposeTestRule.waitUntil'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away (onAllNodes(..).onFirst().assertExists()). See ADR 0008."
+      - value: 'androidx.compose.ui.test.junit4.ComposeTestRule.waitUntilAtLeastOneExists'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away. See ADR 0008."
+      - value: 'androidx.compose.ui.test.junit4.ComposeTestRule.waitUntilExactlyOneExists'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away. See ADR 0008."
+      - value: 'androidx.compose.ui.test.junit4.ComposeTestRule.waitUntilDoesNotExist'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away. See ADR 0008."
+      - value: 'androidx.compose.ui.test.junit4.ComposeTestRule.waitUntilNodeCount'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away. See ADR 0008."
+      - value: 'androidx.compose.ui.test.ComposeUiTest.waitUntil'
+        reason: "Waits on wall-clock time. TestGraph counts the app's background work, so assert straight away. See ADR 0008."
+      - value: 'app.opentv.core.ServiceLocator.get'
+        reason: "The process-wide graph leaks work between tests: use TestGraph's graph (testGraph.graph), which stands in for it during the test. See ADR 0008."
+      - value: 'org.robolectric.shadows.ShadowLooper.idle'
+        reason: 'Run the main looper through TestGraph: awaitIdle (or compose.waitForIdle) waits for its work and the graph''s together, advanceBy moves its clock. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.idleFor'
+        reason: 'Move the main looper''s clock with TestGraph.advanceBy, which settles the graph''s work first and after. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.runToEndOfTasks'
+        reason: 'Run the main looper through TestGraph: awaitIdle, or advanceBy for its clock. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.runUiThreadTasks'
+        reason: 'Run the main looper through TestGraph: awaitIdle, or advanceBy for its clock. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks'
+        reason: 'Run the main looper through TestGraph: awaitIdle, or advanceBy for its clock. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.idleMainLooper'
+        reason: 'Run the main looper through TestGraph: awaitIdle, or advanceBy for its clock. See ADR 0008.'
+      - value: 'org.robolectric.shadows.ShadowLooper.runMainLooperToNextTask'
+        reason: 'Run the main looper through TestGraph: awaitIdle, or advanceBy for its clock. See ADR 0008.'

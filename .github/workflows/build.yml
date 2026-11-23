@@ -162,8 +162,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # detektTestWaits bans the old ways of waiting in tests (ADR 0008). It needs type resolution,
+      # which plain `detekt` hasn't got, so it's a task of its own (app/build.gradle.kts).
       - name: detekt
-        run: ./gradlew detekt --stacktrace
+        run: ./gradlew detekt detektTestWaits --stacktrace
 
       - name: Upload detekt report
         if: failure()
