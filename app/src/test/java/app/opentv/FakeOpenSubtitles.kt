@@ -63,8 +63,16 @@ class FakeOpenSubtitles {
      * by the graph: the Android Keystore the graph's sealer uses isn't in Robolectric.
      */
     fun openSubtitles(graph: ServiceLocator.Graph, files: File) = OpenSubtitles(
-        OpenSubtitlesAccount(graph.settings, OpenSubtitlesClient(http, "k", "0.5.0"), FakeSealer()),
-        DownloadedSubtitles(files.resolve("subtitles")),
+        // On the graph's dispatchers, as the graph's own is: on raw Dispatchers.IO a sign-in is work no
+        // settle counts, so a check straight after one could run before it had answered.
+        OpenSubtitlesAccount(
+            graph.settings,
+            OpenSubtitlesClient(http, "k", "0.5.0"),
+            FakeSealer(),
+            graph.clock,
+            graph.dispatchers,
+        ),
+        DownloadedSubtitles(files.resolve("subtitles"), graph.clock, dispatchers = graph.dispatchers),
         graph.catalogRepository,
         graph.sourceRepository,
     )
