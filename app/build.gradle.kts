@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.roborazzi)
     alias(libs.plugins.baselineprofile)
+    alias(libs.plugins.sentry.android)
 }
 
 // A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
@@ -49,6 +50,14 @@ val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
  * and Sentry's own filters limit misuse.
  */
 val sentryDsn: String = builtInKey("SENTRY_DSN", "sentry.dsn")
+
+/*
+ * Lets the release build upload its R8 mapping to Sentry, so a crash report's stack trace reads as
+ * Settee's own class and method names (#577). From the SENTRY_AUTH_TOKEN secret, which only
+ * release.yml passes; blank everywhere else (this Mac, forks, PR CI), where the upload is skipped.
+ * Never in local.properties: a local release build is a .pr build, whose mapping isn't a release's.
+ */
+val sentryAuthToken: String = providers.environmentVariable("SENTRY_AUTH_TOKEN").orNull.orEmpty()
 
 // The profile generator's builds of the app take this plus a suffix (androidComponents below).
 val releaseApplicationId = "uk.neutraltone.settee"
@@ -281,6 +290,40 @@ baselineProfile {
     mergeIntoMain = true
     automaticGenerationDuringBuild = false
     saveInSrc = true
+}
+
+/*
+ * The Sentry Gradle plugin, for one job: the release build's R8 mapping (#577). It bakes an id for the
+ * mapping into the APK's assets, which the SDK puts on every report (CrashScrubbing keeps it, and
+ * nothing else of the debug metadata), and uploads the mapping to Sentry under that id. Sentry matches
+ * a report to its mapping by that id, so a report carrying release VERSION_NAME (CrashReports) reads
+ * with that release's names; it needs no release name of its own (sentry-cli no longer takes one).
+ *
+ * Everything else the plugin does is off: it would rewrite bytecode (tracing, SDK optimisations),
+ * add Sentry modules or the SDK's auto-init back (ADR 0009 starts Sentry by hand, only with consent),
+ * ship source code or a dependency list in the APK, or report the build itself to Sentry.
+ */
+sentry {
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(sentryAuthToken.isNotBlank())
+    authToken.set(sentryAuthToken.ifBlank { null })
+    // Which Sentry project gets it: release.yml's SENTRY_ORG and SENTRY_PROJECT repository variables.
+    org.set(providers.environmentVariable("SENTRY_ORG"))
+    projectName.set(providers.environmentVariable("SENTRY_PROJECT"))
+    // Only the build that ships: not debug, and not the baseline profile generator's builds.
+    ignoredBuildTypes.set(setOf("debug", "nonMinifiedRelease", "benchmarkRelease"))
+    tracingInstrumentation { enabled.set(false) }
+    autoInstallation { enabled.set(false) }
+    runtimeOptimizations { enabled.set(false) }
+    includeDependenciesReport.set(false)
+    includeSourceContext.set(false)
+    uploadNativeSymbols.set(false)
+    includeNativeSources.set(false)
+    sizeAnalysis { enabled.set(false) }
+    distribution { enabled.set(false) }
+    snapshots { enabled.set(false) }
+    verifyOpenTelemetryVersions.set(false)
+    telemetry.set(false)
 }
 
 ktlint {
