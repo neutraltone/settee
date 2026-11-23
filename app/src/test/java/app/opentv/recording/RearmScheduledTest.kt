@@ -21,6 +21,7 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.recording.RecordingFixture.Companion.HOUR
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -138,8 +139,6 @@ class RearmScheduledTest {
     }
 
     private companion object {
-        const val HOUR = 3_600_000L
-
         /** A fixed instant well away from the real clock, so nothing here passes by accident of timing. */
         const val NOW = 1_700_000_000_000L
     }
