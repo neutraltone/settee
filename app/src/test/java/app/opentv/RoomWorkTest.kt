@@ -68,8 +68,10 @@ class RoomWorkTest {
 
     @Test
     fun `an assertion straight after a Room-backed screen appears sees the rows`() {
+        // Built outside composition, as a view model would, so recomposing doesn't make a new flow.
+        val namesFlow = db.sources().observeAll().map { all -> all.joinToString { it.name } }
         compose.setTvContent {
-            val names by db.sources().observeAll().map { all -> all.joinToString { it.name } }.collectAsState("")
+            val names by namesFlow.collectAsState("")
             BasicText(names)
         }
 
