@@ -5,8 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
 import app.opentv.data.repo.Profiles
@@ -18,12 +16,13 @@ import app.opentv.sync.SyncPosition
 import app.opentv.sync.SyncProfileRename
 import app.opentv.sync.SyncProfileSetting
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,18 +37,26 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class SyncSpreadsChangesTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val deviceA = SyncDevice(app, rowIdOffset = 0)
-    private val deviceB = SyncDevice(app, rowIdOffset = 100)
-    private val deviceC = SyncDevice(app, rowIdOffset = 200)
+    private val deviceA = SyncDevice(rowIdOffset = 0)
+    private val deviceB = SyncDevice(rowIdOffset = 100)
+    private val deviceC = SyncDevice(rowIdOffset = 200)
+
+    @get:Rule(order = 0)
+    val graphA = deviceA.testGraph
+
+    @get:Rule(order = 1)
+    val graphB = deviceB.testGraph
+
+    @get:Rule(order = 2)
+    val graphC = deviceC.testGraph
 
     @After
     fun close() {
         runBlocking { deviceB.awaitEpisodes() }
-        deviceA.db.close()
-        deviceB.db.close()
-        deviceC.db.close()
     }
+
+    /** Each device's calls, made on the test's thread; nothing here needs the main thread to turn. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
 
     /** Sends A's state to B the way the transports do: gathered, as JSON, then applied. */
     private suspend fun syncAToB() = deviceB.sync.apply(bundleFromA())
@@ -57,7 +64,7 @@ class SyncSpreadsChangesTest {
     private suspend fun bundleFromA() = deviceB.sync.decode(deviceA.sync.encode(deviceA.sync.gather()))
 
     @Test
-    fun `a Profile removed here doesn't come back from another device or an old NAS file`() = runTest {
+    fun `a Profile removed here doesn't come back from another device or an old NAS file`() = testing {
         deviceA.seed("Tom")
         deviceB.seed("Tom")
         deviceA.favourite("Tom", 1)
@@ -75,7 +82,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `adding a removed name back brings its history from the other device`() = runTest {
+    fun `adding a removed name back brings its history from the other device`() = testing {
         deviceA.seed("Tom")
         deviceB.seed("Tom")
         deviceA.favourite("Tom", 1)
@@ -88,7 +95,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a new Profile of a removed name on another device doesn't lift the removal here`() = runTest {
+    fun `a new Profile of a removed name on another device doesn't lift the removal here`() = testing {
         deviceB.seed("Tom")
         deviceB.graph.profiles.remove(deviceB.profileId("Tom"))
 
@@ -158,7 +165,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a Profile removed while its episodes are being fetched is left with no rows under its id`() = runTest {
+    fun `a Profile removed while its episodes are being fetched is left with no rows under its id`() = testing {
         deviceA.seed("Tom")
         deviceB.openedSeries = false
         deviceB.seed("Tom")
@@ -176,7 +183,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a lock spreads to the other device`() = runTest {
+    fun `a lock spreads to the other device`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
@@ -187,7 +194,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `an unlock stays on its device and a sync doesn't undo it`() = runTest {
+    fun `an unlock stays on its device and a sync doesn't undo it`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
@@ -204,7 +211,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a newer lock from another device applies after an unlock`() = runTest {
+    fun `a newer lock from another device applies after an unlock`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceB.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
@@ -217,7 +224,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a lock passed on by a third device keeps the time it was made`() = runTest {
+    fun `a lock passed on by a third device keeps the time it was made`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceC.seed()
@@ -231,7 +238,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a lock from an old bundle applies only where this device has never changed it`() = runTest {
+    fun `a lock from an old bundle applies only where this device has never changed it`() = testing {
         deviceB.seed()
         deviceB.graph.settings.setCategoryLocked("unlocked", locked = false, now = 2_000)
 
@@ -241,7 +248,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `unstarring a Favourite spreads to the other device`() = runTest {
+    fun `unstarring a Favourite spreads to the other device`() = testing {
         deviceA.seed("Tom")
         deviceB.seed("Tom")
         deviceA.now = 1_000
@@ -256,7 +263,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a Favourite starred again after it was unstarred elsewhere stays, whichever way it syncs`() = runTest {
+    fun `a Favourite starred again after it was unstarred elsewhere stays, whichever way it syncs`() = testing {
         deviceA.seed("Tom")
         deviceB.seed("Tom")
         deviceA.now = 1_000
@@ -276,7 +283,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `an old NAS file doesn't bring back an unstarred Favourite, however long ago it was`() = runTest {
+    fun `an old NAS file doesn't bring back an unstarred Favourite, however long ago it was`() = testing {
         deviceA.seed("Tom")
         deviceB.seed("Tom")
         deviceB.now = 1_000
@@ -292,7 +299,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a Favourite with no time applies only where this device has never changed it`() = runTest {
+    fun `a Favourite with no time applies only where this device has never changed it`() = testing {
         deviceB.seed("Tom")
         deviceB.now = 1_000
         deviceB.favourite("Tom", 1)
@@ -311,7 +318,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `unhiding a channel spreads, and an old NAS file doesn't hide it again`() = runTest {
+    fun `unhiding a channel spreads, and an old NAS file doesn't hide it again`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceA.now = 1_000
@@ -330,7 +337,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `the newer of two changes to a channel wins, and a tie keeps what's here`() = runTest {
+    fun `the newer of two changes to a channel wins, and a tie keeps what's here`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceA.now = 2_000
@@ -348,7 +355,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a hidden channel with no time applies only where this device has never changed it`() = runTest {
+    fun `a hidden channel with no time applies only where this device has never changed it`() = testing {
         deviceB.seed()
         deviceB.now = 1_000
         deviceB.hide(1)
@@ -368,7 +375,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename spreads, taking the Profile's history with it`() = runTest {
+    fun `a rename spreads, taking the Profile's history with it`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -388,7 +395,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename reaches a third device through the second`() = runTest {
+    fun `a rename reaches a third device through the second`() = testing {
         listOf(deviceA, deviceB, deviceC).forEach {
             it.now = 1_000
             it.seed("Tom")
@@ -403,7 +410,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename onto a name this device has merges the two, newest wins`() = runTest {
+    fun `a rename onto a name this device has merges the two, newest wins`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -426,7 +433,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `anything still labelled with the old name lands on the new one`() = runTest {
+    fun `anything still labelled with the old name lands on the new one`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -447,7 +454,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `renames in a chain apply in time order`() = runTest {
+    fun `renames in a chain apply in time order`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -463,7 +470,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename and back ends on the first name, and stays there on every later sync`() = runTest {
+    fun `a rename and back ends on the first name, and stays there on every later sync`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -483,7 +490,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename that only changes case never merges a Profile into itself`() = runTest {
+    fun `a rename that only changes case never merges a Profile into itself`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("tom")
@@ -499,7 +506,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename seen again changes nothing, even after this device adds the old name`() = runTest {
+    fun `a rename seen again changes nothing, even after this device adds the old name`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -518,7 +525,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a new Profile with a renamed Profile's old name keeps what's dated after it, on every device`() = runTest {
+    fun `a new Profile with a renamed Profile's old name keeps what's dated after it, on every device`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -544,7 +551,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename of a Profile removed here puts the new name on the removed list`() = runTest {
+    fun `a rename of a Profile removed here puts the new name on the removed list`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -561,7 +568,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename onto a name removed here happens, and the name comes off the list`() = runTest {
+    fun `a rename onto a name removed here happens, and the name comes off the list`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed("Tom")
@@ -578,7 +585,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a merge keeps the base Profile, whichever name it ends up with, and moves the active Profile`() = runTest {
+    fun `a merge keeps the base Profile, whichever name it ends up with, and moves the active Profile`() = testing {
         deviceA.now = 1_000
         deviceB.now = 1_000
         deviceA.seed()
@@ -598,7 +605,7 @@ class SyncSpreadsChangesTest {
 
     @Test
     fun `a rename still reaches the old Profile after another device's newer add of that name arrives first`() =
-        runTest {
+        testing {
             listOf(deviceA, deviceB, deviceC).forEach {
                 it.now = 1_000
                 it.seed("Tom")
@@ -621,7 +628,7 @@ class SyncSpreadsChangesTest {
         }
 
     @Test
-    fun `a rename to a blank name is ignored and not passed on`() = runTest {
+    fun `a rename to a blank name is ignored and not passed on`() = testing {
         deviceB.seed("Tom")
 
         deviceB.sync.apply(SyncBundle(profileRenames = listOf(SyncProfileRename("Tom", "  ", 5))))
@@ -631,7 +638,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a rename's new name arrives without stray spaces`() = runTest {
+    fun `a rename's new name arrives without stray spaces`() = testing {
         deviceB.now = 1
         deviceB.seed("Tom")
 
@@ -641,7 +648,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `an old NAS file doesn't hide a channel again after the provider dropped it for a while`() = runTest {
+    fun `an old NAS file doesn't hide a channel again after the provider dropped it for a while`() = testing {
         deviceA.seed()
         deviceB.seed()
         deviceA.now = 1_000
@@ -660,7 +667,7 @@ class SyncSpreadsChangesTest {
     }
 
     @Test
-    fun `a channel hidden before the provider dropped it is still hidden when it returns`() = runTest {
+    fun `a channel hidden before the provider dropped it is still hidden when it returns`() = testing {
         deviceB.seed()
         deviceB.now = 2_000
         deviceB.hide(1)

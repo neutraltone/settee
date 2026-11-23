@@ -425,6 +425,7 @@ object ServiceLocator {
                 errorWording,
                 openFile = openRecordingFile,
                 clock = clock,
+                io = dispatchers.io,
             )
         }
     }

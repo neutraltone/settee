@@ -21,6 +21,8 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
+import app.opentv.recording.RecordingStorage
+import app.opentv.recording.StreamCapture
 import java.time.Duration
 import java.util.Collections
 import java.util.WeakHashMap
@@ -81,7 +83,8 @@ import org.robolectric.Shadows.shadowOf
  * test that changes settings the process's other tests would see; without one, it has the process's
  * settings, as `ServiceLocator.Graph(app)` does. Only the graph with [swapIn] stands in for the app's
  * own, so a sync test's second device doesn't. [statements] hears every statement the database
- * runs, on the thread running it, for a test that counts reads.
+ * runs, on the thread running it, for a test that counts reads. [openRecordingFile] and
+ * [captureReconnectMillis] are the graph's own, for a recording's storage and its reconnects.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Each is a Graph setting a test may need.
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -94,6 +97,8 @@ class TestGraph(
     private val decoders: DecoderList? = null,
     private val swapIn: Boolean = true,
     private val statements: ((String) -> Unit)? = null,
+    private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
+    private val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
 ) : TestRule,
     IdlingResource {
     init {
@@ -124,6 +129,8 @@ class TestGraph(
             clock = clock ?: System::currentTimeMillis,
             dispatchers = AppDispatchers(io, default),
             decoders = decoders ?: DeviceDecoders(),
+            openRecordingFile = openRecordingFile,
+            captureReconnectMillis = captureReconnectMillis,
         ) { openDatabase().also { opened = true } }
     }
 
