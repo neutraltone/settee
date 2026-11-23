@@ -5,6 +5,8 @@
  */
 package app.opentv
 
+import android.net.Uri
+import android.os.SystemClock
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
@@ -25,6 +27,7 @@ import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.DecoderSize
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.ERROR_DETAIL_TAG
@@ -32,6 +35,7 @@ import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -178,5 +182,39 @@ class PlayerErrorPanelTest {
         players.until { controller.state.value is PlayerController.State.Playing }
 
         assertThat(players.played).hasSize(4)
+    }
+
+    @Test
+    fun `a recording whose file has gone from this device says so at once, with Back alone and no restarts`() {
+        val gone = File(app.filesDir, "recordings/gone.ts")
+        var resolves = 0
+        val controller = players.realSourceController { key ->
+            resolves++
+            Playable.Ready(key, Uri.fromFile(gone).toString(), "", "Film", isLive = false, RecordedOn.DEVICE)
+        }
+        toRelease += controller
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
+        val asked = SystemClock.uptimeMillis()
+
+        controller.play(PlayerController.Request(MediaKey.Recording(1)), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.reason.sentence).isEqualTo("This recording's file isn't there any more.")
+        assertThat(error.canRetry).isFalse()
+        // Not after the load's backoff, which would keep the spinner up for 15 seconds first.
+        assertThat(SystemClock.uptimeMillis() - asked).isLessThan(SOON_MILLIS)
+        waitForSentence("isn't there any more")
+        compose.onNodeWithText("Back").assertIsFocused()
+        compose.onNodeWithText("Try again").assertDoesNotExist()
+        captureScreen("vod_player_recording_missing")
+
+        players.advance(TestPlayers.RESTARTS_MILLIS)
+        assertThat(resolves).isEqualTo(1)
+    }
+
+    private companion object {
+        /** Well under the 15 seconds the load's backoffs add up to, and over handing a stream to the player. */
+        const val SOON_MILLIS = 3_000L
     }
 }

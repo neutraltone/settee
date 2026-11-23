@@ -15,15 +15,24 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.upstream.Loader
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.DecoderLog
 import app.opentv.player.PlaybackErrors
 import app.opentv.player.readableCodeName
 import com.google.common.truth.Truth.assertThat
+import com.hierynomus.mserref.NtStatus
+import com.hierynomus.mssmb2.SMB2MessageCommandCode
+import com.hierynomus.mssmb2.SMBApiException
+import java.io.FileNotFoundException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import org.junit.Test
@@ -308,6 +317,99 @@ class PlaybackErrorsTest {
     }
 
     @Test
+    fun `a recording whose file is gone says so, and on a USB drive asks for the drive`() {
+        val gone = ExoPlaybackException.createForSource(
+            FileDataSource.FileDataSourceException(
+                FileNotFoundException(),
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            ),
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+        )
+        val expected = mapOf(
+            RecordedOn.DEVICE to "This recording's file isn't there any more.",
+            RecordedOn.NAS to "This recording's file isn't there any more.",
+            RecordedOn.USB to
+                "Can't find this recording on your USB drive. Check it's plugged in, then try again.",
+        )
+
+        expected.forEach { (storage, sentence) ->
+            val shown = PlaybackErrors.describe(context, gone, onTelevision = true, recordedOn = storage)
+            assertThat(shown.sentence).isEqualTo(sentence)
+            assertThat(shown.detail).isEqualTo("IO file not found")
+        }
+    }
+
+    @Test
+    fun `a NAS recording that can't be read says to check the NAS, however the NAS failed`() {
+        nasFailures().forEach { failure ->
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
+            assertThat(shown.sentence).isEqualTo(NAS_UNREACHABLE)
+            assertThat(shown.detail).isEqualTo("IO unspecified")
+        }
+    }
+
+    @Test
+    fun `the same failures on a provider's stream are still worded as the provider's`() {
+        val expected = listOf(
+            "Can't reach your provider. Check this TV is online and the address is right.",
+            "Your provider stopped responding. It may be busy, so try again in a moment.",
+            "Can't reach your provider. Check this TV is online and the address is right.",
+            "This didn't play. Try again, or pick something else.",
+        )
+
+        nasFailures().zip(expected).forEach { (failure, sentence) ->
+            assertThat(PlaybackErrors.describe(context, failure, onTelevision = true).sentence).isEqualTo(sentence)
+        }
+    }
+
+    @Test
+    fun `a NAS recording that never starts says to check the NAS, and a provider's stream still blames the provider`() {
+        val nas = PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT, RecordedOn.NAS)
+        val provider = PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT)
+
+        assertThat(nas).isEqualTo(ViewerError(NAS_UNREACHABLE, "StartUpLimit"))
+        assertThat(provider).isEqualTo(
+            ViewerError("Your provider stopped responding. It may be busy, so try again in a moment.", "StartUpLimit"),
+        )
+    }
+
+    @Test
+    fun `a NAS recording's decoder or memory failure is worded as it always was`() {
+        val outOfMemory = ExoPlaybackException.createForSource(
+            Loader.UnexpectedLoaderException(OutOfMemoryError("Failed to allocate")),
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+        )
+        val expected = mapOf(
+            outOfMemory to "This stream needs more memory than this TV has. A different quality may work.",
+            PlaybackException(null, null, PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED) to
+                "This video is damaged and won't play. That's at your provider's end, so try something else.",
+            decoderFailure(format = null) to "This TV can't play this format.",
+        )
+
+        expected.forEach { (failure, sentence) ->
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
+            assertThat(shown.sentence).isEqualTo(sentence)
+        }
+    }
+
+    @Test
+    fun `the IO codes only HTTP raises keep their own wording, even said of a NAS recording`() {
+        val expected = mapOf(
+            PlaybackException(null, null, PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE) to
+                "Your provider sent a web page instead of video. The link may have expired, " +
+                "so try refreshing your provider in Settings.",
+            httpFailure(403) to
+                "Your provider refused this. Your account may be in use on another device, " +
+                "so stop it there and try again.",
+        )
+
+        expected.forEach { (failure, sentence) ->
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
+            assertThat(shown.sentence).isEqualTo(sentence)
+        }
+    }
+
+    @Test
     fun `nothing from the exception's own message reaches the sentence or the detail line`() {
         val secret = "http://example.com:8080/live/u/p/1.ts mac=00:1A:79:00:00:01"
         val format = Format.Builder().setId(secret).setLabel(secret).setSampleMimeType(MimeTypes.VIDEO_H265).build()
@@ -450,6 +552,19 @@ class PlaybackErrorsTest {
         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
     )
 
+    /**
+     * How a NAS fails as the player reports it: SmbDataSource lets smbj's exceptions through, so a network
+     * one is a source error with no code of its own, and an SMB refusal is wrapped by the loader.
+     */
+    private fun nasFailures() = listOf(
+        ConnectException("Connection refused"),
+        SocketTimeoutException("Read timed out"),
+        NoRouteToHostException("No route to host"),
+        Loader.UnexpectedLoaderException(
+            SMBApiException(NtStatus.STATUS_LOGON_FAILURE.value, SMB2MessageCommandCode.SMB2_SESSION_SETUP, null),
+        ),
+    ).map { ExoPlaybackException.createForSource(it, PlaybackException.ERROR_CODE_IO_UNSPECIFIED) }
+
     private fun unreachable() = ExoPlaybackException.createForSource(
         UnknownHostException("Unable to resolve host \"example.com\""),
         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
@@ -470,6 +585,9 @@ class PlaybackErrorsTest {
     )
 
     private companion object {
+        const val NAS_UNREACHABLE =
+            "Couldn't reach your NAS. Check it's on and the details in Recording settings are right."
+
         val EVENT_TIME = AnalyticsListener.EventTime(0, Timeline.EMPTY, 0, null, 0, Timeline.EMPTY, 0, null, 0, 0)
     }
 }

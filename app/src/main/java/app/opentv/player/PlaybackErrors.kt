@@ -18,6 +18,7 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.core.hardware
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.RecordedOn
 import java.util.Locale
 
 /**
@@ -35,17 +36,20 @@ object PlaybackErrors {
 
     /**
      * The sentence and detail line for [error]. [onTelevision] picks "this TV" over "this device";
-     * [format] is the stream's, for the detail line, when the error doesn't name its own.
+     * [format] is the stream's, for the detail line, when the error doesn't name its own. [recordedOn] is
+     * where a finished recording is kept, null for anything else.
      */
     fun describe(
         context: Context,
         error: PlaybackException,
         onTelevision: Boolean,
         format: Format? = null,
+        recordedOn: RecordedOn? = null,
     ): ViewerError {
         val status = (error.cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return ViewerError(
-            sentence = sentenceOf(context, error, onTelevision),
+            sentence = recordingSentenceOf(error, recordedOn)?.let(context::getString)
+                ?: sentenceOf(context, error, onTelevision),
             detail = ViewerError.detailOf(
                 readableCodeName(error.errorCodeName),
                 status?.let { "HTTP $it" },
@@ -132,12 +136,15 @@ object PlaybackErrors {
 
     /**
      * Why [stopped]. Nothing failed, so there's no code, status or format to show; the detail line names
-     * what happened instead, as [Playable.Failure]'s do.
+     * what happened instead, as [Playable.Failure]'s do. [recordedOn] is where a finished recording is kept,
+     * null for anything else.
      */
-    fun describe(context: Context, stopped: Stopped): ViewerError = ViewerError(
+    fun describe(context: Context, stopped: Stopped, recordedOn: RecordedOn? = null): ViewerError = ViewerError(
         context.getString(
             when (stopped) {
-                Stopped.START_UP_LIMIT -> R.string.error_timed_out
+                // A NAS that's off can take longer than the limit to refuse, once the retries add up.
+                Stopped.START_UP_LIMIT ->
+                    if (recordedOn == RecordedOn.NAS) R.string.sync_nas_failed else R.string.error_timed_out
                 Stopped.STREAM_ENDED -> R.string.error_live_ended
             },
         ),
@@ -209,6 +216,33 @@ object PlaybackErrors {
     /** Far deeper than Media3 wraps anything, and stops a cause that loops back on itself. */
     private const val MAX_CAUSE_DEPTH = 10
 }
+
+/**
+ * Why a finished recording kept on [recordedOn] couldn't be read, worded for where it's kept; null for anything
+ * else, which is worded as a provider's stream is.
+ */
+private fun recordingSentenceOf(error: PlaybackException, recordedOn: RecordedOn?): Int? = when {
+    recordedOn == null -> null
+    error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> when (recordedOn) {
+        RecordedOn.USB -> R.string.error_recording_usb_missing
+        RecordedOn.NAS, RecordedOn.DEVICE -> R.string.error_recording_missing
+    }
+    // Memory is reported with an IO code too, and isn't the NAS's doing.
+    PlaybackErrors.isOutOfMemory(error) -> null
+    // smbj's exceptions reach the player as they are, so its network ones would read as the provider's and its
+    // SMB refusals, wrapped by the loader, as "try again". Whichever it was, the NAS is the place to look.
+    recordedOn == RecordedOn.NAS && error.errorCode in NAS_READ_ERRORS -> R.string.sync_nas_failed
+    else -> null
+}
+
+/**
+ * Media3's input and output errors, which it numbers 2xxx, but for the two only HTTP raises: a NAS can't, and
+ * they keep their own wording.
+ */
+private val NAS_READ_ERRORS = (PlaybackException.ERROR_CODE_IO_UNSPECIFIED until 3000) - setOf(
+    PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+    PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+)
 
 /** "ERROR_CODE_IO_BAD_HTTP_STATUS" as "IO bad HTTP status", for the detail line. */
 internal fun readableCodeName(name: String): String = name.removePrefix("ERROR_CODE_")

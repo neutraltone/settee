@@ -361,15 +361,23 @@ then the player restarts silently, up to two times. `401`, `404` and `410` are *
 those will not fix themselves.
 
 Whether anything else is retried is left to ExoPlayer's own policy, which deliberately doesn't
-retry a stream that won't parse, a missing file, a cleartext refusal or running out of memory.
-Providers often answer an expired account or a blocked channel with HTTP 200 and an HTML page,
-and backing that off, then restarting, kept the spinner up for about 50 seconds before the error
-showed (#255). `PlaybackRecovery` decides the restarts: a stream that won't parse from the start
-isn't restarted silently, but Retry stays on offer, as it does for running out of memory; one that
-played and then broke is restarted, since that's more likely a bad segment than an HTML page. A
-format this device can't decode gets neither. The limit of two silent restarts stops only the
-restarts: Retry stays on offer after them, because the viewer may have since stopped the stream on
-their other device, and it starts the count afresh with two more silent restarts (#460).
+retry a stream that won't parse, a cleartext refusal or running out of memory. Providers often
+answer an expired account or a blocked channel with HTTP 200 and an HTML page, and backing that
+off, then restarting, kept the spinner up for about 50 seconds before the error showed (#255).
+ExoPlayer means not to retry a missing file either, but it looks for a `FileNotFoundException`, and
+its own file and content sources wrap theirs in a `DataSourceException`, so a recording whose file
+had gone spun through every backoff first. So `IptvLoadErrorPolicy` gives up on
+`ERROR_CODE_IO_FILE_NOT_FOUND` itself, and `SmbDataSource` reports a NAS file that isn't there with
+that code too (#475).
+
+`PlaybackRecovery` decides the restarts: a stream that won't parse from the start isn't restarted
+silently, but Retry stays on offer, as it does for running out of memory; one that played and then
+broke is restarted, since that's more likely a bad segment than an HTML page. A format this device
+can't decode gets neither, and nor does a finished recording whose file has gone, unless it's on a
+USB drive, where plugging the drive back in brings it back, so Retry stays (#475). The limit of two
+silent restarts stops only the restarts: Retry stays on offer after them, because the viewer may
+have since stopped the stream on their other device, and it starts the count afresh with two more
+silent restarts (#460).
 
 A live stream can also simply end, with no error: a provider closes the TS connection cleanly when
 another device on the account connects or a session runs out, and an HLS playlist gains

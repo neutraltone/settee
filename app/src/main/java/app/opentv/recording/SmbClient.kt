@@ -111,9 +111,9 @@ object SmbClient {
 
     /**
      * What the share answers for a file that isn't there, or is already on its way out (a delete
-     * while the capture still holds it open): to [delete], already done.
+     * while the capture still holds it open): to [delete], already done; to playback, a missing file.
      */
-    private val ALREADY_GONE = setOf(
+    internal val ALREADY_GONE = setOf(
         NtStatus.STATUS_OBJECT_NAME_NOT_FOUND,
         NtStatus.STATUS_OBJECT_PATH_NOT_FOUND,
         NtStatus.STATUS_NOT_FOUND,

@@ -8,8 +8,12 @@ package app.opentv
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.ParserException
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.ContentDataSource
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
@@ -49,6 +53,25 @@ class IptvLoadErrorPolicyTest {
         hopeless.forEach { exception ->
             assertThat(policy.getRetryDelayMsFor(info(exception, errorCount = 1)))
                 .isEqualTo(C.TIME_UNSET)
+        }
+    }
+
+    @Test
+    fun `a recording whose file is gone isn't retried, from this device, a USB drive or the NAS`() {
+        val gone = listOf(
+            FileDataSource.FileDataSourceException(
+                FileNotFoundException(),
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            ),
+            ContentDataSource.ContentDataSourceException(
+                FileNotFoundException(),
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            ),
+            DataSourceException(IOException(), PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND),
+        )
+
+        gone.forEach { exception ->
+            assertThat(policy.getRetryDelayMsFor(info(exception, errorCount = 1))).isEqualTo(C.TIME_UNSET)
         }
     }
 

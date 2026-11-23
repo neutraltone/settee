@@ -763,6 +763,8 @@
     <string name="error_damaged">This video is damaged and won\'t play. That\'s at your provider\'s end, so try something else.</string>
     <string name="error_behind_live">This channel fell too far behind live. Try again to catch up.</string>
     <string name="error_gone">This isn\'t on your provider any more. Try refreshing your provider in Settings.</string>
+    <string name="error_recording_missing">This recording\'s file isn\'t there any more.</string>
+    <string name="error_recording_usb_missing">Can\'t find this recording on your USB drive. Check it\'s plugged in, then try again.</string>
     <string name="error_too_big_tv">This video is too big for this TV to play.</string>
     <string name="error_too_big_device">This video is too big for this device to play.</string>
     <string name="error_no_first_frame_tv">This TV couldn\'t show this video. Try again, or pick something else.</string>

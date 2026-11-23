@@ -66,8 +66,8 @@ class VoiceStringsTest {
 
     /**
      * Added in English only, with translating them left to #492: the phone's setup page, worded from
-     * the app's strings by #469, and why a recording cut off when Settee closed failed (#474). They
-     * fall back to English until then.
+     * the app's strings by #469, why a recording cut off when Settee closed failed (#474), and a
+     * finished recording whose file has gone (#475). They fall back to English until then.
      */
     private val awaitingTranslation = setOf(
         "pairing_phone_missing_address",
@@ -75,6 +75,8 @@ class VoiceStringsTest {
         "pairing_phone_too_many_body",
         "pairing_phone_local_only",
         "rec_error_interrupted",
+        "error_recording_missing",
+        "error_recording_usb_missing",
     )
 
     @Test

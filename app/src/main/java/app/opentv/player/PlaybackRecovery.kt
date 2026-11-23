@@ -7,6 +7,7 @@ package app.opentv.player
 
 import androidx.media3.common.PlaybackException
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.RecordedOn
 
 /** What can be done about a failed stream: the viewer offered Retry, the player restarting it by itself. */
 internal data class Recovery(val canRetry: Boolean, val canRestart: Boolean)
@@ -19,13 +20,23 @@ internal object PlaybackRecovery {
 
     /**
      * After [error], the [failuresInARow]th on this stream; [hadPlayed] is whether it reached playing
-     * since it last loaded.
+     * since it last loaded, and [recordedOn] where a finished recording is kept, null for anything else.
      */
-    fun after(error: PlaybackException, failuresInARow: Int, hadPlayed: Boolean): Recovery {
+    fun after(
+        error: PlaybackException,
+        failuresInARow: Int,
+        hadPlayed: Boolean,
+        recordedOn: RecordedOn? = null,
+    ): Recovery {
         // Restarting can't change what this device can decode, and on a portal it would only mint
         // more links for a stream that will fail the same way. How many times it failed doesn't
         // count here: the viewer may have stopped the stream on their other device since (#460).
-        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS
+        //
+        // A recording whose file is gone won't have it back by asking again, unless it's on a USB drive the
+        // viewer can plug back in (#475). A provider's stream never fails this way: its missing stream is an
+        // HTTP status.
+        val gone = error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS && (!gone || recordedOn == RecordedOn.USB)
         // Running out of memory took the Stick over a minute (#180), so a silent restart would hide
         // the message for another minute. Retry stays on offer: the memory may be free by the time
         // the viewer asks.
@@ -34,7 +45,7 @@ internal object PlaybackRecovery {
         // account or a blocked channel, which a restart only fetches again (#255); Retry stays for
         // when the viewer has sorted the account out. One that played first and then broke is more
         // likely a bad segment, which a restart gets past.
-        val hopeless = PlaybackErrors.isOutOfMemory(error) || (error.errorCode in PARSE_FAILURES && !hadPlayed)
+        val hopeless = gone || PlaybackErrors.isOutOfMemory(error) || (error.errorCode in PARSE_FAILURES && !hadPlayed)
         return Recovery(
             canRetry = canRetry,
             canRestart = canRetry && !hopeless && failuresInARow < MAX_AUTO_RESTARTS,
@@ -86,9 +97,12 @@ internal class RestartCounts {
     private var endings = 0
     private var lastEndedAtMillis = 0L
 
-    /** After [error]; [hadPlayed] is whether the stream reached playing since it last loaded. */
-    fun failed(error: PlaybackException, hadPlayed: Boolean): Recovery =
-        PlaybackRecovery.after(error, ++failures, hadPlayed)
+    /**
+     * After [error]; [hadPlayed] is whether the stream reached playing since it last loaded, and [recordedOn]
+     * where it's kept if it's a finished recording.
+     */
+    fun failed(error: PlaybackException, hadPlayed: Boolean, recordedOn: RecordedOn?): Recovery =
+        PlaybackRecovery.after(error, ++failures, hadPlayed, recordedOn)
 
     /**
      * The stream is playing. That clears its failures but not its endings: a playlist that ended plays

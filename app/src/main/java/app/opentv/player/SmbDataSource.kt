@@ -8,15 +8,18 @@ package app.opentv.player
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import app.opentv.core.AppSettings
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbReader
+import com.hierynomus.mssmb2.SMBApiException
 
 /**
  * A Media3 data source that reads a recording straight off a NAS over SMB, at arbitrary offsets —
@@ -38,7 +41,17 @@ class SmbDataSource(private val openReader: (locator: String) -> SmbReader) : Ba
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
         uri = dataSpec.uri
-        val handle = openReader(dataSpec.uri.toString())
+        val handle = try {
+            openReader(dataSpec.uri.toString())
+        } catch (e: SMBApiException) {
+            // As Media3's own file source reports a missing file. smbj's exception would reach the
+            // player as an unexpected error instead, and be restarted and offered Try again for a
+            // file that isn't coming back (#475).
+            if (e.status in SmbClient.ALREADY_GONE) {
+                throw DataSourceException(e, PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
+            }
+            throw e
+        }
         this.handle = handle
         readAhead.reader = handle
         position = dataSpec.position

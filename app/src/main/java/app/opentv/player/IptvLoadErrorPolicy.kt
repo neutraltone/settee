@@ -7,7 +7,9 @@ package app.opentv.player
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -26,7 +28,8 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
  * number of retries turns that page into video. Backing those off too kept the spinner up for
  * about 15 seconds per attempt before the viewer saw why (#255). Asking it whether, rather than
  * listing exception types here, keeps the NAS and recordings, whose sources aren't HTTP, on the
- * same backoff as a provider's stream.
+ * same backoff as a provider's stream. The one exception is a missing file, which ExoPlayer means
+ * not to retry but misses when its sources wrap it (see [getRetryDelayMsFor]).
  */
 @OptIn(UnstableApi::class)
 internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
@@ -34,6 +37,11 @@ internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
     override fun getRetryDelayMsFor(info: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
         val statusCode = (info.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return when {
+            // ExoPlayer counts a FileNotFoundException as hopeless, but its file and content sources wrap
+            // theirs, so a recording whose file is gone spun through every backoff before saying so (#475).
+            (info.exception as? DataSourceException)?.reason == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+                C.TIME_UNSET
+
             statusCode == null -> if (super.getRetryDelayMsFor(info) == C.TIME_UNSET) {
                 C.TIME_UNSET
             } else {
