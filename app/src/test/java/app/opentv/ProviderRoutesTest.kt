@@ -327,12 +327,14 @@ class ProviderRoutesTest {
         compose.onNodeWithText("Set up from your phone").performClick()
         // The phone screen's server is the app's own, not the OpenSubtitles graph's.
         val server = graph.pairingServer
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { server.state.value !is PairingServer.State.Idle } }
+        compose.waitUntil(PHONE_WAIT_MILLIS) {
+            compose.runOnIdle { server.state.value !is PairingServer.State.Idle }
+        }
         val session = (server.state.value as? PairingServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         val phone = thread { submitFromPhone(session!!) }
         // Polled: the phone's provider comes in on the pairing server's own threads, which no settle sees.
-        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(PHONE_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
 
         Espresso.pressBack()
 
@@ -345,14 +347,16 @@ class ProviderRoutesTest {
         // it, but here the step has the test graph's, so it's stopped as the step would.
         compose.runOnIdle { server.stop() }
         // Listening again, with its code showing, for the phone to send a provider again.
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
+        compose.waitUntil(PHONE_WAIT_MILLIS) {
+            compose.runOnIdle { server.state.value is PairingServer.State.Listening }
+        }
         compose.onNodeWithText("Then enter this code on your phone").assertExists()
         phone.join(5_000)
 
         // Sent again, it's the first provider again, so the phone carries on to OpenSubtitles too.
         val again = (server.state.value as PairingServer.State.Listening).session
         val second = thread { submitFromPhone(again) }
-        compose.waitUntil(UI_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.waitUntil(PHONE_WAIT_MILLIS) { route() == Routes.OPENSUBTITLES_STEP }
         assertThat(compose.runOnIdle { server.state.value }).isInstanceOf(PairingServer.State.Listening::class.java)
         second.join(5_000)
         server.stop()
@@ -628,3 +632,10 @@ class ProviderRoutesTest {
 
 /** The start of what a playlist with no channels says (core/ErrorWording). */
 private const val NO_CHANNELS = "There are no channels at that address"
+
+/**
+ * How long the phone test waits for the pairing server: what the phone sends arrives on that
+ * server's own plain threads, which TestGraph doesn't count, so those few checks poll. The wait ends
+ * as soon as it's met; this only decides how long a failure takes.
+ */
+private const val PHONE_WAIT_MILLIS = 15_000L

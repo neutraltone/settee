@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * `ServiceLocator.Graph` without `openDatabase` opens) runs its queries, suspend and Flow alike, on
  * `ArchTaskExecutor.getIOThreadExecutor()`, which hands each task to whichever delegate is set at the
  * time. So one delegate covers every such database with no change to production code. A database
- * built with its own query executor, as `HeldCatalogue`'s is, isn't counted, which its held reads
- * rely on: the skeleton tests check the screen while a read is held.
+ * built with its own query executor, as [TestGraph]'s is, isn't counted here: the graph counts it
+ * itself, and leaves out the reads it holds, so a test can check the screen while one is held.
  */
 @SuppressLint("RestrictedApi")
 object RoomWork : IdlingResource {
