@@ -22,7 +22,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
@@ -433,7 +432,7 @@ class XtreamApi(
             file.delete()
             throw e
         }
-        return CatalogueList(file, json, parse, dispatchers.io)
+        return CatalogueList(file, json, parse, dispatchers)
     }
 
     /**
@@ -444,7 +443,7 @@ class XtreamApi(
         private val file: File,
         private val json: Json,
         private val parse: (JsonObject) -> T?,
-        private val io: CoroutineDispatcher,
+        private val dispatchers: AppDispatchers,
     ) : Closeable {
         /**
          * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
@@ -452,35 +451,36 @@ class XtreamApi(
          * is an empty list, HTML the "not a valid catalogue" message, which can come after some
          * batches if a list is cut off.
          */
-        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) = withContext(io) {
-            // The file's size is known even when the panel didn't say how big its reply was.
-            val size = file.length().coerceAtLeast(1)
-            var read = 0L
-            val batch = ArrayList<T>(CATALOGUE_BATCH)
-            suspend fun each(element: JsonElement) {
-                batch += element.jsonObjectOrNull?.let(parse) ?: return
-                if (batch.size == CATALOGUE_BATCH) {
-                    save(batch.toList())
-                    batch.clear()
-                    progress((read.toFloat() / size).coerceAtMost(1f))
+        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) =
+            withContext(dispatchers.io) {
+                // The file's size is known even when the panel didn't say how big its reply was.
+                val size = file.length().coerceAtLeast(1)
+                var read = 0L
+                val batch = ArrayList<T>(CATALOGUE_BATCH)
+                suspend fun each(element: JsonElement) {
+                    batch += element.jsonObjectOrNull?.let(parse) ?: return
+                    if (batch.size == CATALOGUE_BATCH) {
+                        save(batch.toList())
+                        batch.clear()
+                        progress((read.toFloat() / size).coerceAtMost(1f))
+                    }
                 }
-            }
-            CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
-                while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
-                if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
-                    val elements = json.decodeToSequence<JsonElement>(
-                        body.inputStream(),
-                        DecodeSequenceMode.ARRAY_WRAPPED,
-                    )
-                        .iterator()
-                    while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
-                } else {
-                    parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
+                    while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
+                    if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
+                        val elements = json.decodeToSequence<JsonElement>(
+                            body.inputStream(),
+                            DecodeSequenceMode.ARRAY_WRAPPED,
+                        )
+                            .iterator()
+                        while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+                    } else {
+                        parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                    }
                 }
+                if (batch.isNotEmpty()) save(batch.toList())
+                progress(1f)
             }
-            if (batch.isNotEmpty()) save(batch.toList())
-            progress(1f)
-        }
 
         override fun close() {
             file.delete()

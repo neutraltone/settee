@@ -5,19 +5,21 @@
  */
 package app.opentv.diagnostics
 
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * Saves a report to the NAS share sync and recordings already use, the one place off the device the
  * viewer has set up: a Stick's release build can't be reached by adb, so this is how a report leaves it.
  */
-class DiagnosticsExport(private val settings: AppSettings, private val io: CoroutineDispatcher = Dispatchers.IO) {
+class DiagnosticsExport(
+    private val settings: AppSettings,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
+) {
 
     sealed interface Result {
         /** [name] is where it went, within the share. */
@@ -29,7 +31,7 @@ class DiagnosticsExport(private val settings: AppSettings, private val io: Corou
         data class Failed(val cause: Throwable) : Result
     }
 
-    suspend fun save(report: DiagnosticsReport, madeAtUtcMillis: Long): Result = withContext(io) {
+    suspend fun save(report: DiagnosticsReport, madeAtUtcMillis: Long): Result = withContext(dispatchers.io) {
         val config = RecordingStorage.smbConfig(settings)
         if (!config.isConfigured) return@withContext Result.NotConfigured
         val name = diagnosticsFileName(settings.syncDeviceId, madeAtUtcMillis)

@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.RecordingDao
 import app.opentv.data.db.SeriesRuleDao
 import app.opentv.data.model.Recording
@@ -13,7 +14,6 @@ import app.opentv.data.model.SeriesRule
 import app.opentv.recording.SmbClient
 import app.opentv.sync.SyncRecording
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +23,8 @@ import kotlinx.coroutines.flow.shareIn
 class RecordingRepository(
     private val dao: RecordingDao,
     private val ruleDao: SeriesRuleDao,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    dispatchers: AppDispatchers = AppDispatchers(),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.io),
 ) {
     // One query shared by every screen that shows what's recording: Live TV, Home and the player
     // ask for this while composing, and a new Room flow each time restarted the query on every

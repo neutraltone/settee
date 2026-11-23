@@ -48,7 +48,8 @@ import kotlinx.coroutines.withContext
 typealias UpdateCheck = suspend (Context) -> UpdateChecker.Outcome
 
 internal val CheckGitHub: UpdateCheck = { context ->
-    UpdateChecker(ServiceLocator.get(context).httpClient, BuildConfig.VERSION_NAME).check()
+    val graph = ServiceLocator.get(context)
+    UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME, dispatchers = graph.dispatchers).check()
 }
 
 /**
@@ -59,6 +60,7 @@ internal val CheckGitHub: UpdateCheck = { context ->
 @Composable
 internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateCheck) {
     val context = LocalContext.current
+    val io = remember { ServiceLocator.get(context).dispatchers.io }
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var checkNote by remember { mutableStateOf<String?>(null) }
@@ -107,7 +109,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
         stringResource(R.string.about_whats_new),
         onClick = {
             scope.launch {
-                whatsNew = withContext(ServiceLocator.get(context).dispatchers.io) {
+                whatsNew = withContext(io) {
                     WhatsNew.installedNotes(BuildConfig.VERSION_NAME, context.bundledChangelog())
                 }
             }

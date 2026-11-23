@@ -160,6 +160,7 @@ private fun NasRows(settings: AppSettings) {
 @Composable
 private fun TestConnectionRow(nas: NasDetails) {
     val context = LocalContext.current
+    val graph = remember { ServiceLocator.get(context) }
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var note by remember { mutableStateOf<String?>(null) }
@@ -178,12 +179,12 @@ private fun TestConnectionRow(nas: NasDetails) {
             note = null
             scope.launch {
                 val result =
-                    withContext(ServiceLocator.get(context).dispatchers.io) {
+                    withContext(graph.dispatchers.io) {
                         runCatching { SmbClient.test(nas.config()) }
                     }
                 testing = false
                 val failure = result.exceptionOrNull()?.let {
-                    ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
+                    graph.errorWording.of(it, R.string.recset_status_failed)
                 }
                 note = failure?.sentence ?: resources.getString(R.string.recset_status_connected)
                 detail = failure?.detail
@@ -321,9 +322,10 @@ private fun BackgroundRow() {
 private fun storageNote(): String? {
     val context = LocalContext.current
     val resources = LocalResources.current
+    val io = remember { ServiceLocator.get(context).dispatchers.io }
     var note by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        note = withContext(ServiceLocator.get(context).dispatchers.io) {
+        note = withContext(io) {
             val dir = RecordingStorage.internalDir(context)
             val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
             resources.getString(

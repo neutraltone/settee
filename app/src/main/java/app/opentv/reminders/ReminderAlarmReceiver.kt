@@ -21,7 +21,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.model.Reminder
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -49,9 +48,9 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
 
     private fun fire(context: Context, id: Long) {
         val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
+        val graph = ServiceLocator.get(context)
+        CoroutineScope(graph.dispatchers.io).launch {
             try {
-                val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
                 val repo = graph.reminderRepository
                 val reminder = repo.byId(id) ?: return@launch
@@ -65,9 +64,9 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
 
     private fun rescheduleAll(context: Context) {
         val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
+        val graph = ServiceLocator.get(context)
+        CoroutineScope(graph.dispatchers.io).launch {
             try {
-                val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
                 ReminderScheduler.rearmUpcoming(context, graph.reminderRepository)
             } finally {

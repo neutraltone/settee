@@ -22,7 +22,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.model.Recording
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -58,9 +57,9 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
         RecordingService.start(context, id)
         val pending = goAsync()
         val app = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
+        val graph = ServiceLocator.get(app)
+        CoroutineScope(graph.dispatchers.io).launch {
             try {
-                val graph = ServiceLocator.get(app)
                 if (!graph.settings.recordAutoSwitch.value) return@launch
                 if (graph.database.wontOpen() != null) return@launch
                 val rec = graph.recordingRepository.byId(id) ?: return@launch
@@ -82,9 +81,9 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
     private fun onWarn(context: Context, id: Long) {
         val pending = goAsync()
         val app = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
+        val graph = ServiceLocator.get(app)
+        CoroutineScope(graph.dispatchers.io).launch {
             try {
-                val graph = ServiceLocator.get(app)
                 if (!graph.settings.recordAutoSwitch.value) return@launch
                 if (graph.database.wontOpen() != null) return@launch
                 val rec = graph.recordingRepository.byId(id) ?: return@launch
@@ -106,9 +105,9 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
 
     private fun rescheduleAll(context: Context) {
         val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
+        val graph = ServiceLocator.get(context)
+        CoroutineScope(graph.dispatchers.io).launch {
             try {
-                val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
                 // The same re-arm as every launch: a booking still on starts now rather than being
                 // skipped, and one that ended while the box was off or the update installed is missed.

@@ -5,10 +5,9 @@
  */
 package app.opentv.data.db
 
+import app.opentv.core.AppDispatchers
 import java.io.Closeable
 import java.io.File
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -51,9 +50,9 @@ class StagedBatches<T> private constructor(
         suspend fun <T> stage(
             dir: File?,
             serializer: KSerializer<T>,
-            io: CoroutineDispatcher = Dispatchers.IO,
+            dispatchers: AppDispatchers = AppDispatchers(),
             fill: suspend (stage: (List<T>) -> Unit) -> Unit,
-        ): StagedBatches<T> = withContext(io) {
+        ): StagedBatches<T> = withContext(dispatchers.io) {
             val batches = ListSerializer(serializer)
             val file = File.createTempFile("staged-", ".jsonl", dir)
             var staged: StagedBatches<T>? = null

@@ -7,6 +7,7 @@ package app.opentv.recording
 
 import android.content.Context
 import app.opentv.R
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
@@ -22,8 +23,6 @@ import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -48,8 +47,7 @@ class RecordingEngine(
     private val openFile: ((String) -> RecordingStorage.Sink)? = null,
     /** Wall-clock time, so a test can fix it; the graph's own clock everywhere else. */
     private val clock: () -> Long = System::currentTimeMillis,
-    /** Where files are opened and removed: the graph's io dispatcher. */
-    private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     /**
      * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
@@ -117,7 +115,7 @@ class RecordingEngine(
      * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
      */
     suspend fun openSink(recording: Recording): RecordingStorage.Sink {
-        val sink = withContext(io) {
+        val sink = withContext(dispatchers.io) {
             openFile?.invoke(recording.filePath) ?: RecordingStorage.openSink(appContext, settings, recording.filePath)
         }
         sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
@@ -136,7 +134,7 @@ class RecordingEngine(
         val failure = if (shared) {
             null
         } else {
-            runCatching { withContext(io) { removeFile(recording.filePath) } }.exceptionOrNull()
+            runCatching { withContext(dispatchers.io) { removeFile(recording.filePath) } }.exceptionOrNull()
         }
         if (failure is CancellationException) throw failure
         return when {
@@ -156,7 +154,7 @@ class RecordingEngine(
      */
     private suspend fun deleteFileUnlessShared(recording: Recording) {
         if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
-        val failure = runCatching { withContext(io) { removeFile(recording.filePath) } }.exceptionOrNull()
+        val failure = runCatching { withContext(dispatchers.io) { removeFile(recording.filePath) } }.exceptionOrNull()
         if (failure is CancellationException) throw failure
     }
 

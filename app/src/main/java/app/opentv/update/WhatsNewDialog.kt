@@ -29,7 +29,6 @@ import app.opentv.ui.design.NotesPanel
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
@@ -40,10 +39,11 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WhatsNewGate(canShow: Boolean, onSettled: () -> Unit = {}) {
     val context = LocalContext.current
-    val settings = remember { ServiceLocator.get(context).settings }
+    val graph = remember { ServiceLocator.get(context) }
+    val settings = graph.settings
     var pending by remember { mutableStateOf<List<VersionNotes>>(emptyList()) }
     LaunchedEffect(Unit) {
-        val notes = withContext(Dispatchers.IO) {
+        val notes = withContext(graph.dispatchers.io) {
             val pkg = context.packageManager.getPackageInfo(context.packageName, 0)
             WhatsNew.notesToShow(
                 installed = BuildConfig.VERSION_NAME,

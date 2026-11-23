@@ -341,7 +341,7 @@ object ServiceLocator {
             DiagnosticsLog(java.io.File(appContext.filesDir, "diagnostics"), appScope, dispatchers.io)
         }
 
-        val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings, dispatchers.io) }
+        val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings, dispatchers) }
 
         val diagnosticsReporter: DiagnosticsReporter by lazy {
             DiagnosticsReporter(
@@ -402,7 +402,7 @@ object ServiceLocator {
         }
 
         val recordingRepository: RecordingRepository by lazy {
-            RecordingRepository(database.recordings(), database.seriesRules(), appScope)
+            RecordingRepository(database.recordings(), database.seriesRules(), dispatchers, appScope)
         }
 
         val reminderRepository: ReminderRepository by lazy {
@@ -411,7 +411,13 @@ object ServiceLocator {
 
         /** Which bookings may not fit in what their storage has left (#473). */
         val bookingSpace: BookingSpace by lazy {
-            BookingSpace(recordingRepository, database.channels(), FreeSpace(appContext, settings)::of, clock)
+            BookingSpace(
+                recordingRepository,
+                database.channels(),
+                FreeSpace(appContext, settings)::of,
+                clock,
+                dispatchers,
+            )
         }
 
         val recordingEngine: RecordingEngine by lazy {
@@ -425,7 +431,7 @@ object ServiceLocator {
                 errorWording,
                 openFile = openRecordingFile,
                 clock = clock,
-                io = dispatchers.io,
+                dispatchers = dispatchers,
             )
         }
     }

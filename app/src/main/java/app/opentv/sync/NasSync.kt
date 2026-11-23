@@ -9,7 +9,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
@@ -43,10 +42,10 @@ class NasSync(private val graph: ServiceLocator.Graph) {
 
     /**
      * Publish this device's bundle, then merge in every other device's. Safe to call from anywhere:
-     * all I/O is on [Dispatchers.IO], a blank/unreachable NAS returns a [Result] rather than
+     * all I/O is on the graph's io dispatcher, a blank/unreachable NAS returns a [Result] rather than
      * throwing, and a single unreadable peer file is skipped rather than failing the whole run.
      */
-    suspend fun sync(): Result = withContext(Dispatchers.IO) {
+    suspend fun sync(): Result = withContext(graph.dispatchers.io) {
         val config = RecordingStorage.smbConfig(graph.settings)
         if (!config.isConfigured) return@withContext Result.NotConfigured
 
