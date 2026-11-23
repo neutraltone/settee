@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -55,8 +56,15 @@ class TestGraphTest {
 
     private val compose = createComposeRule()
 
+    // Set by a test to make each read of providers slow, as a slow disk would: not held, just slow.
+    @Volatile
+    private var slowProviders = false
+
     @get:Rule
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(
+        compose,
+        statements = { sql -> if (slowProviders && sql.startsWith("SELECT") && "sources" in sql) slowly {} },
+    )
 
     private val db = testGraph.database
 
@@ -75,6 +83,9 @@ class TestGraphTest {
         db.channels().replaceCatalogue(1, listOf(channel), syncStamp = 1)
     }
 
+    // A held read is the test's own doing, deliberately not counted as busy: it stands in for a
+    // catalogue still loading, and if it counted, the skeleton could never be checked, since every
+    // assertion would wait for the read it's checking the screen without.
     @Test
     fun `with a Room read held the screen shows it loading, and once released the next check sees the rows`() {
         aChannel()
@@ -89,6 +100,34 @@ class TestGraphTest {
         testGraph.release()
 
         compose.onNodeWithText("BBC One").assertExists()
+    }
+
+    @Test
+    fun `waitForIdle doesn't return while a slow Room read, not held, is in flight`() {
+        aChannel()
+        slowProviders = true
+        var read: Source? = null
+        compose.setTvContent {
+            LaunchedEffect(Unit) { read = db.sources().byId(1) }
+        }
+
+        compose.waitForIdle()
+
+        assertThat(read?.name).isEqualTo("Provider")
+    }
+
+    @Test
+    fun `an assertion straight after a screen showing a slow Room read appears sees the rows`() {
+        aChannel()
+        slowProviders = true
+        // Built outside composition, as a view model would, so recomposing doesn't make a new flow.
+        val namesFlow = db.sources().observeAll().map { all -> all.joinToString { it.name } }
+        compose.setTvContent {
+            val names by namesFlow.collectAsState("")
+            BasicText(names)
+        }
+
+        compose.onNodeWithText("Provider").assertExists()
     }
 
     @Test
@@ -155,6 +194,21 @@ class TestGraphTest {
         assertThat(viewModelWork.isCompleted).isTrue()
     }
 
+    @Test
+    fun `a read held and never released fails its test rather than carrying on`() {
+        val forgetful = TestGraph(name = "forgotten-hold").apply { heldMillis = FORGOTTEN_MILLIS }
+
+        val failure = runCatching {
+            forgetful.around {
+                forgetful.hold()
+                // Comes back once the hold gives up on its release, as a screen's read would.
+                runBlocking { forgetful.database.channels().byId(1) }
+            }
+        }.exceptionOrNull()
+
+        assertThat(failure).hasMessageThat().contains("never released")
+    }
+
     /** Reads on and on, as a screen's view model does, until it's stopped. */
     class LeftRunning(app: Application, graph: ServiceLocator.Graph) : AndroidViewModel(app) {
         init {
@@ -177,6 +231,9 @@ class TestGraphTest {
         }
 
         const val SLOW_MILLIS = 300L
+
+        // How long the forgotten hold waits before it gives up: short, as only the giving up is checked.
+        const val FORGOTTEN_MILLIS = 50L
         const val SETTLE_MILLIS = 500L
 
         // Under the three seconds within which TestGraph counts a timer as work still settling.

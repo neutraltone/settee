@@ -76,9 +76,8 @@ fun StateRestorationTester.setTvContent(content: @Composable () -> Unit) {
     setContent { TvScreen(content) }
 }
 
-// Every UI test renders through here, so it's the one place that tells Compose to wait for Room.
+// Room's work is waited for by the test's TestGraph, which registers itself with Compose (#616).
 private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) {
-    registerIdlingResource(RoomWork)
     setContent { TvScreen(content) }
 }
 

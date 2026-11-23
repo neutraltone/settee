@@ -31,21 +31,12 @@ import java.util.WeakHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.resume
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Delay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -54,6 +45,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -89,7 +81,9 @@ import org.robolectric.Shadows.shadowOf
  * runs, on the thread running it, for a test that counts reads. [openRecordingFile] and
  * [captureReconnectMillis] are the graph's own, for a recording's storage and its reconnects.
  */
-@Suppress("LongParameterList", "TooManyFunctions") // Each is a Graph setting a test may need.
+// Each parameter is a Graph setting a test may need, and each function one of the ways a test waits;
+// the counting behind them is in TestGraphWork.kt.
+@Suppress("LongParameterList", "TooManyFunctions")
 @OptIn(ExperimentalCoroutinesApi::class)
 class TestGraph(
     private val compose: ComposeTestRule? = null,
@@ -117,9 +111,16 @@ class TestGraph(
     private val timers = Executors.newSingleThreadScheduledExecutor { task ->
         Thread(task, "TestGraph timers").also { it.isDaemon = true }
     }
+    private val soon = SoonTimers(work, timers) {
+        Looper.myLooper() != Looper.getMainLooper() || shadowOf(Looper.getMainLooper()).isIdle
+    }
     private val jobs: MutableSet<Job> = Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
-    private val io: CoroutineDispatcher = dispatcher ?: Tracked(Dispatchers.IO, "io")
-    private val default: CoroutineDispatcher = dispatcher ?: Tracked(Dispatchers.Default, "default")
+    private val io: CoroutineDispatcher = dispatcher ?: tracked(Dispatchers.IO, "io")
+    private val default: CoroutineDispatcher = dispatcher ?: tracked(Dispatchers.Default, "default")
+    private val reads = ReadGate(HELD_MILLIS)
+
+    private fun tracked(delegate: CoroutineDispatcher, label: String) =
+        TrackedDispatcher(delegate, label, work, timers, soon, jobs)
     private val fileName = "${name ?: "test-graph"}.db"
     private var opened = false
 
@@ -150,7 +151,6 @@ class TestGraph(
                 object : Statement() {
                     override fun evaluate() {
                         rule.registerIdlingResource(this@TestGraph)
-                        rule.registerIdlingResource(RoomWork)
                         base.evaluate()
                     }
                 },
@@ -208,7 +208,7 @@ class TestGraph(
         when {
             dispatcher != null -> dispatcher.scheduler.runCurrent()
             showsScreen() -> compose?.waitForIdle()
-            else -> drain("the graph's work to finish") { isIdleNow && RoomWork.isIdleNow }
+            else -> drain("the graph's work to finish") { isIdleNow }
         }
     }
 
@@ -269,25 +269,28 @@ class TestGraph(
 
     // ---- Holding reads ----
 
-    @Volatile
-    private var gate: Held? = null
-
     /**
      * Holds every read of the catalogue's rows (movies, series, episodes, channels) on the thread
      * making it, until [release]: the way a big catalogue is slow on a Stick, so a test can check
      * the screen while it loads. Counts, EXISTS checks and other tables still run. A held read isn't
      * counted as work in flight, or a screen could never be checked while it waits; once released,
-     * it is, so the next assertion sees what it brought. Can hold again after a release.
+     * it is, so the next assertion sees what it brought. Can hold again after a release. A read
+     * still held after [heldMillis] carries on, and the test fails at teardown for the forgotten
+     * release, rather than hanging the run or passing with the read let through by the clock.
      */
     fun hold() {
         check(dispatcher == null) { "A held read would hold virtual time's only thread" }
-        synchronized(this) { if (gate == null) gate = Held() }
+        reads.hold()
     }
 
-    fun release() = synchronized(this) {
-        gate?.release()
-        gate = null
-    }
+    fun release() = reads.release()
+
+    /** How long a held read waits for [release] before it's taken as forgotten. */
+    internal var heldMillis: Long
+        get() = reads.heldMillis
+        set(value) {
+            reads.heldMillis = value
+        }
 
     // ---- IdlingResource ----
 
@@ -319,6 +322,7 @@ class TestGraph(
             }
             // A test that closed the database itself (through TestCatalog, say) stopped its work first.
             if (opened && graph.database.isOpen) stopBackgroundWork()
+            check(!reads.forgotten) { "A read held by hold() waited ${heldMillis / 1_000} s and was never released" }
         } finally {
             if (swapIn) ServiceLocator.swap(before)
             if (opened) {
@@ -389,13 +393,8 @@ class TestGraph(
 
     private fun onStatement(sql: String) {
         statements?.invoke(sql)
-        val held = gate ?: return
-        if (readsCatalogueRows(sql.trimStart())) held.await(HELD_SECONDS)
+        reads.onStatement(sql)
     }
-
-    // A count or an EXISTS is a quick check, however big the table: only reads of rows are held.
-    private fun readsCatalogueRows(sql: String): Boolean =
-        sql.startsWith("SELECT", ignoreCase = true) && !QUICK.containsMatchIn(sql) && CATALOGUE.containsMatchIn(sql)
 
     /**
      * A wait of the test's own making on one of a graph's threads, such as a held read or a fake
@@ -410,8 +409,10 @@ class TestGraph(
         private var released = false
 
         /** Waits for [release], up to [seconds]: a forgotten one fails its test rather than hanging it. */
-        fun await(seconds: Long): Boolean {
-            val work = running.get()
+        fun await(seconds: Long): Boolean = awaitMillis(TimeUnit.SECONDS.toMillis(seconds))
+
+        internal fun awaitMillis(millis: Long): Boolean {
+            val work = runningWork.get()
             synchronized(this) {
                 if (released) return true
                 work?.let {
@@ -420,7 +421,7 @@ class TestGraph(
                 }
             }
             try {
-                return gate.await(seconds, TimeUnit.SECONDS)
+                return gate.await(millis, TimeUnit.MILLISECONDS)
             } finally {
                 synchronized(this) { if (work != null && parked.remove(work)) work.unpark() }
             }
@@ -436,153 +437,17 @@ class TestGraph(
         }
     }
 
-    // ---- Counting ----
-
-    /** Work in flight on the graph's threads, and a way to wake when any of it ends. */
-    private class Work {
-        private val inFlight = AtomicInteger()
-        private val lock = Object()
-
-        fun busy() = inFlight.get()
-
-        fun started() {
-            inFlight.incrementAndGet()
-        }
-
-        fun finished() {
-            inFlight.decrementAndGet()
-            synchronized(lock) { lock.notifyAll() }
-        }
-
-        /** Runs [task] as this work's, so a [Held] wait in it knows whose count to leave. */
-        fun run(task: Runnable) {
-            val before = running.get()
-            running.set(this)
-            try {
-                task.run()
-            } finally {
-                running.set(before)
-                finished()
-            }
-        }
-
-        fun park() = finished()
-
-        fun unpark() = started()
-
-        // A short wait, not a sleep: it returns as soon as a task ends, and the main looper's own work
-        // (which doesn't come through here) is picked up on the next turn.
-        fun awaitChange() = synchronized(lock) { lock.wait(WAKE_MILLIS) }
-    }
-
-    private val soon = Soon()
-
-    /**
-     * The counted timers still to fire. Once they're all the graph has left to do, and the main thread
-     * has nothing due either, the next idle check fires the earliest at once instead of letting the
-     * test sit it out: nothing can be checked before it fires anyway (it's counted), so the wait only
-     * cost real time, two seconds a settle for the guide's paced rebuilds. Fired in the order they're
-     * due, one per check, so whatever each sets off runs before the next.
-     */
-    private class Timer(val due: Long, val task: ScheduledFuture<*>, val run: Runnable)
-
-    private inner class Soon {
-        private val pending = mutableListOf<Timer>()
-
-        fun add(millis: Long, task: ScheduledFuture<*>, run: Runnable): Timer = synchronized(this) {
-            Timer(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis), task, run).also { pending += it }
-        }
-
-        fun remove(timer: Timer) = synchronized(this) { pending.remove(timer) }
-
-        fun fireIfAllThatsLeft() {
-            val onMain = Looper.myLooper() == Looper.getMainLooper()
-            val othersIdle = (!onMain || shadowOf(Looper.getMainLooper()).isIdle) && RoomWork.isIdleNow
-            val next = synchronized(this) {
-                pending.removeAll { it.task.isDone }
-                pending.minByOrNull { it.due }?.takeIf { othersIdle && work.busy() == pending.size }
-            }
-            // Only if it hadn't started: a timer already firing finishes by itself.
-            if (next != null && next.task.cancel(false)) {
-                remove(next)
-                timers.execute(next.run)
-            }
-        }
-    }
-
-    /**
-     * [delegate], counting what it runs and remembering whose it is, so teardown can stop it. Its
-     * timers count too while they're due within [SOON_MILLIS]: a debounce of half a second or a
-     * timeout of three, set by work still settling, is that work not yet done, and an idle check
-     * that missed it ran before the result. A longer one (a gap before regrouping, a retry in half a
-     * minute) is the work finished and resting, and counting it would keep a screen busy for ever.
-     */
-    @OptIn(InternalCoroutinesApi::class)
-    private inner class Tracked(private val delegate: CoroutineDispatcher, private val label: String) :
-        CoroutineDispatcher(),
-        Delay {
-        override fun isDispatchNeeded(context: CoroutineContext) = delegate.isDispatchNeeded(context)
-
-        override fun scheduleResumeAfterDelay(timeMillis: Long, continuation: CancellableContinuation<Unit>) {
-            val timer = after(timeMillis) { continuation.resume(Unit) }
-            continuation.invokeOnCancellation { timer.dispose() }
-        }
-
-        override fun invokeOnTimeout(timeMillis: Long, block: Runnable, context: CoroutineContext): DisposableHandle =
-            after(timeMillis, block::run)
-
-        // Resumed before it stops counting: resuming dispatches here, which counts it again first.
-        private fun after(millis: Long, fire: () -> Unit): DisposableHandle {
-            val counts = millis <= SOON_MILLIS
-            if (counts) work.started()
-            val done = AtomicBoolean()
-            val finish = { if (done.compareAndSet(false, true) && counts) work.finished() }
-            val run = Runnable {
-                try {
-                    fire()
-                } finally {
-                    finish()
-                }
-            }
-            val task = timers.schedule(run, millis, TimeUnit.MILLISECONDS)
-            val timer = if (counts) soon.add(millis, task, run) else null
-            return DisposableHandle {
-                task.cancel(false)
-                timer?.let(soon::remove)
-                finish()
-            }
-        }
-
-        override fun dispatch(context: CoroutineContext, block: Runnable) {
-            context[Job]?.let { jobs += it }
-            work.started()
-            try {
-                delegate.dispatch(context) { work.run(block) }
-            } catch (e: RuntimeException) {
-                work.finished()
-                throw e
-            }
-        }
-
-        override fun toString() = "TestGraph.$label"
-    }
-
     private companion object {
-        /** The graph whose counted task the current thread is running, if any. */
-        val running = ThreadLocal<Work?>()
-
-        val QUICK = Regex("""^SELECT\s+(COUNT\(|EXISTS\()""", RegexOption.IGNORE_CASE)
-        val CATALOGUE = Regex("""\b(movies|series|episodes|channels)\b""", RegexOption.IGNORE_CASE)
-
         /** Long enough to outlast a test's checks, short enough that a forgotten release can't hang a run. */
-        const val HELD_SECONDS = 10L
-
-        /** A timer due within this is work still settling; see [Tracked]. */
-        const val SOON_MILLIS = 3_000L
+        const val HELD_MILLIS = 10_000L
 
         /** Far longer than any test's work takes to stop; only work that never stops reaches it. */
         const val STOP_SECONDS = 10L
-
-        const val WAKE_MILLIS = 10L
     }
 }
+
+/**
+ * A repository test's body in real time: Room answers on its own threads, so there's no virtual clock
+ * to skip ahead while a read is still out on one (ADR 0008). Returns nothing, as JUnit wants of a test.
+ */
+fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)

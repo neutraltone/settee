@@ -90,7 +90,7 @@ class AddSourceScreenTest {
         show(tv = true, editing = id)
 
         // The form waits for the providers list, which Room reads off the main thread; each check
-        // waits for that read (RoomWork), so none needs a wait of its own.
+        // waits for that read (TestGraph), so none needs a wait of its own.
         compose.onNodeWithText("Edit provider").assertExists()
         compose.onNodeWithText(PHONE).assertDoesNotExist()
         compose.onNodeWithText("Playlist URL").assertExists()
