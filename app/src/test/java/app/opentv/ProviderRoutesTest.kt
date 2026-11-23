@@ -24,6 +24,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.espresso.Espresso
+import app.opentv.core.CrashReports
+import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.pairing.PairingServer
@@ -42,6 +44,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
@@ -291,6 +294,88 @@ class ProviderRoutesTest {
         assertThat(route()).isEqualTo(Routes.SETUP)
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
+    }
+
+    /** A build with Settee's Sentry DSN, for [graph]; nothing Crash Reports would send leaves the test. */
+    private fun withCrashReports(graph: ServiceLocator.Graph = this.graph): ServiceLocator.Graph = graph.apply {
+        sentryDsn = "https://k@sentry.example.org/1"
+        crashOutbox = CrashReports.Outbox {}
+        crashReportsGraphs += this
+    }
+
+    private val crashReportsGraphs = mutableListOf<ServiceLocator.Graph>()
+
+    @After
+    fun turnCrashReportsOff() {
+        crashReportsGraphs.forEach { it.crashReports.setOn(false) }
+    }
+
+    @Test
+    fun `with crash reports, the first provider goes on to their step, and Not now to Setup with them off`() {
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+
+        savePlaylist()
+
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.CRASH_REPORTS_STEP)
+        compose.onAllNodes(hasText("Not now") and isFocused()).onFirst().assertExists()
+        openSubtitlesStepButton("Not now").performClick()
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.SETUP)
+        assertThat(graph.crashReports.on.value).isFalse()
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
+            .isNotEqualTo(Routes.CRASH_REPORTS_STEP)
+        compose.onAllNodesWithText("Take me to Settee").onFirst().assertExists()
+    }
+
+    @Test
+    fun `Send crash reports on their step turns them on and goes on to Setup`() {
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+        savePlaylist()
+        compose.waitForIdle()
+
+        openSubtitlesStepButton("Send crash reports").performClick()
+
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.SETUP)
+        assertThat(graph.crashReports.on.value).isTrue()
+    }
+
+    @Test
+    fun `with OpenSubtitles and crash reports, OpenSubtitles' Not now goes on to the crash reports step`() {
+        setApp(
+            start = Routes.ADD_SOURCE,
+            sources = testGraph.track(SourcesViewModel(app, withCrashReports(withOpenSubtitles))),
+        )
+        savePlaylist()
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
+
+        openSubtitlesStepButton("Not now").performClick()
+
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.CRASH_REPORTS_STEP)
+        openSubtitlesStepButton("Not now").performClick()
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.SETUP)
+    }
+
+    @Test
+    fun `Back on the crash reports step goes back to the form and takes the provider away`() {
+        val guide = panel.hold("xmltv.php")
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+        savePlaylist()
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.CRASH_REPORTS_STEP)
+
+        Espresso.pressBack()
+        guide.release()
+
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.sourceRepository.all() }).isEmpty()
+        assertThat(graph.crashReports.on.value).isFalse()
     }
 
     @Test
