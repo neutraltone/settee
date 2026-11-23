@@ -25,6 +25,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -228,7 +229,7 @@ class HomeRowsScreenTest {
 
         press(KeyEvent.KEYCODE_MENU)
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(showOnHome).onFirst().assertExists()
         compose.onNode(showOnHome).assertTextContains("On")
         captureScreen("home_rows_show_on_home_panel")
 
@@ -336,7 +337,7 @@ class HomeRowsScreenTest {
         show()
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MENU)
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(showOnHome).onFirst().assertExists()
         storeLags = true
 
         compose.onNode(showOnHome).performClick()
@@ -372,7 +373,7 @@ class HomeRowsScreenTest {
         compose.onNodeWithText("Favourite shows").performTouchInput { longClick() }
 
         val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(showOnHome).onFirst().assertExists()
     }
 
     private companion object {

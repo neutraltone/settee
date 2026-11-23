@@ -5,8 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -17,19 +15,10 @@ import app.opentv.data.repo.HomeRowKind
 import app.opentv.ui.HomeState
 import app.opentv.ui.HomeViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -40,38 +29,35 @@ import org.robolectric.annotation.Config
  * from quick checks of the Profile's own small tables, so a skeleton row never disappears and moves
  * the rows below it. Every read of the catalogue is held here, the way a big one is slow on a Stick.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class HomeSkeletonShapeTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val catalogue = HeldCatalogue(app, "home-skeleton-shape-test")
-    private val graph = catalogue.graph
+    @get:Rule
+    val testGraph = TestGraph(name = "home-skeleton-shape-test")
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
 
     @Before
-    fun setUp() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp(): Unit = runBlocking {
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.movies().upsertAll(listOf(superbad))
         db.series().upsertAll(listOf(severance))
     }
 
-    @After
-    fun tearDown() {
-        catalogue.release()
-        runBlocking { viewModels.stopAll() }
-        catalogue.close()
-        Dispatchers.resetMain()
-    }
-
     @Test
-    fun `a Profile with something played and a Favourite show gets places for them and Recently Added`() = runTest {
-        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
-        graph.viewerLibrary.favourites.set(severance, true)
-        catalogue.hold()
+    fun `a Profile with something played and a Favourite show gets places for them and Recently Added`() {
+        runBlocking {
+            graph.viewerLibrary.recordProgress(
+                "movie:1",
+                positionMillis = FILM_MILLIS / 2,
+                durationMillis = FILM_MILLIS,
+            )
+            graph.viewerLibrary.favourites.set(severance, true)
+        }
+        testGraph.hold()
 
         val first = firstState()
 
@@ -84,8 +70,8 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a Profile that has played nothing gets no place for Continue Watching`() = runTest {
-        catalogue.hold()
+    fun `a Profile that has played nothing gets no place for Continue Watching`() {
+        testGraph.hold()
 
         val first = firstState()
 
@@ -93,9 +79,11 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a Profile whose only film is finished gets no place for Continue Watching`() = runTest {
-        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
-        catalogue.hold()
+    fun `a Profile whose only film is finished gets no place for Continue Watching`() {
+        runBlocking {
+            graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        }
+        testGraph.hold()
 
         val first = firstState()
 
@@ -103,9 +91,11 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a finished episode still gets a place, for its Up Next`() = runTest {
-        graph.viewerLibrary.recordProgress("ep:5", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
-        catalogue.hold()
+    fun `a finished episode still gets a place, for its Up Next`() {
+        runBlocking {
+            graph.viewerLibrary.recordProgress("ep:5", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        }
+        testGraph.hold()
 
         val first = firstState()
 
@@ -113,10 +103,12 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a Profile whose last watch was live gets a place for the Live Preview`() = runTest {
-        db.channels().replaceCatalogue(1, listOf(bbcOne), syncStamp = 1)
-        graph.viewerLibrary.live.record(db.channels().everyRow().single())
-        catalogue.hold()
+    fun `a Profile whose last watch was live gets a place for the Live Preview`() {
+        runBlocking {
+            db.channels().replaceCatalogue(1, listOf(bbcOne), syncStamp = 1)
+            graph.viewerLibrary.live.record(db.channels().everyRow().single())
+        }
+        testGraph.hold()
 
         val first = firstState()
 
@@ -124,8 +116,8 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a Profile that has watched nothing live gets no place for the Live Preview`() = runTest {
-        catalogue.hold()
+    fun `a Profile that has watched nothing live gets no place for the Live Preview`() {
+        testGraph.hold()
 
         val first = firstState()
 
@@ -133,10 +125,16 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `a row the Profile hid never gets a place`() = runTest {
-        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
-        graph.profileSettings.arrangeHome(HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))
-        catalogue.hold()
+    fun `a row the Profile hid never gets a place`() {
+        runBlocking {
+            graph.viewerLibrary.recordProgress(
+                "movie:1",
+                positionMillis = FILM_MILLIS / 2,
+                durationMillis = FILM_MILLIS,
+            )
+            graph.profileSettings.arrangeHome(HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))
+        }
+        testGraph.hold()
 
         val first = firstState()
 
@@ -144,24 +142,28 @@ class HomeSkeletonShapeTest {
     }
 
     @Test
-    fun `each place goes as its row's cards come, Continue Watching's with the film in it`() = runTest {
-        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
-        catalogue.hold()
-        val home = viewModels.track(HomeViewModel(app, graph))
-        withContext(Dispatchers.Default) { withTimeout(5_000) { home.state.filterNotNull().first() } }
-
-        catalogue.release()
-        val settled = withContext(Dispatchers.Default) {
-            withTimeout(5_000) { home.state.filterNotNull().first { it.loading.isEmpty() } }
+    fun `each place goes as its row's cards come, Continue Watching's with the film in it`() {
+        runBlocking {
+            graph.viewerLibrary.recordProgress(
+                "movie:1",
+                positionMillis = FILM_MILLIS / 2,
+                durationMillis = FILM_MILLIS,
+            )
         }
+        testGraph.hold()
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
+        testGraph.firstWhenIdle(home.state.filterNotNull())
+
+        testGraph.release()
+        val settled = testGraph.firstWhenIdle(home.state.filterNotNull()) { it.loading.isEmpty() }
 
         assertThat(settled.continueWatching.map { it.name }).containsExactly("Superbad")
     }
 
-    /** Home's first state, waiting in real time: the quick checks run on Room's own threads. */
-    private suspend fun firstState(): HomeState {
-        val home = viewModels.track(HomeViewModel(app, graph))
-        return withContext(Dispatchers.Default) { withTimeout(5_000) { home.state.filterNotNull().first() } }
+    /** Home's first state, once the quick checks are back with the catalogue's reads held. */
+    private fun firstState(): HomeState {
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
+        return testGraph.firstWhenIdle(home.state.filterNotNull())
     }
 
     private val superbad = Movie(

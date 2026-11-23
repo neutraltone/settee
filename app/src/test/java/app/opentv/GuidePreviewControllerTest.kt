@@ -7,8 +7,6 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.rememberGuidePreviewController
 import com.google.common.truth.Truth.assertThat
@@ -24,10 +22,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class GuidePreviewControllerTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val settings = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>()).settings
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val settings = testGraph.graph.settings
 
     // The settings are process-wide, so they outlive each test.
     @After

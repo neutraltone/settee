@@ -15,6 +15,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -47,8 +48,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class HomeAndSearchChannelOptionsTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -136,9 +139,7 @@ class HomeAndSearchChannelOptionsTest {
     }
 
     private fun waitFor(text: String): SemanticsNodeInteraction {
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
         return compose.onNode(hasText(text, substring = true))
     }
 
@@ -310,9 +311,5 @@ class HomeAndSearchChannelOptionsTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("BBC Three").assertIsFocused()
-    }
-
-    private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
     }
 }

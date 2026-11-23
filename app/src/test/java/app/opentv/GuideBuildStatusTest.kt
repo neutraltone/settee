@@ -6,8 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -16,20 +14,11 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.ui.ChannelsViewModel
 import com.google.common.truth.Truth.assertThat
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -40,20 +29,21 @@ import org.robolectric.annotation.Config
  * under every tab is for background work only. So the guide's first build never puts a line up, and
  * never takes down one a background job put up.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class GuideBuildStatusTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val builds = HeldBuilds()
-    private val graph = ServiceLocator.Graph(app, clock = builds::clock)
+    private val builds: HeldBuilds = HeldBuilds { testGraph.awaitIdle() }
+
+    @get:Rule
+    val testGraph: TestGraph = TestGraph(clock = builds::clock)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
 
     @Before
-    fun setUp() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp(): Unit = runBlocking {
         StatusBus.set(null)
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.categories().upsertAll(
@@ -82,16 +72,13 @@ class GuideBuildStatusTest {
     fun tearDown() {
         // A held build would keep the view model from stopping.
         builds.stopHolding()
-        runBlocking { viewModels.stopAll() }
-        db.close()
         StatusBus.set(null)
-        Dispatchers.resetMain()
     }
 
     @Test
-    fun `the guide's first build puts nothing on the status line`() = runTest {
-        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
-        backgroundScope.launch { viewModel.guideRows.collect {} }
+    fun `the guide's first build puts nothing on the status line`() {
+        val viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) }
+        testGraph.launch { viewModel.guideRows.collect {} }
         builds.awaitHeld()
 
         assertThat(StatusBus.message.value).isNull()
@@ -99,14 +86,14 @@ class GuideBuildStatusTest {
     }
 
     @Test
-    fun `a background job's line stays up through the guide's first build`() = runTest {
+    fun `a background job's line stays up through the guide's first build`() {
         StatusBus.set("Refreshing the TV guide", 0.3f)
-        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
-        backgroundScope.launch { viewModel.guideRows.collect {} }
+        val viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) }
+        testGraph.launch { viewModel.guideRows.collect {} }
         builds.awaitHeld()
         builds.stopHolding()
 
-        viewModel.guideRows.first { it.rows.isNotEmpty() }
+        testGraph.firstWhenIdle(viewModel.guideRows) { it.rows.isNotEmpty() }
 
         assertThat(StatusBus.message.value).isEqualTo("Refreshing the TV guide")
         assertThat(StatusBus.progress.value).isEqualTo(0.3f)
@@ -116,20 +103,23 @@ class GuideBuildStatusTest {
 /**
  * The guide's clock, holding the guide's build until the test lets it finish, so a test can look at
  * the status line while one is running. Only a read from inside the guide's build is held: Room and
- * the Profile's library share its threads and clock.
+ * the Profile's library share its threads and clock. Held through [TestGraph.Held], so the waiting
+ * build isn't counted as work in flight and the test can settle while it waits.
  */
-private class HeldBuilds {
+private class HeldBuilds(private val settle: () -> Unit) {
     private val now = System.currentTimeMillis()
 
     @Volatile
-    private var holding = true
-    private val held = Semaphore(0)
-    private val mayFinish = Semaphore(0)
+    private var gate: TestGraph.Held? = TestGraph.Held()
+
+    @Volatile
+    private var reached = false
 
     fun clock(): Long {
-        if (holding && inGuideBuild()) {
-            held.release()
-            mayFinish.acquire()
+        val held = gate
+        if (held != null && inGuideBuild()) {
+            reached = true
+            held.await(10)
         }
         return now
     }
@@ -139,16 +129,14 @@ private class HeldBuilds {
             "guideRows" in frame.className + frame.methodName
     }
 
-    /** Waits until a build is held. */
-    suspend fun awaitHeld() = withContext(Dispatchers.IO) {
-        check(held.tryAcquire(10, TimeUnit.SECONDS)) { "No guide build started" }
+    /** Settles, then checks a build is held. */
+    fun awaitHeld() {
+        settle()
+        check(reached) { "No guide build started" }
     }
 
-    /** Lets the held build finish. */
-    fun finish() = mayFinish.release()
-
     fun stopHolding() {
-        holding = false
-        mayFinish.release(1_000)
+        gate?.release()
+        gate = null
     }
 }
