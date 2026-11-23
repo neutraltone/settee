@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Wird angezeigt, während Settee aufnimmt</string>
     <string name="rec_error_missed">Das wurde verpasst, weil Settee während der Sendung nicht lief.</string>
     <string name="rec_error_missed_late">Das wurde verpasst, weil Android die Aufnahme erst nach dem Ende gestartet hat.</string>
-    <string name="rec_error_nothing">Es wurde nichts aufgenommen. Der Sender ist vielleicht ausgefallen, also versuch die Aufnahme noch einmal.</string>
     <string name="rec_error_usb_no_folder">Es gibt keinen Ordner für Aufnahmen. Wähle in den Aufnahme-Einstellungen einen auf deinem USB-Laufwerk aus.</string>
     <string name="rec_error_usb_unavailable">Dein USB-Laufwerk wurde nicht gefunden. Steck es wieder ein und wähle dann seinen Ordner in den Aufnahme-Einstellungen erneut aus.</string>
+    <string name="rec_error_full_tv">Auf diesem Fernseher ist kein Platz mehr für Aufnahmen. Lösch einige, die du schon gesehen hast, um Platz zu schaffen.</string>
+    <string name="rec_error_full_device">Auf diesem Gerät ist kein Platz mehr für Aufnahmen. Lösch einige, die du schon gesehen hast, um Platz zu schaffen.</string>
+    <string name="rec_error_full_usb">Auf deinem USB-Laufwerk ist kein Platz mehr. Lösch einige Aufnahmen, um Platz zu schaffen.</string>
+    <string name="rec_error_full_nas">Auf deinem NAS ist kein Platz mehr. Lösch einige Aufnahmen oder andere Dateien darauf, um Platz zu schaffen.</string>
+    <string name="rec_error_nas_unreachable">Dein NAS ist nicht erreichbar. Überprüfe, ob es eingeschaltet und mit deinem Netzwerk verbunden ist.</string>
+    <string name="rec_error_channel_stopped">Der Sender schickt kein Video mehr. Das liegt meist an deinem Anbieter. Überprüfe, ob er in Live-TV läuft.</string>
+    <string name="rec_error_stopped_early">Das wurde gestoppt, bevor etwas aufgenommen wurde.</string>
     <string name="rec_delete_failed_nas">Das konnte nicht von deinem NAS gelöscht werden. Überprüfe, ob es eingeschaltet ist, und versuch es dann noch einmal.</string>
     <string name="rec_delete_failed">Diese Aufnahme konnte nicht gelöscht werden. Versuch es noch einmal.</string>
     <string name="rec_background_prompt_title">Aufnahme fortsetzen, wenn du die App verlässt?</string>

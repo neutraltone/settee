@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Zobrazuje sa, keď Settee nahráva</string>
     <string name="rec_error_missed">Toto sa nenahralo, pretože Settee nebežalo počas vysielania.</string>
     <string name="rec_error_missed_late">Toto sa nenahralo, pretože to Android spustil až po skončení.</string>
-    <string name="rec_error_nothing">Nič sa nenahralo. Kanál možno prestal vysielať, preto ho skúste nahrať znova.</string>
     <string name="rec_error_usb_no_folder">Nie je kam nahrávať. Vyberte priečinok na USB disku v Nastaveniach nahrávania.</string>
     <string name="rec_error_usb_unavailable">USB disk sa nenašiel. Znova ho pripojte a potom znova vyberte jeho priečinok v Nastaveniach nahrávania.</string>
+    <string name="rec_error_full_tv">V tomto televízore došlo miesto na nahrávky. Odstráňte niektoré, ktoré ste už videli, a uvoľnite miesto.</string>
+    <string name="rec_error_full_device">V tomto zariadení došlo miesto na nahrávky. Odstráňte niektoré, ktoré ste už videli, a uvoľnite miesto.</string>
+    <string name="rec_error_full_usb">Na USB disku došlo miesto. Odstráňte niektoré nahrávky a uvoľnite miesto.</string>
+    <string name="rec_error_full_nas">Na NAS došlo miesto. Odstráňte z neho niektoré nahrávky alebo iné súbory a uvoľnite miesto.</string>
+    <string name="rec_error_nas_unreachable">NAS nie je dostupný. Skontrolujte, či je zapnutý a pripojený k vašej sieti.</string>
+    <string name="rec_error_channel_stopped">Kanál prestal posielať video, čo býva na strane poskytovateľa. Skontrolujte, či sa prehráva v sekcii Živé TV.</string>
+    <string name="rec_error_stopped_early">Toto bolo zastavené skôr, než sa čokoľvek nahralo.</string>
     <string name="rec_delete_failed_nas">Z NAS sa to nepodarilo odstrániť. Skontrolujte, či je zapnutý, a skúste to odstrániť znova.</string>
     <string name="rec_delete_failed">Nahrávku sa nepodarilo odstrániť. Skúste ju odstrániť znova.</string>
     <string name="rec_background_prompt_title">Pokračovať v nahrávaní, aj keď odídete?</string>

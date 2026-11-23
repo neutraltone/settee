@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Hiển thị khi Settee đang ghi hình</string>
     <string name="rec_error_missed">Đã lỡ chương trình này vì Settee không chạy trong lúc phát sóng.</string>
     <string name="rec_error_missed_late">Đã lỡ chương trình này vì Android bắt đầu ghi sau khi chương trình đã kết thúc.</string>
-    <string name="rec_error_nothing">Không ghi được gì. Kênh có thể đã ngừng, vì vậy hãy thử ghi lại.</string>
     <string name="rec_error_usb_no_folder">Không có thư mục để ghi vào. Chọn một thư mục trên ổ USB của bạn trong Cài đặt ghi hình.</string>
     <string name="rec_error_usb_unavailable">Không tìm thấy ổ USB của bạn. Cắm lại, rồi chọn lại thư mục của nó trong Cài đặt ghi hình.</string>
+    <string name="rec_error_full_tv">TV này đã hết dung lượng cho bản ghi. Xoá một số bản ghi bạn đã xem để giải phóng dung lượng.</string>
+    <string name="rec_error_full_device">Thiết bị này đã hết dung lượng cho bản ghi. Xoá một số bản ghi bạn đã xem để giải phóng dung lượng.</string>
+    <string name="rec_error_full_usb">Ổ USB của bạn đã hết dung lượng. Xoá một số bản ghi để giải phóng dung lượng.</string>
+    <string name="rec_error_full_nas">NAS của bạn đã hết dung lượng. Xoá một số bản ghi hoặc tệp khác trên đó để giải phóng dung lượng.</string>
+    <string name="rec_error_nas_unreachable">Không thể kết nối tới NAS của bạn. Kiểm tra xem nó đã bật và kết nối với mạng của bạn chưa.</string>
+    <string name="rec_error_channel_stopped">Kênh đã ngừng gửi video, thường là do phía nhà cung cấp của bạn. Kiểm tra xem kênh có phát được trong Truyền hình trực tiếp không.</string>
+    <string name="rec_error_stopped_early">Mục này đã bị dừng trước khi ghi được gì.</string>
     <string name="rec_delete_failed_nas">Không thể xoá mục này khỏi NAS của bạn. Kiểm tra xem nó đã bật chưa, rồi thử xoá lại.</string>
     <string name="rec_delete_failed">Không thể xoá bản ghi này. Hãy thử xoá lại.</string>
     <string name="rec_background_prompt_title">Tiếp tục ghi hình khi bạn rời khỏi ứng dụng?</string>

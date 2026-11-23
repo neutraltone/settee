@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.opentv.R
+import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.db.wontOpen
@@ -95,7 +96,7 @@ class RecordingService : Service() {
 
         var error: String? = null
         var sink: RecordingStorage.Sink? = null
-        val capture = StreamCapture(graph.streamingHttpClient) {
+        val capture = StreamCapture(graph.streamingHttpClient, reconnectAfterMillis = graph.captureReconnectMillis) {
             graph.playbackSources.forRecording(MediaKey.Recording(id))
         }
         try {
@@ -105,12 +106,13 @@ class RecordingService : Service() {
             // once the sink knows its real name, as the planned one may be another recording's (#354).
             RecordingLiveState.markActive(id, sink.resolvedLocator ?: recording.filePath)
 
-            error = capture.run(
+            val ending = capture.run(
                 sink.output,
                 endAtMillis = recording.scheduledEndMillis,
                 onCall = { captures[id]?.call = it },
                 onProgress = { repo.setSize(id, it) },
-            ).failure?.let { PlaybackErrors.describe(this@RecordingService, it).stored() }
+            ).ending
+            error = reasonFor(ending, sink.resolvedLocator ?: recording.filePath, graph.errorWording)?.stored()
         } catch (t: Throwable) {
             // A cancelled stop is a clean finish, not an error.
             if (t is kotlinx.coroutines.CancellationException) {
@@ -128,19 +130,48 @@ class RecordingService : Service() {
             runCatching { sink?.close() }
             // Read from the capture rather than its outcome: a stopped one never returns one.
             val total = capture.bytes
-            val ok = total > 0 && error == null
             runCatching {
                 repo.markFinished(
                     id = id,
-                    ok = ok,
                     atMillis = System.currentTimeMillis(),
                     bytes = total,
-                    error = if (ok) null else (error ?: ViewerError(getString(R.string.rec_error_nothing)).stored()),
+                    // Only a stop by hand has no reason of its own: none is needed once something came.
+                    error = error ?: stoppedEarly().takeIf { total == 0L }?.stored(),
                 )
             }
             finish(id)
         }
     }
+
+    /**
+     * Why a capture that stopped by itself stopped, or null when its end came. [locator] is where it
+     * was writing, which says whose storage filled or went: this device's, the USB drive or the NAS.
+     */
+    private fun reasonFor(ending: StreamCapture.Ending, locator: String, wording: ErrorWording): ViewerError? =
+        when (ending) {
+            StreamCapture.Ending.Finished -> null
+            StreamCapture.Ending.StorageFull -> when (RecordingStore.of(locator)) {
+                is RecordingStore.Nas -> wording.of(R.string.rec_error_full_nas, STORAGE_FULL)
+                RecordingStore.Usb -> wording.of(R.string.rec_error_full_usb, STORAGE_FULL)
+                RecordingStore.Device ->
+                    wording.ofHardware(R.string.rec_error_full_tv, R.string.rec_error_full_device, STORAGE_FULL)
+            }
+            is StreamCapture.Ending.StorageLost -> when (RecordingStore.of(locator)) {
+                is RecordingStore.Nas -> wording.of(R.string.rec_error_nas_unreachable, "NasUnreachable")
+                RecordingStore.Usb -> wording.of(R.string.rec_error_usb_unavailable, "StorageUnavailable")
+                // This device's own storage failing for anything but room says nothing a viewer can act on.
+                RecordingStore.Device -> wording.of(ending.cause, R.string.rec_error_failed)
+            }
+            // As playback words a refusal, so a recording and the channel it's of say the same thing.
+            is StreamCapture.Ending.Refused ->
+                ViewerError(PlaybackErrors.describeHttpStatus(this, ending.status), "HTTP ${ending.status}")
+            is StreamCapture.Ending.NoLink -> PlaybackErrors.describe(this, ending.failure)
+            StreamCapture.Ending.StreamStopped -> channelStopped()
+        }
+
+    private fun channelStopped() = ViewerError(getString(R.string.rec_error_channel_stopped), "ChannelStopped")
+
+    private fun stoppedEarly() = ViewerError(getString(R.string.rec_error_stopped_early), "Stopped")
 
     private fun stopCapture(id: Long) {
         val capture = captures[id] ?: return
@@ -244,6 +275,7 @@ class RecordingService : Service() {
         private const val CHANNEL_ID = "recordings"
         private const val NOTIFICATION_ID = 4210
         private const val MAX_WAKE_MILLIS = 6L * 60 * 60 * 1000 // 6h safety cap
+        private const val STORAGE_FULL = "StorageFull"
 
         private const val ACTION_START = "app.opentv.recording.START"
         private const val ACTION_STOP = "app.opentv.recording.STOP"

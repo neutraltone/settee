@@ -12,16 +12,29 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
+import app.opentv.recording.FullAfter
 import app.opentv.recording.StreamCapture
+import app.opentv.recording.StreamCapture.Ending
+import app.opentv.recording.answer
 import com.google.common.truth.Truth.assertThat
 import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.OutputStream
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import okio.BufferedSource
+import okio.Source
+import okio.Timeout
+import okio.buffer
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,7 +87,114 @@ class StreamCaptureTest {
             "http://example.com/play/9.ts?play_token=2" to "OpenTV/0.1 (Android)",
         ).inOrder()
         assertThat(out.toString()).isEqualTo("abcabcabc")
-        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 9, failure = null))
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 9, ending = Ending.Finished))
+    }
+
+    @Test
+    fun `storage running out ends the capture at once, saying it's full, with what was written`() = runTest {
+        val outcome = StreamCapture(provider, clock = { legs.size * 1_000L }) { ready }
+            .run(FullAfter(6), endAtMillis = 10_000L)
+
+        // The third leg's write found no room: no fourth, though the end is far off.
+        assertThat(legs).hasSize(3)
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 6, ending = Ending.StorageFull))
+    }
+
+    @Test
+    fun `a NAS saying its disk is full is storage full too`() = runTest {
+        // How smbj words it, wrapped as smbj wraps a failed write.
+        val full = RuntimeException(
+            "Write failed",
+            RuntimeException("STATUS_DISK_FULL (0xc000007f): Write failed for \\\\nas\\rec\\a.ts"),
+        )
+
+        val outcome = StreamCapture(provider, clock = { legs.size * 1_000L }) { ready }
+            .run(FailingWith(full), endAtMillis = 10_000L)
+
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 0, ending = Ending.StorageFull))
+    }
+
+    @Test
+    fun `storage that fails a write any other way ends the capture at once, saying it was lost`() = runTest {
+        val gone = IOException("write failed: EIO (I/O error)")
+
+        val outcome = StreamCapture(provider, clock = { legs.size * 1_000L }) { ready }
+            .run(FailingWith(gone), endAtMillis = 10_000L)
+
+        assertThat(legs).hasSize(1)
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 0, ending = Ending.StorageLost(gone)))
+    }
+
+    @Test
+    fun `a connection that breaks after sending video is reconnected, however often, until the end`() = runTest {
+        val breaking = providerAnswering { request -> ok(request, BreaksAfter("abc")) }
+        val out = ByteArrayOutputStream()
+
+        val outcome = StreamCapture(breaking, clock = { legs.size * 1_000L }) { ready }
+            .run(out, endAtMillis = 10_000L)
+
+        assertThat(legs).hasSize(10)
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 30, ending = Ending.Finished))
+    }
+
+    @Test
+    fun `a provider refusing every request ends the capture with its refusal`() = runTest {
+        val refusing = providerAnswering { request -> answer(request, 403, "".toResponseBody()) }
+
+        val outcome = StreamCapture(refusing, clock = { legs.size * 1_000L }) { ready }
+            .run(ByteArrayOutputStream(), endAtMillis = 60_000L)
+
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 0, ending = Ending.Refused(403)))
+    }
+
+    @Test
+    fun `a stream that stops sending anything ends the capture, saying it stopped`() = runTest {
+        val stopping = providerAnswering { request ->
+            ok(request, (if (legs.size == 1) "abc" else "").toResponseBody("video/mp2t".toMediaType()))
+        }
+
+        val outcome = StreamCapture(stopping, clock = { legs.size * 1_000L }) { ready }
+            .run(ByteArrayOutputStream(), endAtMillis = 60_000L)
+
+        assertThat(outcome).isEqualTo(StreamCapture.Outcome(bytes = 3, ending = Ending.StreamStopped))
+    }
+
+    /** A provider answering every leg with [reply], counted in [legs]. */
+    private fun providerAnswering(reply: (Request) -> Response) = OkHttpClient.Builder().addInterceptor { chain ->
+        val request = chain.request()
+        legs += request.url.toString() to request.header("User-Agent")
+        reply(request)
+    }.build()
+
+    private fun ok(request: Request, body: ResponseBody) = answer(request, 200, body)
+
+    /** A body that sends [text] and then breaks, as a reset connection or a cut chunked body does. */
+    private class BreaksAfter(private val text: String) : ResponseBody() {
+        override fun contentType() = "video/mp2t".toMediaType()
+
+        override fun contentLength() = -1L
+
+        override fun source(): BufferedSource = object : Source {
+            private var sent = false
+
+            override fun read(sink: Buffer, byteCount: Long): Long {
+                if (sent) throw IOException("unexpected end of stream")
+                sent = true
+                sink.writeUtf8(text)
+                return text.length.toLong()
+            }
+
+            override fun timeout() = Timeout.NONE
+
+            override fun close() = Unit
+        }.buffer()
+    }
+
+    /** Storage that fails every write with [error]. */
+    private class FailingWith(private val error: Exception) : OutputStream() {
+        override fun write(b: Int) = throw error
+
+        override fun write(b: ByteArray, off: Int, len: Int) = throw error
     }
 
     private suspend fun stalkerRecording(): Long {
@@ -108,6 +228,15 @@ class StreamCaptureTest {
             ),
         )
     }
+
+    /** A channel's link, for a test that doesn't care where it came from. */
+    private val ready = Playable.Ready(
+        MediaKey.Recording(1),
+        url = "http://example.com/live/u/p/1.ts",
+        userAgent = "OpenTV/0.1 (Android)",
+        title = "News",
+        isLive = true,
+    )
 
     private fun link(n: Int) = """{"js": {"cmd": "ffmpeg http://example.com/play/9.ts?play_token=$n"}}"""
 }

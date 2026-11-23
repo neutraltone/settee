@@ -111,9 +111,14 @@ class RecordingRepository(
     /** Repoint a recording at its real locator (a USB capture's content:// URI, once created). */
     suspend fun setFilePath(id: Long, filePath: String) = dao.setFilePath(id, filePath)
 
-    suspend fun markFinished(id: Long, ok: Boolean, atMillis: Long, bytes: Long, error: String?) = dao.markFinished(
+    /**
+     * Ends a recording with [bytes] captured, and [error] as why it stopped by itself, if it did. Any
+     * capture at all is kept as recorded, whatever stopped it: a failed one can't be played, so it
+     * would hide what was captured (#473). With nothing captured it failed.
+     */
+    suspend fun markFinished(id: Long, atMillis: Long, bytes: Long, error: String?) = dao.markFinished(
         id = id,
-        status = if (ok) RecordingStatus.COMPLETED else RecordingStatus.FAILED,
+        status = if (bytes > 0) RecordingStatus.COMPLETED else RecordingStatus.FAILED,
         endedAt = atMillis,
         bytes = bytes,
         error = error,

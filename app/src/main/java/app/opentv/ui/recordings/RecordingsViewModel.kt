@@ -16,10 +16,16 @@ import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.options.ItemOption
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,6 +35,29 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
     val recordings: StateFlow<List<Recording>> =
         graph.recordingRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * How many minutes of room each booking that may not fit has (#473), once its storage has said: a
+     * NAS can take a while, and the rest of the screen doesn't wait for it.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val shortOfRoom: StateFlow<Map<Long, Long>> =
+        combine(
+            graph.recordingRepository.observeAll()
+                // Not again for every few megabytes a recording grows: only when what's booked or on changes.
+                .distinctUntilChangedBy { rows ->
+                    rows.map { listOf(it.id, it.status, it.scheduledStartMillis, it.scheduledEndMillis, it.filePath) }
+                },
+            // And every few minutes, for room made outside Settee: files deleted from the NAS or the drive.
+            flow {
+                while (true) {
+                    emit(Unit)
+                    delay(ROOM_RECHECK_MILLIS)
+                }
+            },
+        ) { rows, _ -> rows }
+            .flatMapLatest { graph.bookingSpace.shortOfRoom(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val reminders: StateFlow<List<Reminder>> =
         graph.reminderRepository.observeAll()
@@ -98,5 +127,9 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
     fun delete(recording: Recording) {
         _deleteFailure.value = null
         viewModelScope.launch { _deleteFailure.value = graph.recordingEngine.delete(recording) }
+    }
+
+    private companion object {
+        const val ROOM_RECHECK_MILLIS = 5 * 60_000L
     }
 }

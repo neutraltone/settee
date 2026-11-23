@@ -47,6 +47,10 @@ recording that can't start. Strings are in `res/values/strings.xml`. Where tryin
 both players put the highlight on Try again and OK presses it; in the live player Up and Down still
 change channel.
 
+A recording that stops by itself is Failed when it captured nothing, and Cut short when it captured
+something: still Recorded, playable, with the reason under it as a Failed row has (#473). Each cause's
+sentence reads right on either, and a stop by hand is a plain finish with no reason.
+
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
 | HTTP 401 | `error_http_401` | Your provider didn't accept your login. Check the username and password in Settings. | code · HTTP 401 · format | Viewer's: wrong or expired login |
@@ -81,7 +85,16 @@ change channel.
 | Recording: its whole window passed while Settee wasn't running (`RecordingEngine.rearmScheduled`, on launch, after a reboot or after an update) | `rec_error_missed` | This was missed because Settee wasn't running while it was on. | Missed | Device's: off, unplugged or force-stopped |
 | Recording: its alarm came after its window ended (`RecordingService`) | `rec_error_missed_late` | This was missed because Android started it after it had ended. | MissedLate | Device's: Android delayed the alarm, usually without the alarms permission |
 | Recording: still in progress when Settee starts again (`RecordingRepository.failInterrupted`, on a cold start, #474) | `rec_error_interrupted` | This recording stopped because Settee was closed while it was on. | Interrupted | Device's: the process was killed by an update installed anyway, low memory or a power cut |
-| Recording: nothing came | `rec_error_nothing` | Nothing was recorded. The channel may have stopped, so try recording it again. | none | Provider's stream, usually |
+| Recording, Failed or Cut short: this device's storage full (`StreamCapture.Ending.StorageFull`: a write failing with ENOSPC; no reconnecting, #473) | `rec_error_full_tv` / `_device` | This TV ran out of room for recordings. Delete some you've watched to make space. | StorageFull | Viewer's: storage full |
+| Recording, Failed or Cut short: the USB drive full (as above, writing to the USB drive) | `rec_error_full_usb` | Your USB drive ran out of room. Delete some recordings to make space. | StorageFull | Viewer's: drive full |
+| Recording, Failed or Cut short: the NAS full (as above, the share failing a write with STATUS_DISK_FULL) | `rec_error_full_nas` | Your NAS ran out of room. Delete some recordings or other files on it to make space. | StorageFull | Viewer's: NAS full |
+| Recording, Failed or Cut short: the USB drive gone (`StreamCapture.Ending.StorageLost`: any other failed write to the USB drive; no reconnecting) | `rec_error_usb_unavailable` | Can't find your USB drive. Plug it back in, then pick its folder again in Recording settings. | StorageUnavailable | Viewer's: drive unplugged |
+| Recording, Failed or Cut short: the NAS unreachable (as above, writing to the NAS) | `rec_error_nas_unreachable` | Couldn't reach your NAS. Check it's on and connected to your network. | NasUnreachable | The NAS, or the network |
+| Recording, Failed or Cut short: this device's storage failing a write for anything but room | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | The device's storage |
+| Recording, Failed or Cut short: refused, five connections in a row getting nothing and one of them refused with HTTP 401, 403, 404, 429, 451 or 5xx, the last such status counting (`StreamCapture.Ending.Refused`); worded as playback words the status (`PlaybackErrors.describeHttpStatus`) | `error_http_401`, `error_http_403`, `error_gone`, `error_http_429`, `error_http_451`, `error_http_5xx`, `error_anything_else` | As the HTTP rows above | HTTP n | As the HTTP rows above |
+| Recording, Failed or Cut short: no link, the last of five connections getting nothing having had none to connect to (`StreamCapture.Ending.NoLink`) | As the `Playable.Failure` rows above | As the `Playable.Failure` rows above | LinkRefused, Gone | As the `Playable.Failure` rows above |
+| Recording, Failed or Cut short: the channel stopped, five connections in a row answered and sent nothing (`StreamCapture.Ending.StreamStopped`), or its end came with nothing written; also one failed before reasons were stored | `rec_error_channel_stopped` | The channel stopped sending video, which is usually at your provider's end. Check it plays in Live TV. | ChannelStopped (none for one from before) | Provider's stream, usually |
+| Recording, Failed: stopped by hand (or by Android stopping the service) before anything came; one stopped after something came is plain Recorded, with no reason | `rec_error_stopped_early` | This was stopped before anything was recorded. | Stopped | Viewer's: stopped it |
 | Recordings: deleting a NAS recording failed (unreachable, wrong login, refused); the row stays | `rec_delete_failed_nas` | Couldn't delete this from your NAS. Check it's on, then try deleting it again. | exception type | The NAS, or the network |
 | Recordings: deleting a USB or on-device recording failed; the row stays | `rec_delete_failed` | Couldn't delete this recording. Try deleting it again. | exception type; StorageUnavailable, with `rec_error_usb_unavailable`'s sentence, when the USB drive is gone | The drive |
 

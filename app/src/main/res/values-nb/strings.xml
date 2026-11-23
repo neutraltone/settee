@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Vises mens Settee tar opp</string>
     <string name="rec_error_missed">Dette ble ikke tatt opp fordi Settee ikke kjørte mens det gikk.</string>
     <string name="rec_error_missed_late">Dette ble ikke tatt opp fordi Android startet det etter at det var slutt.</string>
-    <string name="rec_error_nothing">Ingenting ble tatt opp. Kanalen kan ha stoppet, så prøv å ta den opp igjen.</string>
     <string name="rec_error_usb_no_folder">Det finnes ingen mappe å ta opp til. Velg en på USB-stasjonen din i opptaksinnstillinger.</string>
     <string name="rec_error_usb_unavailable">Finner ikke USB-stasjonen din. Koble den til igjen, og velg så mappen på nytt i opptaksinnstillinger.</string>
+    <string name="rec_error_full_tv">Det er ikke mer plass til opptak på denne TV-en. Slett noen du har sett, for å frigjøre plass.</string>
+    <string name="rec_error_full_device">Det er ikke mer plass til opptak på denne enheten. Slett noen du har sett, for å frigjøre plass.</string>
+    <string name="rec_error_full_usb">Det er ikke mer plass på USB-stasjonen din. Slett noen opptak for å frigjøre plass.</string>
+    <string name="rec_error_full_nas">Det er ikke mer plass på NAS-en din. Slett noen opptak eller andre filer på den for å frigjøre plass.</string>
+    <string name="rec_error_nas_unreachable">Får ikke kontakt med NAS-en din. Sjekk at den er på og koblet til nettverket ditt.</string>
+    <string name="rec_error_channel_stopped">Kanalen sluttet å sende video, noe som vanligvis skyldes leverandøren din. Sjekk at den spilles i Live-TV.</string>
+    <string name="rec_error_stopped_early">Dette ble stoppet før noe ble tatt opp.</string>
     <string name="rec_delete_failed_nas">Kunne ikke slette dette fra NAS-en din. Sjekk at den er på, og prøv så å slette det igjen.</string>
     <string name="rec_delete_failed">Kunne ikke slette dette opptaket. Prøv å slette det igjen.</string>
     <string name="rec_background_prompt_title">Fortsette opptak når du forlater appen?</string>

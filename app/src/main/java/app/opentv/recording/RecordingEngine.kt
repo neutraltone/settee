@@ -32,7 +32,7 @@ import kotlinx.coroutines.withContext
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
-@Suppress("LongParameterList") // clock and removeFile are only passed by tests.
+@Suppress("LongParameterList") // clock, removeFile and openFile are only passed by tests.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -43,6 +43,8 @@ class RecordingEngine(
     private val wording: ErrorWording,
     /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
     private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
+    /** Opens a recording's file for its capture, in place of [RecordingStorage.openSink]. */
+    private val openFile: ((String) -> RecordingStorage.Sink)? = null,
     /** Wall-clock time, so a test can fix it; the graph's own clock everywhere else. */
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -112,7 +114,9 @@ class RecordingEngine(
      * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
      */
     suspend fun openSink(recording: Recording): RecordingStorage.Sink {
-        val sink = withContext(Dispatchers.IO) { RecordingStorage.openSink(appContext, settings, recording.filePath) }
+        val sink = withContext(Dispatchers.IO) {
+            openFile?.invoke(recording.filePath) ?: RecordingStorage.openSink(appContext, settings, recording.filePath)
+        }
         sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
         return sink
     }
@@ -310,7 +314,6 @@ class RecordingEngine(
         if (!windowEnded(recording)) return false
         repo.markFinished(
             id = recording.id,
-            ok = false,
             atMillis = clock(),
             bytes = 0,
             error = ViewerError(appContext.getString(why.sentence), why.detail).stored(),

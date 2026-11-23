@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Afișat cât timp Settee înregistrează</string>
     <string name="rec_error_missed">Asta a fost ratată pentru că Settee nu rula cât timp s-a difuzat.</string>
     <string name="rec_error_missed_late">Asta a fost ratată pentru că Android a pornit-o după ce se terminase.</string>
-    <string name="rec_error_nothing">Nu s-a înregistrat nimic. Este posibil ca transmisia canalului să se fi oprit, așa că încearcă să-l înregistrezi din nou.</string>
     <string name="rec_error_usb_no_folder">Nu există niciun folder în care să înregistrezi. Alege unul pe unitatea USB în Setări înregistrare.</string>
     <string name="rec_error_usb_unavailable">Unitatea USB nu poate fi găsită. Conecteaz-o din nou, apoi alege iar folderul ei în Setări înregistrare.</string>
+    <string name="rec_error_full_tv">Acest televizor a rămas fără spațiu pentru înregistrări. Șterge câteva pe care le-ai văzut ca să faci loc.</string>
+    <string name="rec_error_full_device">Acest dispozitiv a rămas fără spațiu pentru înregistrări. Șterge câteva pe care le-ai văzut ca să faci loc.</string>
+    <string name="rec_error_full_usb">Unitatea USB a rămas fără spațiu. Șterge câteva înregistrări ca să faci loc.</string>
+    <string name="rec_error_full_nas">NAS-ul a rămas fără spațiu. Șterge câteva înregistrări sau alte fișiere de pe el ca să faci loc.</string>
+    <string name="rec_error_nas_unreachable">NAS-ul nu a putut fi contactat. Verifică dacă este pornit și conectat la rețeaua ta.</string>
+    <string name="rec_error_channel_stopped">Canalul a încetat să trimită video, de obicei din cauza furnizorului tău. Verifică dacă merge în TV Live.</string>
+    <string name="rec_error_stopped_early">Aceasta a fost oprită înainte să se înregistreze ceva.</string>
     <string name="rec_delete_failed_nas">Nu s-a putut șterge de pe NAS. Verifică dacă este pornit, apoi încearcă din nou să ștergi.</string>
     <string name="rec_delete_failed">Înregistrarea nu s-a putut șterge. Încearcă din nou să o ștergi.</string>
     <string name="rec_background_prompt_title">Continuă înregistrarea când ieși din aplicație?</string>

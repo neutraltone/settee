@@ -107,7 +107,7 @@ class RearmScheduledTest {
         ).isEqualTo(context.getString(R.string.rec_error_missed))
         assertThat(
             context.getString(R.string.rec_error_missed),
-        ).isNotEqualTo(context.getString(R.string.rec_error_nothing))
+        ).isNotEqualTo(context.getString(R.string.rec_error_channel_stopped))
     }
 
     @Test

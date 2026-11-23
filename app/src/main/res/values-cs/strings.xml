@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Zobrazeno, když Settee nahrává</string>
     <string name="rec_error_missed">Tohle se nenahrálo, protože Settee neběželo, když se to vysílalo.</string>
     <string name="rec_error_missed_late">Tohle se nenahrálo, protože to Android spustil až po skončení.</string>
-    <string name="rec_error_nothing">Nic se nenahrálo. Kanál možná přestal vysílat, zkuste ho proto nahrát znovu.</string>
     <string name="rec_error_usb_no_folder">Není kam nahrávat. Vyberte složku na USB disku v nastavení nahrávání.</string>
     <string name="rec_error_usb_unavailable">USB disk nelze najít. Znovu ho připojte a pak znovu vyberte jeho složku v nastavení nahrávání.</string>
+    <string name="rec_error_full_tv">V této televizi došlo místo pro nahrávky. Smažte některé, které jste už viděli, a uvolněte místo.</string>
+    <string name="rec_error_full_device">V tomto zařízení došlo místo pro nahrávky. Smažte některé, které jste už viděli, a uvolněte místo.</string>
+    <string name="rec_error_full_usb">Na USB disku došlo místo. Smažte některé nahrávky a uvolněte místo.</string>
+    <string name="rec_error_full_nas">Na NAS došlo místo. Smažte na něm některé nahrávky nebo jiné soubory a uvolněte místo.</string>
+    <string name="rec_error_nas_unreachable">NAS není dostupný. Zkontrolujte, že je zapnutý a připojený k vaší síti.</string>
+    <string name="rec_error_channel_stopped">Kanál přestal posílat video, což bývá na straně poskytovatele. Zkontrolujte, že se přehrává v Živé TV.</string>
+    <string name="rec_error_stopped_early">Toto bylo zastaveno dřív, než se cokoli nahrálo.</string>
     <string name="rec_delete_failed_nas">Z NAS se to nepodařilo smazat. Zkontrolujte, že je zapnutý, a zkuste to smazat znovu.</string>
     <string name="rec_delete_failed">Nahrávku se nepodařilo smazat. Zkuste ji smazat znovu.</string>
     <string name="rec_background_prompt_title">Pokračovat v nahrávání i po opuštění aplikace?</string>

@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Ditampilkan saat Settee sedang merekam</string>
     <string name="rec_error_missed">Ini terlewat karena Settee tidak berjalan saat acaranya tayang.</string>
     <string name="rec_error_missed_late">Ini terlewat karena Android memulainya setelah acaranya selesai.</string>
-    <string name="rec_error_nothing">Tidak ada yang terekam. Saluran mungkin berhenti, jadi coba rekam lagi.</string>
     <string name="rec_error_usb_no_folder">Tidak ada folder untuk merekam. Pilih folder di drive USB Anda di pengaturan Rekaman.</string>
     <string name="rec_error_usb_unavailable">Drive USB Anda tidak ditemukan. Colokkan lagi, lalu pilih foldernya lagi di pengaturan Rekaman.</string>
+    <string name="rec_error_full_tv">Ruang untuk rekaman di TV ini habis. Hapus beberapa yang sudah Anda tonton untuk mengosongkan ruang.</string>
+    <string name="rec_error_full_device">Ruang untuk rekaman di perangkat ini habis. Hapus beberapa yang sudah Anda tonton untuk mengosongkan ruang.</string>
+    <string name="rec_error_full_usb">Ruang di drive USB Anda habis. Hapus beberapa rekaman untuk mengosongkan ruang.</string>
+    <string name="rec_error_full_nas">Ruang di NAS Anda habis. Hapus beberapa rekaman atau file lain di dalamnya untuk mengosongkan ruang.</string>
+    <string name="rec_error_nas_unreachable">Tidak dapat menjangkau NAS Anda. Periksa apakah NAS menyala dan terhubung ke jaringan Anda.</string>
+    <string name="rec_error_channel_stopped">Saluran berhenti mengirim video, yang biasanya terjadi di pihak penyedia Anda. Periksa apakah saluran ini bisa diputar di TV Langsung.</string>
+    <string name="rec_error_stopped_early">Ini dihentikan sebelum ada yang terekam.</string>
     <string name="rec_delete_failed_nas">Tidak dapat menghapus ini dari NAS Anda. Periksa apakah NAS menyala, lalu coba hapus lagi.</string>
     <string name="rec_delete_failed">Tidak dapat menghapus rekaman ini. Coba hapus lagi.</string>
     <string name="rec_background_prompt_title">Lanjutkan rekaman saat Anda keluar?</string>

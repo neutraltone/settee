@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Prikazuje se dok Settee snima</string>
     <string name="rec_error_missed">Ovo je propušteno jer Settee nije radio dok se emitiralo.</string>
     <string name="rec_error_missed_late">Ovo je propušteno jer ga je Android pokrenuo nakon što je završilo.</string>
-    <string name="rec_error_nothing">Ništa nije snimljeno. Kanal se možda zaustavio, pa ga pokušajte snimiti ponovno.</string>
     <string name="rec_error_usb_no_folder">Nema mape za snimanje. Odaberite jednu na svom USB disku u postavkama snimanja.</string>
     <string name="rec_error_usb_unavailable">Vaš USB disk nije pronađen. Ponovno ga priključite, zatim ponovno odaberite njegovu mapu u postavkama snimanja.</string>
+    <string name="rec_error_full_tv">Na ovom TV-u ponestalo je mjesta za snimke. Izbrišite neke koje ste pogledali kako biste oslobodili prostor.</string>
+    <string name="rec_error_full_device">Na ovom uređaju ponestalo je mjesta za snimke. Izbrišite neke koje ste pogledali kako biste oslobodili prostor.</string>
+    <string name="rec_error_full_usb">Na vašem USB disku ponestalo je mjesta. Izbrišite neke snimke kako biste oslobodili prostor.</string>
+    <string name="rec_error_full_nas">Na vašem NAS-u ponestalo je mjesta. Izbrišite neke snimke ili druge datoteke s njega kako biste oslobodili prostor.</string>
+    <string name="rec_error_nas_unreachable">Nije moguće doći do vašeg NAS-a. Provjerite je li uključen i povezan s vašom mrežom.</string>
+    <string name="rec_error_channel_stopped">Kanal je prestao slati video, što je obično do vašeg pružatelja usluge. Provjerite reproducira li se u TV uživo.</string>
+    <string name="rec_error_stopped_early">Ovo je zaustavljeno prije nego što se išta snimilo.</string>
     <string name="rec_delete_failed_nas">Brisanje s NAS-a nije uspjelo. Provjerite je li uključen, a zatim pokušajte ponovno.</string>
     <string name="rec_delete_failed">Snimku nije bilo moguće izbrisati. Pokušajte je ponovno izbrisati.</string>
     <string name="rec_background_prompt_title">Nastaviti snimanje kad izađete?</string>

@@ -21,8 +21,12 @@ data class RecordingsSection(val heading: RecordingsHeading, val rows: List<Reco
 
 /** One row on the Recordings screen. */
 sealed interface RecordingsRow {
-    /** A booked Recording; [clashes] when it overlaps another booking on the same provider. */
-    data class Booking(val recording: Recording, val clashes: Boolean) : RecordingsRow
+    /**
+     * A booked Recording; [clashes] when it overlaps another booking on the same provider, and
+     * [roomLeftMinutes] when its storage may not have room for it, as how long there's room for.
+     */
+    data class Booking(val recording: Recording, val clashes: Boolean, val roomLeftMinutes: Long? = null) :
+        RecordingsRow
 
     data class OfReminder(val reminder: Reminder) : RecordingsRow
 
@@ -38,17 +42,21 @@ sealed interface RecordingsRow {
 
 /**
  * What the Recordings screen lists, under its headings. Headings with nothing under them are left
- * out, so the first section's first row is where the Highlight starts.
+ * out, so the first section's first row is where the Highlight starts. [shortOfRoom] is how many
+ * minutes of room each booking that may not fit has: `RoomEstimate.shortOfRoom`.
  */
 fun recordingsSections(
     recordings: List<Recording>,
     reminders: List<Reminder>,
     seriesRules: List<SeriesRule>,
     nowMillis: Long,
+    shortOfRoom: Map<Long, Long> = emptyMap(),
 ): List<RecordingsSection> {
     val bookings = recordings.filter { it.status == RecordingStatus.SCHEDULED }
     val clashing = clashingIds(bookings)
-    val comingUp = bookings.map { it.scheduledStartMillis to RecordingsRow.Booking(it, it.id in clashing) } +
+    val comingUp = bookings.map {
+        it.scheduledStartMillis to RecordingsRow.Booking(it, it.id in clashing, shortOfRoom[it.id])
+    } +
         reminders.filter { !it.fired && it.endUtcMillis > nowMillis }
             .map { it.startUtcMillis to RecordingsRow.OfReminder(it) }
     val recorded = recordings.filter { it.status != RecordingStatus.SCHEDULED }

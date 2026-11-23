@@ -323,8 +323,8 @@ Once a provider is saved while none was saved before (a fresh install, or after 
 
 One list, with Coming up, Recorded and Series links as headings, and a heading with no rows hidden. Recordings have a channel logo but no artwork, so they're rows, not cards.
 
-- **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo, and says so if it will switch to its channel by itself.
-- **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong.
+- **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo, and says so if it will switch to its channel by itself. A booking says so when it overlaps another on the same provider, or when its storage may not have room for it, with roughly how long there's room for ("Room for about 40 minutes, so it may not fit"). Both notes are in the row's quiet colour: coral is only for what the remote can press.
+- **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong. One that was cut short plays like any other, with its length and size, and says why it stopped under them, as a failed one does.
 - **Series links:** A to Z.
 - **Rows:** OK plays, watches live or retries. Everything else is in the options panel. Anything there that removes the row asks first, starting on "Keep it": Delete because it can't be undone, and cancelling a booking, a reminder or a series link because it's gone until it's set up again from the guide.
 

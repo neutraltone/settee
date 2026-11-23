@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.recordings
 
+import android.content.res.Resources
 import android.text.format.Formatter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -18,7 +19,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// What a row on the Recordings screen says: its title, the quiet line under it, and why it failed.
+// What a row on the Recordings screen says: its title, the quiet line under it, and why it stopped.
 
 internal val RecordingsRow.title: String
     get() = when (this) {
@@ -75,15 +76,50 @@ private fun Recording.details(): List<String> {
 }
 
 /**
- * Why a failed recording failed, in Voice's sentence and detail line (docs/ERRORS.md). One that
- * failed before errors were stored that way has a plain sentence and no detail.
+ * Why a recording stopped by itself, in Voice's sentence and detail line (docs/ERRORS.md): a failed
+ * one, or a recorded one that was cut short (#473). One that failed before errors were stored that
+ * way has a plain sentence and no detail. A booking's or one in progress's reason is a past attempt's.
  */
 @Composable
-internal fun RecordingsRow.failure(): ViewerError? {
-    val failed = recording?.takeIf { it.status == RecordingStatus.FAILED } ?: return null
-    return failed.error?.let { ViewerError.fromStored(it) ?: ViewerError(it) }
-        ?: ViewerError(stringResource(R.string.rec_error_nothing))
+internal fun RecordingsRow.reason(): ViewerError? {
+    val stopped = (this as? RecordingsRow.Recorded)?.recording ?: return null
+    return when (stopped.status) {
+        RecordingStatus.FAILED -> stopped.error?.let(::readStored)
+            ?: ViewerError(stringResource(R.string.rec_error_channel_stopped))
+        RecordingStatus.COMPLETED -> stopped.error?.let(::readStored)
+        else -> null
+    }
 }
+
+private fun readStored(error: String) = ViewerError.fromStored(error) ?: ViewerError(error)
+
+/** What a booking that may not fit says, with [minutes] of room: in time, not bytes. */
+internal fun mayNotFit(resources: Resources, minutes: Long): String = if (roughly(minutes) > 0) {
+    resources.getString(R.string.rec_may_not_fit, roomFor(resources, roughly(minutes)))
+} else {
+    resources.getString(R.string.rec_no_room)
+}
+
+/** "About" [minutes]: to the five minutes below, so it never says there's more room than there is. */
+private fun roughly(minutes: Long) = if (minutes < ROUGHLY_FROM) minutes else minutes - minutes % ROUGHLY_TO
+
+/** [minutes] as hours and minutes: "40 minutes", "2 hours", "1 hour 20 minutes". */
+private fun roomFor(resources: Resources, minutes: Long): String {
+    val hours = (minutes / MINUTES_PER_HOUR).toInt()
+    val rest = (minutes % MINUTES_PER_HOUR).toInt()
+    val inMinutes = resources.getQuantityString(R.plurals.rec_room_minutes, rest, rest)
+    val inHours = resources.getQuantityString(R.plurals.rec_room_hours, hours, hours)
+    return when {
+        hours == 0 -> inMinutes
+        rest == 0 -> inHours
+        else -> resources.getString(R.string.rec_room_hours_minutes, inHours, inMinutes)
+    }
+}
+
+// Under ten minutes of room, every minute is worth saying.
+private const val ROUGHLY_FROM = 10
+private const val ROUGHLY_TO = 5
+private const val MINUTES_PER_HOUR = 60
 
 /** The Recording behind a row; a Reminder and a series link have none. */
 internal val RecordingsRow.recording: Recording?

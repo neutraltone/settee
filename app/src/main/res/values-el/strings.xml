@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Εμφανίζεται όσο το Settee πραγματοποιεί εγγραφή</string>
     <string name="rec_error_missed">Αυτό χάθηκε επειδή το Settee δεν λειτουργούσε όσο προβαλλόταν.</string>
     <string name="rec_error_missed_late">Αυτό χάθηκε επειδή το Android το ξεκίνησε αφού είχε τελειώσει.</string>
-    <string name="rec_error_nothing">Δεν εγγράφηκε τίποτα. Το κανάλι μπορεί να σταμάτησε, οπότε δοκιμάστε να το εγγράψετε ξανά.</string>
     <string name="rec_error_usb_no_folder">Δεν υπάρχει φάκελος για την εγγραφή. Επιλέξτε έναν στον δίσκο USB σας στις Ρυθμίσεις εγγραφής.</string>
     <string name="rec_error_usb_unavailable">Δεν βρέθηκε ο δίσκος USB σας. Συνδέστε τον ξανά και επιλέξτε πάλι τον φάκελό του στις Ρυθμίσεις εγγραφής.</string>
+    <string name="rec_error_full_tv">Ο χώρος για εγγραφές σε αυτή την τηλεόραση εξαντλήθηκε. Διαγράψτε κάποιες που έχετε δει για να ελευθερώσετε χώρο.</string>
+    <string name="rec_error_full_device">Ο χώρος για εγγραφές σε αυτή τη συσκευή εξαντλήθηκε. Διαγράψτε κάποιες που έχετε δει για να ελευθερώσετε χώρο.</string>
+    <string name="rec_error_full_usb">Ο χώρος στον δίσκο USB σας εξαντλήθηκε. Διαγράψτε κάποιες εγγραφές για να ελευθερώσετε χώρο.</string>
+    <string name="rec_error_full_nas">Ο χώρος στο NAS σας εξαντλήθηκε. Διαγράψτε κάποιες εγγραφές ή άλλα αρχεία από αυτό για να ελευθερώσετε χώρο.</string>
+    <string name="rec_error_nas_unreachable">Δεν ήταν δυνατή η πρόσβαση στο NAS σας. Ελέγξτε ότι είναι ενεργό και συνδεδεμένο στο δίκτυό σας.</string>
+    <string name="rec_error_channel_stopped">Το κανάλι σταμάτησε να στέλνει βίντεο, κάτι που συνήθως οφείλεται στον πάροχό σας. Ελέγξτε ότι παίζει στη Ζωντανή TV.</string>
+    <string name="rec_error_stopped_early">Αυτό σταμάτησε πριν εγγραφεί οτιδήποτε.</string>
     <string name="rec_delete_failed_nas">Δεν ήταν δυνατή η διαγραφή από το NAS σας. Ελέγξτε ότι είναι ενεργό και δοκιμάστε ξανά.</string>
     <string name="rec_delete_failed">Δεν ήταν δυνατή η διαγραφή αυτής της εγγραφής. Δοκιμάστε ξανά.</string>
     <string name="rec_background_prompt_title">Συνέχιση εγγραφής όταν φύγετε;</string>

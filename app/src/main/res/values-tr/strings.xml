@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Settee kayıt yaparken gösterilir</string>
     <string name="rec_error_missed">Bu kaçırıldı, çünkü yayın sırasında Settee çalışmıyordu.</string>
     <string name="rec_error_missed_late">Bu kaçırıldı, çünkü Android kaydı yayın bittikten sonra başlattı.</string>
-    <string name="rec_error_nothing">Hiçbir şey kaydedilmedi. Kanal durmuş olabilir, bu yüzden tekrar kaydetmeyi deneyin.</string>
     <string name="rec_error_usb_no_folder">Kayıt yapılacak bir klasör yok. Kayıt ayarlarından USB sürücünüzde bir klasör seçin.</string>
     <string name="rec_error_usb_unavailable">USB sürücünüz bulunamıyor. Sürücüyü yeniden takın, ardından Kayıt ayarlarından klasörünü tekrar seçin.</string>
+    <string name="rec_error_full_tv">Bu TV\'de kayıtlar için yer kalmadı. Yer açmak için izlediğiniz kayıtlardan bazılarını silin.</string>
+    <string name="rec_error_full_device">Bu cihazda kayıtlar için yer kalmadı. Yer açmak için izlediğiniz kayıtlardan bazılarını silin.</string>
+    <string name="rec_error_full_usb">USB sürücünüzde yer kalmadı. Yer açmak için bazı kayıtları silin.</string>
+    <string name="rec_error_full_nas">NAS\'ınızda yer kalmadı. Yer açmak için üzerindeki bazı kayıtları veya diğer dosyaları silin.</string>
+    <string name="rec_error_nas_unreachable">NAS\'ınıza ulaşılamadı. Açık ve ağınıza bağlı olduğunu kontrol edin.</string>
+    <string name="rec_error_channel_stopped">Kanal video göndermeyi durdurdu; bu genellikle sağlayıcınızdan kaynaklanır. Canlı TV\'de oynatılıp oynatılmadığını kontrol edin.</string>
+    <string name="rec_error_stopped_early">Bu, hiçbir şey kaydedilmeden durduruldu.</string>
     <string name="rec_delete_failed_nas">Bu, NAS\'ınızdan silinemedi. Açık olduğunu kontrol edin, ardından tekrar silmeyi deneyin.</string>
     <string name="rec_delete_failed">Bu kayıt silinemedi. Tekrar silmeyi deneyin.</string>
     <string name="rec_background_prompt_title">Uygulamadan çıkınca kayıt devam etsin mi?</string>

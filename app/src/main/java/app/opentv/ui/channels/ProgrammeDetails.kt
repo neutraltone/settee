@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.channels
 
+import android.content.res.Resources
 import android.widget.Toast
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -42,8 +43,11 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.LocalRecordingStarted
+import app.opentv.ui.recordings.mayNotFit
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Programme details (docs/LOOK.md, Live TV), what OK on a programme in the guide opens: a panel on
@@ -265,8 +269,10 @@ private fun Actions(
             onDismiss()
         })
         !isPast -> PanelRow(stringResource(R.string.rec_schedule_recording), onClick = {
-            scope.launch { graph.recordingEngine.scheduleProgramme(chosenVariant, graph.inFull(programme)) }
-            toast(resources.getString(R.string.rec_scheduled_title, programme.title))
+            scope.launch {
+                val id = graph.recordingEngine.scheduleProgramme(chosenVariant, graph.inFull(programme))
+                toast(bookedText(graph, resources, id, programme.title))
+            }
             recordingStarted()
             onDismiss()
         })
@@ -286,6 +292,26 @@ private fun Actions(
         onWatch(channel)
     })
 }
+
+/**
+ * What booking [title] as [id] says: that it's booked, and that it may not fit when that's known
+ * promptly. A NAS can take a while to say how full it is, and the viewer isn't kept waiting for it:
+ * then it's the plain toast, and the booking's row in Recordings says so once it's known.
+ */
+private suspend fun bookedText(graph: ServiceLocator.Graph, resources: Resources, id: Long, title: String): String {
+    // In the app's scope, so giving up waiting leaves the check to finish in the background rather
+    // than waiting on a read that's blocked on the network.
+    val check = graph.appScope.async { graph.bookingSpace.roomFor(id) }
+    val room = withTimeoutOrNull(ROOM_CHECK_MILLIS) { check.await() }
+    return if (room == null) {
+        resources.getString(R.string.rec_scheduled_title, title)
+    } else {
+        resources.getString(R.string.rec_scheduled_may_not_fit, title, mayNotFit(resources, room))
+    }
+}
+
+/** How long a booking's toast waits to hear whether it may not fit. */
+private const val ROOM_CHECK_MILLIS = 1_000L
 
 @Composable
 private fun ReminderActions(channel: Channel, programme: GuideProgramme, scope: CoroutineScope, onDismiss: () -> Unit) {

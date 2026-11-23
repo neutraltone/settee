@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">يظهر أثناء تسجيل Settee</string>
     <string name="rec_error_missed">فاتك هذا التسجيل لأن Settee لم يكن يعمل أثناء عرضه.</string>
     <string name="rec_error_missed_late">فاتك هذا التسجيل لأن Android بدأه بعد انتهائه.</string>
-    <string name="rec_error_nothing">لم يتم تسجيل أي شيء. ربما توقفت القناة، لذا حاول تسجيلها مرة أخرى.</string>
     <string name="rec_error_usb_no_folder">لا يوجد مجلد للتسجيل فيه. اختر مجلدًا على محرك USB في إعدادات التسجيل.</string>
     <string name="rec_error_usb_unavailable">تعذر العثور على محرك USB. أعد توصيله، ثم اختر مجلده مرة أخرى في إعدادات التسجيل.</string>
+    <string name="rec_error_full_tv">نفدت المساحة المخصصة للتسجيلات على هذا التلفاز. احذف بعض ما شاهدته لتوفير مساحة.</string>
+    <string name="rec_error_full_device">نفدت المساحة المخصصة للتسجيلات على هذا الجهاز. احذف بعض ما شاهدته لتوفير مساحة.</string>
+    <string name="rec_error_full_usb">نفدت المساحة على محرك USB. احذف بعض التسجيلات لتوفير مساحة.</string>
+    <string name="rec_error_full_nas">نفدت المساحة على وحدة NAS. احذف بعض التسجيلات أو الملفات الأخرى عليها لتوفير مساحة.</string>
+    <string name="rec_error_nas_unreachable">تعذر الوصول إلى وحدة NAS. تأكد من أنها قيد التشغيل ومتصلة بشبكتك.</string>
+    <string name="rec_error_channel_stopped">توقفت القناة عن إرسال الفيديو، وعادةً ما يكون السبب من جهة مزوّدك. تأكد من أنها تعمل في البث المباشر.</string>
+    <string name="rec_error_stopped_early">تم إيقاف هذا قبل تسجيل أي شيء.</string>
     <string name="rec_delete_failed_nas">تعذر حذف هذا التسجيل من وحدة NAS. تأكد من أنها قيد التشغيل، ثم حاول حذفه مرة أخرى.</string>
     <string name="rec_delete_failed">تعذر حذف هذا التسجيل. حاول حذفه مرة أخرى.</string>
     <string name="rec_background_prompt_title">هل تريد متابعة التسجيل عند مغادرة التطبيق؟</string>

@@ -75,9 +75,15 @@
     <string name="rec_channel_desc">Mostrado enquanto o Settee está a gravar</string>
     <string name="rec_error_missed">Isto foi perdido porque o Settee não estava aberto durante a emissão.</string>
     <string name="rec_error_missed_late">Isto foi perdido porque o Android o iniciou depois de ter terminado.</string>
-    <string name="rec_error_nothing">Nada foi gravado. O canal pode ter parado, por isso tente gravá-lo novamente.</string>
     <string name="rec_error_usb_no_folder">Não há nenhuma pasta para gravar. Escolha uma na sua unidade USB nas definições de Gravação.</string>
     <string name="rec_error_usb_unavailable">Não foi possível encontrar a sua unidade USB. Volte a ligá-la e escolha novamente a pasta nas definições de Gravação.</string>
+    <string name="rec_error_full_tv">Esta televisão ficou sem espaço para gravações. Elimine algumas que já tenha visto para libertar espaço.</string>
+    <string name="rec_error_full_device">Este dispositivo ficou sem espaço para gravações. Elimine algumas que já tenha visto para libertar espaço.</string>
+    <string name="rec_error_full_usb">A sua unidade USB ficou sem espaço. Elimine algumas gravações para libertar espaço.</string>
+    <string name="rec_error_full_nas">O seu NAS ficou sem espaço. Elimine algumas gravações ou outros ficheiros que lá estejam para libertar espaço.</string>
+    <string name="rec_error_nas_unreachable">Não foi possível contactar o seu NAS. Verifique se está ligado e com ligação à sua rede.</string>
+    <string name="rec_error_channel_stopped">O canal deixou de enviar vídeo, o que costuma ser do lado do seu fornecedor. Verifique se dá na TV em direto.</string>
+    <string name="rec_error_stopped_early">Isto foi parado antes de se gravar alguma coisa.</string>
     <string name="rec_delete_failed_nas">Não foi possível eliminar isto do seu NAS. Verifique se está ligado e tente eliminar novamente.</string>
     <string name="rec_delete_failed">Não foi possível eliminar esta gravação. Tente eliminá-la novamente.</string>
     <string name="rec_background_prompt_title">Continuar a gravar ao sair?</string>

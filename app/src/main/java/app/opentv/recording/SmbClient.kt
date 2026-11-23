@@ -328,6 +328,19 @@ object SmbClient {
         }
     }
 
+    /** The bytes this login may still fill on [config]'s share, quota and all. Throws when it can't be reached. */
+    fun freeSpace(config: SmbConfig): Long {
+        val q = connect(config)
+        try {
+            return q.share.shareInformation.callerFreeSpace
+        } finally {
+            runCatching { q.share.close() }
+            runCatching { q.session.close() }
+            runCatching { q.connection.close() }
+            runCatching { q.client.close() }
+        }
+    }
+
     /** Prove the settings work: connect, authenticate, open the share. Throws on failure. */
     fun test(config: SmbConfig) {
         val q = connect(config)
