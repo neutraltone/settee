@@ -5,18 +5,19 @@
  */
 package app.opentv
 
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.CatalogueRefresh
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,7 +29,11 @@ import org.robolectric.annotation.Config
 class CatalogueRefreshTest {
 
     private var now = 1_000_000_000L
-    private val test = TestCatalog(ApplicationProvider.getApplicationContext(), clock = { now })
+
+    @get:Rule
+    val testGraph = TestGraph(name = "catalogue-refresh-test")
+
+    private val test = TestCatalog(testGraph.app, testGraph.database, dispatchers = testGraph.graph.dispatchers) { now }
     private val db = test.db
     private val panel = test.panel
     private val refresh = test.refresh { panel.asked += RESCAN }
@@ -56,9 +61,21 @@ class CatalogueRefreshTest {
 
     private suspend fun openMoviesOrShows() = refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
 
+    /**
+     * The catalogue's threads, where a test runs its overlapping requests so the graph counts them
+     * from the moment they're made: a request that has joined another is then one waiting on it.
+     */
+    private val catalogueThreads get() = testGraph.graph.dispatchers.default
+
+    /** Waits for every request to have gone as far as it can, off the catalogue's threads, not counted as one. */
+    private suspend fun settle() = withContext(Dispatchers.Default) { testGraph.awaitIdle() }
+
+    /** A test body in real time, as the catalogue's threads keep it. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
+
     @Test
     fun `the periodic refresh fetches live, then movies and shows, then the guide, then rescans series rules`() =
-        runTest {
+        testing {
             db.sources().insert(PANEL_SOURCE)
 
             refresh.refresh(CatalogueRefresh.Trigger.Periodic)
@@ -78,7 +95,7 @@ class CatalogueRefreshTest {
         }
 
     @Test
-    fun `a refresh the viewer asked for downloads the guide even if it was just fetched`() = runTest {
+    fun `a refresh the viewer asked for downloads the guide even if it was just fetched`() = testing {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
         forgetAsked()
@@ -89,7 +106,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a periodic refresh leaves a guide it just fetched alone`() = runTest {
+    fun `a periodic refresh leaves a guide it just fetched alone`() = testing {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
         forgetAsked()
@@ -100,7 +117,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `adding a provider loads its channels, then the guide and series rules, and no movies or shows`() = runTest {
+    fun `adding a provider loads its channels, then the guide and series rules, and no movies or shows`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
@@ -117,7 +134,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `adding a provider whose login fails says why and fetches nothing else`() = runTest {
+    fun `adding a provider whose login fails says why and fetches nothing else`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = "[]"
 
@@ -130,7 +147,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `when the guide has loaded for a new provider, the module's last result says so`() = runTest {
+    fun `when the guide has loaded for a new provider, the module's last result says so`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
@@ -140,7 +157,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `app launch only refreshes a guide that is out of date`() = runTest {
+    fun `app launch only refreshes a guide that is out of date`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         refresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
@@ -152,7 +169,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `Guide settings downloads the guide every time and touches nothing else`() = runTest {
+    fun `Guide settings downloads the guide every time and touches nothing else`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         refresh.refresh(CatalogueRefresh.Trigger.GuideSettings)
@@ -162,7 +179,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows fetches a provider that has never been fetched`() = runTest {
+    fun `opening Movies or Shows fetches a provider that has never been fetched`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         openMoviesOrShows()
@@ -172,7 +189,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows again within 12 hours downloads nothing`() = runTest {
+    fun `opening Movies or Shows again within 12 hours downloads nothing`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -184,7 +201,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows after 12 hours fetches them again`() = runTest {
+    fun `opening Movies or Shows after 12 hours fetches them again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -196,7 +213,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows right after the periodic refresh doesn't download them again`() = runTest {
+    fun `opening Movies or Shows right after the periodic refresh doesn't download them again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
         forgetAsked()
@@ -207,7 +224,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows right after a manual refresh doesn't download them again`() = runTest {
+    fun `opening Movies or Shows right after a manual refresh doesn't download them again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Manual)
         forgetAsked()
@@ -218,7 +235,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a provider added soon after the last fetch has its titles fetched the first time they're opened`() = runTest {
+    fun `a provider added soon after the last fetch has its titles fetched the first time they're opened`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -232,7 +249,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a movie list longer than a batch is all saved, and the next fetch updates the same rows`() = runTest {
+    fun `a movie list longer than a batch is all saved, and the next fetch updates the same rows`() = testing {
         db.sources().insert(PANEL_SOURCE)
         fun films(added: Int) = (1..1_200).joinToString(",", "[", "]") {
             """{"stream_id": $it, "name": "Film $it", "added": "$added"}"""
@@ -253,7 +270,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a movie list cut off halfway changes nothing that was saved`() = runTest {
+    fun `a movie list cut off halfway changes nothing that was saved`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -269,7 +286,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a failed movie list isn't remembered as fresh, so the next open tries again`() = runTest {
+    fun `a failed movie list isn't remembered as fresh, so the next open tries again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!"
         openMoviesOrShows()
@@ -282,7 +299,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a failed show list isn't remembered as fresh either`() = runTest {
+    fun `a failed show list isn't remembered as fresh either`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_series"] = "!"
         openMoviesOrShows()
@@ -295,7 +312,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a database rebuilt from scratch forgets what was fetched`() = runTest {
+    fun `a database rebuilt from scratch forgets what was fetched`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -307,7 +324,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `switching Movies on fetches every provider the next time they're opened`() = runTest {
+    fun `switching Movies on fetches every provider the next time they're opened`() = testing {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         forgetAsked()
@@ -319,14 +336,14 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a second refresh of a provider shares the running download and its result`() = runTest {
+    fun `a second refresh of a provider shares the running download and its result`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_live_streams")
 
-        val outcomes = withContext(Dispatchers.Default) {
+        val outcomes = withContext(catalogueThreads) {
             val first = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             val second = during(hold) {
-                async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }.also { Thread.sleep(JOIN_MILLIS) }
+                async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }.also { settle() }
             }
             hold.release()
             first.await() to second.await()
@@ -339,13 +356,13 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies during another refresh's movie download waits for it and doesn't download again`() = runTest {
+    fun `opening Movies during another refresh's movie download waits for it and doesn't download again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val worker = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
-            val opened = during(hold) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            val opened = during(hold) { async { openMoviesOrShows() }.also { settle() } }
             hold.release()
             worker.await()
             opened.await()
@@ -355,13 +372,13 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `opening Movies while a new provider's channels download waits its turn, then fetches them`() = runTest {
+    fun `opening Movies while a new provider's channels download waits its turn, then fetches them`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_live_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val added = async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
-            val opened = during(hold) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            val opened = during(hold) { async { openMoviesOrShows() }.also { settle() } }
             assertThat(panel.asked).doesNotContain("get_vod_categories")
             hold.release()
             added.await()
@@ -372,13 +389,13 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a download others are sharing carries on when the first to ask leaves`() = runTest {
+    fun `a download others are sharing carries on when the first to ask leaves`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val leaving = async { openMoviesOrShows() }
-            val staying = during(hold) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            val staying = during(hold) { async { openMoviesOrShows() }.also { settle() } }
             leaving.cancel()
             hold.release()
             staying.await()
@@ -405,9 +422,9 @@ class CatalogueRefreshTest {
     private suspend fun assertWaitsForNewEpisodes(trigger: CatalogueRefresh.Trigger.Catalogue) {
         caughtUpOnAnUpdatedShow()
         val hold = panel.hold("get_series_info:7")
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val refreshing = async { refresh.refresh(trigger) }
-            during(hold) { Thread.sleep(JOIN_MILLIS) }
+            during(hold) { testGraph.awaitIdle() }
             assertThat(refreshing.isCompleted).isFalse()
             hold.release()
             refreshing.await()
@@ -415,17 +432,17 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `the periodic refresh waits for New Episode detection`() = runTest {
+    fun `the periodic refresh waits for New Episode detection`() = testing {
         assertWaitsForNewEpisodes(CatalogueRefresh.Trigger.Periodic)
     }
 
     @Test
-    fun `a manual refresh, which runs as background work, waits for New Episode detection`() = runTest {
+    fun `a manual refresh, which runs as background work, waits for New Episode detection`() = testing {
         assertWaitsForNewEpisodes(CatalogueRefresh.Trigger.Manual)
     }
 
     @Test
-    fun `opening Movies or Shows launches New Episode detection and doesn't wait for it`() = runTest {
+    fun `opening Movies or Shows launches New Episode detection and doesn't wait for it`() = testing {
         caughtUpOnAnUpdatedShow()
         val hold = panel.hold("get_series_info:7")
 
@@ -437,7 +454,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `with Live off a refresh leaves channels alone but still fetches movies, shows and the guide`() = runTest {
+    fun `with Live off a refresh leaves channels alone but still fetches movies, shows and the guide`() = testing {
         db.sources().insert(PANEL_SOURCE)
         test.settings.setLiveEnabled(false)
 
@@ -450,7 +467,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `with Movies off no trigger downloads movies, and shows still come`() = runTest {
+    fun `with Movies off no trigger downloads movies, and shows still come`() = testing {
         db.sources().insert(PANEL_SOURCE)
         test.settings.setMoviesEnabled(false)
 
@@ -463,7 +480,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `with Shows off no trigger downloads shows, and movies still come`() = runTest {
+    fun `with Shows off no trigger downloads shows, and movies still come`() = testing {
         db.sources().insert(PANEL_SOURCE)
         test.settings.setSeriesEnabled(false)
 
@@ -476,7 +493,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `adding a provider loads its channels even with Live off`() = runTest {
+    fun `adding a provider loads its channels even with Live off`() = testing {
         db.sources().insert(PANEL_SOURCE)
         test.settings.setLiveEnabled(false)
 
@@ -486,11 +503,11 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a refresh says it's refreshing while it runs, and leaves its result behind`() = runTest {
+    fun `a refresh says it's refreshing while it runs, and leaves its result behind`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_live_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val running = async { refresh.refresh(CatalogueRefresh.Trigger.Manual) }
             during(hold) { assertThat(refresh.state.value.refreshing).isTrue() }
             hold.release()
@@ -502,11 +519,11 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `two refreshes overlapping stay refreshing until the last has finished`() = runTest {
+    fun `two refreshes overlapping stay refreshing until the last has finished`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("xmltv.php")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val first = async { refresh.refresh(CatalogueRefresh.Trigger.Manual) }
             val second = during(hold) { async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) } }
             hold.release()
@@ -518,11 +535,11 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `Movies and Shows say they're loading only while a download is running`() = runTest {
+    fun `Movies and Shows say they're loading only while a download is running`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val opened = async { openMoviesOrShows() }
             during(hold) { assertThat(refresh.state.value.loadingVod).isTrue() }
             hold.release()
@@ -533,7 +550,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a new provider says the guide is building only while it is`() = runTest {
+    fun `a new provider says the guide is building only while it is`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("xmltv.php")
 
@@ -548,11 +565,11 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `the periodic refresh says it's refreshing the channels only while it is`() = runTest {
+    fun `the periodic refresh says it's refreshing the channels only while it is`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_live_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             during(hold) { assertThat(refresh.state.value.refreshingChannels).isTrue() }
             hold.release()
@@ -563,11 +580,11 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `the periodic refresh says the guide is refreshing, and how far through it is, only while it is`() = runTest {
+    fun `the periodic refresh says the guide is refreshing, and how far through it is, only while it is`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("xmltv.php")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val refreshing = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             during(hold) {
                 assertThat(refresh.state.value.refreshingGuide).isTrue()
@@ -582,7 +599,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `however refreshes and guide passes overlap, nothing stays marked as running`() = runTest {
+    fun `however refreshes and guide passes overlap, nothing stays marked as running`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         withContext(Dispatchers.Default) {
@@ -615,7 +632,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a refresh finishes and publishes its result in one step, so a repeated result is still news`() = runTest {
+    fun `a refresh finishes and publishes its result in one step, so a repeated result is still news`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val finished = mutableListOf<CatalogueRefresh.State>()
         val watching = launch(Dispatchers.Unconfined) {
@@ -638,12 +655,12 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a provider another refresh fetched while it waited its turn isn't downloaded again`() = runTest {
+    fun `a provider another refresh fetched while it waited its turn isn't downloaded again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second"))
         val hold = panel.hold("get_vod_streams")
 
-        val outcome = withContext(Dispatchers.Default) {
+        val outcome = withContext(catalogueThreads) {
             val opened = async { openMoviesOrShows() }
             during(hold) { test.settings.setVodFetchedAtMillis(2, now) }
             hold.release()
@@ -655,13 +672,13 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `the same login shares a download even after the provider's row has moved on`() = runTest {
+    fun `the same login shares a download even after the provider's row has moved on`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val first = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
-            val second = during(hold) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            val second = during(hold) { async { openMoviesOrShows() }.also { settle() } }
             hold.release()
             first.await()
             second.await()
@@ -672,7 +689,7 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a provider that returned no titles at all isn't remembered as fresh`() = runTest {
+    fun `a provider that returned no titles at all isn't remembered as fresh`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "[]"
         openMoviesOrShows()
@@ -684,14 +701,14 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `a manual refresh during another's guide download doesn't download that guide again`() = runTest {
+    fun `a manual refresh during another's guide download doesn't download that guide again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("xmltv.php")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val periodic = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
             val manual = during(hold) {
-                async { refresh.refresh(CatalogueRefresh.Trigger.Manual) }.also { Thread.sleep(JOIN_MILLIS) }
+                async { refresh.refresh(CatalogueRefresh.Trigger.Manual) }.also { settle() }
             }
             hold.release()
             periodic.await()
@@ -702,16 +719,16 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `the periodic refresh still waits for New Episodes when it joins a download Movies started`() = runTest {
+    fun `the periodic refresh still waits for New Episodes when it joins a download Movies started`() = testing {
         caughtUpOnAnUpdatedShow()
         val channels = panel.hold("get_live_streams")
         val episodes = panel.hold("get_series_info:7")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             val periodic = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
-            val opened = during(channels) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            val opened = during(channels) { async { openMoviesOrShows() }.also { settle() } }
             channels.release()
-            during(episodes) { Thread.sleep(JOIN_MILLIS) }
+            during(episodes) { testGraph.awaitIdle() }
             assertThat(periodic.isCompleted).isFalse()
             episodes.release()
             periodic.await()
@@ -721,16 +738,16 @@ class CatalogueRefreshTest {
 
     @Test
     fun `opening Movies doesn't wait for New Episodes when it joins a download the periodic refresh started`() =
-        runTest {
+        testing {
             caughtUpOnAnUpdatedShow()
             val titles = panel.hold("get_vod_streams")
             val episodes = panel.hold("get_series_info:7")
 
-            withContext(Dispatchers.Default) {
+            withContext(catalogueThreads) {
                 val periodic = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
-                val opened = during(titles) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+                val opened = during(titles) { async { openMoviesOrShows() }.also { settle() } }
                 titles.release()
-                during(episodes) { Thread.sleep(JOIN_MILLIS) }
+                during(episodes) { testGraph.awaitIdle() }
                 assertThat(opened.isCompleted).isTrue()
                 episodes.release()
                 periodic.await()
@@ -738,16 +755,16 @@ class CatalogueRefreshTest {
         }
 
     @Test
-    fun `New Episode detection keeps the provider's turn, so nothing else downloads from it meanwhile`() = runTest {
+    fun `New Episode detection keeps the provider's turn, so nothing else downloads from it meanwhile`() = testing {
         caughtUpOnAnUpdatedShow()
         val episodes = panel.hold("get_series_info:7")
 
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             openMoviesOrShows()
             val added = during(episodes) {
                 panel.asked.clear()
                 async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
-                    .also { Thread.sleep(JOIN_MILLIS) }
+                    .also { settle() }
             }
             assertThat(panel.asked).doesNotContain("get_live_streams")
             episodes.release()
@@ -759,8 +776,6 @@ class CatalogueRefreshTest {
         const val RESCAN = "rescan series rules"
         const val TWELVE_HOURS = 12L * 60 * 60 * 1000
 
-        /** Long enough for a second request to have reached the module before the first is let go. */
-        const val JOIN_MILLIS = 500L
         val GUIDE = """
             <tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="bbc1">
             <title>News</title></programme></tv>

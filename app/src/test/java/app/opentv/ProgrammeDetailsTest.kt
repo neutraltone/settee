@@ -7,7 +7,6 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -15,14 +14,13 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
@@ -39,8 +37,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -58,11 +54,12 @@ import org.robolectric.shadows.ShadowToast
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class ProgrammeDetailsTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -84,16 +81,8 @@ class ProgrammeDetailsTest {
         qualityRank = if (label == "4K") 400 else 0,
     )
 
-    private val app = ApplicationProvider.getApplicationContext<Application>()
-    private val graph = ServiceLocator.get(app)
-
-    // The graph is process-wide, so what a test stores is the next test's to trip over.
-    @Before
-    @After
-    fun leaveNothingBehind() = runBlocking {
-        graph.database.programmes().deleteForFeed(FEED)
-        graph.recordingRepository.scheduled().forEach { graph.database.recordings().delete(it.id) }
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private val onNow = Programme(
         feedId = FEED,
@@ -204,7 +193,7 @@ class ProgrammeDetailsTest {
             Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "https://example.org"),
         )
         show(row(quality(2, "News HD", "HD"), quality(5, "News HD", "HD", source = 2)), sources = sources)
-        compose.waitUntilAtLeastOneExists(hasText("Record from") and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText("Record from") and hasClickAction()).onFirst().assertExists()
 
         compose.onNode(hasText("Provider A") and hasClickAction()).assertExists()
         compose.onNode(hasText("Record from") and hasClickAction()).performKeyInput { pressKey(Key.DirectionCenter) }
@@ -231,7 +220,7 @@ class ProgrammeDetailsTest {
             row(quality(3, "News FHD", "FHD"), quality(2, "News HD", "HD"), quality(5, "News HD", "HD", source = 2)),
             sources = sources,
         )
-        compose.waitUntilAtLeastOneExists(hasText("Record from") and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText("Record from") and hasClickAction()).onFirst().assertExists()
         compose.waitForIdle()
 
         press(Key.DirectionDown)
@@ -333,23 +322,18 @@ class ProgrammeDetailsTest {
         compose.onNodeWithText("A film about a film.").assertDoesNotExist()
     }
 
-    /** Waits for the toast an action shows, which may come once it has checked something. */
+    /** The toast an action shows, which may come once it has checked something. */
     private fun awaitToast(): String {
-        compose.waitRunningMainLooper { ShadowToast.getTextOfLatestToast() != null }
-        return ShadowToast.getTextOfLatestToast()
+        compose.waitForIdle()
+        return checkNotNull(ShadowToast.getTextOfLatestToast()) { "No toast was shown" }
     }
 
-    /** Waits for text that's read from the database once the panel is up, such as a synopsis. */
-    private fun awaitText(text: String) = compose.waitUntil(TIMEOUT_MILLIS) {
-        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
+    /** Text that's read from the database once the panel is up, such as a synopsis. */
+    private fun awaitText(text: String) = compose.onAllNodes(hasText(text)).onFirst().assertExists()
 
-    /**
-     * Waits for the booking OK on Schedule recording makes. It runs in the panel's scope, on the main
-     * looper, which Robolectric holds paused until it's told to run what's queued there.
-     */
+    /** The booking OK on Schedule recording makes, once settled: it runs in the panel's scope, on the main looper. */
     private fun awaitBooking(): Recording {
-        compose.waitRunningMainLooper { runBlocking { graph.recordingRepository.scheduled().isNotEmpty() } }
+        compose.waitForIdle()
         return runBlocking { graph.recordingRepository.scheduled().single() }
     }
 
@@ -357,6 +341,5 @@ class ProgrammeDetailsTest {
         const val NOW = 1_000_000L
         const val HOUR = 3_600_000L
         const val FEED = 266L
-        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
     }
 }

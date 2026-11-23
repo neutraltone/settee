@@ -6,10 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Profile
@@ -26,8 +22,8 @@ import app.opentv.sync.SyncProfileRename
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import org.junit.After
+import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,26 +34,22 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class ProfilesTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val db = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
-
     // Settings of its own: the removed list would otherwise outlive the test in the process-wide ones.
-    private val graph = ServiceLocator.Graph(app, settingsFile = "profiles_test") { db }
+    @get:Rule
+    val testGraph = TestGraph(name = "profiles_test")
+
+    private val graph = testGraph.graph
+    private val db = testGraph.database
     private val profiles get() = graph.profiles
 
-    @After
-    fun close() = db.close()
-
     @Test
-    fun `a fresh install has one profile, Me, whatever asks first`() = runTest {
+    fun `a fresh install has one profile, Me, whatever asks first`(): Unit = runBlocking {
         assertThat(profiles.observeAll().first().map { it.name }).containsExactly("Me")
         assertThat(profiles.all().map { it.id }).containsExactly(Profiles.BASE_PROFILE_ID)
     }
 
     @Test
-    fun `a profile added before anything reads the list doesn't become the base profile`() = runTest {
+    fun `a profile added before anything reads the list doesn't become the base profile`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
 
         assertThat(tom).isNotEqualTo(Profiles.BASE_PROFILE_ID)
@@ -65,7 +57,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `a removed profile leaves nothing behind in any table that keeps per-profile rows`() = runTest {
+    fun `a removed profile leaves nothing behind in any table that keeps per-profile rows`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         giveEveryPerProfileTableARowFor(tom)
 
@@ -78,7 +70,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `a merged profile's rows all move to the one it merged into, leaving nothing behind`() = runTest {
+    fun `a merged profile's rows all move to the one it merged into, leaving nothing behind`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         val thomas = checkNotNull(profiles.create("Thomas"))
         giveEveryPerProfileTableARowFor(tom)
@@ -93,7 +85,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `merging moves the active profile, removal markers and recent searches, newest first`() = runTest {
+    fun `merging moves the active profile, removal markers and recent searches, newest first`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         val thomas = checkNotNull(profiles.create("Thomas"))
         db.favourites().upsert(Favourite(tom, StreamKind.MOVIE, "Provider", "m1", changedAtMillis = 2, removed = true))
@@ -120,7 +112,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `a removed profile's recordings stay, for no one in particular`() = runTest {
+    fun `a removed profile's recordings stay, for no one in particular`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         val id = graph.recordingRepository.insert(recording(profileId = tom))
 
@@ -131,7 +123,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `the base profile can't be removed`() = runTest {
+    fun `the base profile can't be removed`(): Unit = runBlocking {
         profiles.all()
 
         assertThat(profiles.remove(Profiles.BASE_PROFILE_ID)).isFalse()
@@ -139,7 +131,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `removing the active profile makes the base profile active`() = runTest {
+    fun `removing the active profile makes the base profile active`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         graph.settings.setActiveProfile(tom)
 
@@ -149,7 +141,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `removing another profile leaves the active one alone`() = runTest {
+    fun `removing another profile leaves the active one alone`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         val sam = checkNotNull(profiles.create("Sam"))
         graph.settings.setActiveProfile(sam)
@@ -160,7 +152,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `a name another profile has is refused, ignoring case and spaces`() = runTest {
+    fun `a name another profile has is refused, ignoring case and spaces`(): Unit = runBlocking {
         profiles.create("Tom")
 
         assertThat(profiles.create(" tom ")).isNull()
@@ -168,7 +160,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `renaming to another profile's name is refused, but a profile keeps its own`() = runTest {
+    fun `renaming to another profile's name is refused, but a profile keeps its own`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
 
         assertThat(profiles.rename(tom, "me")).isFalse()
@@ -177,7 +169,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `renaming or removing a profile that isn't there reports nothing done`() = runTest {
+    fun `renaming or removing a profile that isn't there reports nothing done`(): Unit = runBlocking {
         profiles.all()
 
         assertThat(profiles.rename(99, "Tom")).isFalse()
@@ -185,20 +177,20 @@ class ProfilesTest {
     }
 
     @Test
-    fun `a blank name is refused`() = runTest {
+    fun `a blank name is refused`(): Unit = runBlocking {
         assertThat(profiles.create("   ")).isNull()
         assertThat(profiles.rename(Profiles.BASE_PROFILE_ID, "")).isFalse()
     }
 
     @Test
-    fun `names are kept without surrounding spaces`() = runTest {
+    fun `names are kept without surrounding spaces`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("  Tom "))
 
         assertThat(profiles.all().single { it.id == tom }.name).isEqualTo("Tom")
     }
 
     @Test
-    fun `a new profile records when it was created`() = runTest {
+    fun `a new profile records when it was created`(): Unit = runBlocking {
         val profiles = with(graph) {
             Profiles(db, viewerLibrary, profileSettings, recordingRepository, settings, clock = { 42_000L })
         }
@@ -210,7 +202,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `sync finds a profile by name the way the name check matches, and creates a missing one`() = runTest {
+    fun `sync finds a profile by name the way the name check matches, and creates a missing one`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
 
         assertThat(profiles.findOrCreate("tom")).isEqualTo(tom)
@@ -221,7 +213,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `sync doesn't bring back a removed profile, however the name is written`() = runTest {
+    fun `sync doesn't bring back a removed profile, however the name is written`(): Unit = runBlocking {
         val tom = checkNotNull(profiles.create("Tom"))
         profiles.remove(tom)
 
@@ -232,7 +224,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `adding a removed name lifts the removal`() = runTest {
+    fun `adding a removed name lifts the removal`(): Unit = runBlocking {
         profiles.remove(checkNotNull(profiles.create("Tom")))
 
         val again = checkNotNull(profiles.create("tom"))
@@ -243,7 +235,7 @@ class ProfilesTest {
     }
 
     @Test
-    fun `renaming onto a removed name lifts the removal`() = runTest {
+    fun `renaming onto a removed name lifts the removal`(): Unit = runBlocking {
         profiles.remove(checkNotNull(profiles.create("Tom")))
         val sam = checkNotNull(profiles.create("Sam"))
 

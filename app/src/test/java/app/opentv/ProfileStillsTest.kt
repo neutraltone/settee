@@ -5,11 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -18,58 +13,31 @@ import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.ui.ProfilesViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /** The picture behind each Profile on Who's watching?: what they last played, never anything locked. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class ProfileStillsTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(
-        app,
-        settingsFile = "profile-stills-test",
-        openDatabase = {
-            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
-        },
-    )
-    private val watching = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    @get:Rule
+    val testGraph = TestGraph(name = "profile-stills-test")
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val films = Category("films", 1, "Films", StreamKind.MOVIE)
     private val adult = Category("adult", 1, "Adult", StreamKind.MOVIE)
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    private val viewModels = ViewModelsInTest()
-
+    // The settings file outlives each test.
     @After
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
-        watching.cancel()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        // Left in place, the test dispatcher stays Main for every test after this one in the same JVM,
-        // and those driving a player on the main looper (QualityStepDownTest) stop seeing their time pass.
-        Dispatchers.resetMain()
     }
 
     private fun film(id: Long, category: Category) = Movie(
@@ -98,10 +66,10 @@ class ProfileStillsTest {
         ),
     )
 
-    /** The view model's stills once [until] holds. */
-    private fun ProfilesViewModel.stillsWhen(until: (Map<Long, String>) -> Boolean) = runBlocking {
-        watching.launch { stills.collect {} }
-        withTimeout(5_000) { stills.first(until) }
+    /** The view model's stills, drawn throughout, once its work has settled, if [until] holds. */
+    private fun ProfilesViewModel.stillsWhen(until: (Map<Long, String>) -> Boolean): Map<Long, String> {
+        testGraph.launch { stills.collect {} }
+        return testGraph.firstWhenIdle(stills, until)
     }
 
     @Test
@@ -112,7 +80,7 @@ class ProfileStillsTest {
         played(Profiles.BASE_PROFILE_ID, movieId = 1, at = 1_000)
         played(Profiles.BASE_PROFILE_ID, movieId = 2, at = 2_000)
 
-        val stills = viewModels.track(ProfilesViewModel(app, graph)).stillsWhen { it.isNotEmpty() }
+        val stills = testGraph.viewModel { ProfilesViewModel(app, graph) }.stillsWhen { it.isNotEmpty() }
 
         assertThat(stills).containsExactly(Profiles.BASE_PROFILE_ID, "https://example.com/2-backdrop.jpg")
         assertThat(stills).doesNotContainKey(kids)
@@ -126,7 +94,7 @@ class ProfileStillsTest {
         played(Profiles.BASE_PROFILE_ID, movieId = 1, at = 1_000)
         played(Profiles.BASE_PROFILE_ID, movieId = 2, at = 2_000)
 
-        val stills = viewModels.track(ProfilesViewModel(app, graph)).stillsWhen { it.isNotEmpty() }
+        val stills = testGraph.viewModel { ProfilesViewModel(app, graph) }.stillsWhen { it.isNotEmpty() }
 
         assertThat(stills).containsExactly(Profiles.BASE_PROFILE_ID, "https://example.com/1-backdrop.jpg")
     }
