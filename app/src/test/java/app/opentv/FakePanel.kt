@@ -67,19 +67,22 @@ class FakePanel(vararg initial: Pair<String, String>) {
 
     class Hold {
         val reached = java.util.concurrent.CountDownLatch(1)
-        private val gate = java.util.concurrent.CountDownLatch(1)
+
+        // Held, not a plain latch: on a TestGraph's thread the waiting request isn't counted as work
+        // in flight, so a screen can be checked during the download.
+        private val gate = TestGraph.Held()
 
         /** Whether the held request has gone on, released or let through when its wait ran out. */
         @Volatile
         var passed = false
             private set
 
-        fun release() = gate.countDown()
+        fun release() = gate.release()
 
         internal fun pass() {
             reached.countDown()
             // Bounded, so a test that fails before releasing this fails rather than hangs.
-            gate.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            gate.await(10)
             passed = true
         }
     }

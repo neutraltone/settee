@@ -22,8 +22,10 @@ import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
@@ -45,6 +47,7 @@ import org.robolectric.annotation.Config
  */
 
 /** The races a screen's test ran into, in real time. */
+@OptIn(FlowPreview::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 class TestGraphTest {
@@ -94,6 +97,8 @@ class TestGraphTest {
         compose.setTvContent {
             val names by remember {
                 db.sources().observeAll()
+                    // Settled first, as the title index waits for a burst of writes to end.
+                    .debounce(SETTLE_MILLIS)
                     .map { all -> slowly { all.joinToString { it.name } } }
                     .flowOn(graph.dispatchers.default)
             }.collectAsState("")
@@ -147,6 +152,7 @@ class TestGraphTest {
         }
 
         const val SLOW_MILLIS = 300L
+        const val SETTLE_MILLIS = 500L
     }
 }
 

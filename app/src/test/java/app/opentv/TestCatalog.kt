@@ -7,6 +7,7 @@ package app.opentv
 
 import android.content.Context
 import androidx.room.Room
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.data.db.OpenTvDatabase
@@ -25,7 +26,6 @@ import app.opentv.data.repo.VodTitle
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +42,9 @@ class TestCatalog(
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build(),
+    /** A [TestGraph]'s, for a test that waits for this catalogue's work through it. */
+    private val dispatchers: AppDispatchers = AppDispatchers(),
+    // Last, so a test can pass it as a trailing lambda.
     private val clock: () -> Long = { 0L },
 ) {
     val panel = FakePanel()
@@ -57,10 +60,11 @@ class TestCatalog(
         aliasDao = db.epgAliases(),
         channelDao = db.channels(),
         sourceDao = db.sources(),
-        api = XtreamApi(panel.http),
+        api = XtreamApi(panel.http, dispatchers = dispatchers),
         http = panel.http,
         wording = ErrorWording(context, onTelevision = false),
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
+        dispatchers = dispatchers,
     )
 
     /** The catalogue as a build with no TMDB Key has it, so TMDB is never asked. */
@@ -73,12 +77,13 @@ class TestCatalog(
         database = db,
         viewerLibrary = viewerLibrary,
         guide = guide,
-        api = XtreamApi(panel.http),
-        stalkerApi = StalkerApi(panel.http),
+        api = XtreamApi(panel.http, dispatchers = dispatchers),
+        stalkerApi = StalkerApi(panel.http, dispatchers = dispatchers),
         http = panel.http,
         settings = AppSettings.get(context),
         tmdbKey = tmdbKey,
         wording = ErrorWording(context, onTelevision = false),
+        dispatchers = dispatchers,
     ).apply {
         lookupPace = LookupPace(pauseMillis = 0, providerGapMillis = 0)
         staging = this@TestCatalog.staging
@@ -87,7 +92,7 @@ class TestCatalog(
     val settings: AppSettings = AppSettings.get(context)
 
     /** Where [lineup] keeps its folds; cancelled with the database. */
-    private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val sharing = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     /** The catalogue's Channels, with no Parental Lock set. */
     val lineup =
@@ -97,15 +102,22 @@ class TestCatalog(
             MutableStateFlow(emptySet()),
             MutableStateFlow(false),
             ANY_SIZE_DECODERS,
+            dispatchers = dispatchers,
             sharing = sharing,
         )
 
-    private val refreshing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val refreshing = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     /** A [CatalogueRefresh] over this catalogue, at [clock]; [awaitRefresh] waits for its background work. */
     fun refresh(rescanSeriesRules: suspend () -> Unit = {}) = CatalogueRefresh(
         catalog = catalog,
-        sources = SourceRepository(db.sources(), XtreamApi(panel.http), StalkerApi(panel.http), panel.http),
+        sources = SourceRepository(
+            db.sources(),
+            XtreamApi(panel.http, dispatchers = dispatchers),
+            StalkerApi(panel.http, dispatchers = dispatchers),
+            panel.http,
+            dispatchers,
+        ),
         guide = guide,
         settings = settings,
         rescanSeriesRules = rescanSeriesRules,
