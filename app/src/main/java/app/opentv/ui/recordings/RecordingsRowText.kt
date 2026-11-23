@@ -18,7 +18,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// What a row on the Recordings screen says: its title, the quiet line under it, and why it failed.
+// What a row on the Recordings screen says: its title, the quiet line under it, and why it stopped.
 
 internal val RecordingsRow.title: String
     get() = when (this) {
@@ -75,15 +75,22 @@ private fun Recording.details(): List<String> {
 }
 
 /**
- * Why a failed recording failed, in Voice's sentence and detail line (docs/ERRORS.md). One that
- * failed before errors were stored that way has a plain sentence and no detail.
+ * Why a recording stopped by itself, in Voice's sentence and detail line (docs/ERRORS.md): a failed
+ * one, or a recorded one that was cut short (#473). One that failed before errors were stored that
+ * way has a plain sentence and no detail. A booking's or one in progress's reason is a past attempt's.
  */
 @Composable
-internal fun RecordingsRow.failure(): ViewerError? {
-    val failed = recording?.takeIf { it.status == RecordingStatus.FAILED } ?: return null
-    return failed.error?.let { ViewerError.fromStored(it) ?: ViewerError(it) }
-        ?: ViewerError(stringResource(R.string.rec_error_nothing))
+internal fun RecordingsRow.reason(): ViewerError? {
+    val stopped = (this as? RecordingsRow.Recorded)?.recording ?: return null
+    return when (stopped.status) {
+        RecordingStatus.FAILED -> stopped.error?.let(::readStored)
+            ?: ViewerError(stringResource(R.string.rec_error_channel_stopped))
+        RecordingStatus.COMPLETED -> stopped.error?.let(::readStored)
+        else -> null
+    }
 }
+
+private fun readStored(error: String) = ViewerError.fromStored(error) ?: ViewerError(error)
 
 /** The Recording behind a row; a Reminder and a series link have none. */
 internal val RecordingsRow.recording: Recording?

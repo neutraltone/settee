@@ -49,6 +49,8 @@ import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
+import app.opentv.recording.RecordingStorage
+import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -90,14 +92,20 @@ object ServiceLocator {
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
      * [settingsFile] gives it settings of its own, which are otherwise one per process, and [clock]
-     * lets a test say which of two devices changed something last.
+     * lets a test say which of two devices changed something last. [openRecordingFile] replaces where
+     * a recording's bytes go, so a test can fill the storage, and [captureReconnectMillis] how long a
+     * recording waits before connecting again, so one whose stream has gone ends without waiting.
      */
+    @Suppress("LongParameterList") // All but context are only passed by tests.
     class Graph(
         context: Context,
         http: OkHttpClient? = null,
         settingsFile: String? = null,
         val clock: () -> Long = System::currentTimeMillis,
         val decoders: DecoderList = DeviceDecoders(),
+        private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
+        val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
+        // Last, so a test can pass it as a trailing lambda.
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
         private val appContext = context.applicationContext
@@ -388,6 +396,7 @@ object ServiceLocator {
                 epgRepository,
                 channelLineup,
                 errorWording,
+                openFile = openRecordingFile ?: { RecordingStorage.openSink(appContext, settings, it) },
                 clock = clock,
             )
         }

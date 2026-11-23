@@ -321,7 +321,7 @@ private fun RecordingsRowItem(
                 Text(row.title, SetteeType.RowTitle, color = text, maxLines = 1)
                 if (row.inProgress) RecordingNow(highlighted, text)
                 Text(row.line(profileNames), SetteeType.Body, color = quiet, maxLines = 2)
-                row.failure()?.let { Failure(it, text, quiet) }
+                row.reason()?.let { Reason(it, text, quiet) }
                 if (row is RecordingsRow.Booking && row.clashes) {
                     Text(
                         stringResource(R.string.rec_clashes),
@@ -354,15 +354,15 @@ private fun Leading(row: RecordingsRow, tint: Color) {
 }
 
 /**
- * What went wrong and its detail line, as `ErrorMessage` lays them out, but in the row's own colours:
- * `ErrorMessage`'s are for the Background, and a highlighted row is coral.
+ * Why a recording stopped and its detail line, as `ErrorMessage` lays them out, but in the row's own
+ * colours: `ErrorMessage`'s are for the Background, and a highlighted row is coral.
  */
 @Composable
-private fun Failure(failure: ViewerError, text: Color, quiet: Color) {
-    Text(failure.sentence, SetteeType.Body, color = text, maxLines = 2)
-    if (failure.detail.isNotBlank()) {
+private fun Reason(reason: ViewerError, text: Color, quiet: Color) {
+    Text(reason.sentence, SetteeType.Body, color = text, maxLines = 2)
+    if (reason.detail.isNotBlank()) {
         Text(
-            failure.detail,
+            reason.detail,
             SetteeType.Body,
             color = quiet,
             maxLines = 1,

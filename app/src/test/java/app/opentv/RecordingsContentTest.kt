@@ -448,6 +448,20 @@ class RecordingsContentTest {
     }
 
     @Test
+    fun `a recording cut short plays on OK, shows its length and size, and says why it stopped`() {
+        val cutShort = completed(1).copy(error = ViewerError(STORAGE_FULL, "StorageFull").stored())
+        show(recordings = listOf(cutShort))
+
+        row("Recorded 1").assert(hasText("45m", substring = true))
+            .assert(hasText("1.5 GB", substring = true))
+            .assert(hasText(STORAGE_FULL, substring = true))
+        compose.onNodeWithTag(ERROR_DETAIL_TAG, useUnmergedTree = true).assertTextEquals("StorageFull")
+        captureScreen("recordings_cut_short")
+        press(Key.DirectionCenter)
+        assertThat(played).containsExactly(cutShort)
+    }
+
+    @Test
     fun `a Reminder that will switch to its channel by itself says so, and one that only reminds doesn't`() {
         show(reminders = listOf(reminder(1, autoTune = true), reminder(2, autoTune = false)))
 
@@ -557,5 +571,6 @@ class RecordingsContentTest {
         const val LONG_LIST = 30L
         val RAIL = 48.dp
         const val NAS_DELETE_FAILED = "Couldn't delete this from your NAS. Check it's on, then try deleting it again."
+        const val STORAGE_FULL = "This TV ran out of room for recordings. Delete some you've watched to make space."
     }
 }

@@ -105,11 +105,16 @@
     <string name="rec_notification_many">Recording %1$d programmes</string>
     <string name="rec_channel_name">Recording</string>
     <string name="rec_channel_desc">Shown while Settee is recording</string>
-    <string name="rec_error_nothing">Nothing was recorded. The channel may have stopped, so try recording it again.</string>
     <string name="rec_error_missed">This was missed because Settee wasn\'t running while it was on.</string>
     <string name="rec_error_missed_late">This was missed because Android started it after it had ended.</string>
     <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
     <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
+    <string name="rec_error_full_tv">This TV ran out of room for recordings. Delete some you\'ve watched to make space.</string>
+    <string name="rec_error_full_device">This device ran out of room for recordings. Delete some you\'ve watched to make space.</string>
+    <string name="rec_error_full_usb">Your USB drive ran out of room. Delete some recordings to make space.</string>
+    <string name="rec_error_full_nas">Your NAS ran out of room. Delete some recordings or other files on it to make space.</string>
+    <string name="rec_error_nas_unreachable">Couldn\'t reach your NAS. Check it\'s on and connected to your network.</string>
+    <string name="rec_error_channel_stopped">The channel stopped sending video, which is usually at your provider\'s end. Check it plays in Live TV.</string>
     <string name="rec_delete_failed_nas">Couldn\'t delete this from your NAS. Check it\'s on, then try deleting it again.</string>
     <string name="rec_delete_failed">Couldn\'t delete this recording. Try deleting it again.</string>
     <string name="rec_background_prompt_title">Keep recording when you leave?</string>

@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">แสดงขณะ Settee กำลังบันทึก</string>
     <string name="rec_error_missed">พลาดรายการนี้เพราะ Settee ไม่ได้ทำงานระหว่างที่ออกอากาศ</string>
     <string name="rec_error_missed_late">พลาดรายการนี้เพราะ Android เริ่มบันทึกหลังจากรายการจบแล้ว</string>
-    <string name="rec_error_nothing">ไม่มีอะไรถูกบันทึก ช่องอาจหยุดไป ลองบันทึกอีกครั้ง</string>
     <string name="rec_error_usb_no_folder">ไม่มีโฟลเดอร์สำหรับบันทึก เลือกโฟลเดอร์บนไดรฟ์ USB ของคุณในการตั้งค่าการบันทึก</string>
     <string name="rec_error_usb_unavailable">ไม่พบไดรฟ์ USB ของคุณ เสียบกลับเข้าไป แล้วเลือกโฟลเดอร์อีกครั้งในการตั้งค่าการบันทึก</string>
     <string name="rec_delete_failed_nas">ลบออกจาก NAS ของคุณไม่ได้ ตรวจสอบว่าเปิดเครื่องอยู่ แล้วลองลบอีกครั้ง</string>

@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Ditampilkan saat Settee sedang merekam</string>
     <string name="rec_error_missed">Ini terlewat karena Settee tidak berjalan saat acaranya tayang.</string>
     <string name="rec_error_missed_late">Ini terlewat karena Android memulainya setelah acaranya selesai.</string>
-    <string name="rec_error_nothing">Tidak ada yang terekam. Saluran mungkin berhenti, jadi coba rekam lagi.</string>
     <string name="rec_error_usb_no_folder">Tidak ada folder untuk merekam. Pilih folder di drive USB Anda di pengaturan Rekaman.</string>
     <string name="rec_error_usb_unavailable">Drive USB Anda tidak ditemukan. Colokkan lagi, lalu pilih foldernya lagi di pengaturan Rekaman.</string>
     <string name="rec_delete_failed_nas">Tidak dapat menghapus ini dari NAS Anda. Periksa apakah NAS menyala, lalu coba hapus lagi.</string>

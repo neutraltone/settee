@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Vises, mens Settee optager</string>
     <string name="rec_error_missed">Det her blev ikke optaget, fordi Settee ikke kørte, mens det blev sendt.</string>
     <string name="rec_error_missed_late">Det her blev ikke optaget, fordi Android startede det, efter det var slut.</string>
-    <string name="rec_error_nothing">Der blev ikke optaget noget. Kanalen er måske stoppet, så prøv at optage den igen.</string>
     <string name="rec_error_usb_no_folder">Der er ingen mappe at optage til. Vælg en på dit USB-drev i optageindstillinger.</string>
     <string name="rec_error_usb_unavailable">Kan ikke finde dit USB-drev. Sæt det i igen, og vælg så dets mappe igen i optageindstillinger.</string>
     <string name="rec_delete_failed_nas">Kunne ikke slette dette fra din NAS. Tjek, at den er tændt, og prøv så at slette det igen.</string>

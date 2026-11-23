@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Hiển thị khi Settee đang ghi hình</string>
     <string name="rec_error_missed">Đã lỡ chương trình này vì Settee không chạy trong lúc phát sóng.</string>
     <string name="rec_error_missed_late">Đã lỡ chương trình này vì Android bắt đầu ghi sau khi chương trình đã kết thúc.</string>
-    <string name="rec_error_nothing">Không ghi được gì. Kênh có thể đã ngừng, vì vậy hãy thử ghi lại.</string>
     <string name="rec_error_usb_no_folder">Không có thư mục để ghi vào. Chọn một thư mục trên ổ USB của bạn trong Cài đặt ghi hình.</string>
     <string name="rec_error_usb_unavailable">Không tìm thấy ổ USB của bạn. Cắm lại, rồi chọn lại thư mục của nó trong Cài đặt ghi hình.</string>
     <string name="rec_delete_failed_nas">Không thể xoá mục này khỏi NAS của bạn. Kiểm tra xem nó đã bật chưa, rồi thử xoá lại.</string>

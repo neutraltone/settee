@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Zobrazeno, když Settee nahrává</string>
     <string name="rec_error_missed">Tohle se nenahrálo, protože Settee neběželo, když se to vysílalo.</string>
     <string name="rec_error_missed_late">Tohle se nenahrálo, protože to Android spustil až po skončení.</string>
-    <string name="rec_error_nothing">Nic se nenahrálo. Kanál možná přestal vysílat, zkuste ho proto nahrát znovu.</string>
     <string name="rec_error_usb_no_folder">Není kam nahrávat. Vyberte složku na USB disku v nastavení nahrávání.</string>
     <string name="rec_error_usb_unavailable">USB disk nelze najít. Znovu ho připojte a pak znovu vyberte jeho složku v nastavení nahrávání.</string>
     <string name="rec_delete_failed_nas">Z NAS se to nepodařilo smazat. Zkontrolujte, že je zapnutý, a zkuste to smazat znovu.</string>

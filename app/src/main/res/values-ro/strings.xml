@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Afișat cât timp Settee înregistrează</string>
     <string name="rec_error_missed">Asta a fost ratată pentru că Settee nu rula cât timp s-a difuzat.</string>
     <string name="rec_error_missed_late">Asta a fost ratată pentru că Android a pornit-o după ce se terminase.</string>
-    <string name="rec_error_nothing">Nu s-a înregistrat nimic. Este posibil ca transmisia canalului să se fi oprit, așa că încearcă să-l înregistrezi din nou.</string>
     <string name="rec_error_usb_no_folder">Nu există niciun folder în care să înregistrezi. Alege unul pe unitatea USB în Setări înregistrare.</string>
     <string name="rec_error_usb_unavailable">Unitatea USB nu poate fi găsită. Conecteaz-o din nou, apoi alege iar folderul ei în Setări înregistrare.</string>
     <string name="rec_delete_failed_nas">Nu s-a putut șterge de pe NAS. Verifică dacă este pornit, apoi încearcă din nou să ștergi.</string>

@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Mostrato mentre Settee sta registrando</string>
     <string name="rec_error_missed">Questa registrazione è stata persa perché Settee non era in esecuzione durante la messa in onda.</string>
     <string name="rec_error_missed_late">Questa registrazione è stata persa perché Android l\'ha avviata quando era già finita.</string>
-    <string name="rec_error_nothing">Non è stato registrato nulla. Il canale potrebbe essersi interrotto, quindi prova a registrarlo di nuovo.</string>
     <string name="rec_error_usb_no_folder">Non c\'è una cartella in cui registrare. Scegline una sulla tua unità USB nelle impostazioni di registrazione.</string>
     <string name="rec_error_usb_unavailable">Impossibile trovare la tua unità USB. Ricollegala, poi scegli di nuovo la sua cartella nelle impostazioni di registrazione.</string>
     <string name="rec_delete_failed_nas">Impossibile eliminarlo dal tuo NAS. Controlla che sia acceso, poi prova di nuovo a eliminarlo.</string>

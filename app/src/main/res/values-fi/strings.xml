@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Näytetään, kun Settee tallentaa</string>
     <string name="rec_error_missed">Tämä jäi tallentamatta, koska Settee ei ollut käynnissä sen aikana.</string>
     <string name="rec_error_missed_late">Tämä jäi tallentamatta, koska Android käynnisti sen vasta sen päätyttyä.</string>
-    <string name="rec_error_nothing">Mitään ei tallennettu. Kanava on ehkä lakannut lähettämästä, joten yritä tallentaa se uudelleen.</string>
     <string name="rec_error_usb_no_folder">Tallennuskansiota ei ole. Valitse kansio USB-asemaltasi tallennusasetuksista.</string>
     <string name="rec_error_usb_unavailable">USB-asemaasi ei löydy. Kytke se takaisin ja valitse sen kansio uudelleen tallennusasetuksista.</string>
     <string name="rec_delete_failed_nas">Poistaminen NAS-laitteeltasi ei onnistunut. Tarkista, että se on päällä, ja yritä sitten poistaa uudelleen.</string>

@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Prikazuje se dok Settee snima</string>
     <string name="rec_error_missed">Ovo je propušteno jer Settee nije radio dok se emitiralo.</string>
     <string name="rec_error_missed_late">Ovo je propušteno jer ga je Android pokrenuo nakon što je završilo.</string>
-    <string name="rec_error_nothing">Ništa nije snimljeno. Kanal se možda zaustavio, pa ga pokušajte snimiti ponovno.</string>
     <string name="rec_error_usb_no_folder">Nema mape za snimanje. Odaberite jednu na svom USB disku u postavkama snimanja.</string>
     <string name="rec_error_usb_unavailable">Vaš USB disk nije pronađen. Ponovno ga priključite, zatim ponovno odaberite njegovu mapu u postavkama snimanja.</string>
     <string name="rec_delete_failed_nas">Brisanje s NAS-a nije uspjelo. Provjerite je li uključen, a zatim pokušajte ponovno.</string>

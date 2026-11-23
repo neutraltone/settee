@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Показва се, докато Settee записва</string>
     <string name="rec_error_missed">Това е пропуснато, защото Settee не работеше, докато вървеше.</string>
     <string name="rec_error_missed_late">Това е пропуснато, защото Android го стартира, след като беше свършило.</string>
-    <string name="rec_error_nothing">Нищо не беше записано. Каналът може да е спрял, затова опитайте да го запишете отново.</string>
     <string name="rec_error_usb_no_folder">Няма папка за запис. Изберете папка на USB устройството си в Настройки за запис.</string>
     <string name="rec_error_usb_unavailable">USB устройството не е открито. Включете го отново, след което изберете папката му отново в Настройки за запис.</string>
     <string name="rec_delete_failed_nas">Неуспешно изтриване от NAS. Проверете дали е включен, след което опитайте отново.</string>

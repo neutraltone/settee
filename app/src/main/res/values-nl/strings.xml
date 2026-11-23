@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Wordt getoond terwijl Settee opneemt</string>
     <string name="rec_error_missed">Dit is gemist omdat Settee niet draaide terwijl het werd uitgezonden.</string>
     <string name="rec_error_missed_late">Dit is gemist omdat Android het pas startte toen het al was afgelopen.</string>
-    <string name="rec_error_nothing">Er is niets opgenomen. De zender is misschien gestopt, dus probeer hem opnieuw op te nemen.</string>
     <string name="rec_error_usb_no_folder">Er is geen map om naar op te nemen. Kies er een op je USB-drive in Opname-instellingen.</string>
     <string name="rec_error_usb_unavailable">Je USB-drive is niet te vinden. Sluit hem weer aan en kies dan opnieuw de map in Opname-instellingen.</string>
     <string name="rec_delete_failed_nas">Kan dit niet van je NAS verwijderen. Controleer of hij aanstaat en probeer het dan opnieuw.</string>

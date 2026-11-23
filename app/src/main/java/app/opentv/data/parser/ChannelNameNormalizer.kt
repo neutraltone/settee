@@ -68,18 +68,22 @@ object ChannelNameNormalizer {
             }
     }
 
-    /** Quality/codec tokens, matched as whole words, case-insensitively. */
-    private const val RANK_8K = 500
-    private const val RANK_4K = 400
+    /** The `qualityRank` each resolution's name gives a channel. */
+    const val RANK_8K = 500
+    const val RANK_4K = 400
+    const val RANK_FHD = 300
+    const val RANK_HD = 200
+    const val RANK_SD = 100
     private const val HEIGHT_8K = 4320
     private const val HEIGHT_4K = 2160
 
+    /** Quality/codec tokens, matched as whole words, case-insensitively. */
     private val QUALITY_RANKS = mapOf(
         "8K" to RANK_8K,
         "4K" to RANK_4K, "UHD" to RANK_4K, "FUHD" to RANK_4K, "2160P" to RANK_4K,
-        "FHD" to 300, "1080" to 300, "1080P" to 300, "FULLHD" to 300,
-        "HD" to 200, "720P" to 200, "720" to 200,
-        "SD" to 100, "LQ" to 100, "480P" to 100, "576P" to 100,
+        "FHD" to RANK_FHD, "1080" to RANK_FHD, "1080P" to RANK_FHD, "FULLHD" to RANK_FHD,
+        "HD" to RANK_HD, "720P" to RANK_HD, "720" to RANK_HD,
+        "SD" to RANK_SD, "LQ" to RANK_SD, "480P" to RANK_SD, "576P" to RANK_SD,
     )
 
     /** Tokens that describe the stream but not its resolution. Stripped, kept in the label. */

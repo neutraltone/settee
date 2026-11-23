@@ -75,7 +75,6 @@
     <string name="rec_channel_desc">Mostrado enquanto o Settee está a gravar</string>
     <string name="rec_error_missed">Isto foi perdido porque o Settee não estava aberto durante a emissão.</string>
     <string name="rec_error_missed_late">Isto foi perdido porque o Android o iniciou depois de ter terminado.</string>
-    <string name="rec_error_nothing">Nada foi gravado. O canal pode ter parado, por isso tente gravá-lo novamente.</string>
     <string name="rec_error_usb_no_folder">Não há nenhuma pasta para gravar. Escolha uma na sua unidade USB nas definições de Gravação.</string>
     <string name="rec_error_usb_unavailable">Não foi possível encontrar a sua unidade USB. Volte a ligá-la e escolha novamente a pasta nas definições de Gravação.</string>
     <string name="rec_delete_failed_nas">Não foi possível eliminar isto do seu NAS. Verifique se está ligado e tente eliminar novamente.</string>
