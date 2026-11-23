@@ -1,0 +1,17 @@
+# Tests know when background work has finished, never by waiting a set time
+
+A UI or view-model test starts work it can't see: Room reads on Room's threads, view models on `Dispatchers.IO` and `Default`, debounces and settle pauses, and the main looper. The suite used to wait for that work in about ten ways: `waitUntil` with a 15-second limit, `Thread.sleep`, polling the main looper by hand, a view-model stop loop per helper, and `runTest`'s virtual time skipping a view model's delays while a read was still out on a real thread. Each made a test pass when the threads happened to finish in a good order, so Test and assemble failed now and then on changes that had broken nothing (#617), and a red check stopped meaning something was wrong.
+
+Tests now reach the app only through one shared rule, `TestGraph` (#616). It builds the `ServiceLocator.Graph` with Room on an executor that counts its work, and with io and default dispatchers that count what they run and the timers they set. It registers itself with Compose as an idling resource, so `waitForIdle` and every assertion wait for that work, and `awaitIdle` does the same for a view model with no screen. Teardown stops every view model and job the test started before the database closes. A test checks a state that only exists while something is loading by holding that work (`hold()`, `TestGraph.Held`) and releasing it when it chooses, not by catching it in time. Virtual time is used only where the database is on the same test dispatcher, so skipped delays can never race a real thread. A timer the graph's work sets doesn't make a test wait in real time either: once nothing else is running, the next idle check fires it.
+
+We turned down two alternatives:
+
+- **Retrying failed tests**, with a Gradle retry plugin or by re-running the job. A test that passes on its second try is still flaky, and a retry hides that it is, so the next real failure looks like noise too. A retry also doubles the cost of every genuine failure. There is no retry plugin at any stage.
+- **Fixing each test as it fails.** Each fix was a longer wait or another local workaround for the same race, and the next copied test brought the race back. The fix belongs in the one place every test waits through, so a new test gets it without knowing.
+
+## Consequences
+
+- detekt's `detektTestWaits` task fails a test that calls `Thread.sleep`, Compose's `waitUntil` family, `ServiceLocator.get` or a manual main-looper idle, and points at `TestGraph`. The uses that genuinely can't move are in `app/detekt-baseline.xml`: ExoPlayer's readiness in `TestPlayers`, the pairing and manager servers' plain threads, broadcast receivers that launch on raw `Dispatchers.IO`, and `TestGraph`'s own internals. A new test gets no entry there.
+- Work the graph doesn't count is invisible to a settle. Production code a test reaches through the graph takes the graph's dispatchers rather than `Dispatchers.IO` directly; when a check runs too early, the usual cause is a raw dispatcher still to plumb.
+- A timer longer than three seconds isn't counted, so it's treated as work finished and resting. A test that needs one to fire moves the clock itself (`advanceBy`, or `compose.mainClock` for Compose's own delays).
+- Real time still passes in a real-time test, so the canaries in `TestGraphTest` reproduce each of the old races on purpose, and fail if a change to `TestGraph` lets one back in.

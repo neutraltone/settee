@@ -491,6 +491,60 @@ exhaustively — and they are where the bugs that ruin someone's evening actuall
 malformed case in `M3uParserTest` is something that should cost the user one channel, never the
 whole playlist.
 
+### Setting up a UI or view-model test: `TestGraph`
+
+There is one way to set up a test that reaches the app's graph, screens or view models:
+`app/src/test/java/app/opentv/TestGraph.kt` (ADR 0008). It builds the `ServiceLocator.Graph`, swaps
+it in for the app's own for the length of the test, counts every piece of background work the
+graph starts, and stops it all at the end. A test settles, then checks; it never waits a set time.
+
+```kotlin
+private val compose = createComposeRule()          // not a @Rule: TestGraph runs it, inside itself
+@get:Rule val testGraph = TestGraph(compose)       // without a screen: TestGraph()
+private val app = testGraph.app
+private val graph = testGraph.graph                // what ServiceLocator.get returns during the test
+private val db = graph.database                    // on disk with WAL, deleted at teardown
+```
+
+Its settings: `name` (its own settings file and database, for a test that changes settings, or one
+of two devices), `http`, `clock`, `decoders`, `statements` (hears every SQL statement),
+`openRecordingFile`, `captureReconnectMillis`, `swapIn = false` for a second graph, and
+`virtualTime = true` for a test with no screen and no hold.
+
+- **View models:** `testGraph.viewModel { FooViewModel(app, graph) }` (one per class per test, as a
+  screen's store makes it) or `testGraph.track(vm)`. Never clear or stop them yourself.
+- **Settling:** with a screen, any assertion or `compose.waitForIdle()`; without one,
+  `testGraph.awaitIdle()`. Assert straight after: `compose.onAllNodes(m).onFirst().assertExists()`
+  for "it appears", `assertCountEquals(0)` for "it's gone".
+- **A view model's state:** `testGraph.firstWhenIdle(vm.state) { pred }`. Keep a
+  `testGraph.launch { vm.state.collect {} }` first when the flow has to stay drawn across a clock
+  move (`WhileSubscribed`, a debounce on `viewModelScope`). A test that calls a view model's suspending
+  functions in turn runs them in `testGraph.runOnMain { }`; repository-only tests use `runBlocking`.
+- **Clocks:** `testGraph.advanceBy(ms)` moves the main looper's clock between two settles (delays on
+  `viewModelScope`). Compose's own delays (`LaunchedEffect`, `produceState`) move with
+  `compose.mainClock.advanceTimeBy(ms)`; `waitForIdle` doesn't skip them. The graph's own timers
+  under three seconds count as work and fire as soon as nothing else is running; longer ones are
+  work resting, and don't hold a settle.
+- **Loading states:** `testGraph.hold()` holds reads of the catalogue's rows (movies, series,
+  episodes, channels) until `release()`; held reads don't count as busy, so the screen can be checked
+  showing its skeleton. A test's own wait on a graph thread (a fake server holding a request) parks
+  on a `TestGraph.Held` instead of a latch, or every settle would wait for it.
+- **Two graphs** (a panel and the app, two sync devices): give each a rule with an explicit `order`,
+  lower is outer, and `compose.registerIdlingResource(other)` before showing a screen built on the
+  one that isn't passed `compose`.
+
+When a check runs before the work it's about, the work is on something the graph doesn't count:
+usually production code on raw `Dispatchers.IO`/`Default` instead of the graph's
+`dispatchers`. Dump the threads at that point (`Thread.getAllStackTraces()`): a frame on a
+`DefaultDispatcher-worker` with no `TestGraph$Work.run` below it is the one to plumb. A request
+hanging on a real socket on a graph thread keeps the graph busy for ever; hold it with a fake
+instead. Teardown fails the test, not the next one, when work doesn't stop within ten seconds.
+
+`detektTestWaits` (run by `tools/check/check.py quick` and the detekt check) fails a test that
+uses `Thread.sleep`, Compose's `waitUntil` family, `ServiceLocator.get` or a manual main-looper idle.
+The few uses that genuinely can't move (ExoPlayer readiness in `TestPlayers`, plain server threads)
+are in `app/detekt-baseline.xml`; a new test gets no entry there.
+
 Things worth testing that are not yet covered, and would be very welcome contributions:
 
 - `EpgRepository.sync` against a mid-stream failure, asserting the old guide survives
