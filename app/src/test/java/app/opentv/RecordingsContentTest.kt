@@ -22,6 +22,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
@@ -30,6 +31,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -158,7 +160,7 @@ class RecordingsContentTest {
 
         press(Key.DirectionCenter)
 
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         assertThat(retried).isEmpty()
     }
 
@@ -180,11 +182,11 @@ class RecordingsContentTest {
     fun `a booking that starts while its options are open offers Stop, not Cancel`() {
         show(recordings = listOf(booking(1)))
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel recording")).onFirst().assertExists()
 
         shown = listOf(booking(1).copy(status = RecordingStatus.RECORDING))
 
-        compose.waitUntilAtLeastOneExists(hasText("Stop recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Stop recording")).onFirst().assertExists()
         compose.onNode(hasText("Cancel recording")).assertDoesNotExist()
     }
 
@@ -192,11 +194,11 @@ class RecordingsContentTest {
     fun `the options close when their row goes while they're open`() {
         show(recordings = listOf(booking(1), completed(2)))
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel recording")).onFirst().assertExists()
 
         shown = listOf(completed(2))
 
-        compose.waitUntilDoesNotExist(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel recording")).assertCountEquals(0)
     }
 
     @Test
@@ -299,10 +301,10 @@ class RecordingsContentTest {
         show(recordings = listOf(booked))
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel recording")).onFirst().assertExists()
         captureScreen("recordings_options")
         compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         assertThat(chosen).isEmpty()
         compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
 
@@ -314,9 +316,9 @@ class RecordingsContentTest {
         show(reminders = listOf(reminder(1, autoTune = false)))
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel reminder"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel reminder")).onFirst().assertExists()
         compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         compose.waitForIdle()
         compose.onNode(hasText("Keep it") and hasClickAction()).assertIsFocused()
         compose.onNode(hasText("Keep it") and hasClickAction()).performClick()
@@ -332,9 +334,9 @@ class RecordingsContentTest {
         show(reminders = listOf(set))
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel reminder"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel reminder")).onFirst().assertExists()
         compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
 
         assertThat(chosen).containsExactly(RecordingsRow.OfReminder(set) to ItemOption.CancelReminder)
@@ -345,10 +347,10 @@ class RecordingsContentTest {
         show(seriesRules = listOf(seriesLink(1)))
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Remove series link"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Remove series link")).onFirst().assertExists()
         compose.onNode(hasText("Remove series link") and hasClickAction()).performClick()
 
-        compose.waitUntilAtLeastOneExists(hasText("bookings are cancelled", substring = true), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("bookings are cancelled", substring = true)).onFirst().assertExists()
         assertThat(chosen).isEmpty()
     }
 
@@ -358,7 +360,7 @@ class RecordingsContentTest {
         show(recordings = listOf(recording))
 
         press(Key.Menu)
-        compose.waitUntilAtLeastOneExists(hasText("Stop recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Stop recording")).onFirst().assertExists()
         compose.onNode(hasText("Stop recording") and hasClickAction()).performClick()
 
         assertThat(chosen).containsExactly(RecordingsRow.Recorded(recording) to ItemOption.StopRecording)
@@ -368,13 +370,13 @@ class RecordingsContentTest {
     fun `a booking that starts while it's being asked about is no longer asked about`() {
         show(recordings = listOf(booking(1)))
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Cancel recording")).onFirst().assertExists()
         compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
 
         shown = listOf(booking(1).copy(status = RecordingStatus.RECORDING))
 
-        compose.waitUntilDoesNotExist(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).assertCountEquals(0)
     }
 
     @Test
@@ -383,7 +385,7 @@ class RecordingsContentTest {
 
         press(Key.Menu)
 
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         assertThat(played).isEmpty()
     }
 
@@ -392,9 +394,9 @@ class RecordingsContentTest {
         show(recordings = listOf(completed(1)))
 
         press(Key.Menu)
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         captureScreen("recordings_delete_confirm")
         Espresso.pressBack()
         compose.waitForIdle()
@@ -408,9 +410,9 @@ class RecordingsContentTest {
         show(recordings = listOf(completed(1)))
 
         press(Key.Menu)
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         compose.waitForIdle()
 
         compose.onNode(hasText("Keep it") and hasClickAction()).assertIsFocused()
@@ -422,9 +424,9 @@ class RecordingsContentTest {
         show(recordings = listOf(finished))
 
         press(Key.Menu)
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
 
         assertThat(chosen).containsExactly(RecordingsRow.Recorded(finished) to ItemOption.DeleteRecording)
@@ -519,9 +521,9 @@ class RecordingsContentTest {
 
     private fun deleteHighlighted() {
         press(Key.Menu)
-        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Delete")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Keep it")).onFirst().assertExists()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
         compose.waitForIdle()
     }
@@ -583,7 +585,6 @@ class RecordingsContentTest {
     )
 
     private companion object {
-        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
         const val NOW = 1_800_000_000_000L
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE

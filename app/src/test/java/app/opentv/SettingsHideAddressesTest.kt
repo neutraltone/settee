@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
@@ -15,10 +14,9 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StremioAddon
@@ -45,8 +43,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsHideAddressesTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val secrets = FixedServerSecrets()
@@ -54,7 +54,7 @@ class SettingsHideAddressesTest {
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
-    private val graph get() = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph get() = testGraph.graph
 
     @Test
     fun `a provider whose address has no host shows no note, not its address or an empty line`() {
@@ -86,7 +86,8 @@ class SettingsHideAddressesTest {
         }
 
         val saved = "http://guide487.example.com/xmltv.php?password=p"
-        compose.waitUntilSaved { graph.epgRepository.savedFeed(saved) != null }
+        compose.waitForIdle()
+        assertThat(graph.epgRepository.savedFeed(saved)).isNotNull()
         assertThat(graph.epgRepository.savedFeed(saved)?.name).isEqualTo("guide487.example.com")
         compose.onNode(hasText("password", substring = true)).assertDoesNotExist()
     }
@@ -99,9 +100,7 @@ class SettingsHideAddressesTest {
 
         compose.onNodeWithText("Odd add-on 487").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Remove") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Remove") and hasAnyAncestor(isDialog())).onFirst().assertExists()
 
         val shown = compose.onAllNodes(hasAnyAncestor(isDialog()), useUnmergedTree = true).fetchSemanticsNodes()
             .flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
@@ -123,7 +122,5 @@ class SettingsHideAddressesTest {
         )
     }
 
-    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
-        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun waitFor(text: String) = compose.onAllNodes(hasText(text)).onFirst().assertExists()
 }

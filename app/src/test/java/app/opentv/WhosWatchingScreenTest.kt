@@ -56,7 +56,8 @@ class WhosWatchingScreenTest {
         setScreen(lastActive = 2)
 
         compose.onNodeWithContentDescription("Sam").assertIsFocused()
-        compose.waitUntil { artwork.hasLoaded }
+        compose.waitForIdle()
+        assertThat(artwork.hasLoaded).isTrue()
         captureScreen("whos_watching_initial")
     }
 
