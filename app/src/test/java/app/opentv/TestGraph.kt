@@ -274,6 +274,12 @@ class TestGraph(
             viewModels.clear()
             tracked.forEach { it.viewModelScope.cancel() }
             synchronized(jobs) { jobs.toList() }.forEach { it.cancel() }
+            // Even work that hasn't reached the database yet: cancelled on its way to a thread, it
+            // only ends once it gets there, which can be after this test has finished.
+            if (dispatcher == null) {
+                val viewModelWork = tracked.map { it.viewModelScope.coroutineContext.job }
+                drain("the test's view models to stop") { viewModelWork.all { it.isCompleted } && isIdleNow }
+            }
             // A test that closed the database itself (through TestCatalog, say) stopped its work first.
             if (opened && graph.database.isOpen) stopBackgroundWork()
         } finally {
