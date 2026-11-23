@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.provider.Settings
 import android.text.InputType
 import android.view.KeyEvent
@@ -17,6 +16,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -26,6 +26,7 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -33,10 +34,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
-import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.model.Category
 import app.opentv.data.model.Source
@@ -45,6 +44,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.design.ERROR_DETAIL_TAG
+import app.opentv.ui.settings.START_DELAY_MS
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
@@ -70,8 +70,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsScreenTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val secrets = FixedServerSecrets()
@@ -82,7 +84,7 @@ class SettingsScreenTest {
     private var leftSettings = 0
     private val opened = mutableListOf<String>()
 
-    private val graph get() = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph get() = testGraph.graph
 
     // A process-wide singleton: a timer left armed, or on the test's clock, would leak into the next test.
     @After
@@ -109,9 +111,7 @@ class SettingsScreenTest {
 
     private fun highlighted() = compose.onNode(isFocused())
 
-    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
-        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun waitFor(text: String) = compose.onAllNodes(hasText(text)).onFirst().assertExists()
 
     /** A provider nothing will reach: port 9 refuses at once. */
     private fun saveProvider(name: String): Long = runBlocking {
@@ -126,7 +126,7 @@ class SettingsScreenTest {
         // A key goes to whatever has the Highlight, so wait for it to reach the row first: a panel
         // moves it there a frame after it opens.
         val row = hasText(text) and hasAnyAncestor(isDialog())
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(row and isFocused()).onFirst().assertExists()
         compose.onNode(row).performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
@@ -299,10 +299,9 @@ class SettingsScreenTest {
         pressInPanel("Keep it", Key.DirectionUp)
         compose.onNode(hasText("Yes, remove Old films on 168") and isFocused()).assertExists()
         pressInPanel("Yes, remove Old films on 168", Key.DirectionCenter)
-        compose.waitUntilSaved { runBlocking { graph.sourceRepository.byId(id) } == null }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Old films on 168")).fetchSemanticsNodes().isEmpty()
-        }
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.sourceRepository.byId(id) }).isNull()
+        compose.onAllNodes(hasText("Old films on 168")).assertCountEquals(0)
         // The row that had the Highlight has gone, so it moves on rather than vanishing with it.
         highlighted().assertExists()
     }
@@ -324,7 +323,7 @@ class SettingsScreenTest {
         entry.type("http://127.0.0.1:9/guide168.xml")
         entry.pressAction()
 
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml") != null }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml") }).isNotNull()
         // Named by its host: a provider's guide link can carry the login.
         assertThat(graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
         compose.onNode(hasText("guide168", substring = true)).assertDoesNotExist()
@@ -333,7 +332,7 @@ class SettingsScreenTest {
 
     @Test
     fun `an address that isn't one keeps the guide's entry screen open, saying why`() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
+        val app = testGraph.app
         show(SettingsMemory(SettingsSection.Guide))
         waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -351,7 +350,7 @@ class SettingsScreenTest {
         entry.pressAction()
 
         val why = app.getString(R.string.settings_guide_bad_address)
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(hasText(why)).onFirst().assertExists()
         compose.onNode(hasText(app.getString(R.string.common_save))).assertExists()
         captureScreen("settings_guide_bad_address")
         assertThat(ownFeeds()).isEqualTo(before)
@@ -374,17 +373,15 @@ class SettingsScreenTest {
         compose.onNode(hasText("Own guide 168") and hasAnyAncestor(isDialog())).assertExists()
         captureScreen("settings_guide_details")
         pressInPanel("Use this guide", Key.DirectionCenter)
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml")?.enabled == false }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml")?.enabled }).isFalse()
 
         pressInPanel("Use this guide", Key.DirectionDown)
         pressInPanel("Remove", Key.DirectionCenter)
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") == null }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") }).isNull()
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Update the guide now") and isFocused()).onFirst().assertExists()
         paneTitle().assertTextContains("TV guide")
     }
 
@@ -590,10 +587,8 @@ class SettingsScreenTest {
             pressAction()
         }
 
-        compose.waitUntil(10_000) {
-            val failed = hasText("Get from another device") and hasText("Couldn't get anything", substring = true)
-            compose.onAllNodes(failed).fetchSemanticsNodes().isNotEmpty()
-        }
+        val failed = hasText("Get from another device") and hasText("Couldn't get anything", substring = true)
+        compose.onAllNodes(failed).onFirst().assertExists()
         compose.onNode(hasText("Get from another device") and isFocused()).assertExists()
     }
 
@@ -603,10 +598,10 @@ class SettingsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER)
 
         // Sharing needs a network address, which a test machine may not have.
-        compose.waitUntil(UI_WAIT_MILLIS) {
+        assertThat(
             compose.onAllNodes(hasText("Stop sharing")).fetchSemanticsNodes().isNotEmpty() ||
-                compose.onAllNodes(hasText("isn't on a network", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+                compose.onAllNodes(hasText("isn't on a network", substring = true)).fetchSemanticsNodes().isNotEmpty(),
+        ).isTrue()
         assumeTrue(compose.onAllNodes(hasText("Stop sharing")).fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithTag(SettingsTags.CODE_BLOCK).assertExists()
         compose.onNode(hasText("Stop sharing") and isFocused()).assertExists()
@@ -653,9 +648,7 @@ class SettingsScreenTest {
             pressAction()
         }
 
-        compose.waitUntil(10_000) {
-            compose.onAllNodes(hasText("Can't reach the add-on.", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Can't reach the add-on.", substring = true)).onFirst().assertExists()
         compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("Connect"), useUnmergedTree = true).assertExists()
         compose.onNodeWithText("That address didn't give an add-on", substring = true).assertDoesNotExist()
         compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
@@ -665,12 +658,15 @@ class SettingsScreenTest {
     @Test
     fun `Manage on phone or laptop shows its QR code and short address above Get a new address`() {
         show(SettingsMemory(SettingsSection.Manager))
+        // The pane waits a moment before it opens a socket, on Compose's clock, which only moves on its own
+        // while there's a frame to draw.
+        compose.mainClock.advanceTimeBy(START_DELAY_MS)
 
         // Serving needs a network address, which a test machine may not have.
-        compose.waitUntil(UI_WAIT_MILLIS) {
+        assertThat(
             compose.onAllNodesWithTag(SettingsTags.CODE_BLOCK).fetchSemanticsNodes().isNotEmpty() ||
-                compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
-        }
+                compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty(),
+        ).isTrue()
         assumeTrue(compose.onAllNodesWithTag(SettingsTags.CODE_BLOCK).fetchSemanticsNodes().isNotEmpty())
         val shown = compose.onAllNodes(hasAnyAncestor(hasTestTag(SettingsTags.CODE_BLOCK)), useUnmergedTree = true)
             .fetchSemanticsNodes().flatMap { it.config.getOrElseNullable(SemanticsProperties.Text) { null }.orEmpty() }
@@ -722,22 +718,20 @@ class SettingsScreenTest {
     fun `Subtitles says which Profile it belongs to, and choosing Off turns them off for that Profile`() {
         runBlocking { graph.profileSettings.setSubtitlesOn(true) }
         show(SettingsMemory(SettingsSection.Display))
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            // Its Profile's name, whichever that is: asking Profiles for it would block on its lock.
-            val row = hasText("Subtitles") and hasText("For ", substring = true) and hasText("On")
-            compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
-        }
+        // Its Profile's name, whichever that is: asking Profiles for it would block on its lock.
+        val row = hasText("Subtitles") and hasText("For ", substring = true) and hasText("On")
+        compose.onAllNodes(row).onFirst().assertExists()
 
         press(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER)
         pressInPanel("On", Key.DirectionUp)
         pressInPanel("Off", Key.DirectionCenter)
 
-        compose.waitUntilSaved { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
+        assertThat(compose.saved { graph.profileSettings.subtitlePreference.first() }.enabled).isFalse()
     }
 
     @Test
     fun `where nothing can allow background recording, its row says so and opens nothing`() {
-        val app: Application = ApplicationProvider.getApplicationContext()
+        val app = testGraph.app
         BatteryScreens.fireTvStub(app)
         show(SettingsMemory(SettingsSection.Recording))
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -755,7 +749,7 @@ class SettingsScreenTest {
 
     @Test
     fun `where the system can allow background recording, OK on its row opens that screen`() {
-        val app: Application = ApplicationProvider.getApplicationContext()
+        val app = testGraph.app
         BatteryScreens.both(app)
         show(SettingsMemory(SettingsSection.Recording))
         press(KeyEvent.KEYCODE_DPAD_RIGHT)

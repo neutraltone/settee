@@ -12,14 +12,13 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.RecordingSignals
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -46,10 +45,12 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class PlayerScreenRecordingSwitchTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val graph = testGraph.graph
 
     private fun row(streamId: String, name: String) = Channel(
         sourceId = 1,
@@ -62,7 +63,7 @@ class PlayerScreenRecordingSwitchTest {
         streamUrl = "http://example.com/live/u/p/$streamId.ts",
     )
 
-    // The graph is process-wide, so its database outlives each test, and so do the signals.
+    // The signals are process-wide, so they outlive each test.
     @Before
     fun catalogue() = runBlocking<Unit> {
         RecordingSignals.reset()
@@ -87,7 +88,7 @@ class PlayerScreenRecordingSwitchTest {
             PlayerScreen(channelId = id, onBack = {})
             RecordingSwitchWarning()
         }
-        compose.waitUntilAtLeastOneExists(hasText("Bravo Two", substring = true), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText("Bravo Two", substring = true)).onFirst().assertExists()
         warnOfRecording()
         compose.waitForIdle()
     }
@@ -121,7 +122,9 @@ class PlayerScreenRecordingSwitchTest {
         assertThat(RecordingSignals.imminent.value).isNull()
         assertThat(switchesWhenRecordingStarts()).isFalse()
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
-        compose.waitUntil(TIMEOUT_MILLIS) { zapped() }
+        compose.mainClock.advanceTimeBy(ZAP_SETTLE_MILLIS)
+        compose.waitForIdle()
+        assertThat(zapped()).isTrue()
     }
 
     @Test
@@ -133,12 +136,12 @@ class PlayerScreenRecordingSwitchTest {
         compose.onNodeWithText("Keep watching").assertDoesNotExist()
         assertThat(switchesWhenRecordingStarts()).isTrue()
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
-        compose.waitUntil(TIMEOUT_MILLIS) { zapped() }
+        compose.mainClock.advanceTimeBy(ZAP_SETTLE_MILLIS)
+        compose.waitForIdle()
+        assertThat(zapped()).isTrue()
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
-
         // Past the player's 350 ms zap debounce.
         const val ZAP_SETTLE_MILLIS = 1_000L
     }

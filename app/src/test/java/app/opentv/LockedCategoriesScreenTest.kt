@@ -5,13 +5,11 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsOff
@@ -21,13 +19,12 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -55,14 +52,14 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class LockedCategoriesScreenTest {
 
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val graph = testGraph.graph
     private var left = false
 
     private lateinit var view: View
@@ -80,7 +77,6 @@ class LockedCategoriesScreenTest {
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
         locked()
-        graph.database.close()
     }
 
     /** Far more than fit on the screen at once: the last is well below it. */
@@ -114,12 +110,11 @@ class LockedCategoriesScreenTest {
 
     private fun show() {
         setScreen()
-        awaitHighlight("News", 10_000)
+        awaitHighlight("News")
     }
 
-    private fun awaitHighlight(label: String, millis: Long) = compose.waitUntil(millis) {
-        compose.onAllNodes(hasText(label) and isFocused()).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun awaitHighlight(label: String) =
+        compose.onAllNodes(hasText(label) and isFocused()).onFirst().assertExists()
 
     private fun press(key: Key, times: Int = 1) = repeat(times) {
         compose.onRoot().performKeyInput { pressKey(key) }
@@ -171,9 +166,7 @@ class LockedCategoriesScreenTest {
     fun `with no categories yet, it says where they come from`() {
         setScreen()
 
-        compose.waitUntil(10_000) {
-            compose.onAllNodesWithText("No categories yet", substring = true).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodesWithText("No categories yet", substring = true).onFirst().assertExists()
         captureScreen("locked_categories_empty")
     }
 
@@ -198,7 +191,7 @@ class LockedCategoriesScreenTest {
 
         runBlocking { categories.emit(listOf(CategoryGroup("news", "News", listOf("10")))) }
 
-        awaitHighlight("News", 5_000)
+        awaitHighlight("News")
         compose.onNodeWithText("No categories yet", substring = true).assertDoesNotExist()
     }
 

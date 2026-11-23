@@ -14,8 +14,8 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.recording.RecordingFixture.Companion.HOUR
 import app.opentv.recording.RecordingFixture.Companion.NOW
+import app.opentv.testing
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,7 +57,7 @@ class FailInterruptedTest {
     private suspend fun coldStart() = recordings.failInterrupted(RecordingEngine.Interrupted.stored(context))
 
     @Test
-    fun `a recording cut off when Settee closed says so, with Interrupted as the detail`() = runTest {
+    fun `a recording cut off when Settee closed says so, with Interrupted as the detail`() = testing {
         val id = recording(RecordingStatus.RECORDING)
 
         coldStart()
@@ -73,7 +73,7 @@ class FailInterruptedTest {
     }
 
     @Test
-    fun `bookings, finished recordings and ones that already failed are left as they were`() = runTest {
+    fun `bookings, finished recordings and ones that already failed are left as they were`() = testing {
         val booked = recording(RecordingStatus.SCHEDULED)
         val finished = recording(RecordingStatus.COMPLETED)
         val channelStopped = ViewerError("The channel stopped.", "HTTP 404")

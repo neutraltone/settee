@@ -5,9 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.room.Room
-import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
@@ -27,23 +24,18 @@ import kotlinx.coroutines.flow.first
 
 /**
  * One device: its own database and settings, holding the same provider's catalogue under its
- * own row ids.
+ * own row ids. Its graph, [testGraph], is a rule the test declares, none of them standing in for
+ * the app's own.
  */
-internal class SyncDevice(app: Application, private val rowIdOffset: Long) {
+internal class SyncDevice(private val rowIdOffset: Long) {
     /** What this device's clock reads, once a test cares which device changed something last. */
     var now: Long? = null
 
     private fun clock(): Long = now ?: System.currentTimeMillis()
-    val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
     val panel = FakePanel()
-    val graph = ServiceLocator.Graph(
-        app,
-        panel.http,
-        settingsFile = "device_$rowIdOffset",
-        clock = ::clock,
-    ) { db }
+    val testGraph = TestGraph(name = "device_$rowIdOffset", http = panel.http, clock = ::clock, swapIn = false)
+    val graph = testGraph.graph
+    val db: OpenTvDatabase get() = graph.database
     val sync = SyncEngine(graph)
     private val library get() = graph.viewerLibrary
 

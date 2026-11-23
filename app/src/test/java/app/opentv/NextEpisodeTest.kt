@@ -14,7 +14,6 @@ import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,7 +46,7 @@ class NextEpisodeTest {
         library.recordProgress("ep:${ep.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
 
     @Test
-    fun `moving on from a short episode at the card makes it Watched, short of 93 percent`() = runTest {
+    fun `moving on from a short episode at the card makes it Watched, short of 93 percent`() = testing {
         val key = "ep:${testEpisode(1, 1).id}"
         library.recordProgress(key, positionMillis = 45_000, durationMillis = 60_000)
 
@@ -57,7 +56,7 @@ class NextEpisodeTest {
     }
 
     @Test
-    fun `moving on from a clip of only a few seconds at the card still makes it Watched`() = runTest {
+    fun `moving on from a clip of only a few seconds at the card still makes it Watched`() = testing {
         val key = "ep:${testEpisode(1, 1).id}"
 
         library.nextEpisodes.movedOnFrom(key, durationMillis = 4_000)
@@ -66,7 +65,7 @@ class NextEpisodeTest {
     }
 
     @Test
-    fun `moving on from an episode whose length isn't known records nothing`() = runTest {
+    fun `moving on from an episode whose length isn't known records nothing`() = testing {
         val key = "ep:${testEpisode(1, 1).id}"
         library.recordProgress(key, positionMillis = 45_000, durationMillis = 2_400_000)
         val before = library.marks.statusOf(key)
@@ -77,7 +76,7 @@ class NextEpisodeTest {
     }
 
     @Test
-    fun `the Next Episode follows the episode playing, not the last one Watched`() = runTest {
+    fun `the Next Episode follows the episode playing, not the last one Watched`() = testing {
         storeSeries()
         watch(testEpisode(1, 5))
 
@@ -85,35 +84,35 @@ class NextEpisodeTest {
     }
 
     @Test
-    fun `after a season finale the Next Episode opens the next season`() = runTest {
+    fun `after a season finale the Next Episode opens the next season`() = testing {
         storeSeries()
 
         assertThat(library.nextEpisodes.after(testEpisode(1, 5))).isEqualTo(testEpisode(2, 1))
     }
 
     @Test
-    fun `a series' last episode has no Next Episode`() = runTest {
+    fun `a series' last episode has no Next Episode`() = testing {
         storeSeries()
 
         assertThat(library.nextEpisodes.after(testEpisode(2, 5))).isNull()
     }
 
     @Test
-    fun `the episode before a season's first is the last season's finale`() = runTest {
+    fun `the episode before a season's first is the last season's finale`() = testing {
         storeSeries()
 
         assertThat(library.nextEpisodes.before(testEpisode(2, 1))).isEqualTo(testEpisode(1, 5))
     }
 
     @Test
-    fun `a series' first episode has nothing before it`() = runTest {
+    fun `a series' first episode has nothing before it`() = testing {
         storeSeries()
 
         assertThat(library.nextEpisodes.before(testEpisode(1, 1))).isNull()
     }
 
     @Test
-    fun `with the series' episodes not loaded there's nothing before an episode`() = runTest {
+    fun `with the series' episodes not loaded there's nothing before an episode`() = testing {
         assertThat(library.nextEpisodes.before(testEpisode(1, 3))).isNull()
     }
 }

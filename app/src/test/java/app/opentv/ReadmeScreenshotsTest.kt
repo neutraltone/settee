@@ -5,10 +5,8 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -20,13 +18,13 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -43,6 +41,7 @@ import app.opentv.ui.MainShell
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.Tab
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieDetailContent
 import app.opentv.ui.vod.MoviesScreen
@@ -54,15 +53,14 @@ import coil.decode.DataSource
 import coil.request.ErrorResult
 import coil.request.SuccessResult
 import coil.test.FakeImageLoaderEngine
+import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -82,21 +80,16 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class ReadmeScreenshotsTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = ReadmeArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
@@ -379,7 +372,7 @@ class ReadmeScreenshotsTest {
             )
             graph.database.movies().upsertAll(classics + openFilms)
         }
-        val viewModel = viewModels.vod(app, graph)
+        val viewModel = testGraph.viewModel { VodViewModel(app, graph) }
         compose.setTvContent {
             MainShell(
                 tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
@@ -401,10 +394,8 @@ class ReadmeScreenshotsTest {
                 )
             }
         }
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            !viewModel.recommendingMovies.value && viewModel.recommendedMovies.value.isNotEmpty()
-        }
+        compose.waitForIdle()
+        assertThat(!viewModel.recommendingMovies.value && viewModel.recommendedMovies.value.isNotEmpty()).isTrue()
         // As the app gets there: OK on Movies in the rail lands on the first cover, then Right
         // along the row to a film with a backdrop. Focusing the cover directly lost out to the
         // screen placing its own first Highlight once it had loaded.
@@ -416,7 +407,9 @@ class ReadmeScreenshotsTest {
             if (compose.onAllNodes(cover).fetchSemanticsNodes().isEmpty()) press(Key.DirectionRight)
         }
         compose.onNode(cover).assertExists()
-        compose.waitUntilAtLeastOneExists(hasText(tearsOfSteel.plot!!), 5_000)
+        // Once the Highlight has rested there long enough for the backdrop to follow it.
+        compose.mainClock.advanceTimeBy(500)
+        compose.onAllNodes(hasText(tearsOfSteel.plot!!)).onFirst().assertExists()
         artwork.awaitLoaded(compose)
 
         captureScreen("readme_movies")
@@ -477,14 +470,12 @@ class ReadmeArtwork : ExternalResource() {
         )
     }
 
-    /** Waits until every image the screen asked for has arrived; Compose's idling doesn't wait for Coil. */
+    /** Settles until every image the screen asked for has arrived: the fake engine answers on the main thread. */
     fun awaitLoaded(compose: androidx.compose.ui.test.junit4.ComposeTestRule) {
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(SETTLE_MILLIS)
-        compose.waitUntil(LOAD_TIMEOUT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            pending.get() == 0
-        }
+        compose.waitForIdle()
+        assertWithMessage("README artwork still loading").that(pending.get()).isEqualTo(0)
         compose.mainClock.advanceTimeBy(SETTLE_MILLIS)
         compose.waitForIdle()
     }
@@ -497,6 +488,5 @@ class ReadmeArtwork : ExternalResource() {
     private companion object {
         // Long enough for a screen to place its Highlight and fade its backdrop in.
         const val SETTLE_MILLIS = 1_000L
-        const val LOAD_TIMEOUT_MILLIS = 10_000L
     }
 }

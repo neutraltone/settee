@@ -278,6 +278,40 @@ detekt {
     baseline = file("detekt-baseline.xml")
 }
 
+/*
+ * The ways a test used to wait for the app's work (#616, ADR 0008), banned in test sources by
+ * config/detekt/test-waits.yml. ForbiddenMethodCall needs type resolution, which plain `detekt`
+ * hasn't got (it skips the rule without a word), and detekt 1.23's per-variant tasks don't exist
+ * under AGP 9's built-in Kotlin, so this task gives it the unit tests' classpath itself. The main
+ * sources are analysed too, only so that calls into the app resolve; the rule looks at tests alone.
+ */
+val detektTestWaits by tasks.registering(io.gitlab.arturbosch.detekt.Detekt::class) {
+    description = "Fails a test that waits on wall-clock time, a manual looper idle or the process's graph."
+    group = "verification"
+    setSource(files("src/main/java", "src/test/java"))
+    include("**/*.kt")
+    config.setFrom(rootProject.file("config/detekt/test-waits.yml"))
+    buildUponDefaultConfig = false
+    baseline.set(file("detekt-baseline.xml"))
+    jvmTarget = "17"
+    classpath.setFrom(
+        configurations.named("debugUnitTestCompileClasspath").map { compile ->
+            compile.incoming.artifactView {
+                attributes { attribute(Attribute.of("artifactType", String::class.java), "android-classes-jar") }
+            }.files
+        },
+        androidComponents.sdkComponents.bootClasspath,
+    )
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.file("reports/detekt/test-waits.html"))
+        xml.required.set(false)
+        txt.required.set(false)
+        sarif.required.set(false)
+        md.required.set(false)
+    }
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

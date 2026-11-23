@@ -23,7 +23,6 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Test
@@ -87,7 +86,7 @@ class SeriesRuleRescanTest {
     )
 
     @Test
-    fun `a rule set on any quality rescans the channel's own guide`() = runTest {
+    fun `a rule set on any quality rescans the channel's own guide`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("1", "UK| ITV FHD", 300, "itv.fhd"), itv("2", "UK| ITV HD", 200, "itv.hd")))
         val hd = db.channels().everyRow().single { it.streamId == "2" }
@@ -112,7 +111,7 @@ class SeriesRuleRescanTest {
     }
 
     @Test
-    fun `booking one rule from several places at once books each airing once`() = runTest {
+    fun `booking one rule from several places at once books each airing once`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
         val channel = db.channels().everyRow().single()
@@ -127,7 +126,7 @@ class SeriesRuleRescanTest {
     }
 
     @Test
-    fun `recording a series from the guide records an airing on now once, though two feeds list it`() = runTest {
+    fun `recording a series from the guide records an airing on now once, though two feeds list it`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
         val channel = db.channels().everyRow().single()
@@ -140,7 +139,7 @@ class SeriesRuleRescanTest {
     }
 
     @Test
-    fun `recording a series from the guide books its later airings from the guide, past the day on show`() = runTest {
+    fun `recording a series from the guide books its later airings from the guide, past the day on show`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
         val channel = db.channels().everyRow().single()
@@ -172,14 +171,14 @@ class SeriesRuleRescanTest {
     }
 
     @Test
-    fun `a series link still books its channel's airings after the channel misses a refresh`() = runTest {
+    fun `a series link still books its channel's airings after the channel misses a refresh`() = testing {
         seriesLinkBooksAfterAMissedRefresh { incoming, stamp ->
             db.channels().replaceCatalogue(PANEL_SOURCE.id, incoming, stamp)
         }
     }
 
     @Test
-    fun `a series link still books its channel's airings after the channel misses a staged refresh`() = runTest {
+    fun `a series link still books its channel's airings after the channel misses a staged refresh`() = testing {
         seriesLinkBooksAfterAMissedRefresh { incoming, stamp ->
             StagedBatches.stage(null, Channel.serializer()) { stage -> stage(incoming) }.use {
                 db.channels().replaceCatalogue(PANEL_SOURCE.id, stamp, it)
@@ -188,7 +187,7 @@ class SeriesRuleRescanTest {
     }
 
     @Test
-    fun `a series link stays listed while its channel is missing`() = runTest {
+    fun `a series link stays listed while its channel is missing`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val itv = itv("2", "UK| ITV HD", 200, "itv.hd")
         val bbc = itv("1", "UK| BBC One HD", 200, "bbc.one").copy(displayName = "BBC One", groupKey = "uk:bbcone")

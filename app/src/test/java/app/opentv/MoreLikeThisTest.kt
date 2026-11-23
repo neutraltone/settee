@@ -9,7 +9,6 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,7 +59,7 @@ class MoreLikeThisTest {
     private suspend fun stored(name: String) = db.movies().all().single { it.name == name }
 
     @Test
-    fun `films sharing the film's genre come first, best-rated first, and never the film itself`() = runTest {
+    fun `films sharing the film's genre come first, best-rated first, and never the film itself`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("The Quiet Road", genre = "Drama, Road", rating = 7.0),
@@ -76,7 +75,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a film from the same provider comes before a better-rated one from another`() = runTest {
+    fun `a film from the same provider comes before a better-rated one from another`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("The Quiet Road", genre = "Drama"),
@@ -91,7 +90,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a film with no genre is offered others from its category, best-rated first`() = runTest {
+    fun `a film with no genre is offered others from its category, best-rated first`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("Untitled").copy(categoryId = "7"),
@@ -107,7 +106,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a 10 out of 10 counts as average, since it's nearly always a handful of votes`() = runTest {
+    fun `a 10 out of 10 counts as average, since it's nearly always a handful of votes`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("The Quiet Road", genre = "Drama"),
@@ -123,7 +122,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a film the provider added lately gets a lift over an older, slightly better-rated one`() = runTest {
+    fun `a film the provider added lately gets a lift over an older, slightly better-rated one`() = testing {
         val now = 365 * 86_400_000L
         db.movies().upsertAll(
             listOf(
@@ -139,7 +138,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a film sharing more of the film's genres comes before one sharing fewer`() = runTest {
+    fun `a film sharing more of the film's genres comes before one sharing fewer`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("The Quiet Road", genre = "Drama, Crime"),
@@ -156,7 +155,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a genre only matches whole, so Drama doesn't bring in Melodrama`() = runTest {
+    fun `a genre only matches whole, so Drama doesn't bring in Melodrama`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("The Quiet Road", genre = "Drama"),
@@ -174,7 +173,7 @@ class MoreLikeThisTest {
 
     @Test
     fun `with TMDB's recommendations, the films it recommends come first, its own provider's, then TMDB's order`() =
-        runTest {
+        testing {
             val catalog = test.catalogWithTmdb()
             db.movies().upsertAll(
                 listOf(
@@ -194,7 +193,7 @@ class MoreLikeThisTest {
 
     @Test
     fun `when TMDB's recommendations match fewer films than the row holds, genre matches fill it, none twice`() =
-        runTest {
+        testing {
             val catalog = test.catalogWithTmdb()
             db.movies().upsertAll(
                 listOf(
@@ -211,7 +210,7 @@ class MoreLikeThisTest {
         }
 
     @Test
-    fun `a film TMDB recommends that the library has twice gets one cover, its own provider's`() = runTest {
+    fun `a film TMDB recommends that the library has twice gets one cover, its own provider's`() = testing {
         val catalog = test.catalogWithTmdb()
         db.movies().upsertAll(
             listOf(
@@ -227,7 +226,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `the film's own other Versions are never suggested, even when TMDB recommends them`() = runTest {
+    fun `the film's own other Versions are never suggested, even when TMDB recommends them`() = testing {
         val catalog = test.catalogWithTmdb()
         db.movies().upsertAll(
             listOf(
@@ -266,7 +265,7 @@ class MoreLikeThisTest {
     private suspend fun storedShow(name: String) = db.series().all().single { it.name == name }
 
     @Test
-    fun `a show is offered shows sharing its genres, its provider's first, then most shared, never itself`() = runTest {
+    fun `a show is offered shows sharing its genres, its provider's first, then most shared, never itself`() = testing {
         db.series().upsertAll(
             listOf(
                 series("Harbour", genre = "Drama, Crime"),
@@ -283,7 +282,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `a show with no genre is offered others from its category`() = runTest {
+    fun `a show with no genre is offered others from its category`() = testing {
         db.series().upsertAll(
             listOf(
                 series("Untitled").copy(categoryId = "7"),
@@ -298,7 +297,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `with TMDB's recommendations, a show is offered the shows it recommends first, then genre matches`() = runTest {
+    fun `with TMDB's recommendations, a show is offered the shows it recommends first, then genre matches`() = testing {
         val catalog = test.catalogWithTmdb()
         db.series().upsertAll(
             listOf(
@@ -315,7 +314,7 @@ class MoreLikeThisTest {
     }
 
     @Test
-    fun `without a TMDB Key, or for a film with no TMDB id, genres decide, as before TMDB was asked`() = runTest {
+    fun `without a TMDB Key, or for a film with no TMDB id, genres decide, as before TMDB was asked`() = testing {
         db.movies().upsertAll(
             listOf(
                 movie("Keyless", genre = "Drama", tmdbId = "1").recommending("10"),

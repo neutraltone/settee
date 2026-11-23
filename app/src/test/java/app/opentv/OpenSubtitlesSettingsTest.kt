@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -25,13 +26,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
-import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.OpenSubtitles
 import app.opentv.ui.settings.OPENSUBTITLES_PANE_TAG
 import app.opentv.ui.settings.OPENSUBTITLES_SIGN_IN_HERE_TAG
@@ -41,7 +40,6 @@ import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,21 +54,21 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class OpenSubtitlesSettingsTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
     private lateinit var view: View
-    private val app = ApplicationProvider.getApplicationContext<Application>()
     private val site = FakeOpenSubtitles().apply {
         replies["POST /login"] = """{"user": {"allowed_downloads": 20, "remaining_downloads": 18}, "token": "t"}"""
         replies["GET /infos/user"] = """{"data": {"allowed_downloads": 20, "remaining_downloads": 18}}"""
     }
-    private val graph = ServiceLocator.Graph(app, http = site.http, settingsFile = SETTINGS)
+
+    @get:Rule
+    val testGraph = TestGraph(compose, name = SETTINGS, http = site.http)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private val openSubtitles = site.openSubtitles(graph, app.filesDir)
-
-    @After
-    fun close() = graph.database.close()
 
     private fun show(with: OpenSubtitles? = openSubtitles, section: SettingsSection = SettingsSection.OpenSubtitles) =
         compose.setTvContent {
@@ -100,9 +98,8 @@ class OpenSubtitlesSettingsTest {
 
     private fun row(label: String) = compose.onNode(hasText(label) and hasClickAction())
 
-    private fun waitFor(text: String, substring: Boolean = false) = compose.waitUntil(UI_WAIT_MILLIS) {
-        compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun waitFor(text: String, substring: Boolean = false) =
+        compose.onAllNodes(hasText(text, substring = substring)).onFirst().assertExists()
 
     private fun signInOnTheTv(password: String) {
         compose.onNodeWithTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).requestFocus()

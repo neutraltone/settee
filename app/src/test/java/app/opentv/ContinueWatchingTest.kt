@@ -15,7 +15,6 @@ import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,7 +49,7 @@ class ContinueWatchingTest {
         library.recordProgress("ep:${ep.id}", positionMillis = 600_000, durationMillis = 2_400_000)
 
     @Test
-    fun `an episode stopped part way gives its series a card showing how far through it is`() = runTest {
+    fun `an episode stopped part way gives its series a card showing how far through it is`() = testing {
         db.episodes().upsertAll(episodes)
         stopPartWay(testEpisode(1, 2))
 
@@ -62,7 +61,7 @@ class ContinueWatchingTest {
 
     @Test
     fun `finishing an episode puts the series' Up Next in Continue Watching, with no progress if never played`() =
-        runTest {
+        testing {
             db.episodes().upsertAll(episodes)
             watch(testEpisode(1, 3))
 
@@ -70,7 +69,7 @@ class ContinueWatchingTest {
         }
 
     @Test
-    fun `finishing the last available episode takes the series out of Continue Watching`() = runTest {
+    fun `finishing the last available episode takes the series out of Continue Watching`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
 
@@ -78,7 +77,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `a series has one card however many of its episodes were played`() = runTest {
+    fun `a series has one card however many of its episodes were played`() = testing {
         db.episodes().upsertAll(episodes)
         stopPartWay(testEpisode(1, 1))
         now += 60_000
@@ -97,7 +96,7 @@ class ContinueWatchingTest {
     )
 
     @Test
-    fun `cards are ordered by when the Profile last played them, newest first`() = runTest {
+    fun `cards are ordered by when the Profile last played them, newest first`() = testing {
         db.episodes().upsertAll(episodes + otherSeries)
         stopPartWay(testEpisode(1, 1))
         now += 60_000
@@ -112,7 +111,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `movies' Continue Watching has only movies and series' only series`() = runTest {
+    fun `movies' Continue Watching has only movies and series' only series`() = testing {
         db.episodes().upsertAll(episodes)
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         now += 60_000
@@ -124,7 +123,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `series with nothing left to watch don't crowd out older ones that have`() = runTest {
+    fun `series with nothing left to watch don't crowd out older ones that have`() = testing {
         val finished = (1..30).map {
             testEpisode(1, 1).copy(id = 1_000L + it, seriesId = "done-$it", episodeId = "done-$it")
         }
@@ -139,7 +138,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `an Up Next started earlier shows how far through it is, since that is where it resumes`() = runTest {
+    fun `an Up Next started earlier shows how far through it is, since that is where it resumes`() = testing {
         db.episodes().upsertAll(episodes)
         stopPartWay(testEpisode(1, 2))
         now += 60_000
@@ -149,7 +148,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `Home's Continue Watching mixes movies and series, newest played first`() = runTest {
+    fun `Home's Continue Watching mixes movies and series, newest played first`() = testing {
         db.episodes().upsertAll(episodes)
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         now += 60_000
@@ -168,7 +167,7 @@ class ContinueWatchingTest {
     private fun newSeason(firstSeenMillis: Long) = testEpisode(3, 1).copy(firstSeenMillis = firstSeenMillis)
 
     @Test
-    fun `a new season after the finale brings the series back with its first episode as a New Episode`() = runTest {
+    fun `a new season after the finale brings the series back with its first episode as a New Episode`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
         db.episodes().upsertAll(listOf(newSeason(firstSeenMillis = now + 60_000)))
@@ -183,7 +182,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `starting a New Episode makes it an ordinary In Progress card`() = runTest {
+    fun `starting a New Episode makes it an ordinary In Progress card`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
         db.episodes().upsertAll(listOf(newSeason(firstSeenMillis = now + 60_000)))
@@ -196,7 +195,7 @@ class ContinueWatchingTest {
     }
 
     @Test
-    fun `a New Episode is placed by when it was noticed, not when the series was last played`() = runTest {
+    fun `a New Episode is placed by when it was noticed, not when the series was last played`() = testing {
         db.episodes().upsertAll(episodes + otherSeries)
         watch(testEpisode(2, 3))
         now += 60_000

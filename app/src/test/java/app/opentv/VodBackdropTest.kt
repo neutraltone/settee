@@ -5,49 +5,30 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.CoverStatus
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /** What Movies' and Shows' backdrop shows for a title (#161). */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodBackdropTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel by lazy { viewModels.track(VodViewModel(app, graph)) }
+    @get:Rule
+    val testGraph = TestGraph()
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.track(VodViewModel(app, graph)) }
 
     private fun movie(backdrop: String?) = Movie(
         id = 1,

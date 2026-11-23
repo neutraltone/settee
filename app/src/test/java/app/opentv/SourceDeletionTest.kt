@@ -15,7 +15,6 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.ReminderRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,7 +64,7 @@ class SourceDeletionTest {
     )
 
     @Test
-    fun `a source added again under the same name has none of the deleted one's links, reminders or edits`() = runTest {
+    fun `a source added again under the same name has none of the deleted one's links, reminders or edits`() = testing {
         val first = home()
         channels.replaceCatalogue(first, listOf(fromProvider(first, "a"), fromProvider(first, "b")), syncStamp = 1)
         val b = channels.forSource(first).single { it.streamId == "b" }
@@ -93,7 +92,7 @@ class SourceDeletionTest {
     }
 
     @Test
-    fun `deleting a source takes its guide with it and leaves the other source's alone`() = runTest {
+    fun `deleting a source takes its guide with it and leaves the other source's alone`() = testing {
         val first = home()
         val second = away()
         test.guide.ensureFeeds()
@@ -110,7 +109,7 @@ class SourceDeletionTest {
     }
 
     @Test
-    fun `a guide refresh after deleting a source has no failed feeds`() = runTest {
+    fun `a guide refresh after deleting a source has no failed feeds`() = testing {
         val first = home()
         val second = away()
         test.guide.ensureFeeds()

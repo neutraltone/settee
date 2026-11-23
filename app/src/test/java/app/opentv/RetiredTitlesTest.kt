@@ -10,7 +10,6 @@ import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,7 +34,7 @@ class RetiredTitlesTest {
     fun close() = test.close()
 
     @Test
-    fun `a film losing the Version with a resume point resumes on the Version listed last`() = runTest {
+    fun `a film losing the Version with a resume point resumes on the Version listed last`() = testing {
         panel.replies["get_vod_streams"] = films(1 to "550", 2 to "550", 3 to "550")
         test.syncVod()
         library.recordProgress(movie(2), positionMillis = 600_000, durationMillis = 6_000_000)
@@ -50,7 +49,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a film marked Watched stays Watched when the Version it was marked on is removed`() = runTest {
+    fun `a film marked Watched stays Watched when the Version it was marked on is removed`() = testing {
         panel.replies["get_vod_streams"] = films(1 to "550", 2 to "550")
         test.syncVod()
         library.marks.markWatched(movie(1))
@@ -62,7 +61,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a film losing every Version loses its resume point`() = runTest {
+    fun `a film losing every Version loses its resume point`() = testing {
         panel.replies["get_vod_streams"] = films(1 to "550", 2 to "551")
         test.syncVod()
         library.recordProgress(movie(1), positionMillis = 600_000, durationMillis = 6_000_000)
@@ -74,7 +73,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a resume point goes to the Version already played, and the newer of the two points is kept`() = runTest {
+    fun `a resume point goes to the Version already played, and the newer of the two points is kept`() = testing {
         panel.replies["get_vod_streams"] = films(1 to "550", 2 to "550", 3 to "550")
         test.syncVod()
         now = 1_000L
@@ -91,7 +90,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a newer resume point already on the Version left is kept over the one moving to it`() = runTest {
+    fun `a newer resume point already on the Version left is kept over the one moving to it`() = testing {
         panel.replies["get_vod_streams"] = films(1 to "550", 2 to "550")
         test.syncVod()
         now = 1_000L
@@ -107,7 +106,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a film listed again under a new id without a TMDB id keeps its resume point`() = runTest {
+    fun `a film listed again under a new id without a TMDB id keeps its resume point`() = testing {
         panel.replies["get_vod_streams"] =
             """[{"stream_id": 1, "name": "EN - Brief Encounter (1945)", "added": "100"}]"""
         test.syncVod()
@@ -122,7 +121,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `an episode dropped from a show follows to another Version whose episodes weren't fetched yet`() = runTest {
+    fun `an episode dropped from a show follows to another Version whose episodes weren't fetched yet`() = testing {
         panel.replies["get_series"] = shows(7 to "1399", 8 to "1399")
         panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
         panel.replies["get_series_info:8"] = episodes(21 to 1, 22 to 2)
@@ -138,7 +137,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `an episode reply that no longer lists an episode deletes it`() = runTest {
+    fun `an episode reply that no longer lists an episode deletes it`() = testing {
         showSeven()
         panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
         test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
@@ -150,7 +149,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `an episode reply that fails or lists nothing deletes no episodes`() = runTest {
+    fun `an episode reply that fails or lists nothing deletes no episodes`() = testing {
         showSeven()
         for (reply in listOf("!", """{"info": {}, "episodes": {}}""")) {
             panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
@@ -164,7 +163,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `an episode uploaded again under a new id is one row, and its resume point follows it`() = runTest {
+    fun `an episode uploaded again under a new id is one row, and its resume point follows it`() = testing {
         showSeven()
         panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
         test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
@@ -179,7 +178,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a removed show's resume point follows its episode to another Version of the show`() = runTest {
+    fun `a removed show's resume point follows its episode to another Version of the show`() = testing {
         panel.replies["get_series"] = shows(7 to "1399", 8 to "1399")
         panel.replies["get_series_info:7"] = episodes(1 to 1)
         panel.replies["get_series_info:8"] = episodes(21 to 1)
@@ -197,7 +196,7 @@ class RetiredTitlesTest {
     }
 
     @Test
-    fun `a removed show with no Version left takes its episodes and their resume points with it`() = runTest {
+    fun `a removed show with no Version left takes its episodes and their resume points with it`() = testing {
         panel.replies["get_series"] = shows(7 to "1399", 8 to "1400")
         panel.replies["get_series_info:7"] = episodes(1 to 1)
         test.syncVod()

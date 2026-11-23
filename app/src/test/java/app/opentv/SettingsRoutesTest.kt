@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
@@ -13,15 +12,14 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
@@ -47,16 +45,18 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsRoutesTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     private lateinit var nav: NavHostController
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
-    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val app = testGraph.app
 
     private fun setApp(memory: SettingsMemory) {
-        val sources = SourcesViewModel(app)
+        val sources = testGraph.viewModel { SourcesViewModel(app, testGraph.graph) }
         compose.setTvContent {
             view = LocalView.current
             nav = rememberNavController()
@@ -74,7 +74,7 @@ class SettingsRoutesTest {
     private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
     private fun openFrom(row: String) {
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText(row)).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(hasText(row)).onFirst().assertExists()
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithText(row).requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -83,9 +83,7 @@ class SettingsRoutesTest {
     private fun backReturnsTo(row: String) {
         Espresso.pressBack()
         assertThat(route()).isEqualTo(Routes.SETTINGS)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText(row) and isFocused()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText(row) and isFocused()).onFirst().assertExists()
     }
 
     @Test
@@ -102,7 +100,7 @@ class SettingsRoutesTest {
     @Test
     fun `a provider's row opens Edit provider for that provider`() {
         val id = runBlocking {
-            ServiceLocator.get(app).sourceRepository.save(
+            testGraph.graph.sourceRepository.save(
                 Source(name = "Routes 168", kind = SourceKind.M3U, url = "http://127.0.0.1:9/list.m3u"),
             )
         }
@@ -110,9 +108,7 @@ class SettingsRoutesTest {
 
         openFrom("Routes 168")
 
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Edit provider")).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Edit provider")).onFirst().assertExists()
         assertThat(compose.runOnIdle { nav.currentBackStackEntry?.arguments?.getString("sourceId") })
             .isEqualTo(id.toString())
     }
@@ -130,24 +126,19 @@ class SettingsRoutesTest {
     @Test
     fun `Display's Home rows, noted with the Profile, opens on a screen of its own, and Back returns to its row`() {
         setApp(SettingsMemory(SettingsSection.Display))
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            // A Profile's setting, noted with its name, whichever that is.
-            val row = hasText("Home rows") and hasText("For ", substring = true)
-            compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
-        }
+        // A Profile's setting, noted with its name, whichever that is.
+        compose.onAllNodes(hasText("Home rows") and hasText("For ", substring = true)).onFirst().assertExists()
 
         openFrom("Home rows")
 
         assertThat(route()).isEqualTo(Routes.HOME_ROWS)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Restore the usual order")).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Restore the usual order")).onFirst().assertExists()
         backReturnsTo("Home rows")
     }
 
     @Test
     fun `Parental lock's Locked categories opens them on a screen of their own, and Back returns to its row`() {
-        ServiceLocator.get(app).settings.clearPin()
+        testGraph.graph.settings.clearPin()
         setApp(SettingsMemory(SettingsSection.Parental))
 
         openFrom("Locked categories")

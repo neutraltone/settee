@@ -5,13 +5,10 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
@@ -23,17 +20,12 @@ import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.VodPlayerViewModel.NextEpisodeCard
 import app.opentv.ui.vod.chooseVersion
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -41,39 +33,33 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which the view model doesn't need.
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodPlayerViewModelTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph()
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    private val viewModels = ViewModelsInTest()
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     @After
     fun close() {
-        // Before the database closes: a player's reads still running then threw into whichever test
-        // came next (UncaughtExceptionsBeforeTest, which failed a release build).
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
         graph.settings.setPlayNextAutomatically(true)
-        graph.database.close()
-        Dispatchers.resetMain()
     }
 
     private val playback = FakePlayback()
 
+    /** A test's steps on the main thread, as the player screen takes them; see [TestGraph.runOnMain]. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = testGraph.runOnMain(block)
+
     private suspend fun VodPlayerViewModel.playToEnd() = playToEnd(playback)
 
     @Test
-    fun `when the countdown runs out the Next Episode plays in the same player from its own resume point`() = runTest {
+    fun `when the countdown runs out the Next Episode plays in the same player from its own resume point`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
         vm.attach(testEpisode(1, 1).key, playback)
         vm.playToEnd()
@@ -103,13 +89,13 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `a film opened on a Quality this device can't play plays the copy it can, from that copy's own point`() =
-        runTest {
+        testing {
             // Robolectric lists no decoders, so here as on a 1080p Stick a row tagged 4K doesn't play.
             graph.database.movies().upsertAll(
                 listOf(film(1, "4K-TOP - Superbad (2007)"), film(2, "EN - Superbad (2007)")),
             )
             graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
-            val vm = viewModels.track(VodPlayerViewModel(app, graph))
+            val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
             vm.attach(MediaKey.Movie(1), playback)
 
@@ -118,9 +104,9 @@ class VodPlayerViewModelTest {
         }
 
     @Test
-    fun `progress after stepping down belongs to the Quality now playing`() = runTest {
+    fun `progress after stepping down belongs to the Quality now playing`() = testing {
         graph.database.movies().upsertAll(listOf(film(1, "HD - Superbad (2007)"), film(2, "SD - Superbad (2007)")))
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
 
         playback.steppedDownTo = MediaKey.Movie(2)
@@ -134,9 +120,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `switching Version in the player carries on from the same position`() = runTest {
+    fun `switching Version in the player carries on from the same position`() = testing {
         twoVersions()
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
         assertThat(
             vm.qualityChoices.value.map {
@@ -166,10 +152,10 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `choosing a Version while the stream is still being found carries on from where the film was`() = runTest {
+    fun `choosing a Version while the stream is still being found carries on from where the film was`() = testing {
         twoVersions()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
 
         playback.switching = true
@@ -180,13 +166,13 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `choosing a Version with no position known starts it from its own resume point`() = runTest {
+    fun `choosing a Version with no position known starts it from its own resume point`() = testing {
         // German was watched before English was chosen. Saved after, in a later millisecond than the
         // choice, it opened German, so this failed now and then.
         twoVersions {
             graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
         }
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
 
         playback.switching = true
@@ -197,9 +183,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `choosing a Version of a stream whose length isn't known carries on from where it had got to`() = runTest {
+    fun `choosing a Version of a stream whose length isn't known carries on from where it had got to`() = testing {
         twoVersions()
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
         playback.positionMillis = 1_200_000
         playback.durationMillis = 0
@@ -212,10 +198,10 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a player rebuilt after choosing a Version mid-switch doesn't restart the film at 0`() = runTest {
+    fun `a player rebuilt after choosing a Version mid-switch doesn't restart the film at 0`() = testing {
         twoVersions()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
         playback.switching = true
         vm.chooseVersion(MediaKey.Movie(2))
@@ -227,9 +213,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a film that reaches its end is finished`() = runTest {
+    fun `a film that reaches its end is finished`() = testing {
         graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)")))
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(1), playback)
 
         vm.poll()
@@ -241,9 +227,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `an episode that reaches its end moves on rather than finishing`() = runTest {
+    fun `an episode that reaches its end moves on rather than finishing`() = testing {
         graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
 
         playback.positionMillis = playback.durationMillis
@@ -255,9 +241,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `OK on the card moves on and makes even a short episode Watched`() = runTest {
+    fun `OK on the card moves on and makes even a short episode Watched`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
         // Three minutes long, the card up 25 seconds from the end: under 93% through.
         playback.durationMillis = 180_000
@@ -271,9 +257,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a rebuilt player screen carries on with the Next Episode, not the one in the route`() = runTest {
+    fun `a rebuilt player screen carries on with the Next Episode, not the one in the route`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         vm.playToEnd()
@@ -288,10 +274,10 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `after three unattended episodes it pauses to ask, stops the stream at 5 minutes, and Continue plays on`() =
-        runTest {
+        testing {
             graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
             var now = 0L
-            val vm = viewModels.track(VodPlayerViewModel(app, graph, clock = { now }))
+            val vm = testGraph.track(VodPlayerViewModel(app, graph, clock = { now }))
             vm.attach(testEpisode(1, 1).key, playback)
             repeat(3) { vm.playToEnd() }
 
@@ -309,10 +295,10 @@ class VodPlayerViewModelTest {
         }
 
     @Test
-    fun `with Play next episode automatically off the card waits for OK`() = runTest {
+    fun `with Play next episode automatically off the card waits for OK`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         graph.settings.setPlayNextAutomatically(false)
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
 
         vm.playToEnd()
@@ -322,7 +308,7 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `the card shows the Next Episode's thumbnail, or else the series artwork`() = runTest {
+    fun `the card shows the Next Episode's thumbnail, or else the series artwork`() = testing {
         graph.database.series().upsertAll(listOf(show))
         graph.database.episodes().upsertAll(
             listOf(
@@ -331,7 +317,7 @@ class VodPlayerViewModelTest {
                 testEpisode(1, 3),
             ),
         )
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
         vm.attach(testEpisode(1, 1).key, playback)
         assertThat(vm.nextEpisode.value).isEqualTo(
@@ -343,8 +329,8 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a movie gets no card and plays to its end`() = runTest {
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    fun `a movie gets no card and plays to its end`() = testing {
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
         vm.attach(MediaKey.Movie(7), playback)
         playback.positionMillis = EPISODE_MILLIS - 10_000
@@ -355,9 +341,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a player opened again with something new plays the new thing`() = runTest {
+    fun `a player opened again with something new plays the new thing`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
         vm.playToEnd()
 
@@ -369,9 +355,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a player rebuilt while asking whether anyone is still watching keeps asking`() = runTest {
+    fun `a player rebuilt while asking whether anyone is still watching keeps asking`() = testing {
         graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         repeat(4) { vm.playToEnd() }
@@ -384,10 +370,10 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `Continue after the stream was stopped still makes the finished episode Watched`() = runTest {
+    fun `Continue after the stream was stopped still makes the finished episode Watched`() = testing {
         graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
         var now = 0L
-        val vm = viewModels.track(VodPlayerViewModel(app, graph, clock = { now }))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph, clock = { now }))
         vm.attach(testEpisode(1, 1).key, playback)
         repeat(4) { vm.playToEnd() }
         now += 5 * 60_000
@@ -402,9 +388,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a rebuilt player resumes where the last save saw it, without waiting for the write`() = runTest {
+    fun `a rebuilt player resumes where the last save saw it, without waiting for the write`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         playback.positionMillis = 900_000
@@ -418,8 +404,8 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `Mark watched on a movie leaves the player, and it's still Watched after the player saves as it closes`() =
-        runTest {
-            val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        testing {
+            val vm = testGraph.track(VodPlayerViewModel(app, graph))
             vm.attach(MediaKey.Movie(7), playback)
             playback.positionMillis = 900_000
 
@@ -431,9 +417,9 @@ class VodPlayerViewModelTest {
         }
 
     @Test
-    fun `Mark watched on an episode starts the Next Episode, and the one marked stays Watched`() = runTest {
+    fun `Mark watched on an episode starts the Next Episode, and the one marked stays Watched`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
         playback.positionMillis = 600_000
 
@@ -446,9 +432,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `Mark watched on an episode whose length isn't known yet still stays Watched`() = runTest {
+    fun `Mark watched on an episode whose length isn't known yet still stays Watched`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
         playback.durationMillis = 0
 
@@ -459,9 +445,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `Mark watched on a series' last episode leaves the player`() = runTest {
+    fun `Mark watched on a series' last episode leaves the player`() = testing {
         graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 2).key, playback)
         playback.positionMillis = 600_000
 
@@ -474,9 +460,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `the Next Episode's progress still saves after moving on from a mark`() = runTest {
+    fun `the Next Episode's progress still saves after moving on from a mark`() = testing {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(testEpisode(1, 1).key, playback)
 
         vm.markWatched()
@@ -487,9 +473,9 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `movies, add-on streams and episodes can be marked until they're Watched`() = runTest {
+    fun `movies, add-on streams and episodes can be marked until they're Watched`() = testing {
         graph.database.episodes().upsertAll(listOf(testEpisode(1, 1)))
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
         vm.attach(MediaKey.Movie(7), playback)
         assertThat(vm.canMarkWatched.value).isTrue()
@@ -506,8 +492,8 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a title played past 93 percent stops offering Mark watched once that's saved`() = runTest {
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    fun `a title played past 93 percent stops offering Mark watched once that's saved`() = testing {
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(7), playback)
         playback.positionMillis = EPISODE_MILLIS - 60_000
 
@@ -517,8 +503,8 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `recordings and catch-up have no watch state to mark`() = runTest {
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    fun `recordings and catch-up have no watch state to mark`() = testing {
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
 
         vm.attach(MediaKey.Recording(3), playback)
         assertThat(vm.canMarkWatched.value).isFalse()
@@ -528,11 +514,11 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `leaving just as Mark watched is chosen doesn't lose the mark`() = runTest {
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    fun `leaving just as Mark watched is chosen doesn't lose the mark`() = testing {
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(7), playback)
 
-        val marking = launch(UnconfinedTestDispatcher(testScheduler)) { vm.markWatched() }
+        val marking = launch(start = CoroutineStart.UNDISPATCHED) { vm.markWatched() }
         marking.cancel()
         marking.join()
 
@@ -540,8 +526,8 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `a title marked earlier saves progress again when it's opened anew`() = runTest {
-        val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    fun `a title marked earlier saves progress again when it's opened anew`() = testing {
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
         vm.attach(MediaKey.Movie(7), playback)
         vm.markWatched()
         vm.attach(MediaKey.Movie(8), playback)
@@ -555,7 +541,7 @@ class VodPlayerViewModelTest {
 
     /** Episode 1 of 3 with a resume point, opened from the start. */
     private suspend fun playFromStart(
-        vm: VodPlayerViewModel = viewModels.track(VodPlayerViewModel(app, graph)),
+        vm: VodPlayerViewModel = testGraph.track(VodPlayerViewModel(app, graph)),
     ): VodPlayerViewModel {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         graph.viewerLibrary.recordProgress("ep:11", positionMillis = OLD_RESUME_POINT, durationMillis = EPISODE_MILLIS)
@@ -564,14 +550,14 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `Play from start starts at 0 rather than the resume point`() = runTest {
+    fun `Play from start starts at 0 rather than the resume point`() = testing {
         playFromStart()
 
         assertThat(playback.played).containsExactly(testEpisode(1, 1).key to 0L)
     }
 
     @Test
-    fun `stopping after the first 5 seconds of Play from start records the new position`() = runTest {
+    fun `stopping after the first 5 seconds of Play from start records the new position`() = testing {
         val vm = playFromStart()
         playback.positionMillis = 60_000
 
@@ -581,7 +567,7 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `stopping within 5 seconds of Play from start leaves the old resume point`() = runTest {
+    fun `stopping within 5 seconds of Play from start leaves the old resume point`() = testing {
         val vm = playFromStart()
         playback.positionMillis = 4_000
 
@@ -592,7 +578,7 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `a player rebuilt before Play from start knows its position stays at the start, however many times`() =
-        runTest {
+        testing {
             val vm = playFromStart()
             val route = testEpisode(1, 1).key
 
@@ -607,7 +593,7 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `a second rebuild in the first seconds of Play from start still doesn't jump to the old resume point`() =
-        runTest {
+        testing {
             val vm = playFromStart()
             val route = testEpisode(1, 1).key
             playback.positionMillis = 3_000
@@ -622,7 +608,7 @@ class VodPlayerViewModelTest {
         }
 
     @Test
-    fun `choosing a Version mid-switch after a rebuild early in Play from start keeps the seconds watched`() = runTest {
+    fun `choosing a Version mid-switch after a rebuild early in Play from start keeps the seconds watched`() = testing {
         val vm = playFromStart()
         val route = testEpisode(1, 1).key
         playback.positionMillis = 3_000
@@ -637,7 +623,7 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `once Play from start has saved a position, a rebuild that knows no position resumes from it`() = runTest {
+    fun `once Play from start has saved a position, a rebuild that knows no position resumes from it`() = testing {
         val vm = playFromStart()
         val route = testEpisode(1, 1).key
         playback.positionMillis = 60_000
@@ -651,40 +637,45 @@ class VodPlayerViewModelTest {
     }
 
     @Test
-    fun `the view model Android builds keeps Play from start spent across a restore`() = runTest {
-        val shared = ServiceLocator.get(app)
+    fun `the view model Android builds keeps Play from start spent across a restore`() = testing {
+        val shared = graph
         val movie = MediaKey.Movie(77)
         shared.viewerLibrary.recordProgress(movie.stored, OLD_RESUME_POINT, EPISODE_MILLIS)
         val first = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val opened = FakePlayback()
-        ViewModelProvider(first.get())[VodPlayerViewModel::class.java].attach(movie, opened, fromStart = true)
+        testGraph.track(ViewModelProvider(first.get())[VodPlayerViewModel::class.java])
+            .attach(movie, opened, fromStart = true)
         val saved = Bundle().also(first::saveInstanceState)
 
         val restored = FakePlayback()
         val second = Robolectric.buildActivity(ComponentActivity::class.java).setup(saved)
-        ViewModelProvider(second.get())[VodPlayerViewModel::class.java].attach(movie, restored, fromStart = true)
+        testGraph.track(ViewModelProvider(second.get())[VodPlayerViewModel::class.java])
+            .attach(movie, restored, fromStart = true)
 
         assertThat(opened.played).containsExactly(movie to 0L)
         assertThat(restored.played).containsExactly(movie to OLD_RESUME_POINT)
+        // Before the graph closes: their compositions and view models would read it in the next test.
+        first.destroy()
+        second.destroy()
     }
 
     @Test
-    fun `Android restoring the app after Play from start resumes the progress made since`() = runTest {
+    fun `Android restoring the app after Play from start resumes the progress made since`() = testing {
         val saved = SavedStateHandle()
-        val vm = playFromStart(viewModels.track(VodPlayerViewModel(app, graph, savedState = saved)))
+        val vm = playFromStart(testGraph.track(VodPlayerViewModel(app, graph, savedState = saved)))
         playback.positionMillis = 60_000
         vm.saveProgress()
 
         // The route still says from the start, and only the saved state outlives the process.
         val restored = FakePlayback()
-        viewModels.track(VodPlayerViewModel(app, graph, savedState = saved))
+        testGraph.track(VodPlayerViewModel(app, graph, savedState = saved))
             .attach(testEpisode(1, 1).key, restored, fromStart = true)
 
         assertThat(restored.played).containsExactly(testEpisode(1, 1).key to 60_000L)
     }
 
     @Test
-    fun `a Next Episode following Play from start resumes as normal, even if the player is then rebuilt`() = runTest {
+    fun `a Next Episode following Play from start resumes as normal, even if the player is then rebuilt`() = testing {
         val vm = playFromStart()
         graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
 

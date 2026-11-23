@@ -5,35 +5,25 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.content.Context
 import androidx.core.content.edit
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.update.UpdateChecker
 import app.opentv.update.UpdateHub
 import app.opentv.update.UpdateUiState
+import app.opentv.update.UpdateViewModel
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -44,12 +34,9 @@ import org.robolectric.annotation.Config
  * first while one is running. Whether the download started is told by whether the update's APK was
  * asked for; this fake server answers everything with a 404, so a started download goes on to fail.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class UpdateViewModelTest {
-
-    private val app: Application = ApplicationProvider.getApplicationContext()
 
     private val asked: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
     private val http = OkHttpClient.Builder().addInterceptor { chain ->
@@ -63,9 +50,12 @@ class UpdateViewModelTest {
             .build()
     }.build()
 
-    private val graph = ServiceLocator.Graph(app, http = http)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.update(app, graph) }
+    @get:Rule
+    val testGraph = TestGraph(http = http)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { UpdateViewModel(app, graph) } }
 
     private val update = UpdateChecker.Update(
         versionName = "0.5.0",
@@ -76,15 +66,9 @@ class UpdateViewModelTest {
         releaseUrl = "https://example.com/release",
     )
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
     @After
     fun close() {
-        viewModels.clear()
-        graph.database.close()
         UpdateHub.state.value = UpdateUiState.Idle
-        Dispatchers.resetMain()
     }
 
     private fun recording(title: String) = runBlocking {
@@ -106,8 +90,8 @@ class UpdateViewModelTest {
 
     private fun downloads() = asked.count { it == update.apkUrl }
 
-    private suspend fun stateBecomes(predicate: (UpdateUiState) -> Boolean): UpdateUiState =
-        withTimeout(5_000) { viewModel.state.first(predicate) }
+    private fun stateBecomes(predicate: (UpdateUiState) -> Boolean): UpdateUiState =
+        testGraph.firstWhenIdle(viewModel.state, predicate)
 
     @Test
     fun `with a recording running, Install asks first and doesn't download`() = runBlocking {
@@ -182,16 +166,19 @@ class UpdateViewModelTest {
 
     @Test
     fun `with a database Settee can't open, Install still downloads the update that may fix it`() = runBlocking {
-        // Its own graph, which the close after each test would fail on.
-        val broken = ServiceLocator.Graph(app, http = http, openDatabase = { error("won't open") })
-        val own = TestViewModels()
-        val viewModel = own.update(app, broken)
+        // Its own graph, which the close after each test would fail on, on the test graph's threads.
+        val broken = ServiceLocator.Graph(
+            app,
+            http = http,
+            dispatchers = graph.dispatchers,
+            openDatabase = { error("won't open") },
+        )
+        val viewModel = testGraph.track(UpdateViewModel(app, broken))
         UpdateHub.state.value = UpdateUiState.Available(update)
 
         viewModel.install()
 
-        withTimeout(5_000) { viewModel.state.first { it is UpdateUiState.Failed } }
-        own.clear()
+        testGraph.firstWhenIdle(viewModel.state) { it is UpdateUiState.Failed }
         assertWithMessage("whether the update's APK was asked for").that(downloadStarted()).isTrue()
     }
 
@@ -203,10 +190,8 @@ class UpdateViewModelTest {
         viewModel.install()
 
         stateBecomes { it is UpdateUiState.Failed }
-        // A second download would follow the first closely; give it the chance to.
-        withTimeoutOrNull(1_000) {
-            while (downloads() < 2) delay(20)
-        }
+        // A second download would follow the first closely: settled, it would have been asked for.
+        testGraph.awaitIdle()
         assertThat(downloads()).isEqualTo(1)
     }
 
@@ -223,13 +208,11 @@ class UpdateViewModelTest {
         viewModel.dismiss()
         asked.clear()
         // The next launch: a view model of its own, which looks for an update as it starts.
-        val next = TestViewModels()
-        next.update(app, graph)
+        testGraph.track(UpdateViewModel(app, graph))
 
-        val looked = withTimeoutOrNull(5_000) {
-            while (asked.none { it != update.apkUrl }) delay(20)
-        }
-        next.clear()
-        assertWithMessage("whether GitHub was asked for the latest release").that(looked).isNotNull()
+        testGraph.awaitIdle()
+        assertWithMessage("whether GitHub was asked for the latest release")
+            .that(asked.any { it != update.apkUrl })
+            .isTrue()
     }
 }

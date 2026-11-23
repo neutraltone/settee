@@ -16,11 +16,8 @@ import app.opentv.data.repo.EpgRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
-/**
- * Waits for what a press saved. The save resumes on the main thread between its steps, so a condition
- * that only reads the database would never let it finish without [waitRunningMainLooper].
- */
-internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) = waitRunningMainLooper(saved)
+/** What a press saved, read once the screen and the test graph's work are idle. */
+internal fun <T> ComposeContentTestRule.saved(read: suspend () -> T): T = runOnIdle { runBlocking { read() } }
 
 /** The keyboard over an entry screen, which is a window of its own over Settings. */
 internal fun ComposeContentTestRule.entryKeyboard(): DeviceKeyboard {

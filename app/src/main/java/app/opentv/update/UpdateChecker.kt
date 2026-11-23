@@ -5,10 +5,10 @@
  */
 package app.opentv.update
 
+import app.opentv.core.AppDispatchers
 import app.opentv.core.ErrorWording
 import app.opentv.data.remote.GitHubRelease
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -37,6 +37,7 @@ class UpdateChecker(
     private val http: OkHttpClient,
     private val currentVersionName: String,
     private val repoSlug: String = REPO_SLUG,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     data class Update(
         val versionName: String,
@@ -58,7 +59,7 @@ class UpdateChecker(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun check(): Outcome = withContext(Dispatchers.IO) {
+    suspend fun check(): Outcome = withContext(dispatchers.io) {
         runCatching {
             val request = Request.Builder()
                 .url("https://api.github.com/repos/$repoSlug/releases/latest")

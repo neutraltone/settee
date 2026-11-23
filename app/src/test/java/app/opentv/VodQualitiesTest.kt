@@ -5,10 +5,7 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.media3.common.MimeTypes
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
@@ -20,11 +17,12 @@ import app.opentv.data.repo.VodQualities
 import app.opentv.player.DecoderList
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import org.junit.After
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,19 +36,21 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class VodQualitiesTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph()
+
+    private val graph = testGraph.graph
     private val db = graph.database
     private val stick = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
     private val fourK = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(3840, 2160))
 
     @Before
-    fun provider() = runTest {
+    fun provider(): Unit = runBlocking {
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
     }
 
-    @After
-    fun close() = db.close()
+    /** Repository calls, made on the test's thread; nothing here needs the main thread to turn. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
 
     private fun qualities(decoders: DecoderList = stick, versionIds: VersionIds = VersionIds.BY_TMDB) = VodQualities(
         db,
@@ -95,7 +95,7 @@ class VodQualitiesTest {
     private val en = movie(3, "EN - Superbad  (2007)")
 
     @Test
-    fun `a 4K row this device can't play opens on the copy it can, without trying either 4K row`() = runTest {
+    fun `a 4K row this device can't play opens on the copy it can, without trying either 4K row`() = testing {
         db.movies().upsertAll(listOf(top4k, en4k, en))
 
         val plan = qualities().planFor(MediaKey.Movie(1))
@@ -106,7 +106,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `the copy on the same shelf comes first, whatever its id`() = runTest {
+    fun `the copy on the same shelf comes first, whatever its id`() = testing {
         val top = movie(4, "TOP - Superbad (2007)")
         val other = movie(3, "AS - Superbad (2007)")
         db.movies().upsertAll(listOf(movie(1, "4K-TOP - Superbad (2007)"), other, top))
@@ -118,7 +118,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a tagged Quality starts before an untagged one, which says nothing of its size`() = runTest {
+    fun `a tagged Quality starts before an untagged one, which says nothing of its size`() = testing {
         db.movies().upsertAll(listOf(en, movie(4, "EN - Superbad HD (2007)")))
 
         val plan = qualities().planFor(MediaKey.Movie(3))
@@ -128,7 +128,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a device that plays 4K plays the row opened, with the rest to step down to`() = runTest {
+    fun `a device that plays 4K plays the row opened, with the rest to step down to`() = testing {
         db.movies().upsertAll(listOf(top4k, en4k, en))
 
         val plan = qualities(fourK).planFor(MediaKey.Movie(1))
@@ -139,7 +139,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a row this device can play stays the one that plays`() = runTest {
+    fun `a row this device can play stays the one that plays`() = testing {
         db.movies().upsertAll(listOf(top4k, en))
 
         val plan = qualities().planFor(MediaKey.Movie(3))
@@ -150,7 +150,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a 4K row with no other copy is tried, for the sentence to say what happened`() = runTest {
+    fun `a 4K row with no other copy is tried, for the sentence to say what happened`() = testing {
         db.movies().upsertAll(listOf(top4k))
 
         val plan = qualities().planFor(MediaKey.Movie(1))
@@ -160,7 +160,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `titles a panel knows no TMDB id for aren't copies of each other`() = runTest {
+    fun `titles a panel knows no TMDB id for aren't copies of each other`() = testing {
         db.movies().upsertAll(
             listOf(movie(1, "4K-EN - One", "0"), movie(2, "EN - Other", "0"), movie(3, "EN - Third", null)),
         )
@@ -169,7 +169,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a 4K show's episode opens on the same episode of the copy this device can play`() = runTest {
+    fun `a 4K show's episode opens on the same episode of the copy this device can play`() = testing {
         db.series().upsertAll(
             listOf(
                 series(1, "4K-MAX - House of the Dragon (2022) (US)"),
@@ -191,7 +191,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `an episode the copy doesn't have is tried in the row opened`() = runTest {
+    fun `an episode the copy doesn't have is tried in the row opened`() = testing {
         db.series().upsertAll(
             listOf(
                 series(1, "4K-MAX - House of the Dragon (2022) (US)"),
@@ -207,7 +207,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `the best Quality this device can play starts, whichever Version was opened`() = runTest {
+    fun `the best Quality this device can play starts, whichever Version was opened`() = testing {
         db.movies().upsertAll(listOf(top4k, en, movie(4, "NF - Superbad FHD (2007)")))
 
         val plan = qualities().planFor(MediaKey.Movie(3))
@@ -218,7 +218,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a cam copy comes last, and never starts while another Version plays`() = runTest {
+    fun `a cam copy comes last, and never starts while another Version plays`() = testing {
         val cam = movie(5, "EN - Superbad (2007) HDCAM")
         db.movies().upsertAll(listOf(cam, en))
 
@@ -229,14 +229,14 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a cam copy starts when it's the only one that plays`() = runTest {
+    fun `a cam copy starts when it's the only one that plays`() = testing {
         db.movies().upsertAll(listOf(top4k, movie(5, "EN - Superbad (2007) HDCAM")))
 
         assertThat(qualities().planFor(MediaKey.Movie(1)).start.key).isEqualTo(MediaKey.Movie(5))
     }
 
     @Test
-    fun `what it steps down to stays in the device's language`() = runTest {
+    fun `what it steps down to stays in the device's language`() = testing {
         db.movies().upsertAll(listOf(en4k, en, movie(6, "DE - Superbad HD (2007)")))
 
         val plan = qualities().planFor(MediaKey.Movie(2))
@@ -247,7 +247,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `when only another language plays, the plan asks rather than starting it`() = runTest {
+    fun `when only another language plays, the plan asks rather than starting it`() = testing {
         db.movies().upsertAll(listOf(en4k, movie(6, "DE - Superbad HD (2007)")))
 
         val plan = qualities().planFor(MediaKey.Movie(2))
@@ -257,7 +257,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `the Version this Profile last played starts`() = runTest {
+    fun `the Version this Profile last played starts`() = testing {
         db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)")))
         graph.viewerLibrary.recordProgress(
             MediaKey.Movie(3).stored,
@@ -269,7 +269,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a Version chosen after the last one played starts`() = runTest {
+    fun `a Version chosen after the last one played starts`() = testing {
         db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)"), movie(7, "AMZ - Superbad (2007)")))
         graph.viewerLibrary.recordProgress(
             MediaKey.Movie(3).stored,
@@ -283,7 +283,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a Version chosen in another language starts without asking again`() = runTest {
+    fun `a Version chosen in another language starts without asking again`() = testing {
         db.movies().upsertAll(listOf(en4k, movie(6, "DE - Superbad HD (2007)")))
 
         qualities().choose(MediaKey.Movie(6))
@@ -294,7 +294,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a chosen Version this device can't play is passed over`() = runTest {
+    fun `a chosen Version this device can't play is passed over`() = testing {
         db.movies().upsertAll(listOf(en4k, en))
 
         qualities().choose(MediaKey.Movie(2))
@@ -303,7 +303,7 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `the Quality pill lists the Versions that differ, identical copies once`() = runTest {
+    fun `the Quality pill lists the Versions that differ, identical copies once`() = testing {
         db.movies().upsertAll(listOf(top4k, en, movie(4, "NF - Superbad (2007)"), movie(6, "DE - Superbad HD (2007)")))
 
         val choices = qualities().choicesFor(MediaKey.Movie(3))
@@ -315,14 +315,14 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a title whose Versions are all alike has one entry, so no pill`() = runTest {
+    fun `a title whose Versions are all alike has one entry, so no pill`() = testing {
         db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad (2007)"), movie(7, "AMZ - Superbad (2007)")))
 
         assertThat(qualities().choicesFor(MediaKey.Movie(4))).hasSize(1)
     }
 
     @Test
-    fun `choosing in the pill is what plays next`() = runTest {
+    fun `choosing in the pill is what plays next`() = testing {
         db.movies().upsertAll(listOf(en, movie(6, "DE - Superbad HD (2007)")))
         val german = qualities().choicesFor(MediaKey.Movie(3)).first { it.traits.language == "de" }
 
@@ -332,10 +332,10 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a Version with no TMDB id that lists group with the title is in its pill`() = runTest {
+    fun `a Version with no TMDB id that lists group with the title is in its pill`() = testing {
         db.movies().upsertAll(listOf(movie(1, "NF - Superbad (2007)"), movie(2, "EN - Superbad (2007) FHD", null)))
-        val index = TitleIndex(db, stick)
-        // Grouped first: runTest's clock would otherwise skip straight past the wait for it.
+        val index = TitleIndex(db, stick, graph.dispatchers)
+        // Grouped first: the choices would otherwise be read before it.
         index.movies.filterNotNull().first()
 
         val choices = qualities(versionIds = index.versionIds).choicesFor(MediaKey.Movie(1))

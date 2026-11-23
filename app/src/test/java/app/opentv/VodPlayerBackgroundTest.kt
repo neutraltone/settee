@@ -10,12 +10,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.PipState
-import app.opentv.core.ServiceLocator
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
+import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.vodPlayback
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
@@ -34,26 +33,25 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodPlayerBackgroundTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
+    private val graph = testGraph.graph
 
     // From a store, so it's cleared before the database closes: looking up the next episode on its
     // scope could otherwise land after the close and fail a test with "connection is closed".
-    private val viewModel = viewModels.vodPlayer(app, graph)
+    private val viewModel = testGraph.viewModel { VodPlayerViewModel(app, graph) }
     private val lifecycle = TestLifecycle()
 
     @After
     fun release() {
         controller.release()
         players.close()
-        viewModels.clear()
-        graph.database.close()
     }
 
     /** An episode playing ten minutes in, in a screen whose lifecycle [lifecycle] moves. */
@@ -79,7 +77,8 @@ class VodPlayerBackgroundTest {
         compose.waitForIdle()
 
         assertThat(controller.playWhenReady.value).isFalse()
-        compose.waitUntil(WAIT_MILLIS) { runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } == TEN_MINUTES }
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.viewerLibrary.resumeFrom("ep:11") }).isEqualTo(TEN_MINUTES)
 
         lifecycle.comeBack()
         compose.waitForIdle()
@@ -116,16 +115,14 @@ class VodPlayerBackgroundTest {
             // Leaving picture-in-picture while behind is going behind, and saves the place off the main
             // thread: that write has to land before the database closes, or it fails with "already closed".
             PipState.setInPip(false)
-            compose.waitUntil(WAIT_MILLIS) {
-                runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } >= TEN_MINUTES
-            }
+            compose.waitForIdle()
+            assertThat(runBlocking { graph.viewerLibrary.resumeFrom("ep:11") }).isAtLeast(TEN_MINUTES)
         } finally {
             PipState.setInPip(false)
         }
     }
 
     private companion object {
-        const val WAIT_MILLIS = UI_WAIT_MILLIS
         const val TEN_MINUTES = 600_000L
     }
 }

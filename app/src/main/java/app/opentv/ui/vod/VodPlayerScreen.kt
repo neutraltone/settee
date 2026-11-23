@@ -159,7 +159,13 @@ fun VodPlayerScreen(
     // Null in a build without Settee's OpenSubtitles key: then the subtitle list is only the stream's.
     val vodSubtitles = remember {
         graph.openSubtitles?.let {
-            VodSubtitles(it, graph.profileSettings, scope, streamTextOff = controller::disableText)
+            VodSubtitles(
+                it,
+                graph.profileSettings,
+                scope,
+                streamTextOff = controller::disableText,
+                dispatchers = graph.dispatchers,
+            )
         }
     }
     val subtitlePicks = rememberVodProfileSubtitles(controller, graph.profileSettings, scope, vodSubtitles)

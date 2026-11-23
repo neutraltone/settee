@@ -5,22 +5,12 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,27 +20,16 @@ import org.robolectric.annotation.Config
  * The covers a show's page draws under More like this: one per title, as Versions are grouped (ADR 0007),
  * even for shows TMDB doesn't know. On a real clock, for the title index's own thread.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class ShowSuggestionsTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph()
 
-    // Lazily, so that it's made on the main dispatcher set below.
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
-
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     private fun show(id: Long, name: String) = Series(
         id = id,
@@ -75,7 +54,7 @@ class ShowSuggestionsTest {
                 show(4, "4K - Harbour"),
             ),
         )
-        withTimeout(10_000) { graph.titleIndex.series.filterNotNull().first { it.of(4) != null } }
+        testGraph.firstWhenIdle(graph.titleIndex.series.filterNotNull()) { it.of(4) != null }
 
         val covers = viewModel.moreLikeThis(graph.database.series().byIds(listOf(1L)).single())
 

@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.SystemClock
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -22,9 +23,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.RecordedOn
@@ -36,7 +35,6 @@ import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import java.io.File
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -52,14 +50,15 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class PlayerErrorPanelTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph) } }
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
     private val toRelease = mutableListOf<PlayerController>()
 
@@ -67,9 +66,6 @@ class PlayerErrorPanelTest {
     fun release() {
         toRelease.forEach { it.release() }
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     private fun show(controller: PlayerController, onBack: () -> Unit = {}) {
@@ -86,11 +82,11 @@ class PlayerErrorPanelTest {
         return players.controller()
     }
 
-    private fun waitForSentence(text: String) {
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            players.advance(100)
-            compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+    private fun waitForSentence(text: String) = waitFor(hasText(text, substring = true))
+
+    /** Runs the player, as its own clocks would, until [shown] is: each look settles the screen first. */
+    private fun waitFor(shown: SemanticsMatcher) = players.until {
+        compose.onAllNodes(shown).fetchSemanticsNodes().isNotEmpty()
     }
 
     @Test
@@ -156,10 +152,7 @@ class PlayerErrorPanelTest {
     @Test
     fun `a failure trying again could fix lands on Try again, with Back beside it`() {
         show(players.controller { key -> Playable.Failed(key, Playable.Failure.GONE, "Film") })
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            players.advance(100)
-            compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
-        }
+        waitFor(hasText("Try again"))
 
         compose.onNodeWithText("Try again").assertIsFocused()
         compose.onNodeWithText("Back").assertExists()
@@ -171,10 +164,7 @@ class PlayerErrorPanelTest {
         val controller = players.controller(failing = TestPlayers.AUTO_TRIES)
         show(controller)
         players.untilItStopsRestarting(controller)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            players.advance(100)
-            compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
-        }
+        waitFor(hasText("Try again"))
         compose.onNodeWithText("Try again").assertIsFocused()
 
         compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }

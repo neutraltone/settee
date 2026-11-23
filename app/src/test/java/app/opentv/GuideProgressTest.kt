@@ -7,7 +7,6 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,7 +28,7 @@ class GuideProgressTest {
     fun close() = catalogue.close()
 
     @Test
-    fun `a feed whose size is known moves the progress while it's read, never backwards, to the end`() = runTest {
+    fun `a feed whose size is known moves the progress while it's read, never backwards, to the end`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = bigGuide(programmes = 3_000)
         val reported = mutableListOf<Float>()
@@ -43,7 +42,7 @@ class GuideProgressTest {
     }
 
     @Test
-    fun `a feed whose size isn't known fills its share once it's done`() = runTest {
+    fun `a feed whose size isn't known fills its share once it's done`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = bigGuide(programmes = 3_000)
         catalogue.panel.unsized += "xmltv.php"
@@ -56,7 +55,7 @@ class GuideProgressTest {
     }
 
     @Test
-    fun `a feed whose size isn't known still says how many programmes it has read, as it reads them`() = runTest {
+    fun `a feed whose size isn't known still says how many programmes it has read, as it reads them`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = bigGuide(programmes = 3_000)
         catalogue.panel.unsized += "xmltv.php"

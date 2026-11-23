@@ -5,19 +5,15 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,24 +30,18 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NextEpisodeOverlayAnimationsOffTest {
 
+    private val compose = createComposeRule(effectContext = AnimationsOff)
+
     @get:Rule
-    val compose = createComposeRule(effectContext = AnimationsOff)
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val playback = FakePlayback()
-    private val viewModels = ViewModelsInTest()
-    private val vm = viewModels.track(VodPlayerViewModel(app, graph))
-
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-    }
+    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph) } }
 
     // Its very first frame is drawn before the animation has had a frame to finish on, so it's
     // checked from the second: one invisible frame, which nobody sees.

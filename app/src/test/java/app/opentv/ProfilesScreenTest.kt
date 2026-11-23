@@ -5,37 +5,33 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.repo.Profiles
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.settings.ProfilesScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,34 +46,19 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ProfilesScreenTest {
 
+    private val compose = createComposeRule()
+
+    /**
+     * A graph of its own, with its own settings: a test that ends while a Profile write is under way
+     * leaves that write holding Profiles' lock for good, which would stop every test after it.
+     */
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, name = "profiles-screen-test")
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
-    private val app: Application = ApplicationProvider.getApplicationContext()
-
-    /**
-     * A graph of its own, with its own database, rather than the app's: a test that ends while a
-     * Profile write is under way leaves that write holding Profiles' lock for good, which would stop
-     * every test after it in the app's shared one.
-     */
-    private val graph = ServiceLocator.Graph(
-        app,
-        settingsFile = "profiles-screen-test",
-        openDatabase = {
-            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
-        },
-    )
-
-    private val viewModels = ViewModelsInTest()
-
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private lateinit var viewModel: ProfilesViewModel
 
@@ -92,30 +73,24 @@ class ProfilesScreenTest {
 
     private fun stored() = runBlocking { graph.database.profiles().all() }
 
-    /**
-     * Waits on the screen rather than the database: a read that blocks the main thread while a
-     * write is finishing can hold that write up, so a wait polling the database could time out.
-     */
-    private fun waitForRow(row: SemanticsMatcher) =
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty() }
+    /** Checks the screen rather than the database, once the write has settled. */
+    private fun waitForRow(row: SemanticsMatcher) = compose.onAllNodes(row).onFirst().assertExists()
 
     private fun show(vararg names: String) {
         // A name already there is refused, which leaves it as it is.
         runBlocking { names.forEach { graph.profiles.create(it) } }
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
-        viewModel = viewModels.track(ProfilesViewModel(app, graph))
+        viewModel = testGraph.viewModel { ProfilesViewModel(app, graph) }
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = {}, viewModel = viewModel)
         }
         // "Watching now" marks the first Profile, the active one: it's there once the list is.
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            (names.toList() + "Watching now").all {
-                compose.onAllNodes(hasText(it, substring = true)).fetchSemanticsNodes().isNotEmpty()
-            }
+        (names.toList() + "Watching now").forEach {
+            compose.onAllNodes(hasText(it, substring = true)).onFirst().assertExists()
         }
         // The list's first Highlight lands a frame after it loads.
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(isFocused()).onFirst().assertExists()
     }
 
     private fun baseName() = stored().first { it.id == Profiles.BASE_PROFILE_ID }.name
@@ -124,7 +99,7 @@ class ProfilesScreenTest {
 
     private fun pressInPanel(text: String, key: Key) {
         val row = hasText(text) and hasAnyAncestor(isDialog())
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(row and isFocused()).onFirst().assertExists()
         compose.onNode(row).performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
@@ -192,7 +167,8 @@ class ProfilesScreenTest {
         entryKeyboard().run {
             type("New one 168")
             // As a viewer's keyboard does, Done comes once the name is in the box.
-            compose.waitUntil(UI_WAIT_MILLIS) { textShownBy() == "New one 168" }
+            compose.waitForIdle()
+            assertThat(textShownBy()).isEqualTo("New one 168")
             pressAction()
         }
 
@@ -223,12 +199,10 @@ class ProfilesScreenTest {
         captureScreen("profiles_remove_question")
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Remove me 168", Key.DirectionCenter)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Remove me 168")).fetchSemanticsNodes().isEmpty()
-        }
+        compose.onAllNodes(hasText("Remove me 168")).assertCountEquals(0)
         assertThat(profile("Remove me 168")).isNull()
         // Its row has gone, and the Highlight goes back into the list rather than vanishing.
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(isFocused()).onFirst().assertExists()
 
         val base = baseName()
         holdSelectOn(base)
@@ -239,12 +213,12 @@ class ProfilesScreenTest {
     @Test
     fun `Back leaves Profiles`() {
         var left = 0
-        viewModel = viewModels.track(ProfilesViewModel(app, graph))
+        viewModel = testGraph.viewModel { ProfilesViewModel(app, graph) }
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = { left++ }, viewModel = viewModel)
         }
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(isFocused()).onFirst().assertExists()
 
         Espresso.pressBack()
 

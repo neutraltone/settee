@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.settings
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -81,4 +82,5 @@ private fun describe(wording: ErrorWording, failed: ManagerServer.State.Failed):
     ServerProblem.TOO_MANY_CODES -> wording.of(R.string.manager_too_many_codes)
 }
 
-private const val START_DELAY_MS = 400L
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+internal const val START_DELAY_MS = 400L

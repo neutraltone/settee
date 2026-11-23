@@ -11,7 +11,6 @@ import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,7 +95,7 @@ class RecommendationsTest {
     // ---- Movies ---------------------------------------------------------------------------------
 
     @Test
-    fun `movies sharing the most genres with started ones come first, then by rating, then by date added`() = runTest {
+    fun `movies sharing the most genres with started ones come first, then by rating, then by date added`() = testing {
         val all = listOf(
             movie(1, genre = "Drama, Crime"),
             movie(2, genre = "Drama", rating = 9.0),
@@ -111,7 +110,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `with no history, movies go by top rating and then date added`() = runTest {
+    fun `with no history, movies go by top rating and then date added`() = testing {
         val all = listOf(
             movie(1, rating = 7.0, added = 10),
             movie(2, rating = 9.0),
@@ -123,7 +122,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `started movies that carry no genre fall back to top rated without the started ones`() = runTest {
+    fun `started movies that carry no genre fall back to top rated without the started ones`() = testing {
         val all = listOf(movie(1, rating = 10.0), movie(2, genre = "Drama", rating = 5.0), movie(3, rating = 8.0))
         start(1, "movie:1")
 
@@ -131,7 +130,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `when nothing shares a started movie's genre, movies fall back to top rated`() = runTest {
+    fun `when nothing shares a started movie's genre, movies fall back to top rated`() = testing {
         val all = listOf(movie(1, genre = "Drama"), movie(2, genre = "Comedy", rating = 5.0), movie(3, rating = 8.0))
         start(1, "movie:1")
 
@@ -139,7 +138,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a movie marked Unwatched can be recommended again and doesn't count towards the tally`() = runTest {
+    fun `a movie marked Unwatched can be recommended again and doesn't count towards the tally`() = testing {
         val all = listOf(movie(1, genre = "Drama", rating = 1.0), movie(2, genre = "Comedy", rating = 9.0))
         start(1, "movie:1")
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 1, progress = 0f))
@@ -149,7 +148,7 @@ class RecommendationsTest {
 
     // A provider's 10s are almost all titles with a handful of votes; nothing it sends says how many.
     @Test
-    fun `a rating of ten or of nothing counts as average, so it doesn't beat a well rated movie`() = runTest {
+    fun `a rating of ten or of nothing counts as average, so it doesn't beat a well rated movie`() = testing {
         val all = listOf(
             movie(1, rating = 10.0),
             movie(2, rating = 7.0),
@@ -161,14 +160,14 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a movie added this week beats a better rated one added years ago`() = runTest {
+    fun `a movie added this week beats a better rated one added years ago`() = testing {
         val all = listOf(movie(1, rating = 8.5, added = NOW - 2 * YEAR), movie(2, rating = 7.5, added = NOW - DAY))
 
         assertThat(recommendedMovies(all, now = NOW)).containsExactly(2L, 1L).inOrder()
     }
 
     @Test
-    fun `the bonus for being new is gone once a movie has been in the catalogue a year`() = runTest {
+    fun `the bonus for being new is gone once a movie has been in the catalogue a year`() = testing {
         val all = listOf(
             movie(1, rating = 7.5, added = NOW - YEAR - DAY),
             movie(2, rating = 7.6, added = NOW - 3 * YEAR),
@@ -178,7 +177,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `movies stop at the limit`() = runTest {
+    fun `movies stop at the limit`() = testing {
         assertThat(recommendedMovies(listOf(movie(1, rating = 3.0), movie(2, rating = 2.0)), limit = 1))
             .containsExactly(1L)
     }
@@ -186,7 +185,7 @@ class RecommendationsTest {
     // ---- Series ---------------------------------------------------------------------------------
 
     @Test
-    fun `series sharing the most genres with started ones come first, then by rating, then by date added`() = runTest {
+    fun `series sharing the most genres with started ones come first, then by rating, then by date added`() = testing {
         val all = listOf(
             series(1, genre = "Drama, Crime"),
             series(2, genre = "Drama", rating = 9.0),
@@ -201,7 +200,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `with no history, series go by top rating and then date added`() = runTest {
+    fun `with no history, series go by top rating and then date added`() = testing {
         val all = listOf(
             series(1, rating = 7.0, added = 10),
             series(2, rating = 9.0),
@@ -213,7 +212,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a Watched series is left out and counts towards the tally`() = runTest {
+    fun `a Watched series is left out and counts towards the tally`() = testing {
         val all = listOf(series(1, genre = "Drama"), series(2, genre = "Drama", rating = 1.0), series(3, rating = 9.0))
         test.db.episodes().upsertAll(listOf(episodeOf(1)))
         library.recordProgress("ep:1", positionMillis = 2_400_000, durationMillis = 2_400_000)
@@ -222,7 +221,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a series whose only progress is marked Unwatched is recommended and isn't tallied`() = runTest {
+    fun `a series whose only progress is marked Unwatched is recommended and isn't tallied`() = testing {
         val all = listOf(series(1, genre = "Drama", rating = 9.0), series(2, genre = "Comedy", rating = 1.0))
         startSeries(1)
         library.marks.markUnwatched("ep:1")
@@ -231,7 +230,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a series removed from Continue Watching is left out and isn't tallied`() = runTest {
+    fun `a series removed from Continue Watching is left out and isn't tallied`() = testing {
         val all = listOf(series(1, genre = "Drama", rating = 9.0), series(2, genre = "Comedy", rating = 1.0))
         startSeries(1)
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Series(episodeOf(1), progress = 0f))
@@ -240,7 +239,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `a series removed from Continue Watching and then played again stays out and untallied`() = runTest {
+    fun `a series removed from Continue Watching and then played again stays out and untallied`() = testing {
         val all = listOf(series(1, genre = "Drama"), series(2, genre = "Drama", rating = 1.0), series(3, rating = 9.0))
         startSeries(1)
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Series(episodeOf(1), progress = 0f))
@@ -250,7 +249,7 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `two Profiles get different rows from their own history`() = runTest {
+    fun `two Profiles get different rows from their own history`() = testing {
         val all =
             listOf(
                 series(1, genre = "Drama"),
@@ -266,19 +265,19 @@ class RecommendationsTest {
     }
 
     @Test
-    fun `series stop at the limit`() = runTest {
+    fun `series stop at the limit`() = testing {
         assertThat(recommendedSeries(listOf(series(1, rating = 3.0), series(2, rating = 2.0)), limit = 1))
             .containsExactly(1L)
     }
 
     @Test
-    fun `a series rated ten doesn't come before a well rated one`() = runTest {
+    fun `a series rated ten doesn't come before a well rated one`() = testing {
         assertThat(recommendedSeries(listOf(series(1, rating = 10.0), series(2, rating = 8.0))))
             .containsExactly(2L, 1L).inOrder()
     }
 
     @Test
-    fun `an empty library recommends nothing`() = runTest {
+    fun `an empty library recommends nothing`() = testing {
         assertThat(recommendedSeries(emptyList())).isEmpty()
     }
 

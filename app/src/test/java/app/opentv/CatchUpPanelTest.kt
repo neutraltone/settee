@@ -5,20 +5,17 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
@@ -28,7 +25,6 @@ import app.opentv.ui.vod.SeriesDetailContent
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,16 +40,17 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class CatchUpPanelTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph = testGraph.graph
     private val library get() = graph.viewerLibrary
 
     private val series = Series(
@@ -71,17 +68,9 @@ class CatchUpPanelTest {
 
     private val episodes = listOf(1, 2).flatMap { season -> (1..3).map { testEpisode(season, it) } }
 
-    // The graph is process-wide, so its database outlives each test.
     @Before
-    fun startEmpty() = runBlocking {
-        library.profileRemoval.forget(graph.settings.activeProfileId.value)
+    fun setUp() = runBlocking {
         graph.database.episodes().upsertAll(episodes)
-    }
-
-    @After
-    fun leaveNothingBehind() = runBlocking {
-        library.profileRemoval.forget(graph.settings.activeProfileId.value)
-        graph.database.episodes().deleteForSource(series.sourceId)
     }
 
     private fun show() {
@@ -111,20 +100,16 @@ class CatchUpPanelTest {
         compose.onNode(hasText(text) and hasClickAction()).requestFocus()
 
     private fun waitFor(text: String): SemanticsNodeInteraction {
-        compose.waitUntilAtLeastOneExists(hasText(text), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText(text)).onFirst().assertExists()
         return compose.onNodeWithText(text)
     }
 
     private fun statusOf(ep: Episode) = runBlocking { library.episodeStatuses().first()[ep.id] }
 
-    /** Waits for [ep] to reach [status]: waitUntil alone leaves the view model's write stuck on the main looper. */
-    private fun waitUntil(ep: Episode, status: WatchStatus) {
-        val deadline = System.currentTimeMillis() + TIMEOUT_MILLIS
-        while (statusOf(ep) != status) {
-            check(System.currentTimeMillis() < deadline) { "$ep never became $status" }
-            compose.waitForIdle()
-            Thread.sleep(10)
-        }
+    /** Settles, then checks [ep] reached [status]. */
+    private fun assertBecomes(ep: Episode, status: WatchStatus) {
+        compose.waitForIdle()
+        assertThat(statusOf(ep)).isEqualTo(status)
     }
 
     @Test
@@ -135,7 +120,7 @@ class CatchUpPanelTest {
         row("S2 E1").performKeyInput { pressKey(Key.Menu) }
         waitFor("Mark watched up to here").performClick()
 
-        waitUntil(testEpisode(2, 1), WatchStatus.Watched)
+        assertBecomes(testEpisode(2, 1), WatchStatus.Watched)
         assertThat(statusOf(testEpisode(1, 1))).isEqualTo(WatchStatus.Watched)
         assertThat(statusOf(testEpisode(2, 2))).isEqualTo(WatchStatus.Unwatched)
     }
@@ -159,7 +144,7 @@ class CatchUpPanelTest {
         compose.onNodeWithText("Mark season unwatched").assertDoesNotExist()
         compose.onNodeWithText("Mark season watched").performClick()
 
-        waitUntil(testEpisode(1, 3), WatchStatus.Watched)
+        assertBecomes(testEpisode(1, 3), WatchStatus.Watched)
         assertThat(statusOf(testEpisode(2, 1))).isEqualTo(WatchStatus.Unwatched)
 
         row("Season 1").performKeyInput { pressKey(Key.DirectionCenter) }
@@ -167,10 +152,6 @@ class CatchUpPanelTest {
         compose.onNodeWithText("Mark season watched").assertDoesNotExist()
         compose.onNodeWithText("Mark season unwatched").performClick()
 
-        waitUntil(testEpisode(1, 3), WatchStatus.Unwatched)
-    }
-
-    private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
+        assertBecomes(testEpisode(1, 3), WatchStatus.Unwatched)
     }
 }

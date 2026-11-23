@@ -13,12 +13,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -27,14 +26,7 @@ import app.opentv.ui.HomeScreen
 import app.opentv.ui.HomeViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineScheduler
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -48,45 +40,34 @@ import org.robolectric.annotation.GraphicsMode
  * from a player, where it is built again and waits for rows that know what was just watched (#192).
  * Through the real [KeptShell].
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class HomeBackTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
-
-    // The view model's clock, moved on by hand while Settings is open.
-    private val scheduler = TestCoroutineScheduler()
 
     private lateinit var nav: NavHostController
 
     @Before
     fun setUp(): Unit = runBlocking {
-        Dispatchers.setMain(UnconfinedTestDispatcher(scheduler))
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.movies().upsertAll(listOf(superbad))
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 6_000_000)
     }
 
-    @After
-    fun close() {
-        runBlocking { viewModels.stopAll() }
-        db.close()
-        Dispatchers.resetMain()
-    }
-
     private fun setApp() {
-        val home = viewModels.track(HomeViewModel(app, graph))
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
         compose.setTvContent {
             nav = rememberNavController()
             KeptShell(
@@ -118,18 +99,18 @@ class HomeBackTest {
         }
     }
 
-    private fun shown(text: String) =
-        compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
+    private fun assertShown(text: String) = compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
 
     // Displayed rather than present: under Settings, Home is still built (KeptShell), just not placed.
     private fun homeShown() = runCatching { compose.onNodeWithTag(HOME).assertIsDisplayed() }.isSuccess
 
     /** Opens [route] over Home and stays there for longer than Home once kept its rows. */
     private fun awayAt(route: String, until: String) {
-        compose.waitUntil(UI_WAIT_MILLIS) { shown("Superbad") }
+        assertShown("Superbad")
         compose.runOnIdle { nav.navigate(route) }
-        compose.waitUntil(UI_WAIT_MILLIS) { shown(until) && !homeShown() }
-        scheduler.advanceTimeBy(15_000)
+        assertShown(until)
+        check(!homeShown()) { "Home still showing under $until" }
+        testGraph.advanceBy(15_000)
     }
 
     /** Presses Back and moves on a frame at a time until the frame Home is back in. */
@@ -157,12 +138,16 @@ class HomeBackTest {
     fun `back from a player after a long time there, Home waits for fresh rows rather than drawing old ones`() {
         setApp()
         awayAt(Routes.vodPlayer(MediaKey.Movie(1)), until = "Player")
+        // The fresh rows are held until Home's first frame has been checked: read quickly, they'd
+        // already be in it, and the frame couldn't show whether Home waited for them.
+        testGraph.hold()
 
         backToHomesFirstFrame()
 
         compose.onNode(hasText("Superbad", substring = true)).assertDoesNotExist()
         compose.mainClock.autoAdvance = true
-        compose.waitUntil(UI_WAIT_MILLIS) { shown("Superbad") }
+        testGraph.release()
+        assertShown("Superbad")
     }
 
     private val superbad = Movie(

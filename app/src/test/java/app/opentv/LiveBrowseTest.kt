@@ -6,7 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -17,18 +16,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -36,6 +35,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.channels.LiveScreen
@@ -47,7 +47,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -55,11 +54,9 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class LiveBrowseTest {
 
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -77,9 +74,11 @@ class LiveBrowseTest {
         set(2026, java.util.Calendar.JUNE, 15, 12, 0)
     }.timeInMillis
 
-    private val graph = ServiceLocator.Graph(app, clock = { now })
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.channels(app, graph) }
+    @get:Rule
+    val testGraph = TestGraph(compose, clock = { now })
+
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { ChannelsViewModel(app, graph) } }
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
@@ -97,8 +96,6 @@ class LiveBrowseTest {
     fun close() {
         graph.settings.lastChannelId = 0L
         graph.settings.setGuidePreviewVideo(true)
-        viewModels.clear()
-        graph.database.close()
     }
 
     private fun channel(id: Long, name: String, source: Long, category: String) = Channel(
@@ -236,7 +233,8 @@ class LiveBrowseTest {
      * a Right pressed then stays on the channel, and the presses after it land a cell short.
      */
     private fun awaitRows() {
-        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() } }
+        compose.waitForIdle()
+        assertThat(viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() }).isTrue()
         compose.waitForIdle()
     }
 
@@ -402,12 +400,10 @@ class LiveBrowseTest {
 
     /** Waits for text that's read from the database after the Highlight lands, such as a synopsis. */
     private fun awaitText(text: String) {
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            // Past the band's wait for the Highlight to settle, which runs on the test's clock.
-            compose.mainClock.advanceTimeBy(100)
-            compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.waitForIdle()
+        // Past the band's wait for the Highlight to settle (SYNOPSIS_SETTLE_MILLIS), on the test's clock.
+        compose.mainClock.advanceTimeBy(BAND_SETTLE_MILLIS)
+        compose.onAllNodes(hasText(text)).onFirst().assertExists()
     }
 
     /**
@@ -420,7 +416,7 @@ class LiveBrowseTest {
         pressOkOnLiveInTheRail()
         awaitRows()
         viewModel.nudgeGuideDay(1)
-        compose.waitUntilAtLeastOneExists(programme("Evening on 1"), 5_000)
+        compose.onAllNodes(programme("Evening on 1")).onFirst().assertExists()
         programmeCell("Evening on 1").requestFocus()
         compose.waitForIdle()
     }
@@ -432,7 +428,7 @@ class LiveBrowseTest {
         onTomorrowsLastProgramme()
 
         press(Key.DirectionRight)
-        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
 
         programmeCell("Day after on 1").assertIsFocused()
@@ -444,11 +440,11 @@ class LiveBrowseTest {
     fun `Left before a later day's first programme goes back a day, onto that row's last programme`() {
         onTomorrowsLastProgramme()
         press(Key.DirectionRight)
-        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
 
         press(Key.DirectionLeft)
-        compose.waitUntilAtLeastOneExists(programme("Evening on 1"), 5_000)
+        compose.onAllNodes(programme("Evening on 1")).onFirst().assertExists()
         compose.waitForIdle()
 
         programmeCell("Evening on 1").assertIsFocused()
@@ -465,7 +461,7 @@ class LiveBrowseTest {
         press(Key.DirectionUp)
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("No favourites yet"), 5_000)
+        compose.onAllNodes(hasText("No favourites yet")).onFirst().assertExists()
 
         compose.onNode(hasText("Favourites") and hasClickAction()).assertIsFocused()
         captureScreen("live_no_favourites")
@@ -480,7 +476,7 @@ class LiveBrowseTest {
         press(Key.DirectionLeft)
         press(Key.DirectionUp)
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("No favourites yet"), 5_000)
+        compose.onAllNodes(hasText("No favourites yet")).onFirst().assertExists()
 
         press(Key.DirectionRight)
         compose.onNode(hasText("Choose a category") and hasClickAction()).assertIsFocused()
@@ -498,7 +494,7 @@ class LiveBrowseTest {
         awaitRows()
 
         viewModel.selectCategory(viewModel.visibleCategoryGroups.value.first { it.label == "Sport" }.key)
-        compose.waitUntilAtLeastOneExists(hasText("Nothing to show here"), 5_000)
+        compose.onAllNodes(hasText("Nothing to show here")).onFirst().assertExists()
 
         compose.onNode(hasText("Loading channels", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("Choose a category") and hasClickAction()).assertExists()
@@ -509,16 +505,16 @@ class LiveBrowseTest {
     fun `the day's landing happens once, so a row coming back later doesn't take the Highlight`() {
         onTomorrowsLastProgramme()
         press(Key.DirectionRight)
-        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
         press(Key.DirectionDown, times = 3)
         programmeCell("Day after on 4").assertIsFocused()
 
         val sport = viewModel.visibleCategoryGroups.value.first { it.label == "Sport" }.key
         viewModel.selectCategory(sport)
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
+        compose.onAllNodes(hasText("Channel One")).assertCountEquals(0)
         viewModel.selectCategory(null)
-        compose.waitUntilAtLeastOneExists(hasText("Channel One") and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText("Channel One") and hasClickAction()).onFirst().assertExists()
         compose.waitForIdle()
 
         programmeCell("Day after on 4").assertIsFocused()
@@ -528,17 +524,19 @@ class LiveBrowseTest {
     fun `paging to a day with nothing on a row lands on its channel, and Right from there goes on a day`() {
         onTomorrowsLastProgramme()
         press(Key.DirectionRight)
-        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
 
         press(Key.DirectionRight)
-        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 3 }
-        compose.waitUntilDoesNotExist(programme("Day after on 1"), 5_000)
+        compose.waitForIdle()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(3)
+        compose.onAllNodes(programme("Day after on 1")).assertCountEquals(0)
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
 
         press(Key.DirectionRight)
-        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 4 }
+        compose.waitForIdle()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(4)
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
     }
@@ -583,7 +581,8 @@ class LiveBrowseTest {
         compose.onNode(hasText("News") and hasClickAction()).assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" } }
+        compose.waitForIdle()
+        assertThat(viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" }).isTrue()
         compose.waitForIdle()
         press(Key.DirectionRight)
 
@@ -597,8 +596,9 @@ class LiveBrowseTest {
         compose.waitForIdle()
 
         press(Key.DirectionLeft)
-        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.guideDayOffset.value == 0 }
-        compose.waitUntilAtLeastOneExists(programme("Now on 1"), 5_000)
+        compose.waitForIdle()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+        compose.onAllNodes(programme("Now on 1")).onFirst().assertExists()
         compose.waitForIdle()
         channelCell("Channel One").assertIsFocused()
         compose.onNode(hasText("All channels")).assertDoesNotExist()
@@ -618,7 +618,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("Sport") and hasClickAction()).assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
+        compose.onAllNodes(hasText("Channel One")).assertCountEquals(0)
         press(Key.DirectionRight)
 
         channelCell("Sport Four").assertIsFocused()
@@ -656,7 +656,7 @@ class LiveBrowseTest {
         press(Key.DirectionRight, times = 2)
 
         press(Key.DirectionCenter)
-        compose.waitUntilAtLeastOneExists(hasText("Schedule recording") and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText("Schedule recording") and hasClickAction()).onFirst().assertExists()
         compose.onNode(hasText("Remind me") and hasClickAction()).assertExists()
         androidx.test.espresso.Espresso.pressBack()
         compose.waitForIdle()
@@ -767,5 +767,8 @@ class LiveBrowseTest {
         const val MINUTE = 60 * 1000L
         const val HOUR = 60 * 60 * 1000L
         const val DAY = 24 * HOUR
+
+        /** GuidePreview's SYNOPSIS_SETTLE_MILLIS, which the band waits before reading a synopsis. */
+        const val BAND_SETTLE_MILLIS = 200L
     }
 }

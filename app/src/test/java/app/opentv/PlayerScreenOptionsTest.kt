@@ -12,13 +12,12 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -28,7 +27,6 @@ import app.opentv.ui.player.PlayerScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,10 +45,12 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class PlayerScreenOptionsTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val graph = testGraph.graph
 
     private fun row(streamId: String, name: String, quality: String) = Channel(
         sourceId = 1,
@@ -64,15 +64,8 @@ class PlayerScreenOptionsTest {
         qualityLabel = quality,
     )
 
-    // A recording left running would make any later test's Select stop to ask about it.
-    @After
-    fun stopRecordings() = runBlocking {
-        graph.recordingRepository.active().forEach { graph.database.recordings().delete(it.id) }
-    }
-
-    // The graph is process-wide, so its database outlives each test.
     @Before
-    fun catalogue() = runBlocking {
+    fun catalogue(): Unit = runBlocking {
         graph.database.sources().insert(
             Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
         )
@@ -88,8 +81,6 @@ class PlayerScreenOptionsTest {
             syncStamp = 1,
         )
         graph.catalogRepository.renormalizeAll()
-        val itv = graph.channelLineup.channelOf(idOf("10"))!!
-        graph.channelLineup.setFavourite(itv, false)
     }
 
     private suspend fun idOf(streamId: String) =
@@ -99,7 +90,7 @@ class PlayerScreenOptionsTest {
     private fun showPlaying(streamId: String, named: String) {
         val id = runBlocking { idOf(streamId) }
         compose.setTvContent { PlayerScreen(channelId = id, onBack = {}) }
-        compose.waitUntilAtLeastOneExists(hasText(named, substring = true), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText(named, substring = true)).onFirst().assertExists()
     }
 
     private fun openList() {
@@ -111,7 +102,7 @@ class PlayerScreenOptionsTest {
 
     private fun inListMatcher(text: String) = hasText(text) and hasAnyAncestor(isDialog())
 
-    private fun waitInList(text: String) = compose.waitUntilAtLeastOneExists(inListMatcher(text), TIMEOUT_MILLIS)
+    private fun waitInList(text: String) = compose.onAllNodes(inListMatcher(text)).onFirst().assertExists()
 
     @Test
     fun `Record now records the Quality that's playing`() {
@@ -121,7 +112,8 @@ class PlayerScreenOptionsTest {
 
         compose.onNode(inListMatcher("Record now")).performClick()
 
-        compose.waitRunningMainLooper { runBlocking { graph.recordingRepository.active() }.isNotEmpty() }
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.recordingRepository.active() }).isNotEmpty()
         val recording = runBlocking { graph.recordingRepository.active().single() }
         assertThat(recording.channelId).isEqualTo(runBlocking { idOf("10") })
     }
@@ -135,8 +127,8 @@ class PlayerScreenOptionsTest {
         compose.onNode(inListMatcher("Add to Favourites")).performClick()
 
         val qualities = runBlocking { setOf(idOf("10"), idOf("20")) }
-        // Each Quality's write resumes on the main looper, which this wait runs.
-        compose.waitRunningMainLooper { favouriteIds().containsAll(qualities) }
+        compose.waitForIdle()
+        assertThat(favouriteIds()).containsAtLeastElementsIn(qualities)
         compose.waitForIdle()
         openList()
         waitInList("Remove from Favourites")
@@ -154,7 +146,8 @@ class PlayerScreenOptionsTest {
         compose.onNode(inListMatcher("Remove from Favourites")).performClick()
 
         // So does each removal.
-        compose.waitRunningMainLooper { favouriteIds().isEmpty() }
+        compose.waitForIdle()
+        assertThat(favouriteIds()).isEmpty()
     }
 
     @Test
@@ -199,9 +192,5 @@ class PlayerScreenOptionsTest {
         openList()
 
         waitInList("Stop recording")
-    }
-
-    private companion object {
-        const val TIMEOUT_MILLIS = UI_WAIT_MILLIS
     }
 }

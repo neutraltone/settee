@@ -14,14 +14,13 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
@@ -45,13 +44,15 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class GuideChannelOptionsTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph = testGraph.graph
     private val played = mutableListOf<String>()
 
     private fun row(id: Long, name: String, epgId: String? = null): ChannelsViewModel.Row {
@@ -82,9 +83,7 @@ class GuideChannelOptionsTest {
     }
 
     private fun waitFor(text: String): SemanticsNodeInteraction {
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
         return compose.onNode(hasText(text, substring = true))
     }
 
@@ -206,8 +205,6 @@ class GuideChannelOptionsTest {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
-
         // A fixed time rather than an hour from now, which the list draws as a different time on
         // every run and so turned up as changed in every PR's screenshots.
         val LATE_FILM_START = Instant.parse("2099-01-01T20:00:00Z").toEpochMilli()

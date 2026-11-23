@@ -13,7 +13,6 @@ import app.opentv.ui.isTheViewersToFix
 import app.opentv.ui.providerFailures
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,7 +41,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding a provider that can't be reached says so, and nothing from the exception's message`() = runTest {
+    fun `adding a provider that can't be reached says so, and nothing from the exception's message`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "!host"
 
@@ -63,7 +62,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding a provider that rejects the login says to check the login`() = runTest {
+    fun `adding a provider that rejects the login says to check the login`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = """{"user_info": {"auth": 0}}"""
 
@@ -78,7 +77,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding a provider that answers with an HTTP error puts the status on the detail line`() = runTest {
+    fun `adding a provider that answers with an HTTP error puts the status on the detail line`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "!503"
 
@@ -90,7 +89,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding an address that answers with a web page says to check the address, not to try again`() = runTest {
+    fun `adding an address that answers with a web page says to check the address, not to try again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "<!DOCTYPE html><html><body>Welcome to our website</body></html>"
 
@@ -102,7 +101,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding a provider whose channel list is cut off still says to try again`() = runTest {
+    fun `adding a provider whose channel list is cut off still says to try again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}, {"stream_id": 2, "na"""
 
@@ -114,7 +113,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `a broken login reply that starts with a byte-order mark still says to try again`() = runTest {
+    fun `a broken login reply that starts with a byte-order mark still says to try again`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "\uFEFF{\"user_info\": {\"status\": \"Act"
 
@@ -126,7 +125,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `adding an address with nothing where an Xtream login should be says to check the address`() = runTest {
+    fun `adding an address with nothing where an Xtream login should be says to check the address`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "!404"
 
@@ -138,7 +137,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `a refresh keeps each provider's reason by its id, and counts them apart from the guide's feeds`() = runTest {
+    fun `a refresh keeps each provider's reason by its id, and counts them apart from the guide's feeds`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2"))
         panel.replies["u/"] = "!host"
@@ -161,7 +160,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `a provider's guide turning down the login raises no banner on Home`() = runTest {
+    fun `a provider's guide turning down the login raises no banner on Home`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["xmltv.php"] = "!401"
 
@@ -173,14 +172,14 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `a refresh that worked has no failure to show`() = runTest {
+    fun `a refresh that worked has no failure to show`() = testing {
         db.sources().insert(PANEL_SOURCE)
 
         assertThat(refresh.refresh(CatalogueRefresh.Trigger.Manual).failures).isEmpty()
     }
 
     @Test
-    fun `a refresh saves a rejected login on that provider only, and a later refresh that works clears it`() = runTest {
+    fun `a refresh saves a rejected login on that provider only, and a later refresh that works clears it`() = testing {
         val second = PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2")
         db.sources().insert(PANEL_SOURCE)
         db.sources().insert(second)
@@ -203,7 +202,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `movies and shows that fail to download save no failure on the provider`() = runTest {
+    fun `movies and shows that fail to download save no failure on the provider`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!503"
         panel.replies["get_series"] = "!503"
@@ -223,7 +222,7 @@ class CatalogueRefreshFailureTest {
     )
 
     @Test
-    fun `movies that fail during setup are kept as that provider's failure, apart from its shows`() = runTest {
+    fun `movies that fail during setup are kept as that provider's failure, apart from its shows`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!host"
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Taskmaster"}]"""
@@ -237,7 +236,7 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `shows that fail in a background refresh are kept, until a later refresh downloads them`() = runTest {
+    fun `shows that fail in a background refresh are kept, until a later refresh downloads them`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_series"] = "!host"
 

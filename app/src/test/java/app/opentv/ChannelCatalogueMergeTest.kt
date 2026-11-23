@@ -16,7 +16,6 @@ import app.opentv.data.model.ChannelUserState
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,7 +58,7 @@ class ChannelCatalogueMergeTest {
         channels.forSource(sourceId).single { it.streamId == streamId }
 
     @Test
-    fun `a refresh keeps the viewer's settings and the row's id`() = runTest {
+    fun `a refresh keeps the viewer's settings and the row's id`() = testing {
         val sourceId = source("Home")
         channels.replaceCatalogue(
             sourceId,
@@ -120,19 +119,19 @@ class ChannelCatalogueMergeTest {
     }
 
     @Test
-    fun `a channel missing from one refresh comes back with the viewer's edits`() = runTest {
+    fun `a channel missing from one refresh comes back with the viewer's edits`() = testing {
         editsComeBackAfterAMissedRefresh { sourceId, incoming, stamp ->
             channels.replaceCatalogue(sourceId, incoming, stamp)
         }
     }
 
     @Test
-    fun `a channel missing from one staged refresh comes back with the viewer's edits`() = runTest {
+    fun `a channel missing from one staged refresh comes back with the viewer's edits`() = testing {
         editsComeBackAfterAMissedRefresh { sourceId, incoming, stamp -> replaceStaged(sourceId, incoming, stamp) }
     }
 
     @Test
-    fun `a channel's edits are not carried to another source's channel of the same stream id`() = runTest {
+    fun `a channel's edits are not carried to another source's channel of the same stream id`() = testing {
         val home = source("Home")
         val other = source("Other")
         channels.replaceCatalogue(home, listOf(fromProvider(home, "a"), fromProvider(home, "b")), syncStamp = 1)
@@ -145,7 +144,7 @@ class ChannelCatalogueMergeTest {
     }
 
     @Test
-    fun `a row the provider now hides is hidden, even though the viewer never hid it`() = runTest {
+    fun `a row the provider now hides is hidden, even though the viewer never hid it`() = testing {
         val sourceId = source("Home")
         channels.replaceCatalogue(sourceId, listOf(fromProvider(sourceId, "### UK ###")), syncStamp = 1)
 
@@ -155,7 +154,7 @@ class ChannelCatalogueMergeTest {
     }
 
     @Test
-    fun `the state a refresh keeps is read for that source's channels alone`() = runTest {
+    fun `the state a refresh keeps is read for that source's channels alone`() = testing {
         val home = source("Home")
         val other = source("Other")
         channels.replaceCatalogue(home, listOf(fromProvider(home, "a")), syncStamp = 1)

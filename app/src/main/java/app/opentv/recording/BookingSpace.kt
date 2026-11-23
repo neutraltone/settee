@@ -5,12 +5,12 @@
  */
 package app.opentv.recording
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.repo.RecordingRepository
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
@@ -28,6 +28,7 @@ class BookingSpace(
     private val channels: ChannelDao,
     private val freeSpace: (RecordingStore) -> Long?,
     private val clock: () -> Long,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     /** What each storage last said it had free, so a note stays up while its storage is asked again. */
     private val lastFree = ConcurrentHashMap<RecordingStore, Long>()
@@ -57,7 +58,7 @@ class BookingSpace(
                 estimate()
             }
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(dispatchers.io)
 
     /**
      * The minutes of room booking [id] has when it may not fit, or null when it fits or that can't be
@@ -78,7 +79,7 @@ class BookingSpace(
      * What [store] has free now, remembered for next time. Interrupted, not waited for, once nobody
      * wants it: a blocked NAS read would otherwise hold up whatever comes next.
      */
-    private suspend fun read(store: RecordingStore): Long? = runInterruptible(Dispatchers.IO) { freeSpace(store) }
+    private suspend fun read(store: RecordingStore): Long? = runInterruptible(dispatchers.io) { freeSpace(store) }
         .also { if (it == null) lastFree.remove(store) else lastFree[store] = it }
 
     /** Each channel's quality, by id. A channel gone from the catalogue since is of unknown quality. */

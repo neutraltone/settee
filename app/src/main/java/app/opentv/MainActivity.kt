@@ -76,7 +76,6 @@ import app.opentv.update.UpdateGate
 import app.opentv.update.UpdateUiState
 import app.opentv.update.UpdateViewModel
 import app.opentv.update.WhatsNewGate
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -116,7 +115,7 @@ class MainActivity : ComponentActivity() {
                     }.collectAsState(initial = false)
                     DatabaseGate(
                         open = {
-                            val failure = withContext(Dispatchers.IO) { graph.database.wontOpen() }
+                            val failure = withContext(graph.dispatchers.io) { graph.database.wontOpen() }
                             // The launch work reads the database too, so it waits for it as well.
                             if (failure == null) (application as? OpenTvApp)?.opened()
                             failure

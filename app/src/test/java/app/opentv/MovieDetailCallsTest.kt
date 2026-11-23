@@ -7,7 +7,6 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +25,7 @@ class MovieDetailCallsTest {
     fun close() = test.close()
 
     @Test
-    fun `opening a movie the list already filled in asks the provider nothing, even with no release date`() = runTest {
+    fun `opening a movie the list already filled in asks the provider nothing, even with no release date`() = testing {
         test.panel.replies["get_vod_streams"] = """
                 [{"stream_id": 3, "name": "Drive", "cast": "Ryan Gosling", "backdrop_path": "https://example.com/b.jpg"}]
             """

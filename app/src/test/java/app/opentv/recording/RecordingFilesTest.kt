@@ -8,9 +8,9 @@ package app.opentv.recording
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.RecordingStatus
+import app.opentv.testing
 import com.google.common.truth.Truth.assertThat
 import java.io.File
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,7 +38,7 @@ class RecordingFilesTest {
     fun close() = fixture.close()
 
     @Test
-    fun `recording a channel twice in one minute keeps both recordings`() = runTest {
+    fun `recording a channel twice in one minute keeps both recordings`() = testing {
         val first = engine.startChannel(bbcOne)
         engine.openSink(recordings.byId(first)!!).apply { output.write("first".toByteArray()) }.close()
         recordings.setStatus(first, RecordingStatus.COMPLETED)
@@ -53,7 +53,7 @@ class RecordingFilesTest {
     }
 
     @Test
-    fun `deleting one of two recordings of one file keeps the file until the last goes`() = runTest {
+    fun `deleting one of two recordings of one file keeps the file until the last goes`() = testing {
         val file = File(RecordingStorage.internalDir(context), "BBC One - 2026-11-15 1430.ts").apply { writeText("x") }
         val first = recordings.byId(engine.startChannel(bbcOne))!!
         recordings.setStatus(first.id, RecordingStatus.COMPLETED)
@@ -74,7 +74,7 @@ class RecordingFilesTest {
     }
 
     @Test
-    fun `retrying a failed recording records over its own file, leaving nothing behind`() = runTest {
+    fun `retrying a failed recording records over its own file, leaving nothing behind`() = testing {
         val id = engine.startChannel(bbcOne)
         engine.openSink(recordings.byId(id)!!).apply { output.write("partial".toByteArray()) }.close()
         val planned = recordings.byId(id)!!.filePath

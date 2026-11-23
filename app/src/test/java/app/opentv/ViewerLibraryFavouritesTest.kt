@@ -23,7 +23,6 @@ import app.opentv.data.repo.series
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -46,7 +45,7 @@ class ViewerLibraryFavouritesTest {
         ViewerLibrary(db, activeProfile, clock = { now })
 
     @Before
-    fun twoProviders() = runTest {
+    fun twoProviders() = testing {
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "http://example.org"))
     }
@@ -55,7 +54,7 @@ class ViewerLibraryFavouritesTest {
     fun close() = db.close()
 
     @Test
-    fun `an unstarred Favourite shows nowhere a viewer browses, but still travels`() = runTest {
+    fun `an unstarred Favourite shows nowhere a viewer browses, but still travels`() = testing {
         val channel = storedChannels(channel("c1", "Channel 1")).single()
         val film = movie("m1", "Film")
         val show = series("s1", "Show")
@@ -77,7 +76,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `starring a title again brings back its unstarred row`() = runTest {
+    fun `starring a title again brings back its unstarred row`() = testing {
         val film = movie("m1", "Film")
         library.favourites.set(film, favourite = true)
         library.favourites.set(film, favourite = false)
@@ -88,7 +87,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `Favourite titles mix shows and movies, the most recently starred first`() = runTest {
+    fun `Favourite titles mix shows and movies, the most recently starred first`() = testing {
         val heat = movie("m1", "Heat")
         val wire = series("s1", "The Wire")
         val alien = movie("m2", "Alien")
@@ -103,7 +102,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `starring a Favourite again moves it to the front of Favourite titles`() = runTest {
+    fun `starring a Favourite again moves it to the front of Favourite titles`() = testing {
         val heat = movie("m1", "Heat")
         val wire = series("s1", "The Wire")
         library.favourites.set(heat, favourite = true)
@@ -176,7 +175,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a movie the Profile favourites is one of its Favourite movies`() = runTest {
+    fun `a movie the Profile favourites is one of its Favourite movies`() = testing {
         val heat = movie("1", "Heat")
         movie("2", "Ronin")
 
@@ -186,7 +185,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a movie the Profile unfavourites is no longer a Favourite`() = runTest {
+    fun `a movie the Profile unfavourites is no longer a Favourite`() = testing {
         val heat = movie("1", "Heat")
         library.favourites.set(heat, favourite = true)
 
@@ -196,7 +195,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `switching Profile switches Favourites`() = runTest {
+    fun `switching Profile switches Favourites`() = testing {
         val heat = movie("1", "Heat")
         val ronin = movie("2", "Ronin")
         library.favourites.set(heat, favourite = true)
@@ -210,7 +209,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a series the Profile favourites is one of its Favourite series, and can be unfavourited`() = runTest {
+    fun `a series the Profile favourites is one of its Favourite series, and can be unfavourited`() = testing {
         val severance = series("10", "Severance")
         val slowHorses = series("11", "Slow Horses")
 
@@ -222,7 +221,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `Favourite channels leave out channels hidden on this device`() = runTest {
+    fun `Favourite channels leave out channels hidden on this device`() = testing {
         val (bbcOne, bbcTwo) = storedChannels(channel("1", "BBC One"), channel("2", "BBC Two", hidden = true))
 
         library.favourites.set(bbcOne, favourite = true)
@@ -232,7 +231,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a Favourite channel stays a Favourite when a catalogue refresh drops it and lists it again`() = runTest {
+    fun `a Favourite channel stays a Favourite when a catalogue refresh drops it and lists it again`() = testing {
         val (bbcOne) = storedChannels(channel("1", "BBC One"))
         library.favourites.set(bbcOne, favourite = true)
 
@@ -245,7 +244,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `Favourite movies and series stay Favourites when their provider's catalogue is reloaded`() = runTest {
+    fun `Favourite movies and series stay Favourites when their provider's catalogue is reloaded`() = testing {
         library.favourites.set(movie("1", "Heat"), favourite = true)
         library.favourites.set(series("10", "Severance"), favourite = true)
 
@@ -259,7 +258,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a Favourite channel stays a Favourite when its stream URL changes`() = runTest {
+    fun `a Favourite channel stays a Favourite when its stream URL changes`() = testing {
         val (bbcOne) = storedChannels(channel("1", "BBC One", format = "ts"))
         library.favourites.set(bbcOne, favourite = true)
 
@@ -273,7 +272,7 @@ class ViewerLibraryFavouritesTest {
     }
 
     @Test
-    fun `a Favourite series on one provider is not a Favourite on another with the same series id`() = runTest {
+    fun `a Favourite series on one provider is not a Favourite on another with the same series id`() = testing {
         val severance = series("123", "Severance", sourceId = 1)
         series("123", "Bluey", sourceId = 2)
 

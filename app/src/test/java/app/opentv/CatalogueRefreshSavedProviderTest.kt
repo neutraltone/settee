@@ -5,15 +5,15 @@
  */
 package app.opentv
 
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.repo.CatalogueRefresh
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,7 +26,11 @@ import org.robolectric.annotation.Config
 class CatalogueRefreshSavedProviderTest {
 
     private var now = 1_000_000_000L
-    private val test = TestCatalog(ApplicationProvider.getApplicationContext(), clock = { now })
+
+    @get:Rule
+    val testGraph = TestGraph(name = "catalogue-refresh-saved-provider-test")
+
+    private val test = TestCatalog(testGraph.app, testGraph.database, dispatchers = testGraph.graph.dispatchers) { now }
     private val db = test.db
     private val panel = test.panel
     private val refresh = test.refresh { panel.asked += RESCAN }
@@ -49,46 +53,48 @@ class CatalogueRefreshSavedProviderTest {
     private suspend fun openMoviesOrShows() = refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
 
     @Test
-    fun `adding a provider still gets its guide and series rules if whatever asked stops waiting`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
-        val hold = panel.hold("get_live_streams")
+    fun `adding a provider still gets its guide and series rules if whatever asked stops waiting`(): Unit =
+        runBlocking {
+            db.sources().insert(PANEL_SOURCE)
+            val hold = panel.hold("get_live_streams")
 
-        withContext(Dispatchers.Default) {
-            val adding = async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
-            during(hold) { adding.cancel() }
-            hold.release()
-            adding.join()
-        }
-        test.awaitRefresh()
-
-        assertThat(panel.asked).containsAtLeast("xmltv.php", RESCAN).inOrder()
-    }
-
-    @Test
-    fun `a download that read a provider's old login doesn't make the new account's titles look fresh`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
-        db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second"))
-        val hold = panel.hold("get_vod_streams")
-
-        withContext(Dispatchers.Default) {
-            val opened = async { openMoviesOrShows() }
-            during(hold) {
-                val edited = PANEL_SOURCE.copy(id = 2, name = "Second", password = "new")
-                db.sources().update(edited)
-                refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(edited))
+            withContext(Dispatchers.Default) {
+                val adding = async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
+                during(hold) { adding.cancel() }
+                hold.release()
+                adding.join()
             }
-            hold.release()
-            opened.await()
+            test.awaitRefresh()
+
+            assertThat(panel.asked).containsAtLeast("xmltv.php", RESCAN).inOrder()
         }
-        panel.asked.clear()
-
-        openMoviesOrShows()
-
-        assertThat(vodDownloads()).isEqualTo(1)
-    }
 
     @Test
-    fun `saving a provider with a login that fails still fetches its titles once it works`() = runTest {
+    fun `a download that read a provider's old login doesn't make the new account's titles look fresh`(): Unit =
+        runBlocking {
+            db.sources().insert(PANEL_SOURCE)
+            db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second"))
+            val hold = panel.hold("get_vod_streams")
+
+            withContext(Dispatchers.Default) {
+                val opened = async { openMoviesOrShows() }
+                during(hold) {
+                    val edited = PANEL_SOURCE.copy(id = 2, name = "Second", password = "new")
+                    db.sources().update(edited)
+                    refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(edited))
+                }
+                hold.release()
+                opened.await()
+            }
+            panel.asked.clear()
+
+            openMoviesOrShows()
+
+            assertThat(vodDownloads()).isEqualTo(1)
+        }
+
+    @Test
+    fun `saving a provider with a login that fails still fetches its titles once it works`(): Unit = runBlocking {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         val channels = panel.replies.getValue("get_live_streams")
@@ -103,23 +109,24 @@ class CatalogueRefreshSavedProviderTest {
     }
 
     @Test
-    fun `a provider saved with a new login isn't downloaded with the old one when its turn comes`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
-        db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second"))
-        val hold = panel.hold("get_vod_streams")
+    fun `a provider saved with a new login isn't downloaded with the old one when its turn comes`(): Unit =
+        runBlocking {
+            db.sources().insert(PANEL_SOURCE)
+            db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second"))
+            val hold = panel.hold("get_vod_streams")
 
-        withContext(Dispatchers.Default) {
-            val opened = async { openMoviesOrShows() }
-            during(hold) { db.sources().update(PANEL_SOURCE.copy(id = 2, name = "Second", password = "new")) }
-            hold.release()
-            opened.await()
+            withContext(Dispatchers.Default) {
+                val opened = async { openMoviesOrShows() }
+                during(hold) { db.sources().update(PANEL_SOURCE.copy(id = 2, name = "Second", password = "new")) }
+                hold.release()
+                opened.await()
+            }
+
+            assertThat(vodDownloads()).isEqualTo(1)
         }
 
-        assertThat(vodDownloads()).isEqualTo(1)
-    }
-
     @Test
-    fun `changing a provider's live format mid-download still remembers its titles as fresh`() = runTest {
+    fun `changing a provider's live format mid-download still remembers its titles as fresh`(): Unit = runBlocking {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
 
@@ -137,7 +144,7 @@ class CatalogueRefreshSavedProviderTest {
     }
 
     @Test
-    fun `saving a provider again fetches its titles the next time they're opened`() = runTest {
+    fun `saving a provider again fetches its titles the next time they're opened`(): Unit = runBlocking {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
         panel.asked.clear()
@@ -149,27 +156,26 @@ class CatalogueRefreshSavedProviderTest {
     }
 
     @Test
-    fun `changed login details don't join a download running with the old ones`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
+    fun `changed login details don't join a download running with the old ones`() {
+        runBlocking { db.sources().insert(PANEL_SOURCE) }
         val hold = panel.hold("get_live_streams")
 
-        withContext(Dispatchers.Default) {
-            val old = async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
-            val edited = during(hold) {
-                async {
-                    refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE.copy(password = "new")))
-                }.also { Thread.sleep(JOIN_MILLIS) }
-            }
-            hold.release()
-            old.await()
-            edited.await()
+        val old = testGraph.launch { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
+        testGraph.awaitIdle()
+        assertThat(hold.reached.count).isEqualTo(0L)
+        val edited = testGraph.launch {
+            refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE.copy(password = "new")))
         }
+        testGraph.awaitIdle()
+        hold.release()
+        testGraph.awaitIdle()
+        assertThat(old.isCompleted).isTrue()
+        assertThat(edited.isCompleted).isTrue()
 
         assertThat(panel.asked.count { it == "get_live_streams" }).isEqualTo(2)
     }
 
     private companion object {
         const val RESCAN = "rescan series rules"
-        const val JOIN_MILLIS = 500L
     }
 }

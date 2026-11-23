@@ -18,7 +18,6 @@ import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +39,7 @@ class LivePreviewTest {
     private val library = ViewerLibrary(db, activeProfile, clock = { now })
 
     @Before
-    fun provider() = runTest {
+    fun provider() = testing {
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
     }
 
@@ -66,7 +65,7 @@ class LivePreviewTest {
     private suspend fun preview(): LivePreview? = library.live.preview().first()
 
     @Test
-    fun `the live channel played last is the Live Preview`() = runTest {
+    fun `the live channel played last is the Live Preview`() = testing {
         val bbc = stored("101", "BBC One")
 
         library.live.record(bbc)
@@ -75,7 +74,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `anything played after the live channel means there is no Live Preview`() = runTest {
+    fun `anything played after the live channel means there is no Live Preview`() = testing {
         val bbc = stored("101", "BBC One")
         for (key in listOf("movie:5", "ep:7", "rec:3")) {
             library.live.record(bbc)
@@ -88,7 +87,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `one Profile's live channel is not another's Live Preview`() = runTest {
+    fun `one Profile's live channel is not another's Live Preview`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
 
@@ -98,7 +97,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `a movie another Profile played doesn't take this Profile's Live Preview away`() = runTest {
+    fun `a movie another Profile played doesn't take this Profile's Live Preview away`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
         now += 1_000
@@ -111,7 +110,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `a channel hidden since it was watched has no Live Preview`() = runTest {
+    fun `a channel hidden since it was watched has no Live Preview`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
 
@@ -121,7 +120,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `a channel gone from the catalogue is still shown, by the name and logo it had`() = runTest {
+    fun `a channel gone from the catalogue is still shown, by the name and logo it had`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
 
@@ -131,7 +130,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `marking a title Watched by hand isn't playing it, so the Live Preview stays`() = runTest {
+    fun `marking a title Watched by hand isn't playing it, so the Live Preview stays`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
         now += 1_000
@@ -142,7 +141,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `a movie watched on another device doesn't take this one's Live Preview away`() = runTest {
+    fun `a movie watched on another device doesn't take this one's Live Preview away`() = testing {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
 
@@ -160,7 +159,7 @@ class LivePreviewTest {
     }
 
     @Test
-    fun `going back to live after a movie brings the Live Preview back`() = runTest {
+    fun `going back to live after a movie brings the Live Preview back`() = testing {
         val bbc = stored("101", "BBC One")
         library.recordProgress("movie:5", positionMillis = 60_000, durationMillis = 3_600_000)
         now += 1_000

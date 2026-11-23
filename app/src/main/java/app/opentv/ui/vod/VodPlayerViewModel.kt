@@ -24,7 +24,6 @@ import app.opentv.player.SkipButton
 import app.opentv.player.SkipCue
 import app.opentv.player.UpNextCue
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
@@ -515,7 +514,7 @@ private class PlayingTimings(private val graph: ServiceLocator.Graph) {
         if (episode == null || !wanted) return
         // Looked up off the main thread and awaited, rather than inside the launch below, so [arrived]
         // can wait for it from the main thread, as a test does, without needing the main thread free.
-        val found = scope.async(Dispatchers.IO) {
+        val found = scope.async(graph.dispatchers.io) {
             // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
             runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
         }

@@ -12,7 +12,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.remote.AddonFailure
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,7 +46,7 @@ class AddonsViewModel @JvmOverloads constructor(
             _status.value = Status.Checking
             // Only an AddonFailure is caught: cancellation, or a bug, isn't "can't reach the add-on".
             _status.value = try {
-                val name = withContext(Dispatchers.IO) { graph.stremioClient.fetchManifest(url) }
+                val name = withContext(graph.dispatchers.io) { graph.stremioClient.fetchManifest(url) }
                 graph.settings.addStremioAddon(StremioAddon(manifestUrl = url, name = name))
                 Status.Added(name)
             } catch (failure: AddonFailure) {

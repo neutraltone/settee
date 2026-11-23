@@ -12,7 +12,6 @@ import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.resumeItem
 import app.opentv.ui.resumeItems
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -58,7 +57,7 @@ class ResumeCardIdentityTest {
     )
 
     @Test
-    fun `a show's card stands for the same title whichever episode it has moved on to`() = runTest {
+    fun `a show's card stands for the same title whichever episode it has moved on to`() = testing {
         db.series().upsertAll(listOf(show(sourceId = 1)))
         val third = testEpisode(1, 3)
         val fourth = testEpisode(1, 4)
@@ -73,7 +72,7 @@ class ResumeCardIdentityTest {
     }
 
     @Test
-    fun `two shows with the same series id from different sources are different titles`() = runTest {
+    fun `two shows with the same series id from different sources are different titles`() = testing {
         db.series().upsertAll(listOf(show(sourceId = 1), show(sourceId = 2)))
         val fromFirst = testEpisode(1, 3)
         val fromSecond = testEpisode(1, 3).copy(id = 99, sourceId = 2)
@@ -86,7 +85,7 @@ class ResumeCardIdentityTest {
     }
 
     @Test
-    fun `a film's card stands for the same title after a refresh gives the film a new local id`() = runTest {
+    fun `a film's card stands for the same title after a refresh gives the film a new local id`() = testing {
         db.movies().upsertAll(listOf(heat(id = 100)))
         val before = resumeItem(test.catalog, ContinueWatchingCard.Movie(100, 0.4f))!!
         db.movies().deleteForSource(1)
@@ -98,7 +97,7 @@ class ResumeCardIdentityTest {
     }
 
     @Test
-    fun `handed two cards for one title, Continue Watching draws only the first`() = runTest {
+    fun `handed two cards for one title, Continue Watching draws only the first`() = testing {
         db.movies().upsertAll(listOf(heat(id = 100)))
 
         val cards = resumeItems(

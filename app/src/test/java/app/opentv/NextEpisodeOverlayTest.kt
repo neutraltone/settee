@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +20,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.height
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.Series
@@ -48,25 +46,23 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NextEpisodeOverlayTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val playback = FakePlayback()
-    private val viewModels = ViewModelsInTest()
-    private val vm = viewModels.track(VodPlayerViewModel(app, graph))
+    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph) } }
     private var stopped = false
 
     @After
     fun close() {
         graph.settings.setPlayNextAutomatically(true)
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     /** The overlay over a player that has started S1 E1 of a six-episode season. */
@@ -89,9 +85,11 @@ class NextEpisodeOverlayTest {
 
     // The view model names the episode before it has looked up where to resume, and only then starts
     // it, so waiting for the name alone can read what was played before.
-    private fun waitForEpisode(id: Long) = compose.waitUntil {
+    private fun waitForEpisode(id: Long) {
+        compose.waitForIdle()
         val current = vm.current.value
-        current == MediaKey.Episode(id) && playback.played.lastOrNull()?.first == current
+        assertThat(current).isEqualTo(MediaKey.Episode(id))
+        assertThat(playback.played.lastOrNull()?.first).isEqualTo(current)
     }
 
     @Test

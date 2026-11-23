@@ -181,7 +181,7 @@ class TitleIndexTest {
     @Test
     fun `a list doesn't wait for ever on titles that haven't been grouped`() = runTest {
         // A scope that never runs: the grouping never starts.
-        val stalled = TitleIndex(db, stick, CoroutineScope(StandardTestDispatcher()))
+        val stalled = TitleIndex(db, stick, scope = CoroutineScope(StandardTestDispatcher()))
         val films = listOf(VodTitle.OfMovie(movie(1, "NF - Superbad (2007)", "nf")))
 
         val shown = withTimeoutOrNull(60_000) { stalled.distinctTitles(flowOf(films)).first() }

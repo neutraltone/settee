@@ -9,7 +9,6 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.ContinueWatchingCard
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +45,7 @@ class NewEpisodeRefreshTest {
         test.catalog.detectNewEpisodes(PANEL_SOURCE, test.catalog.fetchVod(PANEL_SOURCE, now).updated, now)
 
     @Test
-    fun `fetching a show's episodes again updates them but keeps when each was first seen`() = runTest {
+    fun `fetching a show's episodes again updates them but keeps when each was first seen`() = testing {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_series_info"] = seriesInfo("1" to "Pilot")
         test.catalog.ensureEpisodes(PANEL_SOURCE, "7", now)
@@ -75,7 +74,7 @@ class NewEpisodeRefreshTest {
     }
 
     @Test
-    fun `a refresh where the provider updated a show the Profile is caught up on brings its New Episode`() = runTest {
+    fun `a refresh where the provider updated a show the Profile is caught up on brings its New Episode`() = testing {
         listShow(7, lastModified = 100)
         refresh()
         caughtUpOnPilot("7")
@@ -89,7 +88,7 @@ class NewEpisodeRefreshTest {
     }
 
     @Test
-    fun `a refresh where the provider didn't update the show fetches nothing`() = runTest {
+    fun `a refresh where the provider didn't update the show fetches nothing`() = testing {
         listShow(7, lastModified = 100)
         refresh()
         caughtUpOnPilot("7")
@@ -100,7 +99,7 @@ class NewEpisodeRefreshTest {
     }
 
     @Test
-    fun `a show listed for the first time is not fetched, even with episodes already stored`() = runTest {
+    fun `a show listed for the first time is not fetched, even with episodes already stored`() = testing {
         caughtUpOnPilot("7")
 
         listShow(7, lastModified = 200)

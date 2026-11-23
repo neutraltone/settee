@@ -7,7 +7,6 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,7 +28,7 @@ class ListProgressTest {
     fun close() = catalogue.close()
 
     @Test
-    fun `saving a movie list moves the progress as it goes, never backwards, to the end`() = runTest {
+    fun `saving a movie list moves the progress as it goes, never backwards, to the end`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.unsized += "get_vod_streams"
         catalogue.panel.replies["get_vod_streams"] =
@@ -44,7 +43,7 @@ class ListProgressTest {
     }
 
     @Test
-    fun `saving a show list moves the progress as it goes, to the end`() = runTest {
+    fun `saving a show list moves the progress as it goes, to the end`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["get_series"] =
             (1..3_000).joinToString(",", "[", "]") { """{"series_id": $it, "name": "Show $it"}""" }
@@ -57,7 +56,7 @@ class ListProgressTest {
     }
 
     @Test
-    fun `saving a movie list counts the films saved so far, as it goes`() = runTest {
+    fun `saving a movie list counts the films saved so far, as it goes`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["get_vod_streams"] =
             (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }

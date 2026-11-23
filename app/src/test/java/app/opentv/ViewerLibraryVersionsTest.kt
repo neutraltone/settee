@@ -5,10 +5,6 @@
  */
 package app.opentv
 
-import android.content.Context
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
@@ -26,9 +22,8 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -42,10 +37,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class ViewerLibraryVersionsTest {
 
-    private val context: Context = ApplicationProvider.getApplicationContext()
-    private val db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
+    // Virtual time, with Room on the same test dispatcher, so a skipped delay never races a read.
+    @get:Rule
+    val testGraph = TestGraph(virtualTime = true)
+
+    private val db = testGraph.database
     private var now = 1_000_000L
     private val library = ViewerLibrary(db, MutableStateFlow(1L), clock = { now })
 
@@ -53,17 +49,14 @@ class ViewerLibraryVersionsTest {
     private val english = movie(2, "EN - Superbad (2007)")
 
     @Before
-    fun catalogue() = runTest {
+    fun catalogue() = testGraph.runTest {
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.profiles().insert(Profile(id = 1, name = "Me", createdAtMillis = 1))
         db.movies().upsertAll(listOf(netflix, english, movie(3, "EN - Juno (2007)", tmdbId = "7326")))
     }
 
-    @After
-    fun close() = db.close()
-
     @Test
-    fun `a film is Watched when any of its Versions is`() = runTest {
+    fun `a film is Watched when any of its Versions is`() = testGraph.runTest {
         played(netflix.mediaKey, fraction = 1.0)
         later()
         played(english.mediaKey, fraction = 0.25)
@@ -72,7 +65,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `a film's status comes from the Version played most recently`() = runTest {
+    fun `a film's status comes from the Version played most recently`() = testGraph.runTest {
         played(netflix.mediaKey, fraction = 0.5)
         later()
         played(english.mediaKey, fraction = 0.25)
@@ -83,7 +76,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `Continue Watching shows a film once, at the Version played most recently`() = runTest {
+    fun `Continue Watching shows a film once, at the Version played most recently`() = testGraph.runTest {
         played(netflix.mediaKey, fraction = 0.5)
         later()
         played(english.mediaKey, fraction = 0.25)
@@ -93,7 +86,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `Continue Watching doesn't wait for the grouping once per card`() = runTest {
+    fun `Continue Watching doesn't wait for the grouping once per card`() = testGraph.runTest {
         // Before the titles are first grouped, each lookup waits for them, then gives up (#582).
         val ungrouped = ViewerLibrary(
             db,
@@ -118,7 +111,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `an episode Watched in one Version shows Watched on the show`() = runTest {
+    fun `an episode Watched in one Version shows Watched on the show`() = testGraph.runTest {
         val (first, second) = twoVersionsOfAShow()
         played(first[0].mediaKey, fraction = 1.0)
 
@@ -129,7 +122,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `Up Next moves past an episode Watched in another Version`() = runTest {
+    fun `Up Next moves past an episode Watched in another Version`() = testGraph.runTest {
         val (first, second) = twoVersionsOfAShow()
         played(second[0].mediaKey, fraction = 1.0)
 
@@ -140,7 +133,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `starring one Version makes the title a Favourite`() = runTest {
+    fun `starring one Version makes the title a Favourite`() = testGraph.runTest {
         library.favourites.set(netflix, true)
 
         assertThat(library.favourites.isFavourite(VodTitle.OfMovie(english))).isTrue()
@@ -150,7 +143,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `unstarring a title clears every Version, and sync carries the same keys`() = runTest {
+    fun `unstarring a title clears every Version, and sync carries the same keys`() = testGraph.runTest {
         library.favourites.set(netflix, true)
         library.favourites.set(english, true)
         later()
@@ -163,7 +156,7 @@ class ViewerLibraryVersionsTest {
     }
 
     @Test
-    fun `a title starred in two Versions is one Favourite`() = runTest {
+    fun `a title starred in two Versions is one Favourite`() = testGraph.runTest {
         library.favourites.set(netflix, true)
         later()
         library.favourites.set(english, true)

@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -47,7 +46,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -604,8 +602,9 @@ class SearchContentTest {
     }
 
     // With the clock stopped, the box's EditText holds frames back until Android's own main
-    // looper has run, so a change wouldn't be composed by advancing the clock alone.
-    private fun runMainLooper() = shadowOf(Looper.getMainLooper()).idle()
+    // looper has run, so a change wouldn't be composed by advancing the clock alone: settling runs
+    // it, and with the clock stopped doesn't move it.
+    private fun runMainLooper() = compose.waitForIdle()
 
     // Frame by frame, running the looper before each, so a change is drawn within a frame as on a
     // device. One advanceTimeBy(500) ran no looper: when the EditText held the channels' frame

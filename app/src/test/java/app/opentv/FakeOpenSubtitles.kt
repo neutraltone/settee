@@ -33,7 +33,7 @@ class FakeOpenSubtitles {
     val bodies: MutableList<String> = Collections.synchronizedList(mutableListOf())
 
     /** Held open, downloads wait until it counts down, so a test can see what shows while one is fetched. */
-    @Volatile var downloadsHeld: java.util.concurrent.CountDownLatch? = null
+    @Volatile var downloadsHeld: TestGraph.Held? = null
 
     /** Held open, the account's allowance check waits likewise, so a test can see what shows meanwhile. */
     @Volatile var accountHeld: java.util.concurrent.CountDownLatch? = null
@@ -44,7 +44,7 @@ class FakeOpenSubtitles {
         request.body?.let { body -> bodies += Buffer().also(body::writeTo).readUtf8() }
         val path = request.url.encodedPath.removePrefix("/api/v1")
         // Bounded, so a test that fails before letting go fails rather than hangs.
-        if (path == "/download") downloadsHeld?.await(10, java.util.concurrent.TimeUnit.SECONDS)
+        if (path == "/download") downloadsHeld?.await(10)
         if (path == "/infos/user") accountHeld?.await(10, java.util.concurrent.TimeUnit.SECONDS)
         val reply = replies["${request.method} $path"] ?: if (path == "/subtitles") """{"data": []}""" else "{}"
         if (reply == "!") throw java.io.IOException("OpenSubtitles timed out")
@@ -63,8 +63,16 @@ class FakeOpenSubtitles {
      * by the graph: the Android Keystore the graph's sealer uses isn't in Robolectric.
      */
     fun openSubtitles(graph: ServiceLocator.Graph, files: File) = OpenSubtitles(
-        OpenSubtitlesAccount(graph.settings, OpenSubtitlesClient(http, "k", "0.5.0"), FakeSealer()),
-        DownloadedSubtitles(files.resolve("subtitles")),
+        // On the graph's dispatchers, as the graph's own is: on raw Dispatchers.IO a sign-in is work no
+        // settle counts, so a check straight after one could run before it had answered.
+        OpenSubtitlesAccount(
+            graph.settings,
+            OpenSubtitlesClient(http, "k", "0.5.0"),
+            FakeSealer(),
+            graph.clock,
+            graph.dispatchers,
+        ),
+        DownloadedSubtitles(files.resolve("subtitles"), graph.clock, dispatchers = graph.dispatchers),
         graph.catalogRepository,
         graph.sourceRepository,
     )

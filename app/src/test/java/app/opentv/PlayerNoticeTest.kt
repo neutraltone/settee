@@ -15,9 +15,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.test.utils.ExoPlayerTestRunner
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
-import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.player.DecoderSize
@@ -27,7 +25,6 @@ import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -43,15 +40,15 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class PlayerNoticeTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val surface = Surface(SurfaceTexture(0))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
-
-    private val viewModels = ViewModelsInTest()
 
     @After
     fun close() {
@@ -134,8 +131,8 @@ class PlayerNoticeTest {
             Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).build(),
         )
         val controller = players.realDecoderController(surface = surface)
-        val graph = ServiceLocator.Graph(app)
-        val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+        val graph = testGraph.graph
+        val viewModel = testGraph.viewModel { VodPlayerViewModel(app, graph) }
         compose.setTvContent {
             VodPlayerContent(controller, viewModel, false, noPicks, onBack = {})
         }
@@ -151,8 +148,5 @@ class PlayerNoticeTest {
         compose.onNodeWithText("This device can't play this audio format (E-AC-3)", substring = true).assertExists()
         assertThat(focusedId()).isEqualTo(focusedBefore)
         controller.release()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 }

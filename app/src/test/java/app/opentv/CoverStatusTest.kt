@@ -19,7 +19,6 @@ import app.opentv.data.repo.coverStatuses
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +45,7 @@ class CoverStatusTest {
     fun close() = db.close()
 
     @Test
-    fun `a movie part way through says how long is left`() = runTest {
+    fun `a movie part way through says how long is left`() = testing {
         library.recordProgress("movie:7", positionMillis = 600_000, durationMillis = 1_920_000)
 
         assertThat(library.coverStatuses().first().ofMovie(7))
@@ -54,14 +53,14 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `a movie played past the credits is Watched`() = runTest {
+    fun `a movie played past the credits is Watched`() = testing {
         library.recordProgress("movie:7", positionMillis = 1_900_000, durationMillis = 1_920_000)
 
         assertThat(library.coverStatuses().first().ofMovie(7)).isEqualTo(CoverStatus.Watched)
     }
 
     @Test
-    fun `a show part way through an episode names the episode and how long is left`() = runTest {
+    fun `a show part way through an episode names the episode and how long is left`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         now += 1_000
@@ -73,13 +72,13 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `a movie never played has no status`() = runTest {
+    fun `a movie never played has no status`() = testing {
         assertThat(library.coverStatuses().first().ofMovie(7)).isNull()
         assertThat(library.coverStatuses().first().ofSeries(show)).isNull()
     }
 
     @Test
-    fun `a show between episodes names its Up Next`() = runTest {
+    fun `a show between episodes names its Up Next`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 3))
 
@@ -87,7 +86,7 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `a show whose Up Next was started part way says how long is left of it`() = runTest {
+    fun `a show whose Up Next was started part way says how long is left of it`() = testing {
         db.episodes().upsertAll(episodes)
         library.recordProgress("ep:${testEpisode(1, 3).id}", positionMillis = 600_000, durationMillis = 2_400_000)
         now += 1_000
@@ -99,7 +98,7 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `a show caught up on its last episode is Watched`() = runTest {
+    fun `a show caught up on its last episode is Watched`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
 
@@ -107,7 +106,7 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `a show with an episode added after the Profile caught up has a New Episode`() = runTest {
+    fun `a show with an episode added after the Profile caught up has a New Episode`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
         now += 60_000
@@ -117,7 +116,7 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `with many shows played, each cover goes by that show's own episodes`() = runTest {
+    fun `with many shows played, each cover goes by that show's own episodes`() = testing {
         playManyShows()
 
         val covers = library.coverStatuses().first()
@@ -138,7 +137,7 @@ class CoverStatusTest {
     }
 
     @Test
-    fun `working out the covers reads each saved position's key a few times, not once per show`() = runTest {
+    fun `working out the covers reads each saved position's key a few times, not once per show`() = testing {
         playManyShows()
         var parses = 0
         MediaKey.onParse = { parses++ }

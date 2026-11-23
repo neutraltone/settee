@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Category
@@ -14,7 +15,6 @@ import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
@@ -153,7 +153,8 @@ constructor(
     private val lockedKeys: StateFlow<Set<String>>,
     private val unlocked: StateFlow<Boolean>,
     internal val decoders: DecoderList,
-    private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val dispatchers: AppDispatchers = AppDispatchers(),
+    private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default),
     private val channelDao: ChannelDao = db.channels(),
 ) {
     private val categories = db.categories().observe(StreamKind.LIVE)
@@ -182,7 +183,7 @@ constructor(
             last?.takeIf { it.first == list }?.second
                 ?: list.mapTo(HashSet(), ::categoryGroupKey).also { last = list to it }
         }
-            .flowOn(Dispatchers.Default)
+            .flowOn(dispatchers.default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
     }
 
@@ -210,12 +211,12 @@ constructor(
     private val browsable: Flow<Catalogue> =
         combine(everyRow, locked) { rows, locked -> Catalogue(rows, decoders) { it.isShown(locked) } }
             // One fold for every screen open at once, off the main thread.
-            .flowOn(Dispatchers.Default)
+            .flowOn(dispatchers.default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
     /** Every row, hidden and locked ones too: what the channel manager folds. */
     private val manageable: Flow<Catalogue> = everyRow.map { Catalogue(it, decoders) }
-        .flowOn(Dispatchers.Default)
+        .flowOn(dispatchers.default)
         .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
     /** The scope channel up and down follow: All until a screen says otherwise. */
@@ -249,7 +250,7 @@ constructor(
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }
             // Folding normalises every category's name: hundreds on a big provider, so not on the main thread.
-            .flowOn(Dispatchers.Default)
+            .flowOn(dispatchers.default)
 
     fun channels(scope: LineupScope): Flow<List<LineupChannel>> {
         if (scope is LineupScope.Favourites) {
@@ -272,7 +273,7 @@ constructor(
         return if (scope is LineupScope.All) {
             combine(catalogue, favourites.channelIds()) { catalogue, starred ->
                 catalogue.channelsOf(catalogue.listed(scope.sourceId), scope).map { it.starredBy(starred) }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(dispatchers.default)
         } else {
             combine(rowsIn(scope, channelDao, categories), catalogue, favourites.channelIds()) {
                     rows,
@@ -304,7 +305,7 @@ constructor(
     internal val programmes = db.programmes()
 
     /** Which guides have programmes, for [guideId] and [nowOn]: read again only when the guide changes. */
-    internal val storedGuides = StoredGuides(db)
+    internal val storedGuides = StoredGuides(db, dispatchers)
 
     /**
      * Channel up and down follow [scope] from now on: the guide's current scope, or All from

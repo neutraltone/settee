@@ -9,7 +9,6 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,7 +54,7 @@ class LookedUpSaveTest {
     }
 
     @Test
-    fun `a film's look-up lands on the row as a refresh left it, changing only what it filled in`() = runTest {
+    fun `a film's look-up lands on the row as a refresh left it, changing only what it filled in`() = testing {
         val id = stored().id
         val refreshed = movies.byId(id)!!.copy(
             name = "Drive Redux",
@@ -74,7 +73,7 @@ class LookedUpSaveTest {
     }
 
     @Test
-    fun `a film deleted before its look-up is saved stays deleted`() = runTest {
+    fun `a film deleted before its look-up is saved stays deleted`() = testing {
         val id = stored().id
         movies.deleteForSource(PANEL_SOURCE.id)
 
@@ -104,7 +103,7 @@ class LookedUpSaveTest {
     }
 
     @Test
-    fun `a show's look-up lands on the row as a refresh left it, changing only what it filled in`() = runTest {
+    fun `a show's look-up lands on the row as a refresh left it, changing only what it filled in`() = testing {
         val id = storedShow().id
         val refreshed = series.byId(id)!!.copy(
             name = "Show Redux",
@@ -123,7 +122,7 @@ class LookedUpSaveTest {
     }
 
     @Test
-    fun `a show deleted before its look-up is saved stays deleted`() = runTest {
+    fun `a show deleted before its look-up is saved stays deleted`() = testing {
         val id = storedShow().id
         series.deleteForSource(PANEL_SOURCE.id)
 

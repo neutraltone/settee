@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import androidx.annotation.VisibleForTesting
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.MOVIES_TABLE
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.SERIES_TABLE
@@ -16,7 +17,6 @@ import app.opentv.player.DecoderList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
@@ -58,7 +58,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 class TitleIndex(
     private val db: OpenTvDatabase,
     private val decoders: DecoderList,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val dispatchers: AppDispatchers = AppDispatchers(),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default),
     private val regroupGap: (tookMillis: Long) -> Long = ::regroupGapMillis,
 ) {
     /** One title: its Versions' row ids, and its cover's badge (see [titleBadge]). */
@@ -188,7 +189,7 @@ class TitleIndex(
                     }
                 }
         }
-        .flowOn(Dispatchers.Default)
+        .flowOn(dispatchers.default)
         // A read that fails, or a database closed under it, leaves every row its own title for now,
         // rather than grids that wait for ever, and grouping tries again later rather than never.
         .retryWhen { _, _ ->

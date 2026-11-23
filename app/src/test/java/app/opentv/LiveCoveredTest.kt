@@ -6,7 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -21,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
@@ -29,12 +27,12 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -42,6 +40,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
@@ -56,7 +55,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -68,11 +66,9 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class LiveCoveredTest {
 
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -95,17 +91,17 @@ class LiveCoveredTest {
         add(java.util.Calendar.DAY_OF_MONTH, 1)
     }.timeInMillis
 
-    private val graph = ServiceLocator.Graph(app, clock = { now })
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.channels(app, graph) }
+    @get:Rule
+    val testGraph = TestGraph(compose, clock = { now })
+
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { ChannelsViewModel(app, graph) } }
     private lateinit var nav: NavHostController
 
     @After
     fun close() {
         graph.settings.lastChannelId = 0L
         graph.settings.setGuidePreviewVideo(true)
-        viewModels.clear()
-        graph.database.close()
     }
 
     private fun channel(id: Long, name: String) = Channel(
@@ -186,10 +182,9 @@ class LiveCoveredTest {
         }
     }
 
-    private fun idleMainLooper() = shadowOf(Looper.getMainLooper()).idle()
-
     private fun awaitRows() {
-        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() } }
+        compose.waitForIdle()
+        assertThat(viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() }).isTrue()
         compose.waitForIdle()
     }
 
@@ -203,10 +198,9 @@ class LiveCoveredTest {
     /** Opens Settings over Live TV and waits until it has finished covering it. */
     private fun openSettings() {
         compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasTestTag("Settings option") and isFocused()).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.waitUntil(UI_WAIT_MILLIS) { !liveShown() }
+        compose.onAllNodes(hasTestTag("Settings option") and isFocused()).onFirst().assertExists()
+        compose.waitForIdle()
+        assertThat(liveShown()).isFalse()
     }
 
     /** Back as the remote sends it, through the activity. */
@@ -236,15 +230,12 @@ class LiveCoveredTest {
         }
 
         // A guide still listening builds its three rows from them now: give it time to.
-        val until = System.currentTimeMillis() + BUILD_MILLIS
-        while (System.currentTimeMillis() < until) {
-            idleMainLooper()
-            assertThat(rowsList(NEWS)).isFalse()
-            Thread.sleep(POLL_MILLIS)
-        }
+        testGraph.advanceBy(BUILD_MILLIS)
+        assertThat(rowsList(NEWS)).isFalse()
 
         back()
-        compose.waitRunningMainLooper { rowsList(NEWS) }
+        compose.waitForIdle()
+        assertThat(rowsList(NEWS)).isTrue()
         compose.waitForIdle()
 
         channelCell("Channel Two").assertIsFocused()
@@ -259,7 +250,8 @@ class LiveCoveredTest {
         setApp()
         awaitRows()
         compose.runOnIdle { viewModel.nudgeGuideDay(1) }
-        compose.waitRunningMainLooper { rowsList(TOMORROW) }
+        compose.waitForIdle()
+        assertThat(rowsList(TOMORROW)).isTrue()
         compose.waitForIdle()
         compose.onNode(hasText(TOMORROW)).assertIsDisplayed()
 
@@ -270,7 +262,8 @@ class LiveCoveredTest {
         // Whether or not today's rows were built before the guide stopped, it draws today.
         compose.onNode(hasText("Today")).assertIsDisplayed()
         compose.onNode(hasText(TOMORROW)).assertDoesNotExist()
-        compose.waitRunningMainLooper { !rowsList(TOMORROW) }
+        compose.waitForIdle()
+        assertThat(rowsList(TOMORROW)).isFalse()
         compose.waitForIdle()
         compose.onNode(hasText("Today")).assertIsDisplayed()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
@@ -280,7 +273,7 @@ class LiveCoveredTest {
      * Past when nothing collecting them stops the guide's flows: the rows five seconds after the screen
      * stops, and the programme index under them five seconds after that (WhileSubscribed).
      */
-    private fun letTheGuideStop() = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(STOP_SECONDS))
+    private fun letTheGuideStop() = testGraph.advanceBy(Duration.ofSeconds(STOP_SECONDS).toMillis())
 
     private companion object {
         const val HOUR = 60 * 60 * 1000L
@@ -289,6 +282,5 @@ class LiveCoveredTest {
         const val STOP_SECONDS = 11L
         const val BUILD_MILLIS = 1_500L
         const val TOMORROW = "Tomorrow's news"
-        const val POLL_MILLIS = 100L
     }
 }

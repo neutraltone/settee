@@ -6,12 +6,9 @@
 package app.opentv.recording
 
 import android.app.Application
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.R
-import app.opentv.core.ServiceLocator
+import app.opentv.TestGraph
 import app.opentv.core.ViewerError
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import com.google.common.truth.Truth.assertThat
@@ -19,14 +16,12 @@ import java.io.OutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -45,8 +40,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class RecordingEndingTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-
     /** How the provider answers each leg, numbered from 1. */
     @Volatile
     private var reply: (leg: Int, Request) -> Response = { _, request -> video(request, "abc") }
@@ -62,31 +55,22 @@ class RecordingEndingTest {
         reply(++legs, chain.request())
     }.build()
 
-    private val graph = ServiceLocator.Graph(
-        app,
+    // Swapped in for the app's graph, which the service reaches for.
+    @get:Rule
+    val testGraph = TestGraph(
+        name = "recording-ending",
         http = provider,
-        settingsFile = "recording-ending",
-        openDatabase = {
-            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
-        },
         openRecordingFile = { RecordingStorage.Sink(storage) {} },
         captureReconnectMillis = 0,
     )
-    private val recordings = graph.recordingRepository
-    private var before: ServiceLocator.Graph? = null
-    private var service: ServiceController<RecordingService>? = null
 
-    @Before
-    fun useGraph() {
-        before = ServiceLocator.swap(graph)
-    }
+    private val app = testGraph.app
+    private val recordings = testGraph.graph.recordingRepository
+    private var service: ServiceController<RecordingService>? = null
 
     @After
     fun close() {
         service?.destroy()
-        ServiceLocator.swap(before)
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     @Test
@@ -206,14 +190,10 @@ class RecordingEndingTest {
         return id
     }
 
-    /**
-     * Waits for the capture to finish. It runs on the service's own dispatcher, so this waits for the
-     * row to change rather than for time to pass; the timeout only stops a broken run hanging.
-     */
-    private suspend fun finished(id: Long): Recording = withTimeout(10_000) {
-        recordings.observeAll()
-            .map { rows -> rows.single { it.id == id } }
-            .first { it.status != RecordingStatus.SCHEDULED && it.status != RecordingStatus.RECORDING }
+    /** The recording's row once its capture has finished: it runs on the graph's io dispatcher. */
+    private suspend fun finished(id: Long): Recording {
+        testGraph.awaitIdle()
+        return recordings.observeAll().first().single { it.id == id }
     }
 
     private val Recording.reason get() = error?.let { ViewerError.fromStored(it) }

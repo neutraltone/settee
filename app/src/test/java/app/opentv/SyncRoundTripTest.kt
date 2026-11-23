@@ -5,8 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
 import app.opentv.SyncDevice.Companion.NAS_RECORDING
@@ -17,10 +15,11 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -31,19 +30,26 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class SyncRoundTripTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val deviceA = SyncDevice(rowIdOffset = 0)
+    private val deviceB = SyncDevice(rowIdOffset = 100)
+    private val deviceC = SyncDevice(rowIdOffset = 200)
 
-    private val deviceA = SyncDevice(app, rowIdOffset = 0)
-    private val deviceB = SyncDevice(app, rowIdOffset = 100)
-    private val deviceC = SyncDevice(app, rowIdOffset = 200)
+    @get:Rule(order = 0)
+    val graphA = deviceA.testGraph
+
+    @get:Rule(order = 1)
+    val graphB = deviceB.testGraph
+
+    @get:Rule(order = 2)
+    val graphC = deviceC.testGraph
 
     @After
     fun close() {
         runBlocking { deviceB.awaitEpisodes() }
-        deviceA.db.close()
-        deviceB.db.close()
-        deviceC.db.close()
     }
+
+    /** Each device's calls, made on the test's thread; nothing here needs the main thread to turn. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
 
     /** Sends A's state to B the way the transports do: gathered, as JSON, then applied. */
     private suspend fun syncAToB() = deviceB.sync.apply(bundleFromA())
@@ -51,7 +57,7 @@ class SyncRoundTripTest {
     private suspend fun bundleFromA() = deviceB.sync.decode(deviceA.sync.encode(deviceA.sync.gather()))
 
     @Test
-    fun `each Profile's Favourites land on the Profile with the same name on the other device`() = runTest {
+    fun `each Profile's Favourites land on the Profile with the same name on the other device`() = testing {
         deviceA.seed("Alex", "Sam")
         // B made its Profiles in the other order, so the same name has a different row id there.
         deviceB.seed("Sam", "Alex")
@@ -65,7 +71,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a Profile only the other device has arrives with its Favourites`() = runTest {
+    fun `a Profile only the other device has arrives with its Favourites`() = testing {
         deviceA.seed("Alex", "Sam")
         deviceB.seed("Alex")
         deviceA.favourite("Sam", 1)
@@ -77,7 +83,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `syncing keeps the Favourites only this device has and adds nothing twice`() = runTest {
+    fun `syncing keeps the Favourites only this device has and adds nothing twice`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         deviceA.favourite("Alex", 1)
@@ -94,7 +100,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `progress and a title marked watched carry over to the same Profile, and only that Profile`() = runTest {
+    fun `progress and a title marked watched carry over to the same Profile, and only that Profile`() = testing {
         deviceA.seed("Alex", "Sam")
         deviceB.seed("Sam", "Alex")
         deviceA.play("Alex", deviceA.movieKey, 1_200_000, MOVIE_MILLIS)
@@ -111,7 +117,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `whichever device played a title more recently decides where it resumes`() = runTest {
+    fun `whichever device played a title more recently decides where it resumes`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         // B watched the movie last; A watched the episode last.
@@ -128,7 +134,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `progress still matches after the provider password changes on one device`() = runTest {
+    fun `progress still matches after the provider password changes on one device`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         deviceA.play("Alex", deviceA.movieKey, 1_200_000, MOVIE_MILLIS)
@@ -143,7 +149,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `hidden channels still match after the provider password changes on one device`() = runTest {
+    fun `hidden channels still match after the provider password changes on one device`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         deviceA.hide(1)
@@ -157,7 +163,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `hidden channels still match after the live format changes on one device`() = runTest {
+    fun `hidden channels still match after the live format changes on one device`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         deviceA.hide(2)
@@ -169,7 +175,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a bundle carries no provider credentials or host`() = runTest {
+    fun `a bundle carries no provider credentials or host`() = testing {
         deviceA.seed("Alex")
         deviceA.play("Alex", deviceA.movieKey, 1_200_000, MOVIE_MILLIS)
         deviceA.play("Alex", deviceA.episodeKey, 900_000, EPISODE_MILLIS)
@@ -186,7 +192,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a NAS recording from another device appears in the library and plays from the NAS`() = runTest {
+    fun `a NAS recording from another device appears in the library and plays from the NAS`() = testing {
         deviceA.seed("Alex")
         deviceB.seed("Alex")
         deviceA.recordToNas()
@@ -203,7 +209,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `an old-format bundle still merges its Favourites and ignores its positions and hidden channels`() = runTest {
+    fun `an old-format bundle still merges its Favourites and ignores its positions and hidden channels`() = testing {
         deviceB.seed("Alex")
         val oldBundle = """
             {
@@ -236,7 +242,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `progress for an episode the receiver hasn't fetched arrives without opening the series`() = runTest {
+    fun `progress for an episode the receiver hasn't fetched arrives without opening the series`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -252,7 +258,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `applying a bundle doesn't wait for the provider`() = runTest {
+    fun `applying a bundle doesn't wait for the provider`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -273,7 +279,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a provider that's down costs one fetch, and the progress arrives on a later sync`() = runTest {
+    fun `a provider that's down costs one fetch, and the progress arrives on a later sync`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -301,7 +307,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `several positions in a series, from different peers, cause one fetch`() = runTest {
+    fun `several positions in a series, from different peers, cause one fetch`() = testing {
         deviceA.seed("Alex")
         deviceC.seed("Alex")
         deviceB.openedSeries = false
@@ -319,7 +325,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a position for a source the receiver doesn't have causes no fetch and no error`() = runTest {
+    fun `a position for a source the receiver doesn't have causes no fetch and no error`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.sourceName = "Someone else's provider"
@@ -334,7 +340,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `an episode the provider doesn't have is asked for once, and placed if the series later has it`() = runTest {
+    fun `an episode the provider doesn't have is asked for once, and placed if the series later has it`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -357,7 +363,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a series the provider answers with nothing is asked for again on a later sync`() = runTest {
+    fun `a series the provider answers with nothing is asked for again on a later sync`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -374,7 +380,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `one sync fetches a limited number of series, and a later one fetches the rest`() = runTest {
+    fun `one sync fetches a limited number of series, and a later one fetches the rest`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -394,7 +400,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `a provider switched off on the receiver isn't asked for episodes`() = runTest {
+    fun `a provider switched off on the receiver isn't asked for episodes`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.sourceEnabled = false
@@ -408,7 +414,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `episodes a catch-up fetch brings in aren't New Episodes`() = runTest {
+    fun `episodes a catch-up fetch brings in aren't New Episodes`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")
@@ -424,7 +430,7 @@ class SyncRoundTripTest {
     }
 
     @Test
-    fun `an episode the provider adds after the catch-up fetch is a New Episode`() = runTest {
+    fun `an episode the provider adds after the catch-up fetch is a New Episode`() = testing {
         deviceA.seed("Alex")
         deviceB.openedSeries = false
         deviceB.seed("Alex")

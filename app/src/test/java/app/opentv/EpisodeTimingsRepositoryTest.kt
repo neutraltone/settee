@@ -17,7 +17,6 @@ import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.repo.EpisodeTimingsRepository
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,7 +84,7 @@ class EpisodeTimingsRepositoryTest {
     private fun hosts() = network.hosts()
 
     @Test
-    fun `TheIntroDB's credits and intro are used, without asking IntroDB`() = runTest {
+    fun `TheIntroDB's credits and intro are used, without asking IntroDB`() = testing {
         val known = repository().timingsFor(testEpisode(1, 1))
 
         assertThat(known.timings?.creditsStartMillis).isEqualTo(3_432_884)
@@ -96,7 +95,7 @@ class EpisodeTimingsRepositoryTest {
 
     @Test
     fun `without credits from TheIntroDB IntroDB is asked by the series' IMDb id, and TheIntroDB's intro kept`() =
-        runTest {
+        testing {
             replies["api.theintrodb.org"] = """{"intro":[{"start_ms":228665,"end_ms":246498}],"credits":[]}"""
 
             val known = repository().timingsFor(testEpisode(1, 1))
@@ -113,7 +112,7 @@ class EpisodeTimingsRepositoryTest {
         }
 
     @Test
-    fun `with credits but no intro from TheIntroDB, IntroDB's intro and recap fill in`() = runTest {
+    fun `with credits but no intro from TheIntroDB, IntroDB's intro and recap fill in`() = testing {
         replies["api.theintrodb.org"] = CREDITS_ONLY
         replies["api.introdb.app"] = """
             {"intro":{"start_ms":514000,"end_ms":557000},"recap":{"start_ms":null,"end_ms":30000},
@@ -132,7 +131,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `an episode with credits but no intro timed anywhere is asked about again after a week`() = runTest {
+    fun `an episode with credits but no intro timed anywhere is asked about again after a week`() = testing {
         replies["api.theintrodb.org"] = CREDITS_ONLY
         val timings = repository()
         timings.timingsFor(testEpisode(1, 1))
@@ -151,7 +150,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `an intro confirmed not to be there settles the episode`() = runTest {
+    fun `an intro confirmed not to be there settles the episode`() = testing {
         replies["api.theintrodb.org"] = CREDITS_ONLY
         replies["api.introdb.app"] = """{"no_intro":true}"""
         val timings = repository()
@@ -165,7 +164,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `when IntroDB can't be reached for the intro, the credits are used and the next start asks again`() = runTest {
+    fun `when IntroDB can't be reached for the intro, the credits are used and the next start asks again`() = testing {
         replies["api.theintrodb.org"] = CREDITS_ONLY
         replies["api.introdb.app"] = "!"
         val timings = repository()
@@ -178,7 +177,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `a series without a TMDB id is found on TMDB by its name`() = runTest {
+    fun `a series without a TMDB id is found on TMDB by its name`() = testing {
         series = show.copy(tmdbId = null)
 
         val known = repository().timingsFor(testEpisode(1, 1))
@@ -187,7 +186,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `timings looked up once are kept, and not asked for again`() = runTest {
+    fun `timings looked up once are kept, and not asked for again`() = testing {
         val timings = repository()
         timings.timingsFor(testEpisode(1, 1))
         asked.clear()
@@ -199,7 +198,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `an episode neither database has timed is asked about again after a week, not before`() = runTest {
+    fun `an episode neither database has timed is asked about again after a week, not before`() = testing {
         replies["api.theintrodb.org"] = "404"
         replies["api.introdb.app"] = "{}"
         val timings = repository()
@@ -216,7 +215,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `when neither database can be reached nothing is kept, so the next start asks again`() = runTest {
+    fun `when neither database can be reached nothing is kept, so the next start asks again`() = testing {
         replies["api.theintrodb.org"] = "!"
         replies["api.introdb.app"] = "!"
         val timings = repository()
@@ -228,7 +227,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `the show's other episodes come with the timings, for its usual credits length`() = runTest {
+    fun `the show's other episodes come with the timings, for its usual credits length`() = testing {
         val timings = repository()
         timings.timingsFor(testEpisode(1, 1))
         timings.timingsFor(testEpisode(1, 2))
@@ -241,7 +240,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `with no TMDB id, no way to look one up and no series nothing is asked`() = runTest {
+    fun `with no TMDB id, no way to look one up and no series nothing is asked`() = testing {
         series = show.copy(tmdbId = null)
         assertThat(repository(tmdbKey = "").timingsFor(testEpisode(1, 1)).timings).isNull()
 
@@ -252,7 +251,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `when TheIntroDB can't be reached, IntroDB having nothing isn't kept as nothing timed`() = runTest {
+    fun `when TheIntroDB can't be reached, IntroDB having nothing isn't kept as nothing timed`() = testing {
         replies["api.theintrodb.org"] = "!"
         replies["api.introdb.app"] = "{}"
         val timings = repository()
@@ -264,7 +263,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `when IntroDB can't be reached, TheIntroDB having no credits isn't kept as nothing timed`() = runTest {
+    fun `when IntroDB can't be reached, TheIntroDB having no credits isn't kept as nothing timed`() = testing {
         replies["api.theintrodb.org"] = """{"intro":[{"start_ms":228665,"end_ms":246498}],"credits":[]}"""
         replies["api.introdb.app"] = "!"
         val timings = repository()
@@ -276,7 +275,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `a series with an IMDb id whose TMDB lookup failed tries TMDB again on its next episode`() = runTest {
+    fun `a series with an IMDb id whose TMDB lookup failed tries TMDB again on its next episode`() = testing {
         series = show.copy(seriesId = "tt0903747", tmdbId = null)
         replies["/3/search/tv"] = "!"
         val timings = repository()
@@ -290,7 +289,7 @@ class EpisodeTimingsRepositoryTest {
     }
 
     @Test
-    fun `the show's IMDb id is looked up on TMDB once, not for every episode IntroDB is asked about`() = runTest {
+    fun `the show's IMDb id is looked up on TMDB once, not for every episode IntroDB is asked about`() = testing {
         replies["api.theintrodb.org"] = "404"
         val timings = repository()
 

@@ -80,7 +80,6 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -587,7 +586,7 @@ class ChannelsViewModel @JvmOverloads constructor(
     private val programmeIndex: StateFlow<ProgrammeIndex> =
         guideWindow
             .guideIndex(graph.epgRepository::observeGuideWindow)
-            .flowOn(Dispatchers.Default)
+            .flowOn(graph.dispatchers.default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
     private val _rowsBuilt = MutableStateFlow(false)
@@ -628,7 +627,7 @@ class ChannelsViewModel @JvmOverloads constructor(
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
             // enough to freeze the UI for a big provider — a category tap that took minutes. Run the
             // whole pipeline off the main thread so the list just appears when it's ready.
-            .flowOn(Dispatchers.Default)
+            .flowOn(graph.dispatchers.default)
             .onEach { _rowsBuilt.value = true }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
 
@@ -770,7 +769,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                     lineup.channels(LineupScope.ManageGroup(key)).map { channels -> channels.map { Row(it) } }
                 }
             }
-            .flowOn(Dispatchers.Default)
+            .flowOn(graph.dispatchers.default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectManagerCategory(key: String?) {
@@ -821,7 +820,7 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
             // A guide whose channel list goes leaves matches to redo, which no later guide pass would
             // notice (#582).
             val guide = graph.epgRepository
-            if (guide.ensureFeeds()) withContext(Dispatchers.Default) { guide.runMatcher() }
+            if (guide.ensureFeeds()) withContext(graph.dispatchers.default) { guide.runMatcher() }
         }
         viewModelScope.launch {
             graph.epgRepository.observeFeeds().collect { feeds ->
@@ -947,7 +946,7 @@ class VodViewModel @JvmOverloads constructor(
     init {
         // Asked here, off the main thread: the grid collapses its movies while composing, and listing a
         // cheap box's decoders the first time is slow enough to drop frames.
-        viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
+        viewModelScope.launch(graph.dispatchers.default) { graph.decoders.tallestListed }
     }
 
     /**
@@ -1095,7 +1094,7 @@ class VodViewModel @JvmOverloads constructor(
         val imdb = if (addons.isEmpty()) Result.success(null) else graph.catalogRepository.imdbIdFor(movie)
         val answers = imdb.fold(
             onSuccess = { id ->
-                if (id == null) emptyList() else withContext(Dispatchers.IO) { addons.map { askAddon(it, id) } }
+                if (id == null) emptyList() else withContext(graph.dispatchers.io) { addons.map { askAddon(it, id) } }
             },
             onFailure = { listOf(AddonAnswer.Failed(AddonFailure.NoLookup(it))) },
         )
@@ -1618,7 +1617,7 @@ class VodViewModel @JvmOverloads constructor(
                     .onStart { emit(null) }
             }
         }
-        .flowOn(Dispatchers.Default)
+        .flowOn(graph.dispatchers.default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_CATEGORIES_MILLIS), null)
 
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
@@ -1883,7 +1882,7 @@ class HomeViewModel @JvmOverloads constructor(
     /** The time now, again every minute, so what's on the Live Preview's channel moves on. */
     private val minute: Flow<Long> = flow {
         while (true) {
-            emit(System.currentTimeMillis())
+            emit(graph.clock())
             delay(MINUTE_MILLIS)
         }
     }
@@ -2218,7 +2217,7 @@ class ProfilesViewModel @JvmOverloads constructor(
                 val lockedCheck = LockedTitles(graph.catalogRepository, locked)
                 profiles.mapNotNull { profile -> stillFor(profile.id, lockedCheck)?.let { profile.id to it } }.toMap()
             }
-            .flowOn(Dispatchers.IO)
+            .flowOn(graph.dispatchers.io)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private suspend fun stillFor(profileId: Long, locked: LockedTitles): String? {
@@ -2289,7 +2288,7 @@ private class LockedTitles(private val catalog: CatalogRepository, private val l
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)
     private val server = SyncServer(viewModelScope)
-    private val client = SyncClient(graph.httpClient)
+    private val client = SyncClient(graph.httpClient, graph.dispatchers)
     private val engine = SyncEngine(graph)
 
     val serverState: StateFlow<SyncServer.State> = server.state

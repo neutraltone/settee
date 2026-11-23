@@ -13,7 +13,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.repo.CatalogRepository.SyncResult
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,7 +61,7 @@ class XtreamLiveRefreshTest {
     fun close() = test.close()
 
     @Test
-    fun `a line-up of thousands of channels is saved whole`() = runTest {
+    fun `a line-up of thousands of channels is saved whole`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         // Cleaned like any channel, though it's in a late batch.
         panel.replies["get_live_streams"] =
@@ -80,7 +79,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a refresh keeps what the viewer set on each channel and drops the ones the provider did`() = runTest {
+    fun `a refresh keeps what the viewer set on each channel and drops the ones the provider did`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
@@ -109,7 +108,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a channel the provider brings back in a late batch comes back hidden if the viewer hid it`() = runTest {
+    fun `a channel the provider brings back in a late batch comes back hidden if the viewer hid it`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
@@ -125,7 +124,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a line-up cut off after some batches leaves every channel as it was`() = runTest {
+    fun `a line-up cut off after some batches leaves every channel as it was`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
@@ -143,7 +142,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a line-up is decoded whole before the transaction that saves it begins`() = runTest {
+    fun `a line-up is decoded whole before the transaction that saves it begins`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until LARGE)
         stagedAtFirstChannelStatement = null
@@ -155,7 +154,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a line-up cut off partway leaves what the viewer set on each channel, and no staged copy behind`() = runTest {
+    fun `a line-up cut off partway leaves what the viewer set on each channel, and no staged copy behind`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
@@ -181,7 +180,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a saved line-up leaves no staged copy behind`() = runTest {
+    fun `a saved line-up leaves no staged copy behind`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until LARGE)
 
@@ -192,7 +191,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `an empty line-up says there are no channels and deletes none`() = runTest {
+    fun `an empty line-up says there are no channels and deletes none`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 3)
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
@@ -207,7 +206,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a refresh keeps the time zone the panel says it runs in, and follows it when it changes`() = runTest {
+    fun `a refresh keeps the time zone the panel says it runs in, and follows it when it changes`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 3)
 
@@ -226,7 +225,7 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
-    fun `a refresh the panel turns away keeps the time zone it gave before`() = runTest {
+    fun `a refresh the panel turns away keeps the time zone it gave before`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 3)
         panel.replies[""] = signIn(timezone = "Europe/Amsterdam")

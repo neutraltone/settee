@@ -13,7 +13,6 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,7 +71,7 @@ class RecentRowsTest {
     }
 
     @Test
-    fun `recently added rows go by when the provider added or last updated the title`() = runTest {
+    fun `recently added rows go by when the provider added or last updated the title`() = testing {
         db.movies().upsertAll(
             listOf(movie("Added first", added = 1), movie("Added last", added = 2)),
         )
@@ -85,7 +84,7 @@ class RecentRowsTest {
     }
 
     @Test
-    fun `Recently Added mixes movies and shows, the latest the provider added first`() = runTest {
+    fun `Recently Added mixes movies and shows, the latest the provider added first`() = testing {
         db.movies().upsertAll(listOf(movie("Heat", added = 1), movie("Alien", added = 3)))
         db.series().upsertAll(listOf(series("The Wire", added = 2), series("Taskmaster", added = 4)))
 
@@ -95,7 +94,7 @@ class RecentRowsTest {
     }
 
     @Test
-    fun `Recently Added stops at 20 titles`() = runTest {
+    fun `Recently Added stops at 20 titles`() = testing {
         db.movies().upsertAll((1..15).map { movie("M$it", added = it * 2L) })
         db.series().upsertAll((1..15).map { series("S$it", added = it * 2L + 1) })
 
@@ -106,7 +105,7 @@ class RecentRowsTest {
     }
 
     @Test
-    fun `Recently Added leaves out a kind that's switched off`() = runTest {
+    fun `Recently Added leaves out a kind that's switched off`() = testing {
         db.movies().upsertAll(listOf(movie("Heat", added = 1)))
         db.series().upsertAll(listOf(series("The Wire", added = 2)))
 
@@ -115,7 +114,7 @@ class RecentRowsTest {
     }
 
     @Test
-    fun `Recently Added leaves out titles the provider never dated, and breaks ties by name`() = runTest {
+    fun `Recently Added leaves out titles the provider never dated, and breaks ties by name`() = testing {
         db.movies().upsertAll(listOf(movie("Undated"), movie("Zodiac", added = 5), movie("Alien", added = 5)))
         db.series().upsertAll(listOf(series("Also undated"), series("Monk", added = 5)))
 

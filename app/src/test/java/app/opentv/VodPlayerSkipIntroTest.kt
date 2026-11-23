@@ -14,8 +14,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.Series
@@ -41,18 +39,19 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(UnstableApi::class)
 class VodPlayerSkipIntroTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel = testGraph.track(VodPlayerViewModel(app, graph))
     private val playback = FakePlayback()
 
     @After
@@ -60,9 +59,6 @@ class VodPlayerSkipIntroTest {
         SleepTimer.clear()
         controller.release()
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     /**
@@ -101,6 +97,8 @@ class VodPlayerSkipIntroTest {
 
     /** Waits for the timings read beside playback, then polls at [millis], as the player screen does. */
     private fun playUntilButtonAt(millis: Long) {
+        // Settled first: the lookup places them on the main thread, which the wait below blocks.
+        compose.waitForIdle()
         runBlocking {
             viewModel.timingsArrived()
             playback.positionMillis = millis

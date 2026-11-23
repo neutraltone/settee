@@ -25,7 +25,7 @@ OS 5 (API 22) was already unsupported.
 ```bash
 tools/check/check.py test M3uParserTest     # named test classes; prints each failure's message and line
 tools/check/check.py test 'M3uParserTest.some test name'  # one test (backticked names)
-tools/check/check.py quick                  # ktlintFormat + detekt, after each change
+tools/check/check.py quick                  # ktlintFormat + detekt + detektTestWaits, after each change
 tools/check/check.py sweep                  # kill test processes an abandoned run left spinning, in any checkout of this project
 tools/check/check.py ci                     # what CI's Unit tests step runs: ./gradlew test, both variants (not on this Mac, see below)
 ./gradlew test                              # all unit tests (what CI runs; not on this Mac, see below)
@@ -35,7 +35,7 @@ adb connect <firestick-ip>:5555             # Fire TV over wifi (enable ADB debu
 adb logcat -s OpenTV:* EpgRepository:* SyncWorker:*
 python3 tools/stalker_mock.py [port]        # mock Stalker portal with free test streams (live only)
 ./gradlew ktlintFormat                      # auto-fix formatting (ktlintCheck is what CI runs)
-./gradlew detekt lintDebug                  # static analysis, as CI runs it
+./gradlew detekt detektTestWaits lintDebug  # static analysis, as CI runs it
 git config core.hooksPath .githooks         # once per clone: enables the commit-msg hook
 tools/check-message-test.sh                 # tests for the commit/PR-title convention
 ./gradlew recordRoborazziDebug              # screenshots → app/build/outputs/roborazzi/
@@ -50,7 +50,12 @@ python3 -m unittest discover -s tools/launcher-art  # every copy of the mark mat
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
-instrumented tests.
+instrumented tests. A UI or view-model test sets up through `TestGraph` (`@get:Rule val testGraph = TestGraph(compose)`), which
+counts the graph's background work so a test settles and then checks, and never waits a set time (ADR 0008; how-to in
+`docs/ARCHITECTURE.md` › Testing). A repository test over Room runs in real time (`testing { }`), or in virtual time only with
+Room on the same dispatcher (`TestGraph(virtualTime = true)`), never `runTest` over a real database. `detektTestWaits` fails a
+test that uses `Thread.sleep`, `waitUntil`, `ServiceLocator.get` or a manual looper idle. Production code a test reaches through the
+graph takes its `AppDispatchers` (a class's `dispatchers` parameter), not `Dispatchers.IO`/`Default` by name.
 
 **CI runs the full checks, not your machine.** The developer's Mac is shared by several agent sessions'
 Gradle builds, and a full local run of the suite, ktlint, detekt and lint can swap it for hours. Locally,
@@ -78,7 +83,7 @@ timeout.
 ### PR checks
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
-APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
+APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt** (with `detektTestWaits`),
 **Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/`, `tools/check/`, `tools/signing/` and `tools/launcher-art/`) and **gitleaks** (every commit
 a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /

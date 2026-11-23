@@ -21,7 +21,6 @@ import app.opentv.data.repo.RecordedOn
 import app.opentv.player.PlaybackErrors
 import com.google.common.truth.Truth.assertThat
 import java.util.TimeZone
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,7 +42,7 @@ class PlaybackSourcesTest {
     fun close() = test.close()
 
     @Test
-    fun `an Xtream channel plays its stored link with the source's user agent`() = runTest {
+    fun `an Xtream channel plays its stored link with the source's user agent`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
 
@@ -61,7 +60,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a playlist channel plays its stored link with the source's user agent`() = runTest {
+    fun `a playlist channel plays its stored link with the source's user agent`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(kind = SourceKind.M3U, userAgent = "Playlist/1"))
         val id = channel(streamUrl = "http://example.com/9.ts")
 
@@ -72,7 +71,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a Stalker channel plays a link the portal mints for it now`() = runTest {
+    fun `a Stalker channel plays a link the portal mints for it now`() = testing {
         db.sources().insert(STALKER_SOURCE)
         test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
         test.panel.replies["create_link"] = """{"js": {"cmd": "ffmpeg http://example.com/play/9.ts?play_token=abc"}}"""
@@ -85,7 +84,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a link the portal won't mint is a failure the viewer can act on, not the marker`() = runTest {
+    fun `a link the portal won't mint is a failure the viewer can act on, not the marker`() = testing {
         db.sources().insert(STALKER_SOURCE)
         test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
         test.panel.replies["create_link"] = "!"
@@ -100,7 +99,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a movie plays with its source's user agent, not the app's`() = runTest {
+    fun `a movie plays with its source's user agent, not the app's`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.movies().upsertAll(listOf(movie()))
         val id = db.movies().all().single().id
@@ -119,7 +118,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a film's add-on stream plays as that film, with the app's own user agent`() = runTest {
+    fun `a film's add-on stream plays as that film, with the app's own user agent`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.movies().upsertAll(listOf(movie()))
         val key = MediaKey.AddonStream(db.movies().all().single().id, "https://example.org/addon/drive.mp4")
@@ -132,7 +131,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `an episode plays with its source's user agent, titled by its season and number`() = runTest {
+    fun `an episode plays with its source's user agent, titled by its season and number`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.episodes().upsertAll(listOf(testEpisode(1, 2)))
 
@@ -150,7 +149,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up plays the programme from the panel's archive, for as long as the guide says it ran`() = runTest {
+    fun `catch-up plays the programme from the panel's archive, for as long as the guide says it ran`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         db.programmes().insertOrReplace(listOf(news()))
@@ -170,7 +169,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up from a provider whose address isn't one says so instead of crashing`() = runTest {
+    fun `catch-up from a provider whose address isn't one says so instead of crashing`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(url = "not an address"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         db.programmes().insertOrReplace(listOf(news()))
@@ -182,7 +181,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up asks the panel for the programme's start in the panel's own time zone`() = runTest {
+    fun `catch-up asks the panel for the programme's start in the panel's own time zone`() = testing {
         // November: London is on GMT and Amsterdam an hour ahead, so 21:00 UTC is 22:00 to the panel.
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Europe/Amsterdam"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
@@ -196,7 +195,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up from a panel that names its time zone by abbreviation asks in that zone`() = runTest {
+    fun `catch-up from a panel that names its time zone by abbreviation asks in that zone`() = testing {
         // PHP, which Xtream panels run on, accepts "EST" as a zone: five hours behind UTC all year.
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "EST"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
@@ -210,7 +209,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up from a panel that gives no time zone asks in the device's`() = runTest {
+    fun `catch-up from a panel that gives no time zone asks in the device's`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = null))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         db.programmes().insertOrReplace(listOf(news()))
@@ -223,7 +222,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up from a panel whose time zone isn't one asks in the device's, not GMT`() = runTest {
+    fun `catch-up from a panel whose time zone isn't one asks in the device's, not GMT`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Not/AZone"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         db.programmes().insertOrReplace(listOf(news()))
@@ -236,7 +235,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up plays the programme from the guide the guide shows for the channel`() = runTest {
+    fun `catch-up plays the programme from the guide the guide shows for the channel`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val hd = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         // The Channel's FHD Quality is its primary, so its guide is the one the guide draws.
@@ -265,7 +264,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `playlists and portals say they have no catch-up rather than play something else`() = runTest {
+    fun `playlists and portals say they have no catch-up rather than play something else`() = testing {
         val playlist = PANEL_SOURCE.copy(id = 3, name = "Playlist", kind = SourceKind.M3U)
         db.sources().insert(playlist)
         db.programmes().insertOrReplace(listOf(news()))
@@ -279,7 +278,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a recording plays from wherever it's stored, following the file while it's still recording`() = runTest {
+    fun `a recording plays from wherever it's stored, following the file while it's still recording`() = testing {
         val played = listOf(
             "/data/rec/news.ts" to RecordingStatus.COMPLETED,
             "/data/rec/news.ts" to RecordingStatus.RECORDING,
@@ -301,7 +300,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a finished recording says where it's kept, and one still being written doesn't`() = runTest {
+    fun `a finished recording says where it's kept, and one still being written doesn't`() = testing {
         val recordedOn = listOf(
             "/data/rec/news.ts" to RecordingStatus.COMPLETED,
             "smb://nas/rec/news.ts" to RecordingStatus.COMPLETED,
@@ -316,7 +315,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a recording plays with the user agent it was captured with, titled as the library shows it`() = runTest {
+    fun `a recording plays with the user agent it was captured with, titled as the library shows it`() = testing {
         val id = db.recordings().insert(recording("/data/rec/news.ts", RecordingStatus.COMPLETED))
 
         val playable = sources.forWatching(MediaKey.Recording(id))
@@ -334,7 +333,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a recording captures its channel's continuous stream rather than the HLS playlist`() = runTest {
+    fun `a recording captures its channel's continuous stream rather than the HLS playlist`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/2"))
         val channelId = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         val id = db.recordings().insert(recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, channelId))
@@ -354,7 +353,7 @@ class PlaybackSourcesTest {
 
     @Test
     fun `a recording moved to another provider to avoid a clash captures that provider's copy of the channel`() =
-        runTest {
+        testing {
             db.sources().insert(PANEL_SOURCE)
             db.sources().insert(
                 PANEL_SOURCE.copy(id = 3, name = "Playlist", kind = SourceKind.M3U, userAgent = "Playlist/1"),
@@ -377,7 +376,7 @@ class PlaybackSourcesTest {
         }
 
     @Test
-    fun `a clash recording whose other copy has gone captures the channel the viewer picked`() = runTest {
+    fun `a clash recording whose other copy has gone captures the channel the viewer picked`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.sources().insert(STALKER_SOURCE)
         db.channels().upsertAll(
@@ -394,7 +393,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a Stalker recording is given a freshly minted link each time it asks`() = runTest {
+    fun `a Stalker recording is given a freshly minted link each time it asks`() = testing {
         db.sources().insert(STALKER_SOURCE)
         test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
         val channelId = channel(streamUrl = "stalker://2/9", sourceId = STALKER_SOURCE.id, cmd = "ffmpeg x")
@@ -415,7 +414,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a recording whose channel has left the catalogue captures from the link it last knew`() = runTest {
+    fun `a recording whose channel has left the catalogue captures from the link it last knew`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/2"))
         val id = db.recordings().insert(
             recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, channelId = 404)
@@ -429,7 +428,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a Stalker recording whose channel has left the catalogue fails, since its marker never plays`() = runTest {
+    fun `a Stalker recording whose channel has left the catalogue fails, since its marker never plays`() = testing {
         db.sources().insert(STALKER_SOURCE)
         val id = db.recordings().insert(
             recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, channelId = 404)
@@ -454,7 +453,7 @@ class PlaybackSourcesTest {
     )
 
     @Test
-    fun `catch-up for a programme the guide has since dropped is gone`() = runTest {
+    fun `catch-up for a programme the guide has since dropped is gone`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val key = MediaKey.Catchup(channel(streamUrl = "http://example.com/live/u/p/9.m3u8"), NEWS_START)
 
@@ -462,7 +461,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a portal that won't take the MAC is a refused link, not a crash`() = runTest {
+    fun `a portal that won't take the MAC is a refused link, not a crash`() = testing {
         db.sources().insert(STALKER_SOURCE.copy(macAddress = ""))
         val key = MediaKey.Live(channel(streamUrl = "stalker://2/9", sourceId = STALKER_SOURCE.id, cmd = "ffmpeg x"))
 
@@ -470,7 +469,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `catch-up finds its programme when another feed's entry overlaps its start`() = runTest {
+    fun `catch-up finds its programme when another feed's entry overlaps its start`() = testing {
         db.sources().insert(PANEL_SOURCE)
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         val overlapping = news().copy(feedId = 2, startUtcMillis = NEWS_START - 30 * 60_000L, title = "Quiz")
@@ -482,7 +481,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `a booking that is due follows its file even before the recorder has marked it started`() = runTest {
+    fun `a booking that is due follows its file even before the recorder has marked it started`() = testing {
         val due = recording("/data/rec/news.ts", RecordingStatus.SCHEDULED)
             .copy(scheduledStartMillis = NOW - 1_000, scheduledEndMillis = NOW + 60_000)
         val id = db.recordings().insert(due)
@@ -500,7 +499,7 @@ class PlaybackSourcesTest {
     }
 
     @Test
-    fun `only a recording still being written grows`() = runTest {
+    fun `only a recording still being written grows`() = testing {
         db.sources().insert(PANEL_SOURCE)
         db.movies().upsertAll(listOf(movie()))
         val finished = db.recordings().insert(recording("/data/rec/news.ts", RecordingStatus.COMPLETED))

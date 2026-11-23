@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.EpisodeTimingsDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.EpisodeTimings
@@ -16,7 +17,6 @@ import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
  * or better, and once by three minutes. Every failure is quiet: the player then puts the card 30
  * seconds before the end, as it always could.
  */
+@Suppress("LongParameterList") // clock and dispatchers are only passed by ServiceLocator and tests.
 class EpisodeTimingsRepository(
     private val dao: EpisodeTimingsDao,
     private val theIntroDb: TheIntroDbClient,
@@ -34,6 +35,7 @@ class EpisodeTimingsRepository(
     private val tmdb: TmdbClient,
     private val shows: Shows,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
 
     /** Where an episode's series and the series' episodes are found: the catalogue. */
@@ -57,7 +59,7 @@ class EpisodeTimingsRepository(
     private val ids = ConcurrentHashMap<Pair<Long, String>, ShowIds>()
 
     /** [episode]'s timings: kept ones while they're fresh, else asked for and kept. */
-    suspend fun timingsFor(episode: Episode): Found = withContext(Dispatchers.IO) {
+    suspend fun timingsFor(episode: Episode): Found = withContext(dispatchers.io) {
         val series = shows.seriesOf(episode)
         val show = series?.let(::showIds)
         val key = show?.key

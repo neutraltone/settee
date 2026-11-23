@@ -15,7 +15,6 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.CatalogRepository.SyncResult
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +33,7 @@ class M3uRefreshTest {
     fun close() = test.close()
 
     @Test
-    fun `films and episodes stored as channels before drop out on the next refresh`() = runTest {
+    fun `films and episodes stored as channels before drop out on the next refresh`() = testing {
         test.db.sources().insert(playlist)
         // As an earlier version stored an m3u_plus playlist: its films and episodes as channels.
         test.db.channels().replaceCatalogue(
@@ -63,7 +62,7 @@ class M3uRefreshTest {
     }
 
     @Test
-    fun `film and show groups stored as live categories before leave the channel list`() = runTest {
+    fun `film and show groups stored as live categories before leave the channel list`() = testing {
         test.db.sources().insert(playlist)
         // As an earlier version stored them: a live category for every group-title, films' too.
         test.db.categories().upsertAll(
@@ -115,7 +114,7 @@ class M3uRefreshTest {
     }
 
     @Test
-    fun `a playlist that comes back with only films and episodes keeps your channels as they were`() = runTest {
+    fun `a playlist that comes back with only films and episodes keeps your channels as they were`() = testing {
         test.db.sources().insert(playlist)
         test.db.categories().upsertAll(
             listOf(Category(id = "UK", sourceId = playlist.id, name = "UK", kind = StreamKind.LIVE, sortIndex = 0)),

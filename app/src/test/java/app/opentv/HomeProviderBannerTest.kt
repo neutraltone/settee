@@ -11,16 +11,16 @@ import android.view.View
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
@@ -31,7 +31,6 @@ import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.settings.SettingsMemory
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,8 +46,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class HomeProviderBannerTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -56,12 +57,11 @@ class HomeProviderBannerTest {
     @get:Rule
     val secrets = FixedServerSecrets()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val app = testGraph.app
 
-    // The process's graph, which Settings › Providers reads too.
-    private val graph = ServiceLocator.get(app)
+    // The graph Settings › Providers reads too.
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
     private val memory = SettingsMemory()
 
     private lateinit var nav: NavHostController
@@ -72,18 +72,8 @@ class HomeProviderBannerTest {
 
     @Before
     fun setUp(): Unit = runBlocking {
-        // Other tests' providers share the database: only these tests' failures count here.
-        db.sources().all().forEach { db.sources().setRefreshFailure(it.id, null) }
         db.sources().insert(Source(id = FINE, name = "Fine TV", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.movies().upsertAll(listOf(superbad))
-    }
-
-    @After
-    fun close() {
-        runBlocking {
-            viewModels.stopAll()
-            listOf(FINE, ACME, OTHER).forEach { db.sources().delete(it) }
-        }
     }
 
     private fun provider(id: Long, name: String, failure: ViewerError, enabled: Boolean = true) = runBlocking {
@@ -100,7 +90,7 @@ class HomeProviderBannerTest {
     }
 
     private fun setApp() {
-        val home = viewModels.track(HomeViewModel(app, graph))
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
         compose.setTvContent {
             view = LocalView.current
             nav = rememberNavController()
@@ -133,7 +123,7 @@ class HomeProviderBannerTest {
     private fun shown(text: String) =
         compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
 
-    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) { shown(text) }
+    private fun waitFor(text: String) = compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
 
     private fun highlighted() = compose.onNode(isFocused())
 
@@ -146,7 +136,7 @@ class HomeProviderBannerTest {
         compose.onNodeWithText("Acme TV: ${login.sentence}").assertExists()
         compose.onNode(hasText("LoginRejected", substring = true)).assertDoesNotExist()
         // The banner doesn't take the opening Highlight: Home opens on its first card, as it always has.
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(isFocused()).onFirst().assertExists()
         highlighted().assertTextContains("Superbad", substring = true)
         captureScreen("home_provider_banner")
 
@@ -154,10 +144,8 @@ class HomeProviderBannerTest {
         highlighted().assertTextContains("Open Providers")
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        compose.waitUntil(UI_WAIT_MILLIS) { compose.runOnIdle { nav.currentDestination?.route } == Routes.SETTINGS }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Acme TV") and isFocused()).fetchSemanticsNodes().isNotEmpty()
-        }
+        assertThat(compose.runOnIdle { nav.currentDestination?.route }).isEqualTo(Routes.SETTINGS)
+        compose.onAllNodes(hasText("Acme TV") and isFocused()).onFirst().assertExists()
     }
 
     @Test
@@ -198,7 +186,7 @@ class HomeProviderBannerTest {
 
         runBlocking { graph.catalogRepository.deleteSource(ACME) }
 
-        compose.waitUntil(UI_WAIT_MILLIS) { !shown("Open Providers") }
+        compose.onAllNodes(hasText("Open Providers", substring = true)).assertCountEquals(0)
         assertThat(shown("Other TV")).isFalse()
     }
 

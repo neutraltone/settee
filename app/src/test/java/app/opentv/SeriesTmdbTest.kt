@@ -14,7 +14,6 @@ import app.opentv.data.repo.LookupPace
 import app.opentv.data.repo.SeriesTmdb
 import app.opentv.data.repo.SeriesTmdbPass
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,7 +83,7 @@ class SeriesTmdbTest {
     )
 
     @Test
-    fun `the background pass fills in a series from TMDB, and dates the answer`() = runTest {
+    fun `the background pass fills in a series from TMDB, and dates the answer`() = testing {
         save(series("7"))
 
         pass { Result.success(TmdbMeta(overview = "A show.")) }.fillAll(PANEL_SOURCE)
@@ -94,7 +93,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `the background pass keeps the shows TMDB recommends, in its order`() = runTest {
+    fun `the background pass keeps the shows TMDB recommends, in its order`() = testing {
         save(series("7"))
 
         pass { Result.success(TmdbMeta(overview = "A show.", recommendations = listOf("9", "4"))) }
@@ -104,7 +103,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `asking TMDB again six months on replaces the recommendations it gave before`() = runTest {
+    fun `asking TMDB again six months on replaces the recommendations it gave before`() = testing {
         save(series("7", tmdbAt = NOW - 7 * 31 * DAY).copy(tmdbRecommendations = "1,2"))
 
         pass { Result.success(TmdbMeta(recommendations = listOf("3"))) }.fillAll(PANEL_SOURCE)
@@ -113,7 +112,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `TMDB recommending nothing now clears the recommendations it gave before`() = runTest {
+    fun `TMDB recommending nothing now clears the recommendations it gave before`() = testing {
         save(series("7", tmdbAt = NOW - 7 * 31 * DAY).copy(tmdbRecommendations = "1,2"))
 
         pass { Result.success(TmdbMeta(overview = "A show.")) }.fillAll(PANEL_SOURCE)
@@ -122,7 +121,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a series TMDB has no match for isn't asked about again`() = runTest {
+    fun `a series TMDB has no match for isn't asked about again`() = testing {
         save(series("7"))
         val noMatch = pass { Result.success(null) }
 
@@ -133,7 +132,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a series TMDB answered about over six months ago is asked again`() = runTest {
+    fun `a series TMDB answered about over six months ago is asked again`() = testing {
         save(series("old", tmdbAt = NOW - SEVEN_MONTHS), series("recent", tmdbAt = NOW - FIVE_MONTHS))
         val seen = mutableListOf<String>()
 
@@ -147,7 +146,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `asking TMDB again leaves the provider's own synopsis`() = runTest {
+    fun `asking TMDB again leaves the provider's own synopsis`() = testing {
         save(series("7", plot = "The provider's.", tmdbAt = NOW - SEVEN_MONTHS))
 
         pass { Result.success(TmdbMeta(overview = "TMDB's.", cast = "Someone")) }.fillAll(PANEL_SOURCE)
@@ -157,7 +156,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a series TMDB couldn't be reached about is asked again next time, still dated as before`() = runTest {
+    fun `a series TMDB couldn't be reached about is asked again next time, still dated as before`() = testing {
         save(series("7", tmdbAt = NOW - SEVEN_MONTHS))
         val offline = pass { Result.failure(Exception("offline")) }
 
@@ -169,7 +168,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `without a key the pass asks nothing and clears nothing`() = runTest {
+    fun `without a key the pass asks nothing and clears nothing`() = testing {
         save(series("7", plot = "A show.", tmdbAt = NOW - SEVEN_MONTHS))
 
         pass(ready = false) { Result.success(TmdbMeta(overview = "TMDB's.")) }.fillAll(PANEL_SOURCE)
@@ -180,7 +179,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `the pass works through series a batch at a time until none is left`() = runTest {
+    fun `the pass works through series a batch at a time until none is left`() = testing {
         save(*(1..5).map { series("$it", added = it.toLong()) }.toTypedArray())
 
         SeriesTmdbPass(
@@ -227,7 +226,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a sync in a build with a TMDB Key fills in its films and shows from TMDB`() = runTest {
+    fun `a sync in a build with a TMDB Key fills in its films and shows from TMDB`() = testing {
         panelWithTitles()
 
         test.syncVod(test.catalogWithTmdb())
@@ -237,7 +236,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a sync in a build with no TMDB Key never asks TMDB`() = runTest {
+    fun `a sync in a build with no TMDB Key never asks TMDB`() = testing {
         panelWithTitles()
 
         test.syncVod()
@@ -246,7 +245,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `opening a series with details missing asks TMDB for them`() = runTest {
+    fun `opening a series with details missing asks TMDB for them`() = testing {
         save(series("7"))
         val catalog = tmdbAnswers("A show.")
 
@@ -257,7 +256,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `opening a series TMDB answered about recently asks nothing`() = runTest {
+    fun `opening a series TMDB answered about recently asks nothing`() = testing {
         save(complete("7", tmdbAt = NOW - FIVE_MONTHS))
         val catalog = tmdbAnswers("A show.")
 
@@ -267,7 +266,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `opening a series TMDB answered about over six months ago asks again`() = runTest {
+    fun `opening a series TMDB answered about over six months ago asks again`() = testing {
         save(complete("7", tmdbAt = NOW - SEVEN_MONTHS))
         val catalog = tmdbAnswers("A show.")
 
@@ -278,7 +277,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `opening a series filled in by the provider, never asked of TMDB, asks it`() = runTest {
+    fun `opening a series filled in by the provider, never asked of TMDB, asks it`() = testing {
         save(complete("7", tmdbAt = null))
         val catalog = tmdbAnswers("A show.")
 
@@ -288,7 +287,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `opening a series without a key asks nothing and keeps what TMDB filled in`() = runTest {
+    fun `opening a series without a key asks nothing and keeps what TMDB filled in`() = testing {
         save(complete("7", tmdbAt = NOW - SEVEN_MONTHS))
 
         val opened = test.catalog.seriesDetail(stored("7").id, now = NOW)
@@ -300,7 +299,7 @@ class SeriesTmdbTest {
     // ---- A Catalogue Refresh ------------------------------------------------------------------
 
     @Test
-    fun `a refresh of the show list keeps when TMDB last answered`() = runTest {
+    fun `a refresh of the show list keeps when TMDB last answered`() = testing {
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7"}]"""
         test.syncVod()
         test.db.series().upsertAll(listOf(stored("7").copy(tmdbAnsweredAt = NOW)))
@@ -311,7 +310,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a refresh of the film list keeps when TMDB last answered`() = runTest {
+    fun `a refresh of the film list keeps when TMDB last answered`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4"}]"""
         test.syncVod()
         val film = test.db.movies().forSource(PANEL_SOURCE.id).single()
@@ -323,7 +322,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a refresh of the show and film lists keeps what TMDB recommended`() = runTest {
+    fun `a refresh of the show and film lists keeps what TMDB recommended`() = testing {
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7"}]"""
         panel.replies["get_vod_streams"] = """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4"}]"""
         test.syncVod()
@@ -338,7 +337,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a refresh of the show list keeps the TMDB id found for a show the panel calls 0`() = runTest {
+    fun `a refresh of the show list keeps the TMDB id found for a show the panel calls 0`() = testing {
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "0"}]"""
         test.syncVod()
         test.db.series().upsertAll(listOf(stored("7").copy(tmdbId = "22", tmdbAnsweredAt = NOW)))
@@ -349,7 +348,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a refresh of the film list keeps the TMDB id found for a film the panel calls 0`() = runTest {
+    fun `a refresh of the film list keeps the TMDB id found for a film the panel calls 0`() = testing {
         panel.replies["get_vod_streams"] =
             """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4", "tmdb": "0"}]"""
         test.syncVod()
@@ -362,7 +361,7 @@ class SeriesTmdbTest {
     }
 
     @Test
-    fun `a refresh still takes a real TMDB id the panel now gives`() = runTest {
+    fun `a refresh still takes a real TMDB id the panel now gives`() = testing {
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "0"}]"""
         test.syncVod()
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "1399"}]"""

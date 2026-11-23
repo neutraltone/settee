@@ -76,7 +76,10 @@ fun StateRestorationTester.setTvContent(content: @Composable () -> Unit) {
     setContent { TvScreen(content) }
 }
 
-private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) = setContent { TvScreen(content) }
+// Room's work is waited for by the test's TestGraph, which registers itself with Compose (#616).
+private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) {
+    setContent { TvScreen(content) }
+}
 
 @Composable
 private fun TvScreen(content: @Composable () -> Unit) {

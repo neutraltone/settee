@@ -22,8 +22,8 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.recording.RecordingFixture.Companion.HOUR
+import app.opentv.testing
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -94,7 +94,7 @@ class RearmScheduledTest {
         .associate { shadowOf(it.operation).savedIntent.action!! to it.triggerAtMs }
 
     @Test
-    fun `a booking that ended while Settee wasn't running is missed, not armed`() = runTest {
+    fun `a booking that ended while Settee wasn't running is missed, not armed`() = testing {
         val id = booking(start = NOW - 2 * HOUR, end = NOW - HOUR)
 
         engine.rearmScheduled()
@@ -111,7 +111,7 @@ class RearmScheduledTest {
     }
 
     @Test
-    fun `a booking that's on now, or has no end, starts straight away`() = runTest {
+    fun `a booking that's on now, or has no end, starts straight away`() = testing {
         val onNow = booking(start = NOW - HOUR, end = NOW + HOUR)
         val noEnd = booking(start = NOW - HOUR, end = 0)
 
@@ -124,7 +124,7 @@ class RearmScheduledTest {
     }
 
     @Test
-    fun `a future booking is armed at its start, with its warning before it`() = runTest {
+    fun `a future booking is armed at its start, with its warning before it`() = testing {
         val later = booking(start = NOW + HOUR, end = NOW + 2 * HOUR)
 
         engine.rearmScheduled()

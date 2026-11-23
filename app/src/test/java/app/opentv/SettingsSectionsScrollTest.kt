@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
@@ -18,9 +17,7 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onRoot
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsTags
@@ -40,8 +37,10 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsSectionsScrollTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
@@ -52,10 +51,10 @@ class SettingsSectionsScrollTest {
 
     @Test
     fun `each section comes into view as the Highlight goes down to About, into its settings, and back up`() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
+        val app = testGraph.app
         // With OpenSubtitles, as a build with Settee's key has it: the most sections Settings has
         // (TMDB's went with #515).
-        val openSubtitles = FakeOpenSubtitles().openSubtitles(ServiceLocator.get(app), app.filesDir)
+        val openSubtitles = FakeOpenSubtitles().openSubtitles(testGraph.graph, app.filesDir)
         compose.setTvContent {
             view = LocalView.current
             SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = openSubtitles)

@@ -98,20 +98,14 @@ class CoverGridPrefetchTest {
             val last = started.filter(::onScreen).maxOfOrNull(::numberOf) ?: return emptyList()
             return started.filter { numberOf(it) > last + MORE_THAN_A_ROW }
         }
-        compose.waitUntil(UI_WAIT_MILLIS) { ahead().isNotEmpty() }
+        // Coil runs the fake engine on the main thread, so settled means every fetch has started.
         compose.waitForIdle()
-        return ahead()
+        return ahead().also { assertThat(it).isNotEmpty() }
     }
 
     private fun assertGivenUp(urls: List<String>) {
-        // Idled each time round: the test runs on the main thread, and a cancelled request only
-        // reports it once its coroutine resumes there. waitUntil alone never lets the looper run.
-        runCatching {
-            compose.waitUntil(UI_WAIT_MILLIS) {
-                compose.waitForIdle()
-                cancelled.containsAll(urls)
-            }
-        }
+        // A cancelled request reports it once its coroutine resumes on the main thread.
+        compose.waitForIdle()
         assertThat(cancelled).containsAtLeastElementsIn(urls)
     }
 

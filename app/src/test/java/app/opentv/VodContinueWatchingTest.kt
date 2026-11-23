@@ -5,9 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.MediaKey
@@ -15,42 +12,25 @@ import app.opentv.ui.ResumeItem
 import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which the view model doesn't need.
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodContinueWatchingTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph()
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
-    private val viewModels = ViewModelsInTest()
-
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    private fun viewModel() = testGraph.track(VodViewModel(app, graph))
 
     private val show = Series(
         sourceId = 1,
@@ -65,12 +45,12 @@ class VodContinueWatchingTest {
     )
 
     @Test
-    fun `a series card shows the series and its artwork, and plays under the episode's title`() = runTest {
+    fun `a series card shows the series and its artwork, and plays under the episode's title`(): Unit = runBlocking {
         graph.database.series().upsertAll(listOf(show))
         graph.database.episodes().upsertAll(listOf(testEpisode(2, 4)))
         graph.viewerLibrary.recordProgress("ep:24", positionMillis = 600_000, durationMillis = 2_400_000)
 
-        val cards = viewModels.track(VodViewModel(app, graph)).continueWatchingSeries.first { !it.isNullOrEmpty() }
+        val cards = testGraph.firstWhenIdle(viewModel().continueWatchingSeries) { !it.isNullOrEmpty() }
 
         assertThat(cards).containsExactly(
             ResumeItem(

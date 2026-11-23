@@ -22,7 +22,6 @@ import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.EpgRepository
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Test
@@ -111,7 +110,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `every match reaches the database in a single write`() = runTest {
+    fun `every match reaches the database in a single write`() = testing {
         val numbers = 0..1_000
         db.channels().upsertAll(numbers.map { channel(it) })
         guideFor(numbers)
@@ -124,7 +123,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `matches that fail partway are saved as none, because they're one transaction`() = runTest {
+    fun `matches that fail partway are saved as none, because they're one transaction`() = testing {
         db.channels().upsertAll((0..1).map { channel(it) })
         val failsOnTheSecond = object : AbstractList<ChannelEpgMatch>() {
             override val size = 2
@@ -138,7 +137,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `a matcher run that changes nothing writes nothing`() = runTest {
+    fun `a matcher run that changes nothing writes nothing`() = testing {
         db.channels().upsertAll((0..9).map { channel(it, matchedEpgId = epgId(it)) })
         guideFor(0..9)
 
@@ -149,7 +148,7 @@ class EpgMatcherWritesTest {
 
     @Test
     fun `a guide pass that downloads nothing after no catalogue refresh leaves the matches, and counts them`() =
-        runTest {
+        testing {
             // The launch's guide pass: matching again would read and clean every channel's name (#582).
             db.channels().upsertAll(listOf(channel(0, matchedEpgId = epgId(0))) + (1..2).map { channel(it) })
             db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
@@ -161,7 +160,7 @@ class EpgMatcherWritesTest {
         }
 
     @Test
-    fun `a guide pass matches again when a built-in guide has moved, though it downloads nothing`() = runTest {
+    fun `a guide pass matches again when a built-in guide has moved, though it downloads nothing`() = testing {
         // A moved guide's channel list is dropped, as the new file names its channels differently.
         db.channels().upsertAll(listOf(channel(0, matchedEpgId = epgId(0))))
         val builtIn = EpgRepository.BUILT_IN_FEEDS.first().first
@@ -177,7 +176,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `channels a refresh saved are matched by the next guide pass, even when it downloads nothing`() = runTest {
+    fun `channels a refresh saved are matched by the next guide pass, even when it downloads nothing`() = testing {
         // Also when the refresh's own guide pass never ran, the process gone before it got there.
         db.sources().insert(
             Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
@@ -194,7 +193,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `a channel the guide no longer lists loses its match, and others keep theirs`() = runTest {
+    fun `a channel the guide no longer lists loses its match, and others keep theirs`() = testing {
         db.channels().upsertAll((0..2).map { channel(it, matchedEpgId = "old.guide") })
         guideFor(listOf(0, 1))
 
@@ -205,7 +204,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `the matcher counts channels whose match has programmes, against every channel`() = runTest {
+    fun `the matcher counts channels whose match has programmes, against every channel`() = testing {
         db.channels().upsertAll((0..9).map { channel(it) })
         guideFor(0..5, populated = 0..2)
 
@@ -213,7 +212,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `a guide switched off takes no part in matching, and switching it on brings it back`() = runTest {
+    fun `a guide switched off takes no part in matching, and switching it on brings it back`() = testing {
         db.channels().upsertAll((0..1).map { channel(it) })
         guideFor(listOf(0))
         val second = guideFor(listOf(1), feed = EpgFeed(name = "Guide", url = "https://example.com/second.xml"))
@@ -228,7 +227,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `the provider's own guide wins a channel two guides name, whatever its feed id`() = runTest {
+    fun `the provider's own guide wins a channel two guides name, whatever its feed id`() = testing {
         db.channels().upsertAll(listOf(channel(0)))
         guideFor(listOf(0), epgIdOf = { "free$it.guide" })
         guideFor(
@@ -242,7 +241,7 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `a switched-off guide's programmes don't count towards the working guide total`() = runTest {
+    fun `a switched-off guide's programmes don't count towards the working guide total`() = testing {
         db.channels().upsertAll(listOf(channel(0)))
         val only = guideFor(listOf(0))
         assertThat(guide.runMatcher()).isEqualTo(1 to 1)

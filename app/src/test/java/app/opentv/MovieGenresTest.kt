@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.MovieDao
 import app.opentv.data.model.Movie
 import app.opentv.data.remote.TmdbMeta
@@ -15,8 +14,8 @@ import app.opentv.data.repo.LookupPace
 import app.opentv.data.repo.MovieGenres
 import app.opentv.data.repo.MovieTmdb
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -31,12 +30,23 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class MovieGenresTest {
 
-    private val test = TestCatalog(ApplicationProvider.getApplicationContext())
+    // Virtual time, with Room on the same test dispatcher, so a skipped delay never races a read.
+    @get:Rule
+    val testGraph = TestGraph(virtualTime = true)
+
+    private val test = TestCatalog(testGraph.app, testGraph.database)
     private val panel = test.panel
     private val step = MovieGenres(test.db.movies(), XtreamApi(panel.http))
 
     @After
-    fun close() = test.close()
+    fun close() {
+        // Its background work writes to Room on the test dispatcher, so it's let finish there first.
+        testGraph.runTest {
+            test.awaitRefresh()
+            test.catalog.awaitBackground()
+        }
+        test.close()
+    }
 
     private fun movie(id: String, added: Long, sourceId: Long = 1, genre: String? = null, lookedUp: Boolean = false) =
         Movie(
@@ -59,7 +69,7 @@ class MovieGenresTest {
     private suspend fun genre(id: String): String? = test.db.movies().forSource(1).single { it.streamId == id }.genre
 
     @Test
-    fun `a film the provider has a genre for gets it`() = runTest {
+    fun `a film the provider has a genre for gets it`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"genre": "Action, Thriller"}}"""
 
@@ -69,7 +79,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film already looked up costs no call`() = runTest {
+    fun `a film already looked up costs no call`() = testGraph.runTest {
         test.db.movies().upsertAll(
             listOf(movie("known", added = 2, genre = "Drama", lookedUp = true), movie("unknown", added = 1)),
         )
@@ -82,7 +92,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider has no genre for isn't asked about again`() = runTest {
+    fun `a film the provider has no genre for isn't asked about again`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
 
@@ -93,7 +103,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider couldn't answer for is asked about again next sync`() = runTest {
+    fun `a film the provider couldn't answer for is asked about again next sync`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = "!"
 
@@ -105,7 +115,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film whose genre came with the list is asked for its details but keeps that genre`() = runTest {
+    fun `a film whose genre came with the list is asked for its details but keeps that genre`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = "Drama")))
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy", "director": "Agnès Varda"}}"""
 
@@ -116,7 +126,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `only the 200 newest films not looked up from the synced provider are asked about`() = runTest {
+    fun `only the 200 newest films not looked up from the synced provider are asked about`() = testGraph.runTest {
         test.db.movies().upsertAll(
             (1..202).map { movie("$it", added = it.toLong()) } +
                 movie("known", added = 999, genre = "Drama", lookedUp = true) +
@@ -130,7 +140,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `the next sync moves on to older films`() = runTest {
+    fun `the next sync moves on to older films`() = testGraph.runTest {
         test.db.movies().upsertAll((1..201).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
@@ -142,7 +152,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a sync fills films' genres in afterwards`() = runTest {
+    fun `a sync fills films' genres in afterwards`() = testGraph.runTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] = """{"info": {"genre": "Crime, Drama"}}"""
 
@@ -153,7 +163,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a sync asks the provider about each film's genre once`() = runTest {
+    fun `a sync asks the provider about each film's genre once`() = testGraph.runTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] = """{"info": {"genre": "Crime, Drama", "releasedate": "2011-09-02"}}"""
 
@@ -165,7 +175,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film given its genre afterwards still gets its artwork from the provider when opened`() = runTest {
+    fun `a film given its genre afterwards still gets its artwork from the provider when opened`() = testGraph.runTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] = """{"info": {"genre": "Crime, Drama", "releasedate": "2011-09-02"}}"""
         test.syncVod()
@@ -178,7 +188,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `filling in keeps going a batch at a time until every film has been asked about`() = runTest {
+    fun `filling in keeps going a batch at a time until every film has been asked about`() = testGraph.runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
         val inTwos =
@@ -196,7 +206,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `filling in asks about a film whose lookup failed only once`() = runTest {
+    fun `filling in asks about a film whose lookup failed only once`() = testGraph.runTest {
         test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
         val unreachable = MovieGenres(
@@ -212,7 +222,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `the provider is asked about one film a second at most`() = runTest {
+    fun `the provider is asked about one film a second at most`() = testGraph.runTest {
         test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
@@ -224,7 +234,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider couldn't answer about still holds the next request back a second`() = runTest {
+    fun `a film the provider couldn't answer about still holds the next request back a second`() = testGraph.runTest {
         test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = "!"
 
@@ -249,7 +259,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `filling in reads only as many films each batch as it asks about`() = runTest {
+    fun `filling in reads only as many films each batch as it asks about`() = testGraph.runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
@@ -263,7 +273,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `filling in makes room for a film whose lookup failed and asks about it only once`() = runTest {
+    fun `filling in makes room for a film whose lookup failed and asks about it only once`() = testGraph.runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
         panel.replies["get_vod_info:4"] = "!"
@@ -285,7 +295,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `opening Movies fills genres in even when the film list is fresh`() = runTest {
+    fun `opening Movies fills genres in even when the film list is fresh`() = testGraph.runTest {
         test.db.sources().insert(PANEL_SOURCE)
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         test.settings.setVodFetchedAtMillis(PANEL_SOURCE.id, 0L)
@@ -322,7 +332,7 @@ class MovieGenresTest {
     private suspend fun stored(id: String): Movie = test.db.movies().forSource(1).single { it.streamId == id }
 
     @Test
-    fun `TMDB's answer is dated, so it can be asked again in six months`() = runTest {
+    fun `TMDB's answer is dated, so it can be asked again in six months`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"genre": "Drama"}}"""
 
@@ -332,7 +342,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film TMDB answered about over six months ago is asked again`() = runTest {
+    fun `a film TMDB answered about over six months ago is asked again`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS)))
 
         withTmdb { Result.success(TmdbMeta(overview = "A film.")) }.refresh(PANEL_SOURCE)
@@ -343,7 +353,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film TMDB answered about this year isn't asked again yet`() = runTest {
+    fun `a film TMDB answered about this year isn't asked again yet`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - FIVE_MONTHS)))
 
         withTmdb { Result.success(TmdbMeta(overview = "A film.")) }.refresh(PANEL_SOURCE)
@@ -352,7 +362,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `asking TMDB again leaves the provider's own synopsis`() = runTest {
+    fun `asking TMDB again leaves the provider's own synopsis`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS, plot = "The provider's.")))
 
         withTmdb { Result.success(TmdbMeta(overview = "TMDB's.")) }.refresh(PANEL_SOURCE)
@@ -361,7 +371,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film TMDB couldn't be reached about keeps the date it last answered`() = runTest {
+    fun `a film TMDB couldn't be reached about keeps the date it last answered`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS)))
 
         withTmdb { Result.failure(Exception("offline")) }.refresh(PANEL_SOURCE)
@@ -370,7 +380,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `without a key, a film's old TMDB details are kept`() = runTest {
+    fun `without a key, a film's old TMDB details are kept`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS, plot = "A film.")))
 
         MovieGenres(test.db.movies(), XtreamApi(panel.http), clock = { NOW }).refresh(PANEL_SOURCE)
@@ -380,7 +390,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film a provider gave TMDB id 0 keeps the id TMDB found for it`() = runTest {
+    fun `a film a provider gave TMDB id 0 keeps the id TMDB found for it`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(tmdbId = "0")))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
 
@@ -391,7 +401,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film listed with TMDB id 0 is asked about by the id its details give`() = runTest {
+    fun `a film listed with TMDB id 0 is asked about by the id its details give`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(tmdbId = "0")))
         panel.replies["get_vod_info"] = """{"info": {"tmdb_id": "603"}}"""
         var askedBy: String? = null
@@ -406,7 +416,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
+    fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
 
@@ -416,7 +426,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider sent without a poster gets TMDB's`() = runTest {
+    fun `a film the provider sent without a poster gets TMDB's`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
 
@@ -426,7 +436,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider sent a poster for keeps it, whatever TMDB has`() = runTest {
+    fun `a film the provider sent a poster for keeps it, whatever TMDB has`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(posterUrl = "https://example.com/own.jpg")))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
 
@@ -436,20 +446,21 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film TMDB couldn't be reached about is asked TMDB again next time, but not the provider`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
-        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
-        val offline = withTmdb { Result.failure(Exception("offline")) }
+    fun `a film TMDB couldn't be reached about is asked TMDB again next time, but not the provider`() =
+        testGraph.runTest {
+            test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+            panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+            val offline = withTmdb { Result.failure(Exception("offline")) }
 
-        offline.refresh(PANEL_SOURCE)
-        offline.refresh(PANEL_SOURCE)
+            offline.refresh(PANEL_SOURCE)
+            offline.refresh(PANEL_SOURCE)
 
-        assertThat(panel.asked).containsExactly("get_vod_info:7")
-        assertThat(tmdbAsked).isEqualTo(2)
-    }
+            assertThat(panel.asked).containsExactly("get_vod_info:7")
+            assertThat(tmdbAsked).isEqualTo(2)
+        }
 
     @Test
-    fun `a film TMDB has no match for isn't asked about again`() = runTest {
+    fun `a film TMDB has no match for isn't asked about again`() = testGraph.runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
         val noMatch = withTmdb { Result.success(null) }
@@ -462,17 +473,18 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film looked up before there was a key is asked TMDB once one is added, not the provider`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = "", lookedUp = true)))
+    fun `a film looked up before there was a key is asked TMDB once one is added, not the provider`() =
+        testGraph.runTest {
+            test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = "", lookedUp = true)))
 
-        withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
+            withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
 
-        assertThat(genre("7")).isEqualTo("Western")
-        assertThat(panel.asked).isEmpty()
-    }
+            assertThat(genre("7")).isEqualTo("Western")
+            assertThat(panel.asked).isEmpty()
+        }
 
     @Test
-    fun `films the provider has already answered about are asked TMDB without waiting`() = runTest {
+    fun `films the provider has already answered about are asked TMDB without waiting`() = testGraph.runTest {
         test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong(), genre = "", lookedUp = true) })
 
         withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
@@ -482,7 +494,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `only the films still due the provider wait their turn for it`() = runTest {
+    fun `only the films still due the provider wait their turn for it`() = testGraph.runTest {
         test.db.movies().upsertAll(
             listOf(movie("1", added = 3), movie("2", added = 2, genre = "", lookedUp = true), movie("3", added = 1)),
         )

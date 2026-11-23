@@ -26,7 +26,6 @@ import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -42,7 +41,10 @@ import okhttp3.Call
  */
 class RecordingService : Service() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // The graph's io dispatcher, which is Dispatchers.IO in the app, so a test can tell when a capture has finished.
+    private val scope by lazy {
+        CoroutineScope(SupervisorJob() + ServiceLocator.get(applicationContext).dispatchers.io)
+    }
     private val captures = ConcurrentHashMap<Long, Capture>()
     private var wakeLock: PowerManager.WakeLock? = null
 

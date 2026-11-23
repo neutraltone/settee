@@ -6,10 +6,9 @@
 package app.opentv.recording
 
 import android.app.Application
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.R
+import app.opentv.TestGraph
 import app.opentv.core.AppSettings
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -17,9 +16,8 @@ import app.opentv.recording.RecordingFixture.Companion.HOUR
 import com.google.common.truth.Truth.assertThat
 import java.io.File
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -35,8 +33,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class MissedRecordingServiceTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.get(app)
+    // Swapped in for the app's graph, which the service reaches for.
+    @get:Rule
+    val testGraph = TestGraph()
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val recordings = graph.recordingRepository
 
     @Test
@@ -63,13 +65,9 @@ class MissedRecordingServiceTest {
         RecordingService.start(app, id)
         val start = shadowOf(app).nextStartedService
         Robolectric.buildService(RecordingService::class.java, start).create().startCommand(0, 1)
-        // The capture runs on the service's own dispatcher, so wait for the row to change rather
-        // than for time to pass; the timeout only stops a broken run hanging.
-        val row = withTimeout(10_000) {
-            recordings.observeAll()
-                .map { rows -> rows.single { it.id == id } }
-                .first { it.status != RecordingStatus.SCHEDULED && it.status != RecordingStatus.RECORDING }
-        }
+        // The capture runs on the graph's io dispatcher: settled, it has finished.
+        testGraph.awaitIdle()
+        val row = recordings.observeAll().first().single { it.id == id }
 
         assertThat(row.status).isEqualTo(RecordingStatus.FAILED)
         assertThat(

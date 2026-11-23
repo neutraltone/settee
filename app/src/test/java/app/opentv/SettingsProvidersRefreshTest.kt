@@ -10,10 +10,12 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.requestFocus
@@ -30,11 +32,9 @@ import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import com.google.common.truth.Truth.assertThat
-import java.net.ServerSocket
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
+import java.io.IOException
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,11 +53,22 @@ import org.robolectric.shadows.ShadowToast
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsProvidersRefreshTest {
 
-    @get:Rule(order = 0)
-    val own = OwnGraph("settings-providers-refresh-test")
+    private val compose = createComposeRule()
 
-    @get:Rule(order = 1)
-    val compose = createComposeRule()
+    /** Holds the slow provider's list, until let go, on the thread asking for it; see [SLOW_LIST]. */
+    private val slow = TestGraph.Held()
+
+    // Every other address goes out as it is: port 9 refuses at once.
+    private val http = OkHttpClient.Builder().addInterceptor { chain ->
+        if (chain.request().url.encodedPath == SLOW_LIST) {
+            slow.await(10)
+            throw IOException("The provider closed the connection without answering")
+        }
+        chain.proceed(chain.request())
+    }.build()
+
+    @get:Rule(order = 0)
+    val testGraph = TestGraph(compose, name = "settings-providers-refresh-test", http = http)
 
     @get:Rule(order = 1)
     val secrets = FixedServerSecrets()
@@ -65,7 +76,7 @@ class SettingsProvidersRefreshTest {
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
-    private val graph get() = own.graph
+    private val graph get() = testGraph.graph
 
     private fun app() = ApplicationProvider.getApplicationContext<Application>()
 
@@ -78,9 +89,8 @@ class SettingsProvidersRefreshTest {
 
     private fun highlighted() = compose.onNode(isFocused())
 
-    private fun waitFor(text: String) = compose.waitUntil(UI_WAIT_MILLIS) {
-        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun waitFor(text: String, substring: Boolean = false) =
+        compose.onAllNodes(hasText(text, substring)).onFirst().assertExists()
 
     /** A provider nothing will reach: port 9 refuses at once. */
     private fun saveProvider(
@@ -148,10 +158,7 @@ class SettingsProvidersRefreshTest {
     fun `the refresh row is under the providers, reads Refreshing while one runs, then says how it went`() {
         WorkManagerTestInitHelper.initializeTestWorkManager(app())
         // Answers nothing until it's let go, so the refresh is still running while the row is looked at.
-        val silent = ServerSocket(0)
-        val letGo = CountDownLatch(1)
-        thread { silent.accept().use { letGo.await(10, TimeUnit.SECONDS) } }
-        saveProvider("Slow films on 464", url = "http://127.0.0.1:${silent.localPort}/a.m3u")
+        saveProvider("Slow films on 464", url = "http://127.0.0.1:9$SLOW_LIST")
         show()
         waitFor("Slow films on 464")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -165,15 +172,11 @@ class SettingsProvidersRefreshTest {
         assertThat(ShadowToast.shownToastCount()).isEqualTo(0)
 
         // As the work it queued would: the test's WorkManager doesn't run it.
-        val refreshing = thread { runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) } }
+        testGraph.launch { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) }
         waitFor("Refreshing")
         highlighted().assertTextContains(refreshRow)
-        letGo.countDown()
-        refreshing.join(20_000)
-        silent.close()
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        slow.release()
+        waitFor("See Providers", substring = true)
         highlighted().assertTextContains(refreshRow)
         // Saved on the provider as the refresh ended, and drawn under its row without leaving the pane.
         compose.onNodeWithText("Refresh again").assertExists()
@@ -186,9 +189,7 @@ class SettingsProvidersRefreshTest {
         show()
         waitFor("Unreachable films on 464")
         runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
-        }
+        waitFor("See Providers", substring = true)
 
         val added = Source(id = 99, name = "Another on 464", kind = SourceKind.M3U, url = "http://127.0.0.1:9/b.m3u")
         runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(added)) }
@@ -218,9 +219,7 @@ class SettingsProvidersRefreshTest {
         compose.onNodeWithText("Refresh again").requestFocus()
 
         runBlocking { graph.sourceRepository.saveRefreshResult(id, null) }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Refresh again")).fetchSemanticsNodes().isEmpty()
-        }
+        compose.onAllNodes(hasText("Refresh again")).assertCountEquals(0)
 
         highlighted().assertTextContains("Mended films on 464")
     }
@@ -232,3 +231,6 @@ class SettingsProvidersRefreshTest {
         compose.onNode(hasText("Fetch your providers' lists again")).assertDoesNotExist()
     }
 }
+
+/** The path of the provider's list [SettingsProvidersRefreshTest] holds up, as a panel slow to answer would. */
+private const val SLOW_LIST = "/slow.m3u"

@@ -11,7 +11,6 @@ import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +33,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show the provider updated moves up Recently Added, keeping its place in the library`() = runTest {
+    fun `a show the provider updated moves up Recently Added, keeping its place in the library`() = testing {
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show", "last_modified": "100"}]"""
         test.syncVod()
         val before = db.series().byProviderId(1, "7")!!
@@ -48,7 +47,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a complete film list deletes the films it no longer has, keeping the rest as they were`() = runTest {
+    fun `a complete film list deletes the films it no longer has, keeping the rest as they were`() = testing {
         panel.replies["get_vod_streams"] = films(1, 2, 3)
         test.syncVod()
         val kept = test.catalog.allMovies().associate { it.streamId to it.id }
@@ -61,7 +60,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a film list that fails, is cut off or comes back empty deletes nothing`() = runTest {
+    fun `a film list that fails, is cut off or comes back empty deletes nothing`() = testing {
         for (reply in listOf("!", films(1).dropLast(10), "[]")) {
             panel.replies["get_vod_streams"] = films(1, 2, 3)
             test.syncVod()
@@ -74,7 +73,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a complete show list deletes the shows it no longer has, keeping the rest as they were`() = runTest {
+    fun `a complete show list deletes the shows it no longer has, keeping the rest as they were`() = testing {
         panel.replies["get_series"] = shows(1, 2, 3)
         test.syncVod()
         val kept = test.catalog.allSeries().associate { it.seriesId to it.id }
@@ -87,7 +86,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show list that fails, is cut off or comes back empty deletes nothing`() = runTest {
+    fun `a show list that fails, is cut off or comes back empty deletes nothing`() = testing {
         for (reply in listOf("!", shows(1).dropLast(10), "[]")) {
             panel.replies["get_series"] = shows(1, 2, 3)
             test.syncVod()
@@ -100,7 +99,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a film page open while a refresh removes the film shows it as it was, without bringing it back`() = runTest {
+    fun `a film page open while a refresh removes the film shows it as it was, without bringing it back`() = testing {
         panel.replies["get_vod_streams"] = films(1, 2)
         test.syncVod()
         val film = test.catalog.allMovies().single { it.streamId == "1" }
@@ -119,7 +118,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a film page open while a refresh changes the film keeps what the refresh changed`() = runTest {
+    fun `a film page open while a refresh changes the film keeps what the refresh changed`() = testing {
         // The release date marks the film looked up after the first sync, so the background pass
         // doesn't ask about it again while the page's request is held.
         panel.replies["get_vod_info"] = """{"info": {"releasedate": "2011-09-02"}}"""
@@ -151,7 +150,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show page open while a refresh changes the show keeps what the refresh changed`() = runTest {
+    fun `a show page open while a refresh changes the show keeps what the refresh changed`() = testing {
         panel.replies["get_series"] =
             """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
         test.syncVod()
@@ -178,7 +177,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show page open while a refresh changes the show keeps it when TMDB answers after`() = runTest {
+    fun `a show page open while a refresh changes the show keeps it when TMDB answers after`() = testing {
         panel.replies["get_series"] =
             """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
         test.syncVod()
@@ -211,7 +210,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show page open while a refresh removes the show shows it as it was, without bringing it back`() = runTest {
+    fun `a show page open while a refresh removes the show shows it as it was, without bringing it back`() = testing {
         panel.replies["get_series"] = shows(1, 2)
         test.syncVod()
         val show = test.catalog.allSeries().single { it.seriesId == "1" }
@@ -232,7 +231,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show page open while a refresh gives the show its cover still fills in the panel's details`() = runTest {
+    fun `a show page open while a refresh gives the show its cover still fills in the panel's details`() = testing {
         panel.replies["get_series"] =
             """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
         test.syncVod()
@@ -261,7 +260,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a film's TMDB answer doesn't replace one the background pass saved while the page was asking`() = runTest {
+    fun `a film's TMDB answer doesn't replace one the background pass saved while the page was asking`() = testing {
         panel.replies["get_vod_info"] = """{"info": {"releasedate": "2011-09-02"}}"""
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "added": "100"}]"""
         test.syncVod()
@@ -286,7 +285,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a refresh keeps the release date and artwork filled in when the movie was opened`() = runTest {
+    fun `a refresh keeps the release date and artwork filled in when the movie was opened`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "added": "100"}]"""
         panel.replies["get_vod_info"] =
             """{"info": {"releasedate": "2011-09-02", "backdrop_path": ["https://example.com/b.jpg"]}}"""

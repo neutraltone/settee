@@ -7,10 +7,10 @@ package app.opentv.recording
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.RecordingStatus
+import app.opentv.testing
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +31,7 @@ class RecordingEngineStartTest {
     fun close() = fixture.close()
 
     @Test
-    fun `pressing Record twice at once records the channel once`() = runTest {
+    fun `pressing Record twice at once records the channel once`() = testing {
         val ids = listOf(async { engine.startChannel(bbcOne) }, async { engine.startChannel(bbcOne) }).awaitAll()
 
         val active = recordings.active()
@@ -40,7 +40,7 @@ class RecordingEngineStartTest {
     }
 
     @Test
-    fun `recording another Quality of a channel that's recording records it as well`() = runTest {
+    fun `recording another Quality of a channel that's recording records it as well`() = testing {
         val hd = engine.startChannel(bbcOne)
         val sd = engine.startChannel(bbcOne.copy(id = 8, streamId = "8", name = "UK| BBC One SD", qualityRank = 100))
 
@@ -49,7 +49,7 @@ class RecordingEngineStartTest {
     }
 
     @Test
-    fun `recording a channel again once its recording has finished starts a new one`() = runTest {
+    fun `recording a channel again once its recording has finished starts a new one`() = testing {
         val first = engine.startChannel(bbcOne)
         recordings.setStatus(first, RecordingStatus.COMPLETED)
 

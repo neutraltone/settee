@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.foundation.text.BasicText
@@ -18,6 +17,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -27,10 +27,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -42,7 +38,6 @@ import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,18 +55,16 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class RecentSearchesScreenTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, name = "recent-searches-screen-test")
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph = testGraph.graph
     private val recent get() = graph.viewerLibrary.recentSearches
-
-    // The graph is process-wide, so its database outlives each test.
-    @Before
-    fun startEmpty() = runBlocking { recent.clear() }
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
@@ -86,11 +79,17 @@ class RecentSearchesScreenTest {
     }
 
     private fun waitFor(text: String): SemanticsNodeInteraction {
-        compose.waitUntilAtLeastOneExists(hasText(text), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText(text)).onFirst().assertExists()
         return compose.onNodeWithText(text)
     }
 
     private fun shown() = runBlocking { recent.observe().first() }
+
+    /** Types [text] in the box, and waits out the pause Search leaves for typing to stop. */
+    private fun search(text: String) {
+        device.type(text)
+        testGraph.advanceBy(SEARCH_SETTLED_MILLIS)
+    }
 
     @Test
     fun `opening a result saves the search, and typing alone doesn't`() {
@@ -103,13 +102,14 @@ class RecentSearchesScreenTest {
         }
         show()
 
-        device.type("bbc")
+        search("bbc")
         val result = waitFor("BBC One")
         assertThat(shown()).isEmpty()
 
         result.performClick()
 
-        compose.waitUntil(TIMEOUT_MILLIS) { shown() == listOf("bbc") }
+        compose.waitForIdle()
+        assertThat(shown()).isEqualTo(listOf("bbc"))
     }
 
     @Test
@@ -123,10 +123,9 @@ class RecentSearchesScreenTest {
         waitFor("bbc").requestFocus().performKeyInput { pressKey(Key.Menu) }
         waitFor("Remove").performClick()
 
-        compose.waitUntil(TIMEOUT_MILLIS) { shown() == listOf("news") }
-        // The database answers before the screen: the list reaches it through a flow on another
-        // thread, which waitForIdle doesn't know about, and only then does the row take the highlight.
-        compose.waitUntilAtLeastOneExists(hasText("news") and isFocused(), TIMEOUT_MILLIS)
+        compose.waitForIdle()
+        assertThat(shown()).isEqualTo(listOf("news"))
+        compose.onAllNodes(hasText("news") and isFocused()).onFirst().assertExists()
     }
 
     @Test
@@ -147,16 +146,13 @@ class RecentSearchesScreenTest {
     @Test
     fun `Search opened again starts empty, without the last visit's movies`() = withVod { vod ->
         showSearchInApp(vod)
-        device.type("zebra")
+        search("zebra")
         waitFor("Zebra Crossing")
 
         act { popBackStack() }
-        // Before Search is back, so its first frame can't have them. waitUntil alone doesn't
-        // recompose, so Search would never leave; waitForIdle each time round does.
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.waitForIdle()
-            vod.movieResults.value.isEmpty()
-        }
+        // Before Search is back, so its first frame can't have them.
+        compose.waitForIdle()
+        assertThat(vod.movieResults.value).isEmpty()
         act { navigate(Routes.SEARCH) }
         compose.waitForIdle()
 
@@ -167,7 +163,7 @@ class RecentSearchesScreenTest {
     @Test
     fun `back from a title, Search still has its movies, with no empty moment while they reload`() = withVod { vod ->
         showSearchInApp(vod)
-        device.type("zebra")
+        search("zebra")
         waitFor("Zebra Crossing")
 
         act { navigate(Routes.movieDetail(1)) }
@@ -186,7 +182,7 @@ class RecentSearchesScreenTest {
     @Test
     fun `back from a film opened in the results, the highlight is on that film, not the box`() = withVod { vod ->
         showSearchInApp(vod)
-        device.type("zebra")
+        search("zebra")
 
         openFirstResultAndComeBack("Zebra Crossing")
 
@@ -197,7 +193,7 @@ class RecentSearchesScreenTest {
     fun `back from a show opened in the results, the highlight is on that show, not the box`() =
         withVod(movies = emptyList(), series = listOf(series("Zebra Stripes"))) { vod ->
             showSearchInApp(vod)
-            device.type("zebra")
+            search("zebra")
 
             openFirstResultAndComeBack("Zebra Stripes")
 
@@ -210,7 +206,7 @@ class RecentSearchesScreenTest {
         withVod(movies = emptyList()) { vod ->
             addChannel("Quokka News")
             showSearchInApp(vod)
-            device.type("quokka")
+            search("quokka")
 
             openFirstResultAndComeBack("Quokka News")
 
@@ -232,11 +228,7 @@ class RecentSearchesScreenTest {
             vod.setVodSearchQuery("zebra")
 
             compose.mainClock.autoAdvance = true
-            compose.waitUntil(TIMEOUT_MILLIS) {
-                compose.waitForIdle()
-                vod.movieResults.value.isNotEmpty()
-            }
-            compose.waitForIdle()
+            testGraph.advanceBy(SEARCH_SETTLED_MILLIS)
 
             assertThat(vod.movieResults.value.map { it.name }).containsExactly("Zebra Crossing")
         }
@@ -272,42 +264,20 @@ class RecentSearchesScreenTest {
         compose.waitForIdle()
     }
 
-    /**
-     * Runs [block] with a VodViewModel over a graph and database of its own holding [movies] and
-     * [series], so the app's shared one, which outlives each test, doesn't gain a film every run.
-     */
+    /** Runs [block] with a VodViewModel over the test's graph, its database holding [movies] and [series]. */
     private fun withVod(
         movies: List<Movie> = listOf(movie("Zebra Crossing")),
         series: List<Series> = emptyList(),
         block: (VodViewModel) -> Unit,
     ) {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        val vodGraph = ServiceLocator.Graph(
-            app,
-            settingsFile = "search-vod-test",
-            openDatabase = {
-                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
-            },
-        )
         runBlocking {
-            vodGraph.database.sources().insert(
+            graph.database.sources().insert(
                 Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
             )
-            vodGraph.database.movies().upsertAll(movies)
-            vodGraph.database.series().upsertAll(series)
+            graph.database.movies().upsertAll(movies)
+            graph.database.series().upsertAll(series)
         }
-        val viewModels = ViewModelsInTest()
-        val vod = viewModels.track(VodViewModel(app, vodGraph))
-        try {
-            block(vod)
-        } finally {
-            // Nothing clears a model built outside a ViewModelStore, so it's stopped by hand, and its
-            // reads and the graph's background work waited for: one running when the database closed
-            // threw into whichever test came next.
-            viewModels.stopAll()
-            runBlocking { vodGraph.stopBackgroundWork() }
-            vodGraph.database.close()
-        }
+        block(testGraph.track(VodViewModel(testGraph.app, graph)))
     }
 
     /** Opens the result [name], the first in the list, and comes back to Search as Back does. */
@@ -323,14 +293,12 @@ class RecentSearchesScreenTest {
     }
 
     private fun assertBackOn(name: String) {
-        compose.waitUntilAtLeastOneExists(hasText(name) and hasClickAction() and isFocused(), TIMEOUT_MILLIS)
+        compose.onAllNodes(hasText(name) and hasClickAction() and isFocused()).onFirst().assertExists()
         assertThat(device.highlighted()).isFalse()
     }
 
+    // The provider is withVod's.
     private fun addChannel(name: String) = runBlocking {
-        graph.database.sources().insert(
-            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
-        )
         graph.database.channels().replaceCatalogue(1, listOf(channel(name)), syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
     }
@@ -370,8 +338,7 @@ class RecentSearchesScreenTest {
         containerExtension = "mp4",
         streamUrl = "https://example.com/$name.mp4",
     )
-
-    private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
-    }
 }
+
+/** Longer than Search waits for typing to stop (SEARCH_PAUSE_MILLIS). */
+private const val SEARCH_SETTLED_MILLIS = 500L

@@ -15,7 +15,6 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MovieGenres
 import app.opentv.data.repo.MovieTmdb
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,7 +39,7 @@ class PersonTitlesTest {
     private suspend fun titlesWith(name: String) = test.titlesWith(name)
 
     @Test
-    fun `a film nobody has opened is on its actor's and director's pages after a sync`() = runTest {
+    fun `a film nobody has opened is on its actor's and director's pages after a sync`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] =
             """{"info": {"genre": "Crime", "cast": "Ryan Gosling, Carey Mulligan",
@@ -53,7 +52,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a film whose genre came with the provider's list is still looked up for its cast`() = runTest {
+    fun `a film whose genre came with the provider's list is still looked up for its cast`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "genre": "Crime"}]"""
         panel.replies["get_vod_info"] = """{"info": {"cast": "Ryan Gosling"}}"""
 
@@ -63,7 +62,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a name finds only that person, not names it's part of`() = runTest {
+    fun `a name finds only that person, not names it's part of`() = testing {
         panel.replies["get_vod_streams"] = """[
             {"stream_id": 1, "name": "The Abyss", "cast": "Ed Harris, Mary Elizabeth Mastrantonio"},
             {"stream_id": 2, "name": "Somewhere Else", "cast": "Ted Harrison, Jo Bloggs"}
@@ -75,7 +74,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a name matches however a provider spells its accents, case and spaces`() = runTest {
+    fun `a name matches however a provider spells its accents, case and spaces`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Volver", "cast": "Penélope  Cruz"}]"""
 
         test.syncVod()
@@ -84,7 +83,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a film whose cast changes on a refresh moves to its new actors' pages`() = runTest {
+    fun `a film whose cast changes on a refresh moves to its new actors' pages`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Heat", "cast": "Al Pacino"}]"""
         test.syncVod()
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Heat", "cast": "Robert De Niro"}]"""
@@ -96,7 +95,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a person's shows follow their films, each best-rated first`() = runTest {
+    fun `a person's shows follow their films, each best-rated first`() = testing {
         panel.replies["get_vod_streams"] = """[
             {"stream_id": 1, "name": "Okay Film", "rating": "6", "cast": "Olivia Colman"},
             {"stream_id": 2, "name": "Great Film", "rating": "8", "director": "Olivia Colman"}
@@ -110,7 +109,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a film's cast found when it's opened puts it on their pages`() = runTest {
+    fun `a film's cast found when it's opened puts it on their pages`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Arrival", "genre": "Sci-Fi"}]"""
         test.syncVod()
         panel.replies["get_vod_info"] = """{"info": {"cast": "Amy Adams"}}"""
@@ -135,7 +134,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a provider's director field counts only its first name, the rest being the directing crew`() = runTest {
+    fun `a provider's director field counts only its first name, the rest being the directing crew`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "WALL-E", "genre": "Animation",
             "director": "Andrew Stanton, Adam Bronstein, Dan Jeup"}]"""
         panel.replies["get_vod_info"] = """{"info": {"director": "Andrew Stanton, Adam Bronstein, Dan Jeup"}}"""
@@ -164,7 +163,7 @@ class PersonTitlesTest {
     )
 
     @Test
-    fun `with a TMDB key, every director, the writers and the studios come from TMDB and have pages`() = runTest {
+    fun `with a TMDB key, every director, the writers and the studios come from TMDB and have pages`() = testing {
         panel.replies["get_vod_streams"] =
             """[{"stream_id": 1, "name": "Blades", "director": "Will Speck, Peter Kohn"}]"""
         test.syncVod()
@@ -178,7 +177,7 @@ class PersonTitlesTest {
     }
 
     @Test
-    fun `a refresh keeps TMDB's directors rather than the provider's`() = runTest {
+    fun `a refresh keeps TMDB's directors rather than the provider's`() = testing {
         panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Blades", "director": "Peter Kohn"}]"""
         test.syncVod()
         passWithTmdb(tmdbCredits).refresh(PANEL_SOURCE)

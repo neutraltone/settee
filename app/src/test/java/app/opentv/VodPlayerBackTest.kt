@@ -15,9 +15,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.player.SubtitlePicks
@@ -44,15 +42,16 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodPlayerBackTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel = testGraph.track(VodPlayerViewModel(app, graph))
     private var backs = 0
 
     @After
@@ -60,9 +59,6 @@ class VodPlayerBackTest {
         SleepTimer.clear()
         controller.release()
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     /** A film playing, with the bar it opens with up and holding the highlight. */

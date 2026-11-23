@@ -13,7 +13,6 @@ import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,7 +39,7 @@ class RecentSearchesTest {
     private suspend fun shown() = recent.observe().first()
 
     @Test
-    fun `newest search comes first`() = runTest {
+    fun `newest search comes first`() = testing {
         recent.save("bbc")
         recent.save("news")
 
@@ -48,14 +47,14 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `a Profile keeps its last ten`() = runTest {
+    fun `a Profile keeps its last ten`() = testing {
         (1..12).forEach { recent.save("search $it") }
 
         assertThat(shown()).containsExactlyElementsIn((12 downTo 3).map { "search $it" }).inOrder()
     }
 
     @Test
-    fun `repeating a search moves it to the top without duplicating`() = runTest {
+    fun `repeating a search moves it to the top without duplicating`() = testing {
         recent.save("bbc")
         recent.save("news")
 
@@ -65,7 +64,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `a search differing only in case or surrounding spaces is the same one, in its latest spelling`() = runTest {
+    fun `a search differing only in case or surrounding spaces is the same one, in its latest spelling`() = testing {
         recent.save("bbc")
         recent.save("news")
 
@@ -75,7 +74,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `a clock gone back doesn't cost the newest search its place`() = runTest {
+    fun `a clock gone back doesn't cost the newest search its place`() = testing {
         (1..10).forEach { recent.save("search $it") }
 
         now = 0
@@ -86,14 +85,14 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `a blank search saves nothing`() = runTest {
+    fun `a blank search saves nothing`() = testing {
         recent.save("   ")
 
         assertThat(shown()).isEmpty()
     }
 
     @Test
-    fun `each Profile has its own`() = runTest {
+    fun `each Profile has its own`() = testing {
         recent.save("bbc")
 
         activeProfile.value = 2
@@ -106,7 +105,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `the cap counts one Profile's searches, not everyone's`() = runTest {
+    fun `the cap counts one Profile's searches, not everyone's`() = testing {
         (1..10).forEach { recent.save("search $it") }
 
         activeProfile.value = 2
@@ -117,7 +116,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `removing one leaves the rest`() = runTest {
+    fun `removing one leaves the rest`() = testing {
         recent.save("bbc")
         recent.save("news")
 
@@ -127,7 +126,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `clearing removes only the active Profile's`() = runTest {
+    fun `clearing removes only the active Profile's`() = testing {
         recent.save("bbc")
         activeProfile.value = 2
         recent.save("cartoons")
@@ -140,7 +139,7 @@ class RecentSearchesTest {
     }
 
     @Test
-    fun `forgetting a Profile forgets its searches`() = runTest {
+    fun `forgetting a Profile forgets its searches`() = testing {
         recent.save("bbc")
         activeProfile.value = 2
         recent.save("cartoons")

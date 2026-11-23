@@ -12,8 +12,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
@@ -34,24 +32,22 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodPlayerLoadingTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel = testGraph.track(VodPlayerViewModel(app, graph))
     private val spinner = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
 
     @After
     fun release() {
         controller.release()
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     private fun show() = compose.setTvContent {

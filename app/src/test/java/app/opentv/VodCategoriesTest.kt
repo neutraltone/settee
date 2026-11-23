@@ -5,64 +5,46 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.categoryGroupKey
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /** What Movies' and Shows' Categories Sidebar lists, and what a category's grid carries (#161). */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodCategoriesTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
-    private val watching = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    @get:Rule
+    val testGraph = TestGraph()
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     @After
     fun close() {
         // The settings first: changing them wakes the grid's flow, which mustn't find the database closed.
         graph.settings.setHiddenCategories(emptySet())
         graph.settings.setHiddenUnlocked(false)
-        watching.cancel()
-        viewModels.clear()
-        graph.database.close()
     }
 
-    private fun <T> StateFlow<List<T>?>.names(name: (T) -> String, until: (List<String>) -> Boolean) = runBlocking {
-        watching.launch { collect {} }
-        withTimeout(5_000) { first { it != null && until(it.map(name)) } }.orEmpty().map(name)
+    private fun <T> StateFlow<List<T>?>.names(name: (T) -> String, until: (List<String>) -> Boolean): List<String> {
+        testGraph.launch { collect {} }
+        return testGraph.firstWhenIdle(this) { it != null && until(it.map(name)) }.orEmpty().map(name)
     }
 
     private val films = Category("c", 1, "Films", StreamKind.MOVIE)

@@ -5,11 +5,8 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
@@ -20,15 +17,8 @@ import app.opentv.ui.HomeContent
 import app.opentv.ui.HomeViewModel
 import app.opentv.ui.channels.SearchContent
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -39,26 +29,25 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /** Search and Home show Channels through the lineup: once each, and never from a locked category (#104). */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChannelViewModelsTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
 
     @Before
-    fun setUp() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp(): Unit = runBlocking {
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "http://example.org"))
         db.categories().upsertAll(
@@ -73,9 +62,6 @@ class ChannelViewModelsTest {
     fun close() {
         // The settings outlive the test; the lock mustn't leak into the next one.
         graph.settings.setHiddenCategories(emptySet())
-        runBlocking { viewModels.stopAll() }
-        db.close()
-        Dispatchers.resetMain()
     }
 
     /** Stores [names] as one provider's rows in [categoryId], cleaned the way an import cleans them. */
@@ -99,15 +85,20 @@ class ChannelViewModelsTest {
     private suspend fun row(name: String): Channel = db.channels().everyRow().single { it.name == name }
 
     @Test
-    fun `search leaves out channels in a locked category`() = runTest {
-        seed(1, "10", "UK| Night News")
-        seed(2, "66", "UK| Late Night")
+    fun `search leaves out channels in a locked category`() {
+        runBlocking {
+            seed(1, "10", "UK| Night News")
+            seed(2, "66", "UK| Late Night")
+        }
         graph.settings.setHiddenCategories(setOf("adult"))
-        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
+        val viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) }
 
         viewModel.setSearchQuery("night")
+        // Drawn while the search's pause runs out on the main thread's clock.
+        testGraph.launch { viewModel.searchResults.collect {} }
+        testGraph.advanceBy(500)
 
-        val results = viewModel.searchResults.first { it.isNotEmpty() }
+        val results = testGraph.firstWhenIdle(viewModel.searchResults) { it.isNotEmpty() }
         assertThat(results.map { it.primary.name }).containsExactly("UK| Night News")
         compose.setTvContent {
             SearchContent(TextFieldState("night"), results, emptyList(), emptyList(), {}, {}, {}, {})
@@ -116,15 +107,16 @@ class ChannelViewModelsTest {
     }
 
     @Test
-    fun `home shows a favourite channel once, whichever of its qualities were starred`() = runTest {
-        seed(1, "10", "UK| ITV HD")
-        seed(2, "20", "UK| ITV FHD")
-        graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
-        graph.viewerLibrary.favourites.set(row("UK| ITV FHD"), true)
+    fun `home shows a favourite channel once, whichever of its qualities were starred`() {
+        runBlocking {
+            seed(1, "10", "UK| ITV HD")
+            seed(2, "20", "UK| ITV FHD")
+            graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
+            graph.viewerLibrary.favourites.set(row("UK| ITV FHD"), true)
+        }
 
-        val shelf = viewModels.track(HomeViewModel(app, graph)).state.mapNotNull {
-            it?.favouriteChannels
-        }.first { it.isNotEmpty() }
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
+        val shelf = testGraph.firstWhenIdle(home.state.mapNotNull { it?.favouriteChannels }) { it.isNotEmpty() }
 
         assertThat(shelf.map { home -> home.channel.qualities.map { it.name } })
             .containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
@@ -135,47 +127,50 @@ class ChannelViewModelsTest {
     }
 
     @Test
-    fun `home leaves a favourite in a locked category off its shelf`() = runTest {
-        seed(1, "10", "UK| ITV HD")
-        seed(2, "66", "UK| Late Night")
-        graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
-        graph.viewerLibrary.favourites.set(row("UK| Late Night"), true)
+    fun `home leaves a favourite in a locked category off its shelf`() {
+        runBlocking {
+            seed(1, "10", "UK| ITV HD")
+            seed(2, "66", "UK| Late Night")
+            graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
+            graph.viewerLibrary.favourites.set(row("UK| Late Night"), true)
+        }
         graph.settings.setHiddenCategories(setOf("adult"))
 
-        val shelf = viewModels.track(HomeViewModel(app, graph)).state.mapNotNull {
-            it?.favouriteChannels
-        }.first { it.isNotEmpty() }
+        val home = testGraph.viewModel { HomeViewModel(app, graph) }
+        val shelf = testGraph.firstWhenIdle(home.state.mapNotNull { it?.favouriteChannels }) { it.isNotEmpty() }
 
         assertThat(shelf.map { it.channel.primary.name }).containsExactly("UK| ITV HD")
     }
 
     @Test
-    fun `Live TV's sidebar lists every provider's categories in its own order, without locked ones`() = runTest {
-        db.categories().upsertAll(
-            listOf(
-                Category(id = "10", sourceId = 1, name = "UK| News", kind = StreamKind.LIVE, sortIndex = 0),
-                Category(id = "11", sourceId = 1, name = "Films", kind = StreamKind.LIVE, sortIndex = 1),
-                Category(id = "20", sourceId = 2, name = "Sport", kind = StreamKind.LIVE, sortIndex = 0),
-                Category(id = "66", sourceId = 2, name = "UK| Adult", kind = StreamKind.LIVE, sortIndex = 1),
-                Category(id = "21", sourceId = 2, name = "Kids", kind = StreamKind.LIVE, sortIndex = 2),
-            ),
-        )
+    fun `Live TV's sidebar lists every provider's categories in its own order, without locked ones`() {
+        runBlocking {
+            db.categories().upsertAll(
+                listOf(
+                    Category(id = "10", sourceId = 1, name = "UK| News", kind = StreamKind.LIVE, sortIndex = 0),
+                    Category(id = "11", sourceId = 1, name = "Films", kind = StreamKind.LIVE, sortIndex = 1),
+                    Category(id = "20", sourceId = 2, name = "Sport", kind = StreamKind.LIVE, sortIndex = 0),
+                    Category(id = "66", sourceId = 2, name = "UK| Adult", kind = StreamKind.LIVE, sortIndex = 1),
+                    Category(id = "21", sourceId = 2, name = "Kids", kind = StreamKind.LIVE, sortIndex = 2),
+                ),
+            )
+        }
         graph.settings.setHiddenCategories(setOf("adult"))
-        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
+        val viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) }
 
-        val categories = viewModel.visibleCategoryGroups.first { it.isNotEmpty() }
+        val categories = testGraph.firstWhenIdle(viewModel.visibleCategoryGroups) { it.isNotEmpty() }
 
         assertThat(categories.map { it.label }).containsExactly("News", "Films", "Sport", "Kids").inOrder()
     }
 
     @Test
-    fun `today's page in the guide ends where tomorrow's starts, at midnight`() = runTest {
-        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
-        val todayStarts = viewModel.windowStartMillis.first()
-        val todayEnds = viewModel.windowEndMillis.first()
+    fun `today's page in the guide ends where tomorrow's starts, at midnight`() {
+        val viewModel = testGraph.viewModel { ChannelsViewModel(app, graph) }
+        val todayStarts = testGraph.firstWhenIdle(viewModel.windowStartMillis)
+        val todayEnds = testGraph.firstWhenIdle(viewModel.windowEndMillis)
 
         viewModel.nudgeGuideDay(1)
-        val tomorrowStarts = viewModel.windowStartMillis.first { it != todayStarts }
+        val tomorrowStarts = testGraph.firstWhenIdle(viewModel.windowStartMillis) { it != todayStarts }
 
         assertThat(tomorrowStarts).isEqualTo(todayEnds)
     }
