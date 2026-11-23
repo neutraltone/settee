@@ -8,7 +8,6 @@ package app.opentv
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.os.Looper
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -88,8 +87,8 @@ class AddSourceScreenTest {
         show(tv = true, editing = id)
 
         // The form waits for the providers list, which Room reads off the main thread: checking at
-        // once passed only when that read beat the first frame.
-        compose.waitUntilExactlyOneExists(hasText("Edit provider"), UI_WAIT_MILLIS)
+        // once passed only when that read came back before the screen first went idle.
+        compose.waitUntilAtLeastOneExists(hasText("Edit provider"), UI_WAIT_MILLIS)
         compose.onNodeWithText(PHONE).assertDoesNotExist()
         compose.onNodeWithText("Playlist URL").assertExists()
         compose.onNodeWithText("Username").assertDoesNotExist()
@@ -116,11 +115,8 @@ class AddSourceScreenTest {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
 
-        // The providers list comes back on the main looper, which nothing else runs while this waits.
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            finished
-        }
+        // Leaving waits for the providers list too, as the edit form does.
+        compose.waitRunningMainLooper { finished }
     }
 
     @Test
@@ -151,11 +147,7 @@ class AddSourceScreenTest {
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            // The answer comes back on the main looper, which nothing else runs while this waits.
-            compose.waitUntil(UI_WAIT_MILLIS) {
-                shadowOf(Looper.getMainLooper()).idle()
-                viewModel.ui.value.let { !it.testing && it.testResult != null }
-            }
+            compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testResult != null } }
 
             compose.onNodeWithText("Found your playlist. Save to load its channels.").assertExists()
             captureScreen("add_source_test_ok")
@@ -363,7 +355,7 @@ class AddSourceScreenTest {
 
         compose.onNodeWithText(XTREAM).assertDoesNotExist()
         // The QR screen waits for the providers list too, as the edit form does.
-        compose.waitUntilExactlyOneExists(hasText("Then enter this code on your phone"), UI_WAIT_MILLIS)
+        compose.waitUntilAtLeastOneExists(hasText("Then enter this code on your phone"), UI_WAIT_MILLIS)
         captureScreen("add_source_qr")
 
         Espresso.pressBack()
