@@ -50,10 +50,16 @@ class VodPlayerSkipTest {
         graph.settings.setSkipIntrosAndCredits(true)
     }
 
-    private fun startSeries(): VodPlayerViewModel = runBlocking {
-        graph.database.series().upsertAll(listOf(show))
-        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        testGraph.track(VodPlayerViewModel(app, graph)).apply { attach(testEpisode(1, 1).key, playback) }
+    private fun startSeries(): VodPlayerViewModel {
+        runBlocking {
+            graph.database.series().upsertAll(listOf(show))
+            graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        }
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+        // As the player's screen attaches it: blocked in runBlocking, the main thread would sit out the
+        // title index's pause in real time, where a settle skips it.
+        testGraph.runOnMain { vm.attach(testEpisode(1, 1).key, playback) }
+        return vm
     }
 
     private fun VodPlayerViewModel.at(millis: Long): Stretch? {
