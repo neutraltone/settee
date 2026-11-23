@@ -81,16 +81,12 @@ class StreamCapture(
 
         while (coroutineContext.isActive && !leg.ended() && deadReconnects < MAX_DEAD_RECONNECTS) {
             val bytesThisLeg = try {
-                when (val playable = resolve()) {
-                    is Playable.Failed -> 0L.also { refused = Ending.NoLink(playable.failure) }
-                    is Playable.Ready -> leg.copy(playable).also {
-                        leg.status?.let { refused = Ending.Refused(it) }
-                    }
-                }
+                leg.connect()
             } catch (failed: StorageFailed) {
                 // Reconnecting can't help: the stream is fine, it's where it goes that isn't.
                 return Outcome(bytes, failed.ending)
             }
+            leg.refusal?.let { refused = it }
             // Nothing arrived this leg: count it, and give up only after several in a row so a
             // truly dead stream can't spin forever. A leg that delivered bytes resets the counter.
             if (bytesThisLeg > 0L) {
@@ -115,22 +111,29 @@ class StreamCapture(
         private val buffer = ByteArray(BUFFER_BYTES)
         private var lastReport = 0L
 
-        /** The HTTP status the last connection was refused with, or null when it was answered. */
-        var status: Int? = null
+        /** Why the last connection got nothing, when the provider said: no link, or a refusal. */
+        var refusal: Ending? = null
             private set
 
         fun ended() = endAtMillis > 0 && clock() >= endAtMillis
 
-        /** Appends what [playable] serves until it closes, the end or a stop; returns how much. */
-        suspend fun copy(playable: Playable.Ready): Long {
+        /** Asks for the link again and appends what it serves until it closes, the end or a stop; returns how much. */
+        suspend fun connect(): Long {
+            refusal = null
+            return when (val playable = resolve()) {
+                is Playable.Failed -> 0L.also { refusal = Ending.NoLink(playable.failure) }
+                is Playable.Ready -> copy(playable)
+            }
+        }
+
+        private suspend fun copy(playable: Playable.Ready): Long {
             val request = Request.Builder().url(playable.url).header("User-Agent", playable.userAgent).build()
             val call = http.newCall(request).also(onCall)
             val before = bytes
-            status = null
             try {
                 call.execute().use { response ->
                     if (!response.isSuccessful) {
-                        status = response.code
+                        refusal = Ending.Refused(response.code)
                         throw IOException("HTTP ${response.code}")
                     }
                     copy(response.body.byteStream())

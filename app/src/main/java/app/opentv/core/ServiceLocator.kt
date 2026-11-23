@@ -48,6 +48,8 @@ import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
+import app.opentv.recording.BookingRoom
+import app.opentv.recording.FreeSpace
 import app.opentv.recording.RecordingEngine
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
@@ -385,6 +387,11 @@ object ServiceLocator {
 
         val reminderRepository: ReminderRepository by lazy {
             ReminderRepository(database.reminders(), database.sources())
+        }
+
+        /** Which bookings may not fit in what their storage has left (#473). */
+        val bookingRoom: BookingRoom by lazy {
+            BookingRoom(database.channels(), FreeSpace(appContext, settings)::of, clock)
         }
 
         val recordingEngine: RecordingEngine by lazy {

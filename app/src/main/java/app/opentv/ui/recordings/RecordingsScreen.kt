@@ -20,8 +20,9 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
     val profiles by viewModel.profiles.collectAsState()
     val seriesRules by viewModel.seriesRules.collectAsState()
     val deleteFailure by viewModel.deleteFailure.collectAsState()
-    val sections = remember(recordings, reminders, seriesRules) {
-        recordingsSections(recordings, reminders, seriesRules, System.currentTimeMillis())
+    val shortOfRoom by viewModel.shortOfRoom.collectAsState()
+    val sections = remember(recordings, reminders, seriesRules, shortOfRoom) {
+        recordingsSections(recordings, reminders, seriesRules, System.currentTimeMillis(), shortOfRoom)
     }
     RecordingsContent(
         sections = sections,

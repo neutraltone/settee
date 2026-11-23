@@ -16,10 +16,13 @@ import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.options.ItemOption
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,6 +32,20 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
     val recordings: StateFlow<List<Recording>> =
         graph.recordingRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * How many minutes of room each booking that may not fit has (#473), once its storage has said: a
+     * NAS can take a while, and the rest of the screen doesn't wait for it.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val shortOfRoom: StateFlow<Map<Long, Long>> =
+        graph.recordingRepository.observeAll()
+            // Not again for every few megabytes a recording grows: only when what's booked or on changes.
+            .distinctUntilChangedBy { rows ->
+                rows.map { listOf(it.id, it.status, it.scheduledStartMillis, it.scheduledEndMillis, it.filePath) }
+            }
+            .mapLatest { graph.bookingRoom.shortOfRoom(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val reminders: StateFlow<List<Reminder>> =
         graph.reminderRepository.observeAll()

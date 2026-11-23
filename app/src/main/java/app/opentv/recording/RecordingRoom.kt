@@ -5,9 +5,12 @@
  */
 package app.opentv.recording
 
+import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.parser.ChannelNameNormalizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Where a recording's file goes, as far as room goes: this device, the USB drive, or a NAS share. */
 sealed interface RecordingStore {
@@ -82,11 +85,11 @@ class RecordingRoom(
 
     /** Roughly what an hour of a live stream of [quality] comes to; HD when the name doesn't say. */
     private fun typicalGigabytesPerHour(quality: Int?): Double = when {
-        quality == null -> 2.5
-        quality >= ChannelNameNormalizer.RANK_4K -> 8.0
-        quality >= ChannelNameNormalizer.RANK_FHD -> 3.5
-        quality == ChannelNameNormalizer.RANK_SD -> 1.0
-        else -> 2.5
+        quality == null -> HD_GB_PER_HOUR
+        quality >= ChannelNameNormalizer.RANK_4K -> UHD_GB_PER_HOUR
+        quality >= ChannelNameNormalizer.RANK_FHD -> FHD_GB_PER_HOUR
+        quality == ChannelNameNormalizer.RANK_SD -> SD_GB_PER_HOUR
+        else -> HD_GB_PER_HOUR
     }
 
     /**
@@ -106,5 +109,38 @@ class RecordingRoom(
         const val MINUTES_PER_HOUR = 60
         const val GIGABYTE = 1_000_000_000L
         const val LAST_FEW = 5
+
+        // Roughly what an hour of each quality comes to from IPTV providers: 4K and 8K alike.
+        const val SD_GB_PER_HOUR = 1.0
+        const val HD_GB_PER_HOUR = 2.5
+        const val FHD_GB_PER_HOUR = 3.5
+        const val UHD_GB_PER_HOUR = 8.0
+    }
+}
+
+/**
+ * [RecordingRoom] for the recordings here as they are: each channel's quality from the catalogue, and
+ * what's free on each storage a booking is on, from [freeSpace] (a [FreeSpace]).
+ */
+class BookingRoom(
+    private val channels: ChannelDao,
+    private val freeSpace: (RecordingStore) -> Long?,
+    private val clock: () -> Long,
+) {
+    /**
+     * For each booking in [recordings] (every recording here) that may not fit, the minutes of room it
+     * has. Reads each storage's free space, which on a NAS takes as long as the network does.
+     */
+    suspend fun shortOfRoom(recordings: List<Recording>): Map<Long, Long> = withContext(Dispatchers.IO) {
+        val stores = recordings.filter { it.status == RecordingStatus.SCHEDULED }
+            .map { RecordingStore.of(it.filePath) }
+            .toSet()
+        val free = stores.mapNotNull { store -> freeSpace(store)?.let { store to it } }.toMap()
+        if (free.isEmpty()) return@withContext emptyMap()
+        // A channel gone from the catalogue since is of unknown quality.
+        val qualities = recordings.map { it.channelId }.distinct()
+            .mapNotNull { id -> channels.byId(id)?.let { id to it.qualityRank } }
+            .toMap()
+        RecordingRoom(recordings, qualities, clock(), free).shortOfRoom()
     }
 }

@@ -87,13 +87,14 @@ class RecordingsContentTest {
         reminders: List<Reminder> = emptyList(),
         seriesRules: List<SeriesRule> = emptyList(),
         profileNames: Map<Long, String> = emptyMap(),
+        shortOfRoom: Map<Long, Long> = emptyMap(),
     ) {
         val enter = FocusRequester()
         shown = recordings
         compose.setTvContent {
             Box(Modifier.focusRequester(enter)) {
                 RecordingsContent(
-                    sections = recordingsSections(shown, reminders, seriesRules, NOW),
+                    sections = recordingsSections(shown, reminders, seriesRules, NOW, shortOfRoom),
                     profileNames = profileNames,
                     onPlay = { played += it },
                     onRetry = { retried += it },
@@ -489,6 +490,15 @@ class RecordingsContentTest {
         val b = booking(1).copy(id = 2, title = "Booking 2")
         show(recordings = listOf(a, b))
         row("Booking 2").assert(hasText("Overlaps another recording", substring = true))
+    }
+
+    @Test
+    fun `a booking that may not fit says how long there's room for, and one that fits says nothing`() {
+        show(recordings = listOf(booking(1), booking(2)), shortOfRoom = mapOf(1L to 42L))
+
+        row("Booking 1").assert(hasText("Room for about 40 minutes, so it may not fit", substring = true))
+        row("Booking 2").assert(hasText("may not fit", substring = true).not())
+        captureScreen("recordings_may_not_fit")
     }
 
     @Test

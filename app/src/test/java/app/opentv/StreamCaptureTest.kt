@@ -12,8 +12,8 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MediaKey
-import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.PlaybackSources
 import app.opentv.recording.StreamCapture
 import app.opentv.recording.StreamCapture.Ending
 import com.google.common.truth.Truth.assertThat

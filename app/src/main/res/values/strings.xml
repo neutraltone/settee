@@ -84,6 +84,8 @@
     <string name="rec_record_now">Record now</string>
     <string name="rec_schedule_recording">Schedule recording</string>
     <string name="rec_scheduled_title">Scheduled: %1$s</string>
+    <!-- %1$s is the programme, %2$s why it may not fit: rec_may_not_fit or rec_no_room. -->
+    <string name="rec_scheduled_may_not_fit">Scheduled: %1$s. %2$s.</string>
     <string name="rec_recording_channel">● Recording %1$s</string>
     <string name="rec_record_series">Record whole series</string>
     <string name="rec_record_series_named">Record whole series: %1$s</string>
@@ -647,6 +649,19 @@
     <string name="rec_source_unknown">Provider</string>
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Overlaps another recording</string>
+    <!-- A booking whose storage may not have room for it (#473). %1$s is how long there's room for, such as "40 minutes". -->
+    <string name="rec_may_not_fit">Room for about %1$s, so it may not fit</string>
+    <string name="rec_no_room">No room left for this, so it may not fit</string>
+    <plurals name="rec_room_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="rec_room_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <!-- Hours, then minutes: "1 hour 20 minutes". -->
+    <string name="rec_room_hours_minutes">%1$s %2$s</string>
 
     <!-- Recordings: sections, scheduling detail, retry, profile -->
     <string name="rec_section_series_links">Series links</string>

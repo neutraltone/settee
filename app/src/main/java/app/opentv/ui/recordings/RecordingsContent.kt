@@ -45,6 +45,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -322,13 +323,19 @@ private fun RecordingsRowItem(
                 if (row.inProgress) RecordingNow(highlighted, text)
                 Text(row.line(profileNames), SetteeType.Body, color = quiet, maxLines = 2)
                 row.reason()?.let { Reason(it, text, quiet) }
-                if (row is RecordingsRow.Booking && row.clashes) {
-                    Text(
-                        stringResource(R.string.rec_clashes),
-                        SetteeType.Body,
-                        color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Accent,
-                        maxLines = 1,
-                    )
+                if (row is RecordingsRow.Booking) {
+                    val warning = if (highlighted) SetteeColors.OnAccent else SetteeColors.Accent
+                    if (row.clashes) {
+                        Text(
+                            stringResource(R.string.rec_clashes),
+                            SetteeType.Body,
+                            color = warning,
+                            maxLines = 1,
+                        )
+                    }
+                    row.roomLeftMinutes?.let {
+                        Text(mayNotFit(LocalResources.current, it), SetteeType.Body, color = warning, maxLines = 1)
+                    }
                 }
             }
         }

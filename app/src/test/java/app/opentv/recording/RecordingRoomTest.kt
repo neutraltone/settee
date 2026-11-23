@@ -20,7 +20,16 @@ class RecordingRoomTest {
     @Test
     fun `a booking that may not fit has room worked out at its channel's own rate`() {
         // Channel 7's recordings came to 20 MB a minute: 1 GB is room for 50 minutes.
-        val past = listOf(recorded(channel = 7, minutes = 60, bytes = 1_200 * MB), recorded(channel = 7, minutes = 30, bytes = 600 * MB))
+        val past =
+            listOf(
+                recorded(channel = 7, minutes = 60, bytes = 1_200 * MB),
+                recorded(
+                    channel = 7,
+                    minutes = 30,
+                    bytes =
+                    600 * MB,
+                ),
+            )
         val room = RecordingRoom(
             past + booking(id = 1, channel = 7, minutes = 120),
             qualities = mapOf(7L to HD),
@@ -35,7 +44,9 @@ class RecordingRoomTest {
     fun `only a channel's last few recordings count towards its rate`() {
         // Its last five came to 20 MB a minute, so 1 GB is room for 50 minutes; one long before, in
         // another format, doesn't count.
-        val lastFive = (1L..5L).map { recorded(channel = 7, minutes = 60, bytes = 1_200 * MB, endedAt = NOW - it * DAY) }
+        val lastFive = (1L..5L).map {
+            recorded(channel = 7, minutes = 60, bytes = 1_200 * MB, endedAt = NOW - it * DAY)
+        }
         val longBefore = recorded(channel = 7, minutes = 60, bytes = 6_000 * MB, endedAt = NOW - 30 * DAY)
         val room = RecordingRoom(
             lastFive + longBefore + booking(id = 1, channel = 7, minutes = 120),
@@ -50,7 +61,16 @@ class RecordingRoomTest {
     @Test
     fun `a channel never recorded here goes by recordings of channels of the same quality`() {
         // HD channel 8 came to 25 MB a minute, so 1 GB is room for 40 minutes; FHD channel 9 doesn't count.
-        val past = listOf(recorded(channel = 8, minutes = 60, bytes = 1_500 * MB), recorded(channel = 9, minutes = 60, bytes = 3_000 * MB))
+        val past =
+            listOf(
+                recorded(channel = 8, minutes = 60, bytes = 1_500 * MB),
+                recorded(
+                    channel = 9,
+                    minutes = 60,
+                    bytes =
+                    3_000 * MB,
+                ),
+            )
         val room = RecordingRoom(
             past + booking(id = 1, channel = 7, minutes = 120),
             qualities = mapOf(7L to HD, 8L to HD, 9L to FHD),
@@ -65,7 +85,8 @@ class RecordingRoomTest {
     fun `with nothing of the same quality recorded either, it goes by a fixed figure for the quality`() {
         // 1 GB is an hour of SD at 1 GB an hour; 24 minutes of HD or unknown at 2.5 GB; 17 of FHD at
         // 3.5 GB; 7 of 4K or 8K at 8 GB. A channel gone from the catalogue is of unknown quality.
-        val minutesByQuality = mapOf(SD to 60L, HD to 24L, 0 to 24L, FHD to 17L, UHD_4K to 7L, UHD_8K to 7L, null to 24L)
+        val minutesByQuality =
+            mapOf(SD to 60L, HD to 24L, 0 to 24L, FHD to 17L, UHD_4K to 7L, UHD_8K to 7L, null to 24L)
 
         for ((quality, minutes) in minutesByQuality) {
             val room = RecordingRoom(

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
@@ -31,6 +32,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.LineupChannel
+import app.opentv.recording.RecordingStorage
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.ProgrammeDetails
 import com.google.common.truth.Truth.assertThat
@@ -47,6 +49,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowStatFs
+import org.robolectric.shadows.ShadowToast
 
 /**
  * Programme details, the panel OK on a programme in the guide opens (#164): the programme at the
@@ -82,7 +86,8 @@ class ProgrammeDetailsTest {
         qualityRank = if (label == "4K") 400 else 0,
     )
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val app = ApplicationProvider.getApplicationContext<Application>()
+    private val graph = ServiceLocator.get(app)
 
     // The graph is process-wide, so what a test stores is the next test's to trip over.
     @Before
@@ -300,6 +305,19 @@ class ProgrammeDetailsTest {
     }
 
     @Test
+    fun `scheduling a programme there may not be room for says so as it's booked`() {
+        graph.settings.setRecordingTarget(AppSettings.RecordingTarget.INTERNAL)
+        // No room at all, so it can't fit whatever rate the recordings other tests left would give.
+        ShadowStatFs.registerStats(RecordingStorage.internalDir(app), 1_000, 0, 0)
+        show(row(quality(2, "News HD")), programme = listed(later))
+
+        compose.onNode(hasText("Schedule recording") and hasClickAction()).performClick()
+
+        awaitBooking()
+        assertThat(awaitToast()).isEqualTo("Scheduled: The Film. No room left for this, so it may not fit.")
+    }
+
+    @Test
     fun `a programme the guide has dropped since shows without a synopsis, and can still be booked`() {
         val gone = listed(later)
         runBlocking { graph.database.programmes().deleteForFeed(FEED) }
@@ -315,6 +333,15 @@ class ProgrammeDetailsTest {
         // done too, and a synopsis that was going to show would be showing.
         compose.waitForIdle()
         compose.onNodeWithText("A film about a film.").assertDoesNotExist()
+    }
+
+    /** Waits for the toast an action shows, which may come once it has checked something. */
+    private fun awaitToast(): String {
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            shadowOf(Looper.getMainLooper()).idle()
+            ShadowToast.getTextOfLatestToast() != null
+        }
+        return ShadowToast.getTextOfLatestToast()
     }
 
     /** Waits for text that's read from the database once the panel is up, such as a synopsis. */

@@ -162,8 +162,12 @@ _Avoid_: Shelf, section, rail
 ## Recordings
 
 **Recording**:
-A programme captured from a channel to storage on this device, a NAS or USB, or booked to be. It can be booked, in progress, recorded or failed.
+A programme captured from a channel to storage on this device, a NAS or USB, or booked to be. It can be booked, in progress, recorded or failed; a failed one captured nothing.
 _Avoid_: DVR, PVR, capture
+
+**Cut short**:
+A recorded Recording that stopped by itself before its end, and says why.
+_Avoid_: partial, incomplete, failed
 
 **Reminder**:
 A prompt when a programme starts, which can also switch to its channel. It never captures anything.
