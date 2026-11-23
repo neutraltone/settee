@@ -45,6 +45,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.opentv.core.CrashReports
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
@@ -119,7 +120,11 @@ class MainActivity : ComponentActivity() {
                     }.collectAsState(initial = false)
                     DatabaseGate(
                         open = {
-                            val failure = withContext(graph.dispatchers.io) { graph.database.wontOpen() }
+                            val failure = withContext(graph.dispatchers.io) {
+                                graph.database.wontOpen {
+                                    graph.crashReports.report(CrashReports.Handled.DATABASE_MIGRATION, it)
+                                }
+                            }
                             // The launch work reads the database too, so it waits for it as well.
                             if (failure == null) (application as? OpenTvApp)?.opened()
                             failure

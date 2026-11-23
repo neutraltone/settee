@@ -67,6 +67,12 @@ class XtreamApi(
         isLenient = true
     },
     private val dispatchers: AppDispatchers = AppDispatchers(),
+    /**
+     * Told of a reply that starts as JSON but couldn't be read, which may be Settee's parsing at
+     * fault, so Crash Reports can send it (#576). Never of a web page or an HTTP error: those are
+     * the Provider's, and never leave the device.
+     */
+    private val reportParseFailure: (Throwable) -> Unit = {},
 ) {
 
     class XtreamException(
@@ -386,7 +392,9 @@ class XtreamApi(
         action: String?,
         oneTitle: Boolean = false,
         extra: (HttpUrl.Builder) -> Unit = {},
-    ): JsonElement = open(source, action, oneTitle, extra).use { parsed(json, it.body.string(), oneTitle) }
+    ): JsonElement = open(source, action, oneTitle, extra).use {
+        parsed(json, it.body.string(), oneTitle, reportParseFailure)
+    }
 
     private fun open(
         source: Source,
@@ -432,7 +440,7 @@ class XtreamApi(
             file.delete()
             throw e
         }
-        return CatalogueList(file, json, parse, dispatchers)
+        return CatalogueList(file, json, parse, dispatchers, reportParseFailure)
     }
 
     /**
@@ -444,6 +452,7 @@ class XtreamApi(
         private val json: Json,
         private val parse: (JsonObject) -> T?,
         private val dispatchers: AppDispatchers,
+        private val reportParseFailure: (Throwable) -> Unit = {},
     ) : Closeable {
         /**
          * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
@@ -473,9 +482,11 @@ class XtreamApi(
                             DecodeSequenceMode.ARRAY_WRAPPED,
                         )
                             .iterator()
-                        while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+                        while (readingCatalogue(report = reportParseFailure) { elements.hasNext() }) {
+                            each(readingCatalogue(report = reportParseFailure) { elements.next() })
+                        }
                     } else {
-                        parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                        parsed(json, body.readUtf8(), report = reportParseFailure).arrayOrEmpty.forEach { each(it) }
                     }
                 }
                 if (batch.isNotEmpty()) save(batch.toList())
@@ -537,20 +548,31 @@ class XtreamApi(
     data class SeriesReply(val info: SeriesInfo, val episodes: List<Episode>)
 }
 
-private fun parsed(json: Json, text: String, oneTitle: Boolean = false): JsonElement {
+private fun parsed(
+    json: Json,
+    text: String,
+    oneTitle: Boolean = false,
+    report: (Throwable) -> Unit = {},
+): JsonElement {
     if (text.isBlank()) throw XtreamApi.XtreamException("The server returned an empty response.")
     // Only a reply that isn't a JSON object, array or string from its first character is a website or a
     // sign-in page (panels send nothing else at the top): JSON that breaks off later is a panel whose
     // reply was cut short, and trying again can help with that.
     val startsAsJson = text.trimStart().first() in "{[\""
     val problem = if (startsAsJson || oneTitle) Problem.BAD_REPLY else Problem.NOT_A_PANEL
-    return readingCatalogue(problem) { json.parseToJsonElement(text) }
+    // A web page is the Provider's, whichever request it answered; only JSON Settee couldn't read is reported.
+    return readingCatalogue(problem, report = if (startsAsJson) report else null) { json.parseToJsonElement(text) }
 }
 
 /** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
-private inline fun <T> readingCatalogue(problem: Problem = Problem.BAD_REPLY, read: () -> T): T = try {
+private inline fun <T> readingCatalogue(
+    problem: Problem = Problem.BAD_REPLY,
+    noinline report: ((Throwable) -> Unit)? = null,
+    read: () -> T,
+): T = try {
     read()
 } catch (e: IllegalArgumentException) {
+    report?.invoke(e)
     // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
     throw XtreamApi.XtreamException(
         "The server replied with something that is not a valid catalogue. " +
