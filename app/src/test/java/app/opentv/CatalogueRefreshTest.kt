@@ -57,7 +57,14 @@ class CatalogueRefreshTest {
 
     private fun vodDownloads() = panel.asked.count { it == "get_vod_streams" }
 
-    private fun forgetAsked() = panel.asked.clear()
+    /**
+     * Forgets what has been asked so far, once what it set off has finished: a refresh returns before
+     * the films' details it starts looking up in the background have been asked for.
+     */
+    private suspend fun forgetAsked() {
+        settle()
+        panel.asked.clear()
+    }
 
     private suspend fun openMoviesOrShows() = refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
 
