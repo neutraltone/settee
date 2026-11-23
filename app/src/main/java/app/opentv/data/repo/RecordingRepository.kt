@@ -126,8 +126,8 @@ class RecordingRepository(
     /** Whether a recording row other than [id] points at [filePath]. */
     suspend fun fileUsedByOthers(id: Long, filePath: String): Boolean = dao.countWithFilePath(filePath, id) > 0
 
-    /** Cold-start reconciliation: anything left "recording" was killed mid-capture. */
-    suspend fun failInterrupted() = dao.failInterrupted()
+    /** Cold-start reconciliation: anything left "recording" was killed mid-capture, and failed with [error]. */
+    suspend fun failInterrupted(error: String) = dao.failInterrupted(error)
 
     // ---- Series-link rules -------------------------------------------------------------------
 

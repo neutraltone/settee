@@ -289,6 +289,20 @@ class RecordingEngine(
     }
 
     /**
+     * Why a recording still in progress when Settee starts again failed: Settee was closed while it
+     * was on (an update installed anyway, Android killing it for memory, or a power cut). Here, beside
+     * [Missed], so the repository stays free of Android resources; but not a method on the engine, so
+     * failing them on a cold start needn't wait for the engine to be built.
+     */
+    object Interrupted {
+        val sentence = R.string.rec_error_interrupted
+        const val DETAIL = "Interrupted"
+
+        /** The failure as a row stores it, worded in [context]'s language. */
+        fun stored(context: Context): String = ViewerError(context.getString(sentence), DETAIL).stored()
+    }
+
+    /**
      * Fail [recording] as missed for [why] when its window has already ended, before anything is
      * written to storage. Returns true when it was.
      */

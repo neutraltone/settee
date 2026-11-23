@@ -17,6 +17,7 @@ import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.LAST_ASCII_KEY_NORMALIZER
 import app.opentv.data.repo.carriedCategoryLocks
 import app.opentv.data.work.SyncWorker
+import app.opentv.recording.RecordingEngine
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
@@ -79,8 +80,11 @@ open class OpenTvApp :
 
         // Cold-start reconciliation: a recording still marked "in progress" at process start is an
         // orphan from a killed capture. Done here, once per process — NOT when the Recordings screen
-        // opens — so checking on a recording you just started never marks it interrupted.
-        appScope.launch { runCatching { graph.recordingRepository.failInterrupted() } }
+        // opens — so checking on a recording you just started never marks it interrupted. Straight to
+        // the repository, not through the engine: an alarm that cold-starts Settee builds the engine
+        // before marking its recording started, and this has to have run by then.
+        val interrupted = RecordingEngine.Interrupted.stored(this)
+        appScope.launch { runCatching { graph.recordingRepository.failInterrupted(interrupted) } }
 
         // 1.0's device-wide Live Preview switch, moved onto each Profile (#212). Early in the launch,
         // so Home seldom draws a preview the device had turned off before it lands.

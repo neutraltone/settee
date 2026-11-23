@@ -13,6 +13,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
+import app.opentv.recording.RecordingFixture.Companion.HOUR
 import com.google.common.truth.Truth.assertThat
 import java.io.File
 import kotlinx.coroutines.flow.first
@@ -76,9 +77,5 @@ class MissedRecordingServiceTest {
         ).isEqualTo(app.getString(R.string.rec_error_missed_late))
         assertThat(row.startedAtMillis).isEqualTo(0)
         assertThat(file.exists()).isFalse()
-    }
-
-    private companion object {
-        const val HOUR = 3_600_000L
     }
 }
