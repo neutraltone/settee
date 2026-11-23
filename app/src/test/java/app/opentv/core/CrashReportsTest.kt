@@ -394,6 +394,30 @@ class CrashReportsTest {
         assertThat(event).contains("CrashReportsTest")
     }
 
+    @Test
+    fun `a handled error while reports are off is neither sent nor held to ask about`() {
+        crashReports()
+
+        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+
+        assertThat(sentEvents()).isEmpty()
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
+    @Test
+    fun `a handled error while a held crash is being sent with reports off isn't sent with it`() {
+        crashReports()
+        crash(IllegalStateException("Settee broke"))
+        val next = nextLaunch()
+        next.answer(CrashReports.Answer.SEND)
+
+        next.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(sentEvents().single()).doesNotContain("XTREAM_PARSE")
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
     private fun subsetsOf(fields: Set<String>): List<Set<String>> =
         fields.fold(listOf(emptySet())) { subsets, field -> subsets + subsets.map { it + field } }
 

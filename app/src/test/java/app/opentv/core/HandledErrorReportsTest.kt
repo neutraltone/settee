@@ -72,6 +72,8 @@ class HandledErrorReportsTest {
     @After
     fun tearDown() {
         reports.setOn(false)
+        // Takes out the crash handler and freeze watch start() put in, as the process ending would.
+        reports.close()
         app.deleteDatabase(OpenTvDatabase.FILE_NAME)
     }
 

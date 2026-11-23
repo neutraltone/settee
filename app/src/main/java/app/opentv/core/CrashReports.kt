@@ -46,7 +46,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * leave the device. Null, as in the app, sends them to Sentry. [freezes] and [background] are the
  * same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
-@Suppress("LongParameterList") // outbox, freezes and background are only passed by tests.
+// The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place.
+@Suppress("LongParameterList", "TooManyFunctions") // outbox, freezes and background are only passed by tests.
 class CrashReports(
     private val settings: AppSettings,
     private val dsn: String,
@@ -295,6 +296,9 @@ class CrashReports(
 
         options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
             // Checked again here: a crash can land between turning reports off and Sentry closing.
+            // While off, the held crash being sent is the only event let through: a handled error
+            // (HANDLED_HINT) or anything else is dropped, never held, since only the crash handler
+            // and the freeze watch hold.
             if (!on.value && event.eventId != sendingHeld) {
                 null
             } else {
@@ -314,6 +318,11 @@ class CrashReports(
 
         /** Causes copied into a [HandledError]: enough for any real chain, and an end to a looping one. */
         const val MAX_CAUSES = 8
+
+        const val HELD_FILE = "crash-reports/held.json"
+        const val MOST_REFUSALS = 2
+        const val FREEZE_MILLIS = 5_000L
+        const val FLUSH_MILLIS = 15_000L
     }
 
     /** Sentry's transport, swapped for one that hands each envelope to an [Outbox]. */
@@ -340,12 +349,5 @@ class CrashReports(
         override fun close(isRestarting: Boolean) = Unit
 
         override fun close() = Unit
-    }
-
-    private companion object {
-        const val HELD_FILE = "crash-reports/held.json"
-        const val MOST_REFUSALS = 2
-        const val FREEZE_MILLIS = 5_000L
-        const val FLUSH_MILLIS = 15_000L
     }
 }
