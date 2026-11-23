@@ -61,7 +61,7 @@ test failed and stops a test run that has frozen:
 
 ```bash
 tools/check/check.py test M3uParserTest   # one or more test classes
-tools/check/check.py quick                # ktlintFormat and detekt, after each change
+tools/check/check.py quick                # ktlintFormat, detekt and detektTestWaits, after each change
 ```
 
 `./gradlew test` runs every test, as CI does. It takes a while, and CI runs it on every PR anyway.
@@ -107,7 +107,7 @@ the Gradle ones are slow; it's fine to push and let CI run them:
 |---|---|---|
 | Test and assemble | Failing unit tests, a broken build, Room schema changes that weren't committed | `./gradlew test assembleDebug` |
 | ktlint | Formatting | `./gradlew ktlintCheck` (`ktlintFormat` fixes most of it) |
-| detekt | Kotlin and Compose code smells | `./gradlew detekt` |
+| detekt | Kotlin and Compose code smells, and a test that waits a set time instead of through `TestGraph` (ADR 0008) | `./gradlew detekt detektTestWaits` |
 | Android Lint | Android API misuse, resource problems | `./gradlew lintDebug` |
 | gitleaks | Provider URLs with credentials, MAC addresses, API keys | [gitleaks](https://github.com/gitleaks/gitleaks): `gitleaks git . --config .gitleaks.toml` |
 | PR title | The title convention above | `tools/check-message.sh "<title>"` |

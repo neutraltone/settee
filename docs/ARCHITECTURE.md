@@ -519,7 +519,11 @@ of two devices), `http`, `clock`, `decoders`, `statements` (hears every SQL stat
 - **A view model's state:** `testGraph.firstWhenIdle(vm.state) { pred }`. Keep a
   `testGraph.launch { vm.state.collect {} }` first when the flow has to stay drawn across a clock
   move (`WhileSubscribed`, a debounce on `viewModelScope`). A test that calls a view model's suspending
-  functions in turn runs them in `testGraph.runOnMain { }`; repository-only tests use `runBlocking`.
+  functions in turn runs them in `testGraph.runOnMain { }`.
+- **Repository tests** (Room, no view model or screen) run in real time, `= testing { }`, or in
+  virtual time with `TestGraph(virtualTime = true)`, its `database` (Room on the test dispatcher)
+  and `testGraph.runTest { }`. Never `runTest` over a database on Room's own threads: its virtual
+  clock skips ahead while a read is still out on one.
 - **Clocks:** `testGraph.advanceBy(ms)` moves the main looper's clock between two settles (delays on
   `viewModelScope`). Compose's own delays (`LaunchedEffect`, `produceState`) move with
   `compose.mainClock.advanceTimeBy(ms)`; `waitForIdle` doesn't skip them. The graph's own timers
@@ -527,7 +531,8 @@ of two devices), `http`, `clock`, `decoders`, `statements` (hears every SQL stat
   work resting, and don't hold a settle.
 - **Loading states:** `testGraph.hold()` holds reads of the catalogue's rows (movies, series,
   episodes, channels) until `release()`; held reads don't count as busy, so the screen can be checked
-  showing its skeleton. A test's own wait on a graph thread (a fake server holding a request) parks
+  showing its skeleton. A read still held after ten seconds carries on and fails the test at
+  teardown for the forgotten `release()`. A test's own wait on a graph thread (a fake server holding a request) parks
   on a `TestGraph.Held` instead of a latch, or every settle would wait for it.
 - **Two graphs** (a panel and the app, two sync devices): give each a rule with an explicit `order`,
   lower is outer, and `compose.registerIdlingResource(other)` before showing a screen built on the
@@ -542,8 +547,15 @@ instead. Teardown fails the test, not the next one, when work doesn't stop withi
 
 `detektTestWaits` (run by `tools/check/check.py quick` and the detekt check) fails a test that
 uses `Thread.sleep`, Compose's `waitUntil` family, `ServiceLocator.get` or a manual main-looper idle.
-The few uses that genuinely can't move (ExoPlayer readiness in `TestPlayers`, plain server threads)
-are in `app/detekt-baseline.xml`; a new test gets no entry there.
+The few uses that genuinely can't move (ExoPlayer readiness in `TestPlayers`, `ManagerServerTest`'s
+paced request and its "nothing is saved meanwhile" window, `TestGraph`'s internals; ADR 0008 says
+why) are in `app/detekt-baseline.xml`; a new test gets no entry there.
+
+Production code reached through the graph takes its `AppDispatchers` (a class's `dispatchers`
+parameter, defaulting to `Dispatchers.IO` and `Default`), never the shared dispatchers by name, or
+a settle can't see its work. A server's plain threads aren't counted: a test that sends it a request
+does so on one of the graph's threads (`ProviderRoutesTest`), or waits for the server's state to
+say it's arrived (`PairingServerTest`).
 
 Things worth testing that are not yet covered, and would be very welcome contributions:
 

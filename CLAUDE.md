@@ -52,8 +52,10 @@ python3 -m unittest discover -s tools/launcher-art  # every copy of the mark mat
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
 instrumented tests. A UI or view-model test sets up through `TestGraph` (`@get:Rule val testGraph = TestGraph(compose)`), which
 counts the graph's background work so a test settles and then checks, and never waits a set time (ADR 0008; how-to in
-`docs/ARCHITECTURE.md` › Testing). `detektTestWaits` fails a test that uses `Thread.sleep`, `waitUntil`, `ServiceLocator.get` or
-a manual looper idle.
+`docs/ARCHITECTURE.md` › Testing). A repository test over Room runs in real time (`testing { }`), or in virtual time only with
+Room on the same dispatcher (`TestGraph(virtualTime = true)`), never `runTest` over a real database. `detektTestWaits` fails a
+test that uses `Thread.sleep`, `waitUntil`, `ServiceLocator.get` or a manual looper idle. Production code a test reaches through the
+graph takes its `AppDispatchers` (a class's `dispatchers` parameter), not `Dispatchers.IO`/`Default` by name.
 
 **CI runs the full checks, not your machine.** The developer's Mac is shared by several agent sessions'
 Gradle builds, and a full local run of the suite, ktlint, detekt and lint can swap it for hours. Locally,
