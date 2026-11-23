@@ -775,7 +775,10 @@ data class Recording(
     val seriesRuleId: Long? = null,
     /** The viewing profile this recording is for (null = unassigned / everyone). */
     val profileId: Long? = null,
-    /** Human-readable reason when [status] is FAILED. */
+    /**
+     * Why it stopped by itself, as [app.opentv.core.ViewerError.stored] wrote it: set on a FAILED one,
+     * and on a COMPLETED one that was cut short (#473). A plain line of text on older rows.
+     */
     val error: String? = null,
 ) {
     /** Best available length: actual if finished, else the planned window. */

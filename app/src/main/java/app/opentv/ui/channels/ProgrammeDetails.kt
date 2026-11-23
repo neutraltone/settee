@@ -301,7 +301,7 @@ private fun Actions(
 private suspend fun bookedText(graph: ServiceLocator.Graph, resources: Resources, id: Long, title: String): String {
     // In the app's scope, so giving up waiting leaves the check to finish in the background rather
     // than waiting on a read that's blocked on the network.
-    val check = graph.appScope.async { graph.bookingRoom.shortOfRoom(graph.recordingRepository.all())[id] }
+    val check = graph.appScope.async { graph.bookingSpace.roomFor(id) }
     val room = withTimeoutOrNull(ROOM_CHECK_MILLIS) { check.await() }
     return if (room == null) {
         resources.getString(R.string.rec_scheduled_title, title)

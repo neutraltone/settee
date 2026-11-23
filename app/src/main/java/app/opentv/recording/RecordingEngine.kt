@@ -43,8 +43,8 @@ class RecordingEngine(
     private val wording: ErrorWording,
     /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
     private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
-    /** Opens a recording's file for its capture: [RecordingStorage.openSink]. */
-    private val openFile: (String) -> RecordingStorage.Sink = { RecordingStorage.openSink(appContext, settings, it) },
+    /** Opens a recording's file for its capture, in place of [RecordingStorage.openSink]. */
+    private val openFile: ((String) -> RecordingStorage.Sink)? = null,
     /** Wall-clock time, so a test can fix it; the graph's own clock everywhere else. */
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -114,7 +114,9 @@ class RecordingEngine(
      * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
      */
     suspend fun openSink(recording: Recording): RecordingStorage.Sink {
-        val sink = withContext(Dispatchers.IO) { openFile(recording.filePath) }
+        val sink = withContext(Dispatchers.IO) {
+            openFile?.invoke(recording.filePath) ?: RecordingStorage.openSink(appContext, settings, recording.filePath)
+        }
         sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
         return sink
     }

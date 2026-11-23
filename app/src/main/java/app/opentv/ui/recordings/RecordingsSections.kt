@@ -43,7 +43,7 @@ sealed interface RecordingsRow {
 /**
  * What the Recordings screen lists, under its headings. Headings with nothing under them are left
  * out, so the first section's first row is where the Highlight starts. [shortOfRoom] is how many
- * minutes of room each booking that may not fit has: `RecordingRoom.shortOfRoom`.
+ * minutes of room each booking that may not fit has: `RoomEstimate.shortOfRoom`.
  */
 fun recordingsSections(
     recordings: List<Recording>,

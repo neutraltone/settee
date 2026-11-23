@@ -7,6 +7,11 @@ package app.opentv.recording
 
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
+import app.opentv.data.parser.ChannelNameNormalizer.RANK_4K
+import app.opentv.data.parser.ChannelNameNormalizer.RANK_8K
+import app.opentv.data.parser.ChannelNameNormalizer.RANK_FHD
+import app.opentv.data.parser.ChannelNameNormalizer.RANK_HD
+import app.opentv.data.parser.ChannelNameNormalizer.RANK_SD
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
@@ -15,7 +20,7 @@ import org.junit.Test
  * Which bookings may not fit in the room their storage has left, and how long there's room for (#473).
  * Sizes are worked out by hand from each test's figures.
  */
-class RecordingRoomTest {
+class RoomEstimateTest {
 
     @Test
     fun `a booking that may not fit has room worked out at its channel's own rate`() {
@@ -30,9 +35,9 @@ class RecordingRoomTest {
                     600 * MB,
                 ),
             )
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             past + booking(id = 1, channel = 7, minutes = 120),
-            qualities = mapOf(7L to HD),
+            qualities = mapOf(7L to RANK_HD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to GB),
         )
@@ -48,9 +53,9 @@ class RecordingRoomTest {
             recorded(channel = 7, minutes = 60, bytes = 1_200 * MB, endedAt = NOW - it * DAY)
         }
         val longBefore = recorded(channel = 7, minutes = 60, bytes = 6_000 * MB, endedAt = NOW - 30 * DAY)
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             lastFive + longBefore + booking(id = 1, channel = 7, minutes = 120),
-            qualities = mapOf(7L to HD),
+            qualities = mapOf(7L to RANK_HD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to GB),
         )
@@ -71,9 +76,9 @@ class RecordingRoomTest {
                     3_000 * MB,
                 ),
             )
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             past + booking(id = 1, channel = 7, minutes = 120),
-            qualities = mapOf(7L to HD, 8L to HD, 9L to FHD),
+            qualities = mapOf(7L to RANK_HD, 8L to RANK_HD, 9L to RANK_FHD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to GB),
         )
@@ -86,10 +91,10 @@ class RecordingRoomTest {
         // 1 GB is an hour of SD at 1 GB an hour; 24 minutes of HD or unknown at 2.5 GB; 17 of FHD at
         // 3.5 GB; 7 of 4K or 8K at 8 GB. A channel gone from the catalogue is of unknown quality.
         val minutesByQuality =
-            mapOf(SD to 60L, HD to 24L, 0 to 24L, FHD to 17L, UHD_4K to 7L, UHD_8K to 7L, null to 24L)
+            mapOf(RANK_SD to 60L, RANK_HD to 24L, 0 to 24L, RANK_FHD to 17L, RANK_4K to 7L, RANK_8K to 7L, null to 24L)
 
         for ((quality, minutes) in minutesByQuality) {
-            val room = RecordingRoom(
+            val room = RoomEstimate(
                 listOf(booking(id = 1, channel = 7, minutes = 600)),
                 qualities = if (quality == null) emptyMap() else mapOf(7L to quality),
                 nowMillis = NOW,
@@ -105,9 +110,9 @@ class RecordingRoomTest {
         // HD at 2.5 GB an hour: half an hour left of the running one takes 1.25 GB of the 3 GB, leaving
         // room for 42 minutes. With an end that isn't known, Record now's takes nothing.
         val running = listOf(running(channel = 8, minutesLeft = 30), running(channel = 9, minutesLeft = null))
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             running + booking(id = 1, channel = 7, minutes = 60),
-            qualities = mapOf(7L to HD, 8L to HD, 9L to HD),
+            qualities = mapOf(7L to RANK_HD, 8L to RANK_HD, 9L to RANK_HD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to 3 * GB),
         )
@@ -125,9 +130,9 @@ class RecordingRoomTest {
             booking(id = 3, channel = 7, minutes = 600, startsIn = 0, filePath = "smb://nas/tv/Recordings/a.ts"),
             booking(id = 4, channel = 7, minutes = 60, startsIn = 2 * HOUR, filePath = "smb://nas/tv/Recordings/b.ts"),
         )
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             bookings,
-            qualities = mapOf(7L to HD),
+            qualities = mapOf(7L to RANK_HD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to 3 * GB, RecordingStore.Nas("nas", "tv") to 100 * GB),
         )
@@ -138,12 +143,12 @@ class RecordingRoomTest {
     @Test
     fun `a booking on storage whose free space couldn't be read is never said not to fit`() {
         // Only this device's is known, and it's nearly full; the USB drive's and the NAS's aren't.
-        val room = RecordingRoom(
+        val room = RoomEstimate(
             listOf(
                 booking(id = 1, channel = 7, minutes = 600, filePath = "usb://a.ts"),
                 booking(id = 2, channel = 7, minutes = 600, filePath = "smb://nas/tv/Recordings/b.ts"),
             ),
-            qualities = mapOf(7L to HD),
+            qualities = mapOf(7L to RANK_HD),
             nowMillis = NOW,
             free = mapOf(RecordingStore.Device to MB),
         )
@@ -208,10 +213,5 @@ class RecordingRoomTest {
         const val DAY = 24 * HOUR
         const val MB = 1_000_000L
         const val GB = 1_000 * MB
-        const val SD = 100
-        const val HD = 200
-        const val FHD = 300
-        const val UHD_4K = 400
-        const val UHD_8K = 500
     }
 }

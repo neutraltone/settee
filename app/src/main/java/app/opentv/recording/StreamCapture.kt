@@ -12,6 +12,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -96,6 +97,8 @@ class StreamCapture(
                 delay(reconnectAfterMillis)
             }
         }
+        // A stop by hand isn't the stream stopping: it has no outcome, whatever the last leg got.
+        coroutineContext.ensureActive()
         // Its end coming with nothing written is a stream that stopped too: why nothing came is the reason.
         val stopped = deadReconnects >= MAX_DEAD_RECONNECTS || bytes == 0L
         return Outcome(bytes, if (stopped) refused ?: Ending.StreamStopped else Ending.Finished)

@@ -116,6 +116,7 @@
     <string name="rec_error_full_usb">Your USB drive ran out of room. Delete some recordings to make space.</string>
     <string name="rec_error_full_nas">Your NAS ran out of room. Delete some recordings or other files on it to make space.</string>
     <string name="rec_error_nas_unreachable">Couldn\'t reach your NAS. Check it\'s on and connected to your network.</string>
+    <string name="rec_error_stopped_early">This was stopped before anything was recorded.</string>
     <string name="rec_error_channel_stopped">The channel stopped sending video, which is usually at your provider\'s end. Check it plays in Live TV.</string>
     <string name="rec_delete_failed_nas">Couldn\'t delete this from your NAS. Check it\'s on, then try deleting it again.</string>
     <string name="rec_delete_failed">Couldn\'t delete this recording. Try deleting it again.</string>

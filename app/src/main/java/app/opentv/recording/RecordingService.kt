@@ -135,8 +135,8 @@ class RecordingService : Service() {
                     id = id,
                     atMillis = System.currentTimeMillis(),
                     bytes = total,
-                    // Only a stop by hand before anything came has no reason of its own.
-                    error = error ?: channelStopped().takeIf { total == 0L }?.stored(),
+                    // Only a stop by hand has no reason of its own: none is needed once something came.
+                    error = error ?: stoppedEarly().takeIf { total == 0L }?.stored(),
                 )
             }
             finish(id)
@@ -150,16 +150,17 @@ class RecordingService : Service() {
     private fun reasonFor(ending: StreamCapture.Ending, locator: String, wording: ErrorWording): ViewerError? =
         when (ending) {
             StreamCapture.Ending.Finished -> null
-            StreamCapture.Ending.StorageFull -> when {
-                SmbClient.isSmb(locator) -> wording.of(R.string.rec_error_full_nas, STORAGE_FULL)
-                locator.isUsb -> wording.of(R.string.rec_error_full_usb, STORAGE_FULL)
-                else -> wording.ofHardware(R.string.rec_error_full_tv, R.string.rec_error_full_device, STORAGE_FULL)
+            StreamCapture.Ending.StorageFull -> when (RecordingStore.of(locator)) {
+                is RecordingStore.Nas -> wording.of(R.string.rec_error_full_nas, STORAGE_FULL)
+                RecordingStore.Usb -> wording.of(R.string.rec_error_full_usb, STORAGE_FULL)
+                RecordingStore.Device ->
+                    wording.ofHardware(R.string.rec_error_full_tv, R.string.rec_error_full_device, STORAGE_FULL)
             }
-            is StreamCapture.Ending.StorageLost -> when {
-                SmbClient.isSmb(locator) -> wording.of(R.string.rec_error_nas_unreachable, "NasUnreachable")
-                locator.isUsb -> wording.of(R.string.rec_error_usb_unavailable, "StorageUnavailable")
+            is StreamCapture.Ending.StorageLost -> when (RecordingStore.of(locator)) {
+                is RecordingStore.Nas -> wording.of(R.string.rec_error_nas_unreachable, "NasUnreachable")
+                RecordingStore.Usb -> wording.of(R.string.rec_error_usb_unavailable, "StorageUnavailable")
                 // This device's own storage failing for anything but room says nothing a viewer can act on.
-                else -> wording.of(ending.cause, R.string.rec_error_failed)
+                RecordingStore.Device -> wording.of(ending.cause, R.string.rec_error_failed)
             }
             // As playback words a refusal, so a recording and the channel it's of say the same thing.
             is StreamCapture.Ending.Refused ->
@@ -170,7 +171,7 @@ class RecordingService : Service() {
 
     private fun channelStopped() = ViewerError(getString(R.string.rec_error_channel_stopped), "ChannelStopped")
 
-    private val String.isUsb get() = RecordingStorage.isContent(this) || RecordingStorage.isUsbPlaceholder(this)
+    private fun stoppedEarly() = ViewerError(getString(R.string.rec_error_stopped_early), "Stopped")
 
     private fun stopCapture(id: Long) {
         val capture = captures[id] ?: return

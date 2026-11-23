@@ -48,7 +48,7 @@ import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
-import app.opentv.recording.BookingRoom
+import app.opentv.recording.BookingSpace
 import app.opentv.recording.FreeSpace
 import app.opentv.recording.RecordingEngine
 import app.opentv.recording.RecordingStorage
@@ -390,8 +390,8 @@ object ServiceLocator {
         }
 
         /** Which bookings may not fit in what their storage has left (#473). */
-        val bookingRoom: BookingRoom by lazy {
-            BookingRoom(database.channels(), FreeSpace(appContext, settings)::of, clock)
+        val bookingSpace: BookingSpace by lazy {
+            BookingSpace(recordingRepository, database.channels(), FreeSpace(appContext, settings)::of, clock)
         }
 
         val recordingEngine: RecordingEngine by lazy {
@@ -403,7 +403,7 @@ object ServiceLocator {
                 epgRepository,
                 channelLineup,
                 errorWording,
-                openFile = openRecordingFile ?: { RecordingStorage.openSink(appContext, settings, it) },
+                openFile = openRecordingFile,
                 clock = clock,
             )
         }

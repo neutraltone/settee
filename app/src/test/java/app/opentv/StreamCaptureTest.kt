@@ -14,8 +14,10 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
+import app.opentv.recording.FullAfter
 import app.opentv.recording.StreamCapture
 import app.opentv.recording.StreamCapture.Ending
+import app.opentv.recording.answer
 import com.google.common.truth.Truth.assertThat
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -166,14 +168,6 @@ class StreamCaptureTest {
 
     private fun ok(request: Request, body: ResponseBody) = answer(request, 200, body)
 
-    private fun answer(request: Request, code: Int, body: ResponseBody) = Response.Builder()
-        .request(request)
-        .protocol(Protocol.HTTP_1_1)
-        .code(code)
-        .message("Status $code")
-        .body(body)
-        .build()
-
     /** A body that sends [text] and then breaks, as a reset connection or a cut chunked body does. */
     private class BreaksAfter(private val text: String) : ResponseBody() {
         override fun contentType() = "video/mp2t".toMediaType()
@@ -201,18 +195,6 @@ class StreamCaptureTest {
         override fun write(b: Int) = throw error
 
         override fun write(b: ByteArray, off: Int, len: Int) = throw error
-    }
-
-    /** Storage with room for [capacity] bytes, failing a write past that as Android's own files do. */
-    private class FullAfter(private val capacity: Int) : OutputStream() {
-        private var written = 0
-
-        override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
-
-        override fun write(b: ByteArray, off: Int, len: Int) {
-            if (written + len > capacity) throw IOException("write failed: ENOSPC (No space left on device)")
-            written += len
-        }
     }
 
     private suspend fun stalkerRecording(): Long {

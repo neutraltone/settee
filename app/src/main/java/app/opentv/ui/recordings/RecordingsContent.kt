@@ -323,19 +323,12 @@ private fun RecordingsRowItem(
                 if (row.inProgress) RecordingNow(highlighted, text)
                 Text(row.line(profileNames), SetteeType.Body, color = quiet, maxLines = 2)
                 row.reason()?.let { Reason(it, text, quiet) }
-                if (row is RecordingsRow.Booking) {
-                    val warning = if (highlighted) SetteeColors.OnAccent else SetteeColors.Accent
-                    if (row.clashes) {
-                        Text(
-                            stringResource(R.string.rec_clashes),
-                            SetteeType.Body,
-                            color = warning,
-                            maxLines = 1,
-                        )
-                    }
-                    row.roomLeftMinutes?.let {
-                        Text(mayNotFit(LocalResources.current, it), SetteeType.Body, color = warning, maxLines = 1)
-                    }
+                // In the row's quiet colour, not coral: coral marks only what the remote can press.
+                if (row is RecordingsRow.Booking && row.clashes) {
+                    Text(stringResource(R.string.rec_clashes), SetteeType.Body, color = quiet, maxLines = 1)
+                }
+                (row as? RecordingsRow.Booking)?.roomLeftMinutes?.let {
+                    Text(mayNotFit(LocalResources.current, it), SetteeType.Body, color = quiet, maxLines = 1)
                 }
             }
         }

@@ -15,7 +15,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import com.google.common.truth.Truth.assertThat
-import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -23,12 +22,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -53,7 +49,7 @@ class RecordingEndingTest {
 
     /** How the provider answers each leg, numbered from 1. */
     @Volatile
-    private var answer: (leg: Int, Request) -> Response = { _, request -> video(request, "abc") }
+    private var reply: (leg: Int, Request) -> Response = { _, request -> video(request, "abc") }
 
     @Volatile
     private var legs = 0
@@ -63,7 +59,7 @@ class RecordingEndingTest {
     private var storage: OutputStream = OutputStream.nullOutputStream()
 
     private val provider = OkHttpClient.Builder().addInterceptor { chain ->
-        answer(++legs, chain.request())
+        reply(++legs, chain.request())
     }.build()
 
     private val graph = ServiceLocator.Graph(
@@ -116,7 +112,7 @@ class RecordingEndingTest {
 
     @Test
     fun `a provider refusing every request fails the recording with its refusal`() = runBlocking {
-        answer = { _, request -> refusal(request, 403) }
+        reply = { _, request -> answer(request, 403) }
 
         val row = record()
 
@@ -126,7 +122,7 @@ class RecordingEndingTest {
 
     @Test
     fun `a refusal after some video keeps the recording, with the refusal's sentence`() = runBlocking {
-        answer = { leg, request -> if (leg == 1) video(request, "abc") else refusal(request, 403) }
+        reply = { leg, request -> if (leg == 1) video(request, "abc") else answer(request, 403) }
 
         val row = record()
 
@@ -136,7 +132,7 @@ class RecordingEndingTest {
 
     @Test
     fun `the stream going quiet after some video keeps the recording, saying the channel stopped`() = runBlocking {
-        answer = { leg, request -> video(request, if (leg == 1) "abc" else "") }
+        reply = { leg, request -> video(request, if (leg == 1) "abc" else "") }
 
         val row = record()
 
@@ -149,7 +145,7 @@ class RecordingEndingTest {
     @Test
     fun `a recording stopped by hand is kept with no reason`() = runBlocking {
         val delivered = CountDownLatch(1)
-        answer = { _, request -> video(request, "abc").also { delivered.countDown() } }
+        reply = { _, request -> video(request, "abc").also { delivered.countDown() } }
         val id = start(endMillis = 0)
         assertThat(delivered.await(10, TimeUnit.SECONDS)).isTrue()
 
@@ -159,6 +155,28 @@ class RecordingEndingTest {
 
         assertThat(row.status).isEqualTo(RecordingStatus.COMPLETED)
         assertThat(row.error).isNull()
+    }
+
+    @Test
+    fun `a recording stopped by hand before any video came fails, saying it was stopped`() = runBlocking {
+        val asked = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        // The provider answers only once the stop has gone in, with nothing.
+        reply = { _, request ->
+            asked.countDown()
+            stopped.await(10, TimeUnit.SECONDS)
+            video(request, "")
+        }
+        val id = start(endMillis = 0)
+        assertThat(asked.await(10, TimeUnit.SECONDS)).isTrue()
+
+        RecordingService.stop(app, id)
+        service!!.withIntent(shadowOf(app).nextStartedService).startCommand(0, 2)
+        stopped.countDown()
+        val row = finished(id)
+
+        assertThat(row.status).isEqualTo(RecordingStatus.FAILED)
+        assertThat(row.reason).isEqualTo(ViewerError(app.getString(R.string.rec_error_stopped_early), "Stopped"))
     }
 
     /** Records a programme that's on now until its capture stops by itself, and gives its row then. */
@@ -199,34 +217,6 @@ class RecordingEndingTest {
     }
 
     private val Recording.reason get() = error?.let { ViewerError.fromStored(it) }
-
-    private fun video(request: Request, body: String) = Response.Builder()
-        .request(request)
-        .protocol(Protocol.HTTP_1_1)
-        .code(200)
-        .message("OK")
-        .body(body.toResponseBody("video/mp2t".toMediaType()))
-        .build()
-
-    private fun refusal(request: Request, code: Int) = Response.Builder()
-        .request(request)
-        .protocol(Protocol.HTTP_1_1)
-        .code(code)
-        .message("Refused")
-        .body("".toResponseBody())
-        .build()
-
-    /** Storage with room for [capacity] bytes, failing a write past that as Android's own files do. */
-    private class FullAfter(private val capacity: Int) : OutputStream() {
-        private var written = 0
-
-        override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
-
-        override fun write(b: ByteArray, off: Int, len: Int) {
-            if (written + len > capacity) throw IOException("write failed: ENOSPC (No space left on device)")
-            written += len
-        }
-    }
 
     private companion object {
         const val HOUR = 3_600_000L
