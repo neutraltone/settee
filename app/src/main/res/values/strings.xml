@@ -192,6 +192,11 @@
     <string name="settings_pane_privacy_hint">What this device may send when Settee goes wrong, and only if you say so</string>
     <string name="settings_privacy_crash_reports">Send crash reports</string>
     <string name="settings_privacy_crash_reports_note">When Settee crashes or freezes, a report says which version, which device and screen, and where in Settee\'s code it broke. Never your provider, its login, your profiles or what you watch.</string>
+    <string name="crash_question_title">Send a crash report?</string>
+    <string name="crash_question_body">Settee crashed or froze last time. A report says which version, which device and screen, and where in Settee\'s code it broke. Never your provider, its login, your profiles or what you watch.</string>
+    <string name="crash_question_send">Send</string>
+    <string name="crash_question_dont_send">Don\'t send</string>
+    <string name="crash_question_always_send">Always send</string>
     <string name="settings_pane_about">About</string>
     <string name="settings_pane_about_hint">Settee\'s version, updates and licences</string>
     <string name="settings_row_on">On</string>

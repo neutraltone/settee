@@ -629,6 +629,18 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     fun makeCrashReportsInstallId(): String = crashReportsInstallId
         ?: java.util.UUID.randomUUID().toString().also { prefs.edit { putString(KEY_CRASH_INSTALL_ID, it) } }
 
+    /**
+     * How many times the viewer has answered Don't send to the question after a crash. At two it
+     * isn't asked again; Settings › Privacy can still turn reports on. The device's own, like
+     * [crashReportsOn].
+     */
+    val crashReportsRefusals: Int
+        get() = prefs.getInt(KEY_CRASH_REFUSALS, 0)
+
+    fun addCrashReportsRefusal() {
+        prefs.edit { putInt(KEY_CRASH_REFUSALS, crashReportsRefusals + 1) }
+    }
+
     // ---- Stremio add-ons ---------------------------------------------------------------------
 
     /**
@@ -716,6 +728,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
         private const val KEY_CRASH_REPORTS = "crash_reports_on"
         private const val KEY_CRASH_INSTALL_ID = "crash_reports_install_id"
+        private const val KEY_CRASH_REFUSALS = "crash_reports_refusals"
         private const val KEY_PAD_START = "rec_pad_start_min"
         private const val KEY_PAD_END = "rec_pad_end_min"
         private const val KEY_REC_AUTOSWITCH = "rec_auto_switch"

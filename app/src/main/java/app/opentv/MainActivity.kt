@@ -48,6 +48,7 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.CrashQuestion
 import app.opentv.ui.DatabaseGate
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
@@ -326,6 +327,10 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
+    // Before anything can return early, so it shows over whichever screen opens first, Who's watching?
+    // and Setup included. What's new waits for it to be answered.
+    CrashQuestion(crashReports)
+    val askingAboutCrash by crashReports.askAboutHeld.collectAsState()
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
@@ -560,7 +565,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 val routeName = route?.destination?.route
                 var whatsNewSettled by remember { mutableStateOf(false) }
                 WhatsNewGate(
-                    canShow = launchPromptMayShow(routeName),
+                    canShow = launchPromptMayShow(routeName) && !askingAboutCrash,
                     onSettled = { whatsNewSettled = true },
                 )
                 UpdateGate(canShow = launchPromptMayShow(routeName, afterWhatsNew = whatsNewSettled))

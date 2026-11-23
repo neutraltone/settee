@@ -21,7 +21,11 @@ import io.sentry.transport.RateLimiter
 import io.sentry.util.HintUtils
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Crash Reports (ADR 0009): crashes and freezes sent to Sentry, only from a build with Settee's
@@ -33,19 +37,50 @@ import kotlinx.coroutines.flow.StateFlow
  * manifest), so nothing of it runs before the DSN and the viewer's choice have been checked. A
  * build without a DSN, or a device that hasn't said yes, costs one setting read at launch.
  *
+ * While they're off, a crash or freeze is held on the device instead ([HeldCrash]), and the next
+ * launch asks the viewer whether to send it ([askAboutHeld], [answer]). Holding needs neither Sentry
+ * nor anything at launch but an uncaught-exception handler, a sleeping [FreezeWatch] thread and a
+ * check for the held file.
+ *
  * [outbox] replaces Sentry's own transport, so a test can see each envelope exactly as it would
- * leave the device. Null, as in the app, sends them to Sentry.
+ * leave the device. Null, as in the app, sends them to Sentry. [freezes] and [background] are the
+ * same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
+@Suppress("LongParameterList") // outbox, freezes and background are only passed by tests.
 class CrashReports(
     private val settings: AppSettings,
     private val dsn: String,
     private val release: String,
     private val environment: String,
     private val outbox: Outbox? = null,
+    private val freezes: Freezes = Freezes(),
+    private val background: Executor = Executors.newSingleThreadExecutor(),
 ) {
     /** Where envelopes go instead of Sentry: each one serialized, as it would be sent. */
     fun interface Outbox {
         fun send(envelope: String)
+    }
+
+    /**
+     * What counts as a freeze while reports are off: the main thread stuck for [afterMillis] (as
+     * Sentry's own default) and Android agreeing it's [notResponding]. [held] runs once one is held.
+     */
+    class Freezes(
+        val afterMillis: Long = FREEZE_MILLIS,
+        val notResponding: (Context) -> Boolean = FreezeWatch::androidSaysNotResponding,
+        val held: () -> Unit = {},
+    )
+
+    /** The viewer's answers to the question after a crash. */
+    enum class Answer {
+        /** Send this one report; reports stay off. */
+        SEND,
+
+        /** Throw it away. After two, the question isn't asked again. */
+        DONT_SEND,
+
+        /** Send it, and turn reports on. */
+        ALWAYS_SEND,
     }
 
     /** Whether this build can send Crash Reports at all. Without, nothing offers them. */
@@ -62,10 +97,61 @@ class CrashReports(
 
     private var started = false
 
-    /** Called once, from `OpenTvApp.onCreate`: starts Sentry if the build and the viewer allow it. */
+    private val _askAboutHeld = MutableStateFlow(false)
+
+    /**
+     * Whether to ask, on this launch, about a crash or freeze held while reports were off. Never in a
+     * build without a DSN, never once reports are on, and never after two Don't sends.
+     */
+    val askAboutHeld: StateFlow<Boolean> = _askAboutHeld.asStateFlow()
+
+    private var held: HeldCrashes? = null
+
+    // The held crash being sent while reports are off: the one event the before-send hook lets through.
+    @Volatile private var sendingHeld: io.sentry.protocol.SentryId? = null
+
+    private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
+
+    /**
+     * Called once, from `OpenTvApp.onCreate`: starts Sentry if the build and the viewer allow it, or
+     * else starts holding crashes and checks for one held last time.
+     */
     fun start(context: Context) {
-        this.context = context.applicationContext
+        val app = context.applicationContext
+        this.context = app
+        held = HeldCrashes(File(app.noBackupFilesDir, HELD_FILE), app, release, freezes) { !on.value && mayHold }
+        // Freezes only while off: while on, Sentry watches for them.
+        if (mayHold) held?.start(watchFreezes = !on.value)
         if (available && on.value) startSentry()
+        _askAboutHeld.value = mayHold && !on.value && held?.any == true
+    }
+
+    /** The viewer's [answer] to [askAboutHeld]: the held report sent, thrown away, or sent with reports on. */
+    fun answer(answer: Answer) {
+        _askAboutHeld.value = false
+        val crash = held?.take() ?: return
+        when (answer) {
+            Answer.SEND -> send(crash)
+            Answer.DONT_SEND -> settings.addCrashReportsRefusal()
+            Answer.ALWAYS_SEND -> {
+                setOn(true)
+                send(crash)
+            }
+        }
+    }
+
+    /** Asked again next launch: Back on the question, which isn't an answer. */
+    fun askLater() {
+        _askAboutHeld.value = false
+    }
+
+    /**
+     * Stops holding and watching, as the process ending does. Only a test needs it, to be the next
+     * launch in the same process.
+     */
+    internal fun close() {
+        stopSentry(throwAwayWaiting = false)
+        held?.stop()
     }
 
     /**
@@ -75,10 +161,14 @@ class CrashReports(
     fun setOn(on: Boolean) {
         if (on) settings.makeCrashReportsInstallId()
         settings.setCrashReportsOn(on)
+        // Nobody said to send what was held: Always send takes it before turning reports on.
+        held?.discard()
+        _askAboutHeld.value = false
         if (on) {
             if (available) startSentry()
         } else {
             stopSentry()
+            if (mayHold) held?.start(watchFreezes = true)
         }
     }
 
@@ -98,10 +188,25 @@ class CrashReports(
         started = true
     }
 
+    // Off the main thread: starting Sentry and waiting for the report to go both take a while.
+    private fun send(crash: HeldCrash) = background.execute {
+        val event = crash.toEvent()
+        sendingHeld = event.eventId
+        startSentry()
+        Sentry.captureEvent(event)
+        if (!on.value) {
+            // Still off: Sentry stops again once it's gone. Kept, if it couldn't go, for the next time
+            // Sentry starts, which is the viewer's say too.
+            Sentry.flush(FLUSH_MILLIS)
+            stopSentry(throwAwayWaiting = false)
+        }
+    }
+
     @Synchronized
-    private fun stopSentry() {
+    private fun stopSentry(throwAwayWaiting: Boolean = true) {
         if (started) Sentry.close()
         started = false
+        if (!throwAwayWaiting) return
         // Envelopes Sentry kept to send later, such as one written as the app crashed offline. Where
         // Sentry keeps them by default when it hasn't started in this process.
         val kept = cacheDir?.let(::File) ?: context?.cacheDir?.resolve("sentry")
@@ -145,7 +250,11 @@ class CrashReports(
 
         options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
             // Checked again here: a crash can land between turning reports off and Sentry closing.
-            if (!on.value) null else CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+            if (!on.value && event.eventId != sendingHeld) {
+                null
+            } else {
+                CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+            }
         }
         options.beforeSendTransaction = SentryOptions.BeforeSendTransactionCallback { _, _ -> null }
         options.beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
@@ -178,5 +287,12 @@ class CrashReports(
         override fun close(isRestarting: Boolean) = Unit
 
         override fun close() = Unit
+    }
+
+    private companion object {
+        const val HELD_FILE = "crash-reports/held.json"
+        const val MOST_REFUSALS = 2
+        const val FREEZE_MILLIS = 5_000L
+        const val FLUSH_MILLIS = 15_000L
     }
 }

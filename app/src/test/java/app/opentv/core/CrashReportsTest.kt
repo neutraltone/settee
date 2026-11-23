@@ -32,11 +32,23 @@ class CrashReportsTest {
     private var before: Thread.UncaughtExceptionHandler? = null
     private lateinit var reports: CrashReports
 
-    private fun crashReports(dsn: String = DSN) =
-        CrashReports(settings, dsn, release = "1.4.0", environment = "test", outbox = outbox).also {
+    private val freezesHeld = java.util.concurrent.CountDownLatch(1)
+
+    // The test's main looper only runs when a test lets it, so to the watch it's always frozen: Android
+    // never agrees it's a freeze unless a test says so.
+    private var freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { false })
+
+    private fun crashReports(dsn: String = DSN, release: String = "1.4.0") =
+        CrashReports(settings, dsn, release, environment = "test", outbox, freezes, background = Runnable::run).also {
             reports = it
             it.start(app)
         }
+
+    /** Settee opening again after [reports]' process ended, as it does after a crash. */
+    private fun nextLaunch(dsn: String = DSN, release: String = "1.4.0"): CrashReports {
+        reports.close()
+        return crashReports(dsn, release)
+    }
 
     /** The app crashing: whatever handler is installed hears of it, as the JVM would tell it. */
     private fun crash(error: Throwable = IllegalStateException("Settee broke")) {
@@ -53,7 +65,10 @@ class CrashReportsTest {
 
     @After
     fun tearDown() {
-        if (::reports.isInitialized) reports.setOn(false)
+        if (::reports.isInitialized) {
+            reports.setOn(false)
+            reports.close()
+        }
         settings.setCrashReportsOn(false)
     }
 
@@ -202,6 +217,181 @@ class CrashReportsTest {
         assertThat(event.lines().count { it.contains("\"type\":") && it.contains("\"length\"") })
             .isEqualTo(1)
         assertThat(event).contains("\"type\":\"event\"")
+    }
+
+    @Test
+    fun `off, a crash is held instead of sent, and the next launch asks about it`() {
+        crashReports()
+
+        crash(IllegalStateException("Settee broke"))
+        assertThat(sentEvents()).isEmpty()
+        assertThat(reports.askAboutHeld.value).isFalse()
+
+        assertThat(nextLaunch().askAboutHeld.value).isTrue()
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `a launch after no crash doesn't ask`() {
+        crashReports()
+
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
+    @Test
+    fun `Send sends the held crash, from the release it happened in, and leaves reports off`() {
+        crashReports(release = "1.4.0")
+        crash(IllegalStateException("Settee broke"))
+
+        nextLaunch(release = "1.5.0").answer(CrashReports.Answer.SEND)
+
+        val event = sentEvents().single()
+        assertThat(event).contains("Settee broke")
+        assertThat(event).contains("IllegalStateException")
+        assertThat(event).contains("\"release\":\"1.4.0\"")
+        assertThat(event).contains("\"handled\":false")
+        assertThat(reports.askAboutHeld.value).isFalse()
+        assertThat(reports.on.value).isFalse()
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+        assertThat(sentEvents()).hasSize(1)
+    }
+
+    @Test
+    fun `after Send, reports are still off, so the next crash is held and asked about again`() {
+        crashReports()
+        crash()
+        nextLaunch().answer(CrashReports.Answer.SEND)
+
+        crash(IllegalStateException("Broke again"))
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(nextLaunch().askAboutHeld.value).isTrue()
+    }
+
+    @Test
+    fun `a held crash leaves the device scrubbed when sent`() {
+        crashReports()
+        crash(IllegalStateException("Xtream http://example.com:8080/live/u/p/1234.ts box 00:1A:79:00:00:01"))
+
+        nextLaunch().answer(CrashReports.Answer.SEND)
+
+        val event = sentEvents().single()
+        assertThat(event).doesNotContain("example.com")
+        assertThat(event).doesNotContain("00:1A:79")
+        assertThat(event).doesNotContain("/u/p/")
+        assertThat(event).contains("Xtream http:///live/*/*/1234.ts box **:**:**:**:**:**")
+    }
+
+    @Test
+    fun `Don't send throws the held crash away and sends nothing`() {
+        crashReports()
+        crash()
+
+        nextLaunch().answer(CrashReports.Answer.DONT_SEND)
+
+        assertThat(reports.askAboutHeld.value).isFalse()
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+        reports.answer(CrashReports.Answer.SEND)
+        assertThat(sentEvents()).isEmpty()
+        assertThat(reports.on.value).isFalse()
+    }
+
+    @Test
+    fun `Always send sends the held crash and turns reports on, so the next crash is sent without asking`() {
+        crashReports()
+        crash(IllegalStateException("Settee broke"))
+
+        nextLaunch().answer(CrashReports.Answer.ALWAYS_SEND)
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(sentEvents().single()).contains("Settee broke")
+        assertThat(reports.on.value).isTrue()
+        assertThat(settings.crashReportsInstallId).isNotNull()
+
+        crash(IllegalStateException("Broke again"))
+        assertThat(sentEvents()).hasSize(2)
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
+    @Test
+    fun `after two Don't sends the question never comes back`() {
+        crashReports()
+        crash()
+        nextLaunch().answer(CrashReports.Answer.DONT_SEND)
+        crash()
+        nextLaunch().answer(CrashReports.Answer.DONT_SEND)
+
+        crash()
+
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+        assertThat(sentEvents()).isEmpty()
+        // Settings can still turn them on.
+        reports.setOn(true)
+        crash()
+        assertThat(sentEvents()).hasSize(1)
+    }
+
+    @Test
+    fun `one Don't send still asks after the next crash`() {
+        crashReports()
+        crash()
+        nextLaunch().answer(CrashReports.Answer.DONT_SEND)
+
+        crash()
+
+        assertThat(nextLaunch().askAboutHeld.value).isTrue()
+    }
+
+    @Test
+    fun `on, a crash is sent and the next launch doesn't ask`() {
+        crashReports().setOn(true)
+
+        crash()
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
+    @Test
+    fun `turning reports off throws away a held crash`() {
+        crashReports()
+        crash()
+        nextLaunch()
+
+        reports.setOn(true)
+        reports.setOn(false)
+
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+        reports.answer(CrashReports.Answer.SEND)
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `a build without a DSN holds nothing and never asks`() {
+        crashReports(dsn = "")
+
+        crash()
+
+        assertThat(nextLaunch(dsn = "").askAboutHeld.value).isFalse()
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `off, a freeze is held, and Send sends it as a freeze with the main thread's stack`() {
+        val notFreezing = freezes
+        // Anything the main thread sits on for 50ms here, and Android agrees it's a freeze.
+        freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { true }, held = freezesHeld::countDown)
+        crashReports()
+
+        // The test thread is the main thread, and its looper only runs when the test lets it: it's frozen.
+        assertThat(freezesHeld.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+        freezes = notFreezing
+        nextLaunch().answer(CrashReports.Answer.SEND)
+
+        val event = sentEvents().single()
+        assertThat(event).contains("ApplicationNotResponding")
+        assertThat(event).contains("\"type\":\"ANR\"")
+        assertThat(event).contains("CrashReportsTest")
     }
 
     private fun subsetsOf(fields: Set<String>): List<Set<String>> =

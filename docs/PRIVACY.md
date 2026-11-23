@@ -45,7 +45,8 @@ timed, after a week. Turn off Settings → Display → Skip intros and credits a
 When Settee crashes or stops responding, it can send a report to Sentry so the bug can be found and
 fixed. Crash reports are **off until you turn them on**: on the last step of setting Settee up, in
 Settings → Privacy, or by answering Send or Always send when Settee asks about a crash the next time
-it opens. Say Don't send twice and it stops asking. Settings → Privacy turns them off again at any
+it opens. Until you answer, that crash is kept only on this device, with any web addresses and
+MAC addresses in it already cut out, and Don't send deletes it. Say Don't send twice and it stops asking. Settings → Privacy turns them off again at any
 time, and turning them off throws away any report still waiting to go. The choice belongs to each
 device: it isn't synced and doesn't depend on who's watching.
 
