@@ -5,9 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -15,57 +12,29 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.movies
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineScheduler
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /** On a real clock, for Room's own threads. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodViewModelCatalogueTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    @get:Rule
+    val testGraph = TestGraph()
 
-    // Lazily, so that it's made on the main dispatcher set below.
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
-    private val watching = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    // Kept, so a test can move on past Search's wait for the viewer to stop typing.
-    private val scheduler = TestCoroutineScheduler()
-
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher(scheduler))
-
-    @After
-    fun close() {
-        watching.cancel()
-        viewModels.clear()
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     private fun movie(id: Long, name: String, category: String? = "c", tmdbId: String? = "8363") = Movie(
         id = id,
@@ -88,13 +57,13 @@ class VodViewModelCatalogueTest {
         val films = Category("c", 1, "Films", StreamKind.MOVIE)
         graph.database.categories().upsertAll(listOf(films))
         graph.database.movies().upsertAll(listOf(movie(1, "One")))
-        watching.launch { viewModel.movieGrid.collect {} }
+        testGraph.launch { viewModel.movieGrid.collect {} }
 
         viewModel.selectMovieCategory(films.browseKey)
-        withTimeout(5_000) { viewModel.movieGrid.first { it?.size == 1 } }
+        testGraph.firstWhenIdle(viewModel.movieGrid) { it?.size == 1 }
 
         viewModel.selectMovieCategory(null)
-        withTimeout(5_000) { viewModel.movieGrid.first { it == null } }
+        testGraph.firstWhenIdle(viewModel.movieGrid) { it == null }
         Unit
     }
 
@@ -117,13 +86,13 @@ class VodViewModelCatalogueTest {
                 ),
             ),
         )
-        watching.launch { viewModel.seriesGrid.collect {} }
+        testGraph.launch { viewModel.seriesGrid.collect {} }
 
         viewModel.selectSeriesCategory(shows.browseKey)
-        withTimeout(5_000) { viewModel.seriesGrid.first { it?.size == 1 } }
+        testGraph.firstWhenIdle(viewModel.seriesGrid) { it?.size == 1 }
 
         viewModel.selectSeriesCategory(null)
-        withTimeout(5_000) { viewModel.seriesGrid.first { it == null } }
+        testGraph.firstWhenIdle(viewModel.seriesGrid) { it == null }
         Unit
     }
 
@@ -150,18 +119,13 @@ class VodViewModelCatalogueTest {
         )
         // Grouped first: the search's clock, moved on below, would otherwise outrun the grouping's wait,
         // and lists show every row until the grouping comes.
-        withTimeout(5_000) { graph.titleIndex.movies.first { it?.of(3) != null } }
-        watching.launch { viewModel.movieResults.collect {} }
+        testGraph.firstWhenIdle(graph.titleIndex.movies) { it?.of(3) != null }
+        testGraph.launch { viewModel.movieResults.collect {} }
 
         viewModel.setVodSearchQuery("Superbad")
-        // The search starts once collected, on another thread: keep moving its clock on till it answers.
-        val found = withTimeout(5_000) {
-            while (viewModel.movieResults.value.isEmpty()) {
-                scheduler.advanceTimeBy(SEARCH_SETTLED_MILLIS)
-                delay(50)
-            }
-            viewModel.movieResults.value
-        }
+        // Past the wait for typing to stop, and then whatever the search sets off.
+        testGraph.advanceBy(SEARCH_SETTLED_MILLIS)
+        val found = viewModel.movieResults.value
 
         assertThat(found.map { it.tmdbId }).containsExactly("8363", "9999")
     }
@@ -175,9 +139,9 @@ class VodViewModelCatalogueTest {
                 movie(3, "EN - Superbad (2007)").copy(addedMillis = 300),
             ),
         )
-        watching.launch { viewModel.recentlyAddedMovies.collect {} }
+        testGraph.launch { viewModel.recentlyAddedMovies.collect {} }
 
-        val recent = withTimeout(5_000) { viewModel.recentlyAddedMovies.filterNotNull().first { it.size == 2 } }
+        val recent = testGraph.firstWhenIdle(viewModel.recentlyAddedMovies.filterNotNull()) { it.size == 2 }
 
         assertThat(recent.map { it.id }).containsExactly(3L, 2L).inOrder()
     }

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
 import java.io.File
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -24,7 +25,7 @@ import okhttp3.Request
  * shows its own install screen; if the user has not yet allowed OpenTV to install unknown
  * apps, Android walks them through that first. We never install silently.
  */
-class ApkInstaller(private val http: OkHttpClient) {
+class ApkInstaller(private val http: OkHttpClient, private val io: CoroutineDispatcher = Dispatchers.IO) {
 
     /** Progress as a 0f..1f fraction, or -1f when the total size is unknown. */
     fun interface Progress {
@@ -42,7 +43,7 @@ class ApkInstaller(private val http: OkHttpClient) {
     }
 
     private suspend fun download(context: Context, url: String, expectedBytes: Long, progress: Progress): File =
-        withContext(Dispatchers.IO) {
+        withContext(io) {
             val dir = File(context.cacheDir, "updates").apply { mkdirs() }
             // A fixed name means each download overwrites the last rather than piling up copies.
             val out = File(dir, "opentv-update.apk")

@@ -5,30 +5,18 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.Opened
 import app.opentv.ui.OpenedShow
+import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,28 +26,18 @@ import org.robolectric.annotation.Config
  * A show's page, opened as the page opens it, asks each Version's panel for `get_series_info` once
  * (#260). On a real clock, for Room's and the panel's own threads.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class ShowPageFetchTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
     private val panel = FakePanel()
-    private val graph = ServiceLocator.Graph(app, http = panel.http)
 
-    // Lazily, so that it's made on the main dispatcher set below.
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
+    @get:Rule
+    val testGraph = TestGraph(http = panel.http)
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     /** A bare show as `get_series` lists it; one TMDB id makes two of them Versions of one title. */
     private fun series(id: Long, name: String) = Series(
@@ -90,7 +68,7 @@ class ShowPageFetchTest {
         panel.replies["get_series_info:1"] = reply("101")
         panel.replies["get_series_info:2"] = reply("201")
         // Otherwise the page's look-up of Versions waits out the index's first grouping in real time.
-        withTimeout(10_000) { graph.titleIndex.series.filterNotNull().first { it.of(2) != null } }
+        testGraph.firstWhenIdle(graph.titleIndex.series.filterNotNull()) { it.of(2) != null }
     }
 
     @Test
@@ -98,7 +76,7 @@ class ShowPageFetchTest {
         runBlocking<Unit> {
             saveTwoVersions()
 
-            val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+            val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
             assertThat(opened.series.genre).isEqualTo("Drama")
             assertThat(timesAsked(1)).isEqualTo(1)
@@ -108,42 +86,46 @@ class ShowPageFetchTest {
         }
 
     @Test
-    fun `a show whose details are in opens, and its other Versions' episodes come, before its own panel answers`() =
-        runBlocking<Unit> {
-            saveTwoVersions(first = series(1, "Dragons").copy(genre = "Comedy"))
-            val answer = panel.hold("get_series_info:1")
-            val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
-            val show = viewModel.openShow(1).found()
-            val opening = launch(Dispatchers.Default) { show.collect { shown += it } }
+    fun `a show whose details are in opens, and its other Versions' episodes come, before its own panel answers`() {
+        runBlocking { saveTwoVersions(first = series(1, "Dragons").copy(genre = "Comedy")) }
+        val answer = panel.hold("get_series_info:1")
+        val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
+        val show = viewModel.openShow(1).found()
+        val opening = testGraph.launch { show.collect { shown += it } }
 
-            during(answer) {
-                withTimeout(10_000) { while (shown.isEmpty() || episodeIds(2).isEmpty()) delay(20) }
-                assertThat(shown.single().series.genre).isEqualTo("Comedy")
-                assertThat(shown.single().fetched).isFalse()
-            }
-            answer.release()
-            opening.join()
+        // Settled with the panel's answer held: the stored show is out, and the other Version's episodes in.
+        testGraph.awaitIdle()
+        assertThat(answer.reached.count).isEqualTo(0L)
+        assertThat(runBlocking { episodeIds(2) }).isNotEmpty()
+        assertThat(shown.single().series.genre).isEqualTo("Comedy")
+        assertThat(shown.single().fetched).isFalse()
+        answer.release()
+        testGraph.awaitIdle()
+        assertThat(opening.isCompleted).isTrue()
 
-            assertThat(shown.last().fetched).isTrue()
-            assertThat(episodeIds(1)).containsExactly("101")
-            assertThat(timesAsked(1)).isEqualTo(1)
-            assertThat(timesAsked(2)).isEqualTo(1)
-        }
+        assertThat(shown.last().fetched).isTrue()
+        assertThat(runBlocking { episodeIds(1) }).containsExactly("101")
+        assertThat(timesAsked(1)).isEqualTo(1)
+        assertThat(timesAsked(2)).isEqualTo(1)
+    }
 
     @Test
-    fun `another Version's episodes are stored before TMDB answers about the show`() = runBlocking<Unit> {
+    fun `another Version's episodes are stored before TMDB answers about the show`() {
         graph.tmdbKey = TMDB_KEY
-        saveTwoVersions()
+        runBlocking { saveTwoVersions() }
         // By its id, which these shows already have, rather than a search.
         val tmdb = panel.hold("/3/tv/94997")
         val show = viewModel.openShow(1)
-        val opening = launch(Dispatchers.Default) { show.collect {} }
+        val opening = testGraph.launch { show.collect {} }
 
-        during(tmdb) { withTimeout(10_000) { while (episodeIds(2).isEmpty()) delay(20) } }
+        testGraph.awaitIdle()
+        assertThat(tmdb.reached.count).isEqualTo(0L)
+        assertThat(runBlocking { episodeIds(2) }).isNotEmpty()
         tmdb.release()
-        opening.join()
+        testGraph.awaitIdle()
+        assertThat(opening.isCompleted).isTrue()
 
-        assertThat(episodeIds(2)).containsExactly("201")
+        assertThat(runBlocking { episodeIds(2) }).containsExactly("201")
         assertThat(timesAsked(2)).isEqualTo(1)
     }
 
@@ -153,7 +135,7 @@ class ShowPageFetchTest {
         panel.replies["get_series_info:1"] = "!timeout"
         panel.replies["get_series_info:2"] = "!timeout"
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+        val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
         assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure?.sentence).isEqualTo(app.getString(R.string.error_timed_out))
@@ -164,7 +146,7 @@ class ShowPageFetchTest {
         saveTwoVersions()
         panel.replies["get_series_info:1"] = "!503"
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+        val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
         assertThat(opened.failure).isNull()
         assertThat(episodeIds(2)).containsExactly("201")
@@ -176,7 +158,7 @@ class ShowPageFetchTest {
         graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(tmdbId = null)))
         panel.replies["get_series_info:1"] = """{"episodes": {}}"""
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+        val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
         assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure).isNull()
@@ -188,7 +170,7 @@ class ShowPageFetchTest {
         graph.database.sources().insert(playlist)
         graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(sourceId = playlist.id, tmdbId = null)))
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+        val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
         assertThat(opened.failure).isNull()
     }
@@ -202,7 +184,7 @@ class ShowPageFetchTest {
             graph.database.episodes().upsertAll(listOf(stored))
             panel.replies["get_series_info:1"] = "!timeout"
 
-            val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
+            val opened = testGraph.firstWhenIdle(viewModel.openShow(1).found()) { it.fetched }
 
             assertThat(opened.noEpisodes).isFalse()
             assertThat(opened.failure).isNull()

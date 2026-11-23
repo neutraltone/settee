@@ -210,8 +210,8 @@ class UpdateViewModel @JvmOverloads constructor(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
-    private val checker = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME)
-    private val installer = ApkInstaller(graph.httpClient)
+    private val checker = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME, io = graph.dispatchers.io)
+    private val installer = ApkInstaller(graph.httpClient, graph.dispatchers.io)
 
     /** The install a press started, looking for a recording or downloading. */
     private var installing: Job? = null

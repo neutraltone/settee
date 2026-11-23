@@ -5,9 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioAddon
@@ -15,15 +12,10 @@ import app.opentv.data.model.StremioStream
 import app.opentv.ui.AddonStreams
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import okhttp3.Request
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -33,12 +25,9 @@ import org.robolectric.annotation.Config
  * A film's Add-on sources: what the add-ons' answers come to, against a fake TMDB and fake add-ons
  * at placeholder addresses. TMDB maps the film's id 949 to IMDb's tt0113277.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodAddonStreamsTest {
-
-    private val app: Application = ApplicationProvider.getApplicationContext()
 
     // What each add-on's host answers; TMDB knows the film unless told to drop the connection.
     private val addonReplies = mutableMapOf<String, String>()
@@ -54,8 +43,11 @@ class VodAddonStreamsTest {
         }
     }
 
-    private val graph = ServiceLocator.Graph(app, http = network.http, settingsFile = "vod-addon-streams-test")
-        .apply { tmdbKey = "key" }
+    @get:Rule
+    val testGraph = TestGraph(name = "vod-addon-streams-test", http = network.http)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph.apply { tmdbKey = "key" }
 
     private val heat = Movie(
         id = 1,
@@ -73,18 +65,9 @@ class VodAddonStreamsTest {
         tmdbId = "949",
     )
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    private val viewModels = ViewModelsInTest()
-
     @After
     fun close() {
         graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        Dispatchers.resetMain()
     }
 
     private fun addon(host: String, name: String, reply: String) {
@@ -101,7 +84,7 @@ class VodAddonStreamsTest {
             addon("films.example.com", "Films", "503")
             addon("more.example.com", "More films", "!")
 
-            val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
+            val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
 
             assertThat(found).isEqualTo(
                 AddonStreams.Failed(
@@ -115,7 +98,7 @@ class VodAddonStreamsTest {
         addon("broken.example.com", "Broken", "!")
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
+        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
 
         assertThat(found).isEqualTo(
             AddonStreams.Found(
@@ -128,7 +111,7 @@ class VodAddonStreamsTest {
     fun `a film TMDB can't match to IMDb finds no match, without asking the add-ons`() = runBlocking {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat.copy(tmdbId = "1"))
+        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat.copy(tmdbId = "1"))
 
         assertThat(found).isEqualTo(AddonStreams.NoneFound)
         assertThat(network.hosts()).doesNotContain("films.example.com")
@@ -139,7 +122,7 @@ class VodAddonStreamsTest {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
         tmdbDown = true
 
-        val found = viewModels.track(VodViewModel(app, graph)).addonStreams(heat)
+        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
 
         assertThat(found).isEqualTo(
             AddonStreams.Failed(
