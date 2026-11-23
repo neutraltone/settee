@@ -22,9 +22,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
@@ -56,17 +54,18 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodPlayerContentTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    @get:Rule
+    val testGraph = TestGraph(compose)
+
+    private val app = testGraph.app
     private val players = TestPlayers(app)
     private val controller = players.controller()
 
     // Never attached to an episode, so no Next Episode card: these tests are about the transport.
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+    private val graph = testGraph.graph
+    private val viewModel = testGraph.track(VodPlayerViewModel(app, graph))
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
 
     @After
@@ -75,9 +74,6 @@ class VodPlayerContentTest {
         SleepTimer.clear()
         controller.release()
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     private fun showFilm(growingRec: Boolean = false) {
@@ -542,7 +538,8 @@ class VodPlayerContentTest {
         press(Key.Menu)
 
         inList("Mark watched").performClick()
-        compose.waitUntil(WAIT_MILLIS) { left }
+        compose.waitForIdle()
+        assertThat(left).isTrue()
 
         assertThat(runBlocking { graph.viewerLibrary.marks.statusOf("movie:1") }).isEqualTo(WatchStatus.Watched)
     }
@@ -555,7 +552,8 @@ class VodPlayerContentTest {
         press(Key.Menu)
 
         inList("Mark watched").performClick()
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 2).key }
+        compose.waitForIdle()
+        assertThat(viewModel.current.value).isEqualTo(testEpisode(1, 2).key)
 
         assertThat(left).isFalse()
     }
@@ -592,7 +590,6 @@ class VodPlayerContentTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = UI_WAIT_MILLIS
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L

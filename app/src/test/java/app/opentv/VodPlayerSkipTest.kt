@@ -5,9 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.player.SkipCue.Kind
 import app.opentv.player.SkipCue.Stretch
@@ -15,27 +12,18 @@ import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.controlsShowing
 import app.opentv.ui.vod.skipStretch
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /** The episode player's Skip intro and Skip recap, from the timings TheIntroDB has (#518). */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodPlayerSkipTest {
-
-    private val app: Application = ApplicationProvider.getApplicationContext()
 
     /** TheIntroDB times a recap, an intro well after it, and credits; IntroDB and TMDB answer with nothing. */
     private val network = FakeJsonHttp { request ->
@@ -49,43 +37,45 @@ class VodPlayerSkipTest {
             "{}"
         }
     }
-    private val graph = ServiceLocator.Graph(app, http = network.http).apply { tmdbKey = "key" }
+
+    @get:Rule
+    val testGraph = TestGraph(http = network.http)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph.apply { tmdbKey = "key" }
     private val playback = FakePlayback()
-
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
-
-    private val viewModels = ViewModelsInTest()
 
     @After
     fun close() {
         graph.settings.setSkipIntrosAndCredits(true)
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        Dispatchers.resetMain()
     }
 
-    private suspend fun startSeries(): VodPlayerViewModel {
+    private fun startSeries(): VodPlayerViewModel = runBlocking {
         graph.database.series().upsertAll(listOf(show))
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
-        return viewModels.track(VodPlayerViewModel(app, graph)).apply { attach(testEpisode(1, 1).key, playback) }
+        testGraph.track(VodPlayerViewModel(app, graph)).apply { attach(testEpisode(1, 1).key, playback) }
     }
 
-    private suspend fun VodPlayerViewModel.at(millis: Long): Stretch? {
+    private fun VodPlayerViewModel.at(millis: Long): Stretch? {
         playback.positionMillis = millis
-        poll()
+        runBlocking { poll() }
         return skipButton.value
     }
 
     /** Waits for the timings, looked up beside playback, and polls at [millis] to put the button up. */
-    private suspend fun VodPlayerViewModel.waitForButtonAt(millis: Long) {
-        timingsArrived()
+    private fun VodPlayerViewModel.waitForButtonAt(millis: Long) {
+        arrived()
         assertThat(at(millis)).isNotNull()
     }
 
+    /** The timings, once the lookup started beside playback has finished, which places them on this thread. */
+    private fun VodPlayerViewModel.arrived() {
+        testGraph.awaitIdle()
+        runBlocking { timingsArrived() }
+    }
+
     @Test
-    fun `inside a timed intro Skip intro shows, and skipping lands at the intro's end`() = runTest {
+    fun `inside a timed intro Skip intro shows, and skipping lands at the intro's end`() {
         val vm = startSeries()
         vm.waitForButtonAt(INTRO_START + 1_000)
 
@@ -99,7 +89,7 @@ class VodPlayerSkipTest {
     }
 
     @Test
-    fun `a recap with no start timed shows Skip recap from the beginning`() = runTest {
+    fun `a recap with no start timed shows Skip recap from the beginning`() {
         val vm = startSeries()
         vm.waitForButtonAt(1_000)
 
@@ -107,7 +97,7 @@ class VodPlayerSkipTest {
     }
 
     @Test
-    fun `the button goes after 10 seconds, and comes back with the controls`() = runTest {
+    fun `the button goes after 10 seconds, and comes back with the controls`() {
         val vm = startSeries()
         vm.waitForButtonAt(INTRO_START)
 
@@ -123,7 +113,7 @@ class VodPlayerSkipTest {
     }
 
     @Test
-    fun `nothing is skipped without a press`() = runTest {
+    fun `nothing is skipped without a press`() {
         val vm = startSeries()
         vm.waitForButtonAt(INTRO_START)
 
@@ -133,7 +123,7 @@ class VodPlayerSkipTest {
     }
 
     @Test
-    fun `with Skip intros and credits off there's no button`() = runTest {
+    fun `with Skip intros and credits off there's no button`() {
         graph.settings.setSkipIntrosAndCredits(false)
         val vm = startSeries()
 

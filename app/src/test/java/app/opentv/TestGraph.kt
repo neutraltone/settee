@@ -214,6 +214,22 @@ class TestGraph(
         return found.single()
     }
 
+    /**
+     * Runs [block] on the main thread, as a screen's coroutine would, and returns once it and
+     * everything it set off have finished, throwing what it threw. For a test that calls a view
+     * model's suspending functions in turn: blocking the main thread around them, as runBlocking
+     * does, would never let the work they leave there finish. A [block] still waiting once nothing
+     * is running waits on something the graph doesn't count, and fails the test saying so.
+     */
+    fun runOnMain(block: suspend CoroutineScope.() -> Unit) {
+        check(dispatcher == null) { "In virtual time, use runTest" }
+        var failure: Throwable? = null
+        val body = launch { failure = runCatching { block() }.exceptionOrNull() }
+        awaitIdle()
+        failure?.let { throw it }
+        check(body.isCompleted) { "The test was still waiting once the graph's work had finished" }
+    }
+
     /** Moves the clock on by [millis] once nothing is running, then waits for what that sets off. */
     fun advanceBy(millis: Long) {
         awaitIdle()
