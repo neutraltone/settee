@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,11 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -28,18 +28,16 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,24 +49,18 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class MovieCategoryMemoryTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-    private val viewModel = viewModels.vod(app, graph)
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-    }
-
-    private fun waitFor(text: String) = compose.waitUntilAtLeastOneExists(hasText(text), 5_000)
+    private fun waitFor(text: String) = compose.onAllNodes(hasText(text)).onFirst().assertExists()
 
     /** Opens the Categories Sidebar from [fromCover]'s cover in For you, and picks [category]. */
     private fun pick(category: String, fromCover: String) {
@@ -77,7 +69,7 @@ class MovieCategoryMemoryTest {
         compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
         waitFor(category)
         compose.onNodeWithText(category).performClick()
-        compose.waitUntilDoesNotExist(hasText(recentlyAdded), 5_000)
+        compose.onAllNodes(hasText(recentlyAdded)).assertCountEquals(0)
     }
 
     /** As a remote drives it: in touch mode nothing can take the Highlight. */
@@ -97,7 +89,7 @@ class MovieCategoryMemoryTest {
 
     /** On the category's grid, not back on For you, whose rows would show the same title. */
     private fun assertOnGridOf(title: String) {
-        compose.waitUntilAtLeastOneExists(hasText(title) and hasClickAction(), 5_000)
+        compose.onAllNodes(hasText(title) and hasClickAction()).onFirst().assertExists()
         compose.onNodeWithText(recentlyAdded).assertDoesNotExist()
     }
 

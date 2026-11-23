@@ -19,15 +19,14 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioStream
@@ -36,6 +35,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VersionTraits
 import app.opentv.data.repo.VodQualities
 import app.opentv.ui.AddonStreams
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.vod.MovieDetailContent
 import app.opentv.ui.vod.MovieDetailScreen
@@ -57,8 +57,10 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class MovieDetailContentTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, http = FakePanel().http)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -518,34 +520,29 @@ class MovieDetailContentTest {
     @Test
     fun `a film page opened for a film that isn't stored says it's gone, and its highlighted Back leaves`() {
         // The whole screen with its real view model, which only this state needs (#495).
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        val graph = ServiceLocator.Graph(app, http = FakePanel().http)
-        val viewModels = TestViewModels()
-        try {
-            runBlocking { graph.database.sources().insert(PANEL_SOURCE) }
-            var left = false
-            compose.setTvContent {
-                MovieDetailScreen(
-                    movieId = 404,
-                    onPlay = {},
-                    onPlayAddonStream = {},
-                    onOpenMovie = {},
-                    onOpenPerson = {},
-                    onBack = { left = true },
-                    viewModel = viewModels.vod(app, graph),
-                )
-            }
-
-            compose.waitUntilAtLeastOneExists(hasText(app.getString(R.string.error_gone)), 10_000)
-            compose.onNodeWithText(app.getString(R.string.common_back)).assertIsFocused()
-            captureScreen("movie_detail_gone")
-            compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
-            compose.waitForIdle()
-
-            assertThat(left).isTrue()
-        } finally {
-            viewModels.clear()
-            graph.database.close()
+        val app = testGraph.app
+        val graph = testGraph.graph
+        runBlocking { graph.database.sources().insert(PANEL_SOURCE) }
+        var left = false
+        val viewModel = testGraph.viewModel { VodViewModel(app, graph) }
+        compose.setTvContent {
+            MovieDetailScreen(
+                movieId = 404,
+                onPlay = {},
+                onPlayAddonStream = {},
+                onOpenMovie = {},
+                onOpenPerson = {},
+                onBack = { left = true },
+                viewModel = viewModel,
+            )
         }
+
+        compose.onAllNodes(hasText(app.getString(R.string.error_gone))).onFirst().assertExists()
+        compose.onNodeWithText(app.getString(R.string.common_back)).assertIsFocused()
+        captureScreen("movie_detail_gone")
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+
+        assertThat(left).isTrue()
     }
 }

@@ -11,20 +11,18 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
-import app.opentv.core.ServiceLocator
 import app.opentv.ui.onboarding.OpenSubtitlesStepScreen
 import app.opentv.ui.settings.OPENSUBTITLES_SIGN_IN_HERE_TAG
 import com.google.common.truth.Truth.assertThat
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,19 +37,19 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class OpenSubtitlesStepTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app = ApplicationProvider.getApplicationContext<Application>()
     private val site = FakeOpenSubtitles().apply {
         replies["POST /login"] = """{"user": {"allowed_downloads": 20, "remaining_downloads": 20}, "token": "t"}"""
     }
-    private val graph = ServiceLocator.Graph(app, http = site.http, settingsFile = "opensubtitles-step-test")
+
+    @get:Rule
+    val testGraph = TestGraph(compose, name = "opensubtitles-step-test", http = site.http)
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     private val openSubtitles = site.openSubtitles(graph, app.filesDir)
-
-    @After
-    fun close() = graph.database.close()
 
     private fun entryKeyboard(): DeviceKeyboard {
         compose.waitForIdle()
@@ -83,9 +81,7 @@ class OpenSubtitlesStepTest {
             pressAction()
         }
 
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Carry on") and isFocused()).onFirst().assertExists()
         compose.onNodeWithText("Signed in as u").assertExists()
         assertThat(done).isFalse()
         captureScreen("onboarding_opensubtitles_signed_in")
@@ -111,9 +107,7 @@ class OpenSubtitlesStepTest {
             type("p")
             pressAction()
         }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.onAllNodes(hasText("Signed in as u")).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Signed in as u")).onFirst().assertExists()
 
         Espresso.pressBack()
 

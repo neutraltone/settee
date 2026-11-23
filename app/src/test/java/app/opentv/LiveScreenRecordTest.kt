@@ -11,11 +11,10 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -31,7 +30,6 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,21 +47,19 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LiveScreenRecordTest {
 
+    private val compose = createComposeRule()
+
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+    private val graph = testGraph.graph
 
-    // The graph and its settings are process-wide, so what a test changes is the next test's to trip over.
-    @Before
+    // The settings are the process's, so what a test changes is the next test's to trip over.
     @After
-    fun leaveNothingBehind() = runBlocking {
-        graph.recordingRepository.active().forEach { graph.database.recordings().delete(it.id) }
-        graph.settings.setGuidePreviewVideo(true)
-    }
+    fun leaveNothingBehind() = graph.settings.setGuidePreviewVideo(true)
 
     @Test
     fun `Record now on what's on records the Quality this device plays, and then offers to stop it`() {
@@ -80,19 +76,14 @@ class LiveScreenRecordTest {
                 onRefresh = {},
             )
         }
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasText("The News") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("The News") and hasClickAction()).onFirst().assertExists()
         compose.onNode(hasText("The News") and hasClickAction()).performClick()
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasText("Record now") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Record now") and hasClickAction()).onFirst().assertExists()
         compose.onNode(hasText("Record now") and hasClickAction()).performClick()
-        compose.waitUntil(TIMEOUT_MILLIS) { runBlocking { graph.recordingRepository.active().isNotEmpty() } }
+        compose.waitForIdle()
+        assertThat(runBlocking { graph.recordingRepository.active().isNotEmpty() }).isTrue()
         compose.onNode(hasText("The News") and hasClickAction()).performClick()
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasText("Stop recording") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodes(hasText("Stop recording") and hasClickAction()).onFirst().assertExists()
 
         val recording = runBlocking { graph.recordingRepository.observeActive().first().single() }
         assertThat(recording.channelId).isEqualTo(playable)
@@ -100,10 +91,6 @@ class LiveScreenRecordTest {
 
     @Test
     fun `a guide whose channels couldn't load names the provider, says why, and offers Try again`() {
-        // The graph is process-wide, so another test's channels would leave this guide loading.
-        runBlocking {
-            graph.database.sources().observeAll().first().forEach { graph.catalogRepository.deleteSource(it.id) }
-        }
         compose.setTvContent {
             LiveScreen(
                 isTelevision = true,
@@ -122,12 +109,7 @@ class LiveScreenRecordTest {
                 onRefresh = {},
             )
         }
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodesWithText(
-                "Can't reach your provider.",
-                substring = true,
-            ).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.onAllNodesWithText("Can't reach your provider.", substring = true).onFirst().assertExists()
 
         compose.onNodeWithText("Couldn't load your channels from Acme TV").assertExists()
         compose.onNodeWithTag(ERROR_DETAIL_TAG).assertTextEquals("UnknownHost")
@@ -172,7 +154,6 @@ class LiveScreenRecordTest {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 10_000L
         const val HOUR = 60 * 60 * 1000L
     }
 }
