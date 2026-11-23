@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">यह छूट गया क्योंकि Android ने इसे खत्म होने के बाद शुरू किया।</string>
     <string name="rec_error_usb_no_folder">रिकॉर्ड करने के लिए कोई फ़ोल्डर नहीं है। रिकॉर्डिंग सेटिंग्स में अपनी USB ड्राइव पर एक फ़ोल्डर चुनें।</string>
     <string name="rec_error_usb_unavailable">आपकी USB ड्राइव नहीं मिल रही। उसे फिर से लगाएं, फिर रिकॉर्डिंग सेटिंग्स में उसका फ़ोल्डर दोबारा चुनें।</string>
+    <string name="rec_error_full_tv">इस टीवी में रिकॉर्डिंग के लिए जगह खत्म हो गई। जगह बनाने के लिए कुछ देखी हुई रिकॉर्डिंग हटाएं।</string>
+    <string name="rec_error_full_device">इस डिवाइस में रिकॉर्डिंग के लिए जगह खत्म हो गई। जगह बनाने के लिए कुछ देखी हुई रिकॉर्डिंग हटाएं।</string>
+    <string name="rec_error_full_usb">आपकी USB ड्राइव में जगह खत्म हो गई। जगह बनाने के लिए कुछ रिकॉर्डिंग हटाएं।</string>
+    <string name="rec_error_full_nas">आपके NAS में जगह खत्म हो गई। जगह बनाने के लिए उस पर से कुछ रिकॉर्डिंग या दूसरी फ़ाइलें हटाएं।</string>
+    <string name="rec_error_nas_unreachable">आपके NAS तक नहीं पहुंचा जा सका। जांचें कि वह चालू है और आपके नेटवर्क से जुड़ा है।</string>
+    <string name="rec_error_channel_stopped">चैनल ने वीडियो भेजना बंद कर दिया, जो आमतौर पर आपके प्रदाता की ओर से होता है। जांचें कि यह लाइव टीवी में चलता है।</string>
+    <string name="rec_error_stopped_early">कुछ भी रिकॉर्ड होने से पहले इसे रोक दिया गया।</string>
     <string name="rec_delete_failed_nas">इसे आपके NAS से हटाया नहीं जा सका। जांचें कि वह चालू है, फिर इसे दोबारा हटाने की कोशिश करें।</string>
     <string name="rec_delete_failed">यह रिकॉर्डिंग हटाई नहीं जा सकी। इसे दोबारा हटाने की कोशिश करें।</string>
     <string name="rec_background_prompt_title">बाहर जाने पर भी रिकॉर्डिंग जारी रखें?</string>

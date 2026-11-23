@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Dit is gemist omdat Android het pas startte toen het al was afgelopen.</string>
     <string name="rec_error_usb_no_folder">Er is geen map om naar op te nemen. Kies er een op je USB-drive in Opname-instellingen.</string>
     <string name="rec_error_usb_unavailable">Je USB-drive is niet te vinden. Sluit hem weer aan en kies dan opnieuw de map in Opname-instellingen.</string>
+    <string name="rec_error_full_tv">Deze tv heeft geen ruimte meer voor opnames. Verwijder er een paar die je al hebt gezien om ruimte te maken.</string>
+    <string name="rec_error_full_device">Dit apparaat heeft geen ruimte meer voor opnames. Verwijder er een paar die je al hebt gezien om ruimte te maken.</string>
+    <string name="rec_error_full_usb">Je USB-drive heeft geen ruimte meer. Verwijder een paar opnames om ruimte te maken.</string>
+    <string name="rec_error_full_nas">Je NAS heeft geen ruimte meer. Verwijder een paar opnames of andere bestanden erop om ruimte te maken.</string>
+    <string name="rec_error_nas_unreachable">Kan je NAS niet bereiken. Controleer of hij aanstaat en met je netwerk is verbonden.</string>
+    <string name="rec_error_channel_stopped">Het kanaal stuurt geen beeld meer, wat meestal aan je provider ligt. Controleer of het speelt in Live tv.</string>
+    <string name="rec_error_stopped_early">Dit is gestopt voordat er iets was opgenomen.</string>
     <string name="rec_delete_failed_nas">Kan dit niet van je NAS verwijderen. Controleer of hij aanstaat en probeer het dan opnieuw.</string>
     <string name="rec_delete_failed">Kan deze opname niet verwijderen. Probeer het opnieuw.</string>
     <string name="rec_background_prompt_title">Blijven opnemen als je weggaat?</string>

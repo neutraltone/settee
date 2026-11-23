@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">已错过：Android 在节目结束后才开始录制。</string>
     <string name="rec_error_usb_no_folder">没有可录制到的文件夹。请在“录制”设置中选择 USB 存储设备上的文件夹。</string>
     <string name="rec_error_usb_unavailable">找不到你的 USB 存储设备。请重新插入，然后在“录制”设置中重新选择文件夹。</string>
+    <string name="rec_error_full_tv">这台电视的录制空间已用完。请删除一些已看过的录制内容来腾出空间。</string>
+    <string name="rec_error_full_device">本设备的录制空间已用完。请删除一些已看过的录制内容来腾出空间。</string>
+    <string name="rec_error_full_usb">你的 USB 存储设备空间已用完。请删除一些录制内容来腾出空间。</string>
+    <string name="rec_error_full_nas">你的 NAS 空间已用完。请删除上面的一些录制内容或其他文件来腾出空间。</string>
+    <string name="rec_error_nas_unreachable">无法连接到你的 NAS。请确认它已开机并已连接到你的网络。</string>
+    <string name="rec_error_channel_stopped">该频道已停止发送视频，这通常是提供商那边的问题。请检查它能否在“直播”中播放。</string>
+    <string name="rec_error_stopped_early">在录下任何内容之前就已停止。</string>
     <string name="rec_delete_failed_nas">无法从你的 NAS 删除。请确认它已开机，然后再试一次。</string>
     <string name="rec_delete_failed">无法删除这个录制。请再试一次。</string>
     <string name="rec_background_prompt_title">离开后是否继续录制？</string>

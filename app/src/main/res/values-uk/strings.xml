@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Цей запис пропущено, бо Android запустив його вже після завершення.</string>
     <string name="rec_error_usb_no_folder">Немає папки для запису. Виберіть папку на USB-накопичувачі в налаштуваннях запису.</string>
     <string name="rec_error_usb_unavailable">USB-накопичувач не знайдено. Під\'єднайте його знову, потім ще раз виберіть папку в налаштуваннях запису.</string>
+    <string name="rec_error_full_tv">На цьому телевізорі закінчилося місце для записів. Видаліть ті, що вже переглянули, щоб звільнити місце.</string>
+    <string name="rec_error_full_device">На цьому пристрої закінчилося місце для записів. Видаліть ті, що вже переглянули, щоб звільнити місце.</string>
+    <string name="rec_error_full_usb">На USB-накопичувачі закінчилося місце. Видаліть кілька записів, щоб звільнити місце.</string>
+    <string name="rec_error_full_nas">На NAS закінчилося місце. Видаліть з нього кілька записів або інших файлів, щоб звільнити місце.</string>
+    <string name="rec_error_nas_unreachable">Не вдалося зв\'язатися з NAS. Перевірте, що він увімкнений і підключений до вашої мережі.</string>
+    <string name="rec_error_channel_stopped">Канал перестав передавати відео, зазвичай це проблема з боку провайдера. Перевірте, чи він іде в розділі «Ефір».</string>
+    <string name="rec_error_stopped_early">Запис зупинили до того, як щось записалося.</string>
     <string name="rec_delete_failed_nas">Не вдалося видалити це з NAS. Перевірте, що він увімкнений, і спробуйте видалити ще раз.</string>
     <string name="rec_delete_failed">Не вдалося видалити цей запис. Спробуйте видалити його ще раз.</string>
     <string name="rec_background_prompt_title">Продовжити запис після виходу?</string>

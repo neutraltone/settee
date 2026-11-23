@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Ez kimaradt, mert az Android csak a vége után indította el.</string>
     <string name="rec_error_usb_no_folder">Nincs mappa, ahová rögzíteni lehetne. Válasszon egyet az USB-meghajtón a Felvétel beállításaiban.</string>
     <string name="rec_error_usb_unavailable">Nem található az USB-meghajtó. Csatlakoztassa újra, majd válassza ki ismét a mappáját a Felvétel beállításaiban.</string>
+    <string name="rec_error_full_tv">Ezen a TV-n elfogyott a hely a felvételek számára. Töröljön néhányat, amit már megnézett, hogy helyet szabadítson fel.</string>
+    <string name="rec_error_full_device">Ezen az eszközön elfogyott a hely a felvételek számára. Töröljön néhányat, amit már megnézett, hogy helyet szabadítson fel.</string>
+    <string name="rec_error_full_usb">Az USB-meghajtón elfogyott a hely. Töröljön néhány felvételt, hogy helyet szabadítson fel.</string>
+    <string name="rec_error_full_nas">A NAS-on elfogyott a hely. Töröljön róla néhány felvételt vagy más fájlt, hogy helyet szabadítson fel.</string>
+    <string name="rec_error_nas_unreachable">A NAS nem érhető el. Ellenőrizze, hogy be van-e kapcsolva, és csatlakozik-e a hálózatához.</string>
+    <string name="rec_error_channel_stopped">A csatorna nem küld több videót, ami általában a szolgáltatón múlik. Ellenőrizze, hogy megy-e az Élő TV-ben.</string>
+    <string name="rec_error_stopped_early">Ezt leállították, mielőtt bármi felvételre került volna.</string>
     <string name="rec_delete_failed_nas">Nem sikerült törölni a NAS-ról. Ellenőrizze, hogy be van-e kapcsolva, majd próbálja meg újra.</string>
     <string name="rec_delete_failed">Nem sikerült törölni ezt a felvételt. Próbálja meg újra törölni.</string>
     <string name="rec_background_prompt_title">Folytatódjon a felvétel kilépéskor?</string>

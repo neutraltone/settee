@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Det her blev ikke optaget, fordi Android startede det, efter det var slut.</string>
     <string name="rec_error_usb_no_folder">Der er ingen mappe at optage til. Vælg en på dit USB-drev i optageindstillinger.</string>
     <string name="rec_error_usb_unavailable">Kan ikke finde dit USB-drev. Sæt det i igen, og vælg så dets mappe igen i optageindstillinger.</string>
+    <string name="rec_error_full_tv">Der er ikke mere plads til optagelser på dette tv. Slet nogle, du har set, for at give plads.</string>
+    <string name="rec_error_full_device">Der er ikke mere plads til optagelser på denne enhed. Slet nogle, du har set, for at give plads.</string>
+    <string name="rec_error_full_usb">Der er ikke mere plads på dit USB-drev. Slet nogle optagelser for at give plads.</string>
+    <string name="rec_error_full_nas">Der er ikke mere plads på din NAS. Slet nogle optagelser eller andre filer på den for at give plads.</string>
+    <string name="rec_error_nas_unreachable">Kunne ikke nå din NAS. Tjek, at den er tændt og forbundet til dit netværk.</string>
+    <string name="rec_error_channel_stopped">Kanalen holdt op med at sende video, hvilket som regel skyldes din udbyder. Tjek, at den spiller i Live-tv.</string>
+    <string name="rec_error_stopped_early">Dette blev stoppet, før noget blev optaget.</string>
     <string name="rec_delete_failed_nas">Kunne ikke slette dette fra din NAS. Tjek, at den er tændt, og prøv så at slette det igen.</string>
     <string name="rec_delete_failed">Kunne ikke slette denne optagelse. Prøv at slette den igen.</string>
     <string name="rec_background_prompt_title">Fortsæt optagelse, når du forlader appen?</string>

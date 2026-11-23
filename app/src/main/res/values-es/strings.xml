@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Esto se perdió porque Android lo inició cuando ya había terminado.</string>
     <string name="rec_error_usb_no_folder">No hay ninguna carpeta donde grabar. Elige una en tu unidad USB en Ajustes de grabación.</string>
     <string name="rec_error_usb_unavailable">No se encuentra tu unidad USB. Vuelve a conectarla y elige su carpeta de nuevo en Ajustes de grabación.</string>
+    <string name="rec_error_full_tv">Este televisor se quedó sin espacio para grabaciones. Borra algunas que ya hayas visto para liberar espacio.</string>
+    <string name="rec_error_full_device">Este dispositivo se quedó sin espacio para grabaciones. Borra algunas que ya hayas visto para liberar espacio.</string>
+    <string name="rec_error_full_usb">Tu unidad USB se quedó sin espacio. Borra algunas grabaciones para liberar espacio.</string>
+    <string name="rec_error_full_nas">Tu NAS se quedó sin espacio. Borra algunas grabaciones u otros archivos que tenga para liberar espacio.</string>
+    <string name="rec_error_nas_unreachable">No se pudo conectar con tu NAS. Comprueba que esté encendido y conectado a tu red.</string>
+    <string name="rec_error_channel_stopped">El canal dejó de enviar vídeo, lo que suele ser cosa de tu proveedor. Comprueba que se reproduce en TV en vivo.</string>
+    <string name="rec_error_stopped_early">Se detuvo antes de grabar nada.</string>
     <string name="rec_delete_failed_nas">No se pudo borrar de tu NAS. Comprueba que esté encendido y vuelve a intentar borrarlo.</string>
     <string name="rec_delete_failed">No se pudo borrar esta grabación. Vuelve a intentar borrarla.</string>
     <string name="rec_background_prompt_title">¿Mantener la grabación al salir?</string>

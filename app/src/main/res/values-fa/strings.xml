@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">این برنامه از دست رفت چون Android آن را پس از پایانش شروع کرد.</string>
     <string name="rec_error_usb_no_folder">پوشه‌ای برای ضبط وجود ندارد. در تنظیمات ضبط، پوشه‌ای روی درایو USB خود انتخاب کنید.</string>
     <string name="rec_error_usb_unavailable">درایو USB شما پیدا نشد. آن را دوباره وصل کنید، سپس پوشه آن را دوباره در تنظیمات ضبط انتخاب کنید.</string>
+    <string name="rec_error_full_tv">فضای ضبط این تلویزیون پر شد. برای باز کردن فضا، چند مورد از آن‌هایی را که دیده‌اید حذف کنید.</string>
+    <string name="rec_error_full_device">فضای ضبط این دستگاه پر شد. برای باز کردن فضا، چند مورد از آن‌هایی را که دیده‌اید حذف کنید.</string>
+    <string name="rec_error_full_usb">فضای درایو USB شما پر شد. برای باز کردن فضا، چند ضبط را حذف کنید.</string>
+    <string name="rec_error_full_nas">فضای NAS شما پر شد. برای باز کردن فضا، چند ضبط یا فایل‌های دیگر روی آن را حذف کنید.</string>
+    <string name="rec_error_nas_unreachable">دسترسی به NAS شما ممکن نشد. بررسی کنید روشن و به شبکه شما وصل باشد.</string>
+    <string name="rec_error_channel_stopped">کانال دیگر ویدیو نمی‌فرستد، که معمولاً از سمت ارائه‌دهنده شماست. بررسی کنید در پخش زنده پخش شود.</string>
+    <string name="rec_error_stopped_early">این پیش از ضبط شدن چیزی متوقف شد.</string>
     <string name="rec_delete_failed_nas">حذف این از NAS شما ممکن نشد. بررسی کنید روشن باشد، سپس دوباره برای حذف آن تلاش کنید.</string>
     <string name="rec_delete_failed">حذف این ضبط ممکن نشد. دوباره برای حذف آن تلاش کنید.</string>
     <string name="rec_background_prompt_title">هنگام خروج، ضبط ادامه یابد؟</string>

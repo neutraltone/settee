@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Това е пропуснато, защото Android го стартира, след като беше свършило.</string>
     <string name="rec_error_usb_no_folder">Няма папка за запис. Изберете папка на USB устройството си в Настройки за запис.</string>
     <string name="rec_error_usb_unavailable">USB устройството не е открито. Включете го отново, след което изберете папката му отново в Настройки за запис.</string>
+    <string name="rec_error_full_tv">На този телевизор няма повече място за записи. Изтрийте някои, които сте гледали, за да освободите място.</string>
+    <string name="rec_error_full_device">На това устройство няма повече място за записи. Изтрийте някои, които сте гледали, за да освободите място.</string>
+    <string name="rec_error_full_usb">На USB устройството няма повече място. Изтрийте някои записи, за да освободите място.</string>
+    <string name="rec_error_full_nas">На NAS няма повече място. Изтрийте някои записи или други файлове на него, за да освободите място.</string>
+    <string name="rec_error_nas_unreachable">Няма връзка с NAS. Проверете дали е включен и свързан към мрежата ви.</string>
+    <string name="rec_error_channel_stopped">Каналът спря да изпраща видео, което обикновено е проблем при доставчика ви. Проверете дали върви в „На живо“.</string>
+    <string name="rec_error_stopped_early">Това беше спряно, преди да бъде записано нещо.</string>
     <string name="rec_delete_failed_nas">Неуспешно изтриване от NAS. Проверете дали е включен, след което опитайте отново.</string>
     <string name="rec_delete_failed">Записът не можа да бъде изтрит. Опитайте отново.</string>
     <string name="rec_background_prompt_title">Да продължи ли записът, когато излезете?</string>

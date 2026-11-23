@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Cet enregistrement a été manqué, car Android l\'a lancé une fois l\'émission terminée.</string>
     <string name="rec_error_usb_no_folder">Il n\'y a pas de dossier où enregistrer. Choisissez-en un sur votre disque USB dans les paramètres d\'enregistrement.</string>
     <string name="rec_error_usb_unavailable">Votre disque USB est introuvable. Rebranchez-le, puis choisissez à nouveau son dossier dans les paramètres d\'enregistrement.</string>
+    <string name="rec_error_full_tv">Cette télévision n\'a plus de place pour les enregistrements. Supprimez-en que vous avez déjà regardés pour libérer de l\'espace.</string>
+    <string name="rec_error_full_device">Cet appareil n\'a plus de place pour les enregistrements. Supprimez-en que vous avez déjà regardés pour libérer de l\'espace.</string>
+    <string name="rec_error_full_usb">Votre disque USB n\'a plus de place. Supprimez des enregistrements pour libérer de l\'espace.</string>
+    <string name="rec_error_full_nas">Votre NAS n\'a plus de place. Supprimez des enregistrements ou d\'autres fichiers qui s\'y trouvent pour libérer de l\'espace.</string>
+    <string name="rec_error_nas_unreachable">Impossible de joindre votre NAS. Vérifiez qu\'il est allumé et connecté à votre réseau.</string>
+    <string name="rec_error_channel_stopped">La chaîne n\'envoie plus de vidéo, ce qui vient généralement de votre fournisseur. Vérifiez qu\'elle passe dans TV en direct.</string>
+    <string name="rec_error_stopped_early">Ceci a été arrêté avant que rien ne soit enregistré.</string>
     <string name="rec_delete_failed_nas">Impossible de supprimer ceci de votre NAS. Vérifiez qu\'il est allumé, puis réessayez de le supprimer.</string>
     <string name="rec_delete_failed">Impossible de supprimer cet enregistrement. Réessayez de le supprimer.</string>
     <string name="rec_background_prompt_title">Continuer l\'enregistrement en quittant l\'appli ?</string>

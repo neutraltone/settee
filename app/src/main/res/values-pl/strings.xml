@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">To nie zostało nagrane, bo Android uruchomił nagrywanie dopiero po zakończeniu.</string>
     <string name="rec_error_usb_no_folder">Nie ma folderu do nagrywania. Wybierz folder na dysku USB w ustawieniach nagrywania.</string>
     <string name="rec_error_usb_unavailable">Nie można znaleźć dysku USB. Podłącz go ponownie, a potem jeszcze raz wybierz jego folder w ustawieniach nagrywania.</string>
+    <string name="rec_error_full_tv">Na tym telewizorze skończyło się miejsce na nagrania. Usuń kilka obejrzanych, aby zwolnić miejsce.</string>
+    <string name="rec_error_full_device">Na tym urządzeniu skończyło się miejsce na nagrania. Usuń kilka obejrzanych, aby zwolnić miejsce.</string>
+    <string name="rec_error_full_usb">Na dysku USB skończyło się miejsce. Usuń kilka nagrań, aby zwolnić miejsce.</string>
+    <string name="rec_error_full_nas">Na serwerze NAS skończyło się miejsce. Usuń z niego kilka nagrań lub innych plików, aby zwolnić miejsce.</string>
+    <string name="rec_error_nas_unreachable">Nie można połączyć się z serwerem NAS. Sprawdź, czy jest włączony i podłączony do sieci.</string>
+    <string name="rec_error_channel_stopped">Kanał przestał przesyłać obraz, co zwykle leży po stronie dostawcy. Sprawdź, czy działa w TV na żywo.</string>
+    <string name="rec_error_stopped_early">Zatrzymano to, zanim cokolwiek zostało nagrane.</string>
     <string name="rec_delete_failed_nas">Nie udało się usunąć tego z serwera NAS. Sprawdź, czy jest włączony, i spróbuj usunąć ponownie.</string>
     <string name="rec_delete_failed">Nie udało się usunąć tego nagrania. Spróbuj usunąć je ponownie.</string>
     <string name="rec_background_prompt_title">Kontynuować nagrywanie po wyjściu?</string>

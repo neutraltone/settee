@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">Android が終了後に録画を開始したため、録画できませんでした。</string>
     <string name="rec_error_usb_no_folder">録画先のフォルダがありません。「録画」設定でUSBドライブ内のフォルダを選んでください。</string>
     <string name="rec_error_usb_unavailable">USBドライブが見つかりません。挿し直してから、「録画」設定でフォルダを選び直してください。</string>
+    <string name="rec_error_full_tv">このテレビの録画用の空き容量がなくなりました。視聴済みの録画を削除して空きを作ってください。</string>
+    <string name="rec_error_full_device">この端末の録画用の空き容量がなくなりました。視聴済みの録画を削除して空きを作ってください。</string>
+    <string name="rec_error_full_usb">USBドライブの空き容量がなくなりました。録画をいくつか削除して空きを作ってください。</string>
+    <string name="rec_error_full_nas">NASの空き容量がなくなりました。NAS上の録画やほかのファイルを削除して空きを作ってください。</string>
+    <string name="rec_error_nas_unreachable">NASに接続できませんでした。電源が入っていて、ネットワークにつながっているか確認してください。</string>
+    <string name="rec_error_channel_stopped">チャンネルからの映像が止まりました。通常はプロバイダー側の問題です。ライブTVで再生できるか確認してください。</string>
+    <string name="rec_error_stopped_early">何も録画されないうちに停止されました。</string>
     <string name="rec_delete_failed_nas">NASから削除できませんでした。電源が入っているか確認してから、もう一度削除してください。</string>
     <string name="rec_delete_failed">この録画を削除できませんでした。もう一度削除してください。</string>
     <string name="rec_background_prompt_title">離れても録画を続けますか？</string>

@@ -77,6 +77,13 @@
     <string name="rec_error_missed_late">พลาดรายการนี้เพราะ Android เริ่มบันทึกหลังจากรายการจบแล้ว</string>
     <string name="rec_error_usb_no_folder">ไม่มีโฟลเดอร์สำหรับบันทึก เลือกโฟลเดอร์บนไดรฟ์ USB ของคุณในการตั้งค่าการบันทึก</string>
     <string name="rec_error_usb_unavailable">ไม่พบไดรฟ์ USB ของคุณ เสียบกลับเข้าไป แล้วเลือกโฟลเดอร์อีกครั้งในการตั้งค่าการบันทึก</string>
+    <string name="rec_error_full_tv">พื้นที่สำหรับการบันทึกบนทีวีเครื่องนี้เต็มแล้ว ลบรายการที่ดูแล้วบางส่วนเพื่อให้มีพื้นที่ว่าง</string>
+    <string name="rec_error_full_device">พื้นที่สำหรับการบันทึกบนอุปกรณ์นี้เต็มแล้ว ลบรายการที่ดูแล้วบางส่วนเพื่อให้มีพื้นที่ว่าง</string>
+    <string name="rec_error_full_usb">พื้นที่ในไดรฟ์ USB ของคุณเต็มแล้ว ลบการบันทึกบางรายการเพื่อให้มีพื้นที่ว่าง</string>
+    <string name="rec_error_full_nas">พื้นที่ใน NAS ของคุณเต็มแล้ว ลบการบันทึกหรือไฟล์อื่นบางส่วนใน NAS เพื่อให้มีพื้นที่ว่าง</string>
+    <string name="rec_error_nas_unreachable">เข้าถึง NAS ของคุณไม่ได้ ตรวจสอบว่าเปิดเครื่องอยู่และเชื่อมต่อกับเครือข่ายของคุณ</string>
+    <string name="rec_error_channel_stopped">ช่องหยุดส่งวิดีโอ ซึ่งมักเป็นปัญหาจากฝั่งผู้ให้บริการของคุณ ตรวจสอบว่าช่องนี้เล่นได้ในทีวีสด</string>
+    <string name="rec_error_stopped_early">การบันทึกนี้ถูกหยุดก่อนที่จะบันทึกอะไรได้</string>
     <string name="rec_delete_failed_nas">ลบออกจาก NAS ของคุณไม่ได้ ตรวจสอบว่าเปิดเครื่องอยู่ แล้วลองลบอีกครั้ง</string>
     <string name="rec_delete_failed">ลบการบันทึกนี้ไม่ได้ ลองลบอีกครั้ง</string>
     <string name="rec_background_prompt_title">บันทึกต่อไปเมื่อคุณออกจากแอปหรือไม่?</string>
