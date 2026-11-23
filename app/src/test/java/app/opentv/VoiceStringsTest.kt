@@ -65,14 +65,17 @@ class VoiceStringsTest {
     )
 
     /**
-     * The phone's setup page, worded from the app's strings by #469, which adds them in English only:
-     * translating them is #492's. They fall back to English until then.
+     * Added in English only, with translating them left to #492: the phone's setup page, worded from
+     * the app's strings by #469, and a finished recording whose file has gone (#475). They fall back
+     * to English until then.
      */
     private val awaitingTranslation = setOf(
         "pairing_phone_missing_address",
         "pairing_phone_too_many_title",
         "pairing_phone_too_many_body",
         "pairing_phone_local_only",
+        "error_recording_missing",
+        "error_recording_usb_missing",
     )
 
     @Test
