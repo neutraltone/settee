@@ -191,6 +191,14 @@ _Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
 Where the box is set up: its sections down the left, and the highlighted section's settings beside them, so nothing has to be opened to see what's inside.
 _Avoid_: Preferences, options (that's an item's options), menu
 
+**Crash Report**:
+What Settee sends to Sentry about one crash or freeze, and only from a device whose viewer has turned crash reports on: which version, which device, which screen, and where in Settee's own code it failed. Never anything about the viewer, their Profiles, their Provider or what they watch.
+_Avoid_: Telemetry, analytics, diagnostics (that's the report Settings → Diagnostics saves to the viewer's own NAS)
+
+**Privacy**:
+The Settings section where a viewer turns Crash Reports on or off for this device, and sees what one contains.
+_Avoid_: Data, permissions
+
 **Side Panel**:
 The panel down the right of the screen, over what's there, for a choice, an item's details, or a question before acting. Back closes it.
 _Avoid_: Dialog, popup, modal
