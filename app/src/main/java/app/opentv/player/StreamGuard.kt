@@ -12,10 +12,10 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import app.opentv.R
-import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ViewerError
 import app.opentv.core.hardware
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.RecordedOn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,7 +61,7 @@ internal class StreamGuard(
     }
 
     /** Where the stream on the player is kept, if it's a finished recording, for the start-up limit's sentence. */
-    private var recordedOn: RecordingTarget? = null
+    private var recordedOn: RecordedOn? = null
 
     // Straight to the sentence: a panel that sends nothing usually does so on every Quality, so stepping
     // down would only make the viewer wait the limit again for each. Try again is theirs to choose.
@@ -85,7 +85,7 @@ internal class StreamGuard(
      * from a local file or the viewer's NAS, where the timed-out sentence blames a provider that isn't there.
      * [recordedOn] is where a finished recording is kept, null for anything else.
      */
-    fun started(limitStartUp: Boolean, recordedOn: RecordingTarget? = null) {
+    fun started(limitStartUp: Boolean, recordedOn: RecordedOn? = null) {
         this.recordedOn = recordedOn
         firstFrame.newStream()
         if (limitStartUp) startUp.newStream()

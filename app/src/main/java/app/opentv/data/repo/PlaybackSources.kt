@@ -94,12 +94,17 @@ sealed interface MediaKey {
 
 /** What [PlaybackSources] makes of a [MediaKey]: something to play, or why there isn't. */
 sealed interface Playable {
+    /**
+     * [recordedOn] is where a finished recording is kept, so a failure to read it can say so; null for
+     * anything else, a recording still being written included.
+     */
     data class Ready(
         val key: MediaKey,
         val url: String,
         val userAgent: String,
         val title: String,
         val isLive: Boolean,
+        val recordedOn: RecordedOn? = null,
     ) : Playable
 
     /**
@@ -122,6 +127,9 @@ sealed interface Playable {
         BAD_ADDRESS,
     }
 }
+
+/** Where a finished recording is kept. */
+enum class RecordedOn { DEVICE, NAS, USB }
 
 /**
  * The one place a title becomes something playable: its URL (minted now for a Stalker channel),
@@ -247,12 +255,13 @@ class PlaybackSources(
         val path = recording.filePath
         // One still being written is followed through the tail-reading optvrec:// source, so it can be
         // watched as it records with no second connection to the provider.
-        val url = when {
-            isGrowing(recording, clock()) -> "optvrec://${recording.id}"
-            SmbClient.isSmb(path) || RecordingStorage.isContent(path) -> path
-            else -> Uri.fromFile(File(path)).toString()
+        val (url, recordedOn) = when {
+            isGrowing(recording, clock()) -> "optvrec://${recording.id}" to null
+            SmbClient.isSmb(path) -> path to RecordedOn.NAS
+            RecordingStorage.isContent(path) -> path to RecordedOn.USB
+            else -> Uri.fromFile(File(path)).toString() to RecordedOn.DEVICE
         }
-        return Playable.Ready(key, url, recording.userAgent, recording.title, isLive = false)
+        return Playable.Ready(key, url, recording.userAgent, recording.title, isLive = false, recordedOn)
     }
 }
 

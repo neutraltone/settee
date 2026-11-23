@@ -17,6 +17,7 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.PlaybackErrors
 import com.google.common.truth.Truth.assertThat
 import java.util.TimeZone
@@ -300,6 +301,21 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `a finished recording says where it's kept, and one still being written doesn't`() = runTest {
+        val recordedOn = listOf(
+            "/data/rec/news.ts" to RecordingStatus.COMPLETED,
+            "smb://nas/rec/news.ts" to RecordingStatus.COMPLETED,
+            "content://usb/doc/news.ts" to RecordingStatus.COMPLETED,
+            "smb://nas/rec/news.ts" to RecordingStatus.RECORDING,
+        ).map { (filePath, status) ->
+            val id = db.recordings().insert(recording(filePath, status))
+            (sources.forWatching(MediaKey.Recording(id)) as Playable.Ready).recordedOn
+        }
+
+        assertThat(recordedOn).containsExactly(RecordedOn.DEVICE, RecordedOn.NAS, RecordedOn.USB, null).inOrder()
+    }
+
+    @Test
     fun `a recording plays with the user agent it was captured with, titled as the library shows it`() = runTest {
         val id = db.recordings().insert(recording("/data/rec/news.ts", RecordingStatus.COMPLETED))
 
@@ -312,6 +328,7 @@ class PlaybackSourcesTest {
                 userAgent = "Panel/1",
                 title = "News",
                 isLive = false,
+                recordedOn = RecordedOn.DEVICE,
             ),
         )
     }

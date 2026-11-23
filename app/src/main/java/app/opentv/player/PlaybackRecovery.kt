@@ -6,8 +6,8 @@
 package app.opentv.player
 
 import androidx.media3.common.PlaybackException
-import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.RecordedOn
 
 /** What can be done about a failed stream: the viewer offered Retry, the player restarting it by itself. */
 internal data class Recovery(val canRetry: Boolean, val canRestart: Boolean)
@@ -26,7 +26,7 @@ internal object PlaybackRecovery {
         error: PlaybackException,
         failuresInARow: Int,
         hadPlayed: Boolean,
-        recordedOn: RecordingTarget? = null,
+        recordedOn: RecordedOn? = null,
     ): Recovery {
         // Restarting can't change what this device can decode, and on a portal it would only mint
         // more links for a stream that will fail the same way. How many times it failed doesn't
@@ -36,7 +36,7 @@ internal object PlaybackRecovery {
         // viewer can plug back in (#475). A provider's stream never fails this way: its missing stream is an
         // HTTP status.
         val gone = error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
-        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS && (!gone || recordedOn == RecordingTarget.USB)
+        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS && (!gone || recordedOn == RecordedOn.USB)
         // Running out of memory took the Stick over a minute (#180), so a silent restart would hide
         // the message for another minute. Retry stays on offer: the memory may be free by the time
         // the viewer asks.
@@ -101,7 +101,7 @@ internal class RestartCounts {
      * After [error]; [hadPlayed] is whether the stream reached playing since it last loaded, and [recordedOn]
      * where it's kept if it's a finished recording.
      */
-    fun failed(error: PlaybackException, hadPlayed: Boolean, recordedOn: RecordingTarget?): Recovery =
+    fun failed(error: PlaybackException, hadPlayed: Boolean, recordedOn: RecordedOn?): Recovery =
         PlaybackRecovery.after(error, ++failures, hadPlayed, recordedOn)
 
     /**

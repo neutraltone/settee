@@ -27,6 +27,7 @@ import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.DecoderSize
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.ERROR_DETAIL_TAG
@@ -189,7 +190,7 @@ class PlayerErrorPanelTest {
         var resolves = 0
         val controller = players.realSourceController { key ->
             resolves++
-            Playable.Ready(key, Uri.fromFile(gone).toString(), userAgent = "", title = "Film", isLive = false)
+            Playable.Ready(key, Uri.fromFile(gone).toString(), "", "Film", isLive = false, RecordedOn.DEVICE)
         }
         toRelease += controller
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }

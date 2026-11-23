@@ -28,7 +28,8 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
  * number of retries turns that page into video. Backing those off too kept the spinner up for
  * about 15 seconds per attempt before the viewer saw why (#255). Asking it whether, rather than
  * listing exception types here, keeps the NAS and recordings, whose sources aren't HTTP, on the
- * same backoff as a provider's stream.
+ * same backoff as a provider's stream. The one exception is a missing file, which ExoPlayer means
+ * not to retry but misses when its sources wrap it (see [getRetryDelayMsFor]).
  */
 @OptIn(UnstableApi::class)
 internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {

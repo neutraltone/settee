@@ -12,6 +12,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
@@ -184,6 +185,7 @@ class StartUpLimitTest {
                 userAgent = "",
                 title = "Film",
                 isLive = false,
+                RecordedOn.NAS,
             )
         }
         start(controller, PlayerController.Request(MediaKey.Recording(1)))

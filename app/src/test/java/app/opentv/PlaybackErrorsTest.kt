@@ -21,8 +21,8 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.upstream.Loader
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ViewerError
+import app.opentv.data.repo.RecordedOn
 import app.opentv.player.DecoderLog
 import app.opentv.player.PlaybackErrors
 import app.opentv.player.readableCodeName
@@ -326,9 +326,9 @@ class PlaybackErrorsTest {
             PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
         )
         val expected = mapOf(
-            RecordingTarget.INTERNAL to "This recording's file isn't there any more.",
-            RecordingTarget.SMB to "This recording's file isn't there any more.",
-            RecordingTarget.USB to
+            RecordedOn.DEVICE to "This recording's file isn't there any more.",
+            RecordedOn.NAS to "This recording's file isn't there any more.",
+            RecordedOn.USB to
                 "Can't find this recording on your USB drive. Check it's plugged in, then try again.",
         )
 
@@ -342,7 +342,7 @@ class PlaybackErrorsTest {
     @Test
     fun `a NAS recording that can't be read says to check the NAS, however the NAS failed`() {
         nasFailures().forEach { failure ->
-            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordingTarget.SMB)
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
             assertThat(shown.sentence).isEqualTo(NAS_UNREACHABLE)
             assertThat(shown.detail).isEqualTo("IO unspecified")
         }
@@ -364,7 +364,7 @@ class PlaybackErrorsTest {
 
     @Test
     fun `a NAS recording that never starts says to check the NAS, and a provider's stream still blames the provider`() {
-        val nas = PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT, RecordingTarget.SMB)
+        val nas = PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT, RecordedOn.NAS)
         val provider = PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT)
 
         assertThat(nas).isEqualTo(ViewerError(NAS_UNREACHABLE, "StartUpLimit"))
@@ -387,7 +387,24 @@ class PlaybackErrorsTest {
         )
 
         expected.forEach { (failure, sentence) ->
-            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordingTarget.SMB)
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
+            assertThat(shown.sentence).isEqualTo(sentence)
+        }
+    }
+
+    @Test
+    fun `the IO codes only HTTP raises keep their own wording, even said of a NAS recording`() {
+        val expected = mapOf(
+            PlaybackException(null, null, PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE) to
+                "Your provider sent a web page instead of video. The link may have expired, " +
+                "so try refreshing your provider in Settings.",
+            httpFailure(403) to
+                "Your provider refused this. Your account may be in use on another device, " +
+                "so stop it there and try again.",
+        )
+
+        expected.forEach { (failure, sentence) ->
+            val shown = PlaybackErrors.describe(context, failure, onTelevision = true, recordedOn = RecordedOn.NAS)
             assertThat(shown.sentence).isEqualTo(sentence)
         }
     }

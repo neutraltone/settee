@@ -20,16 +20,14 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.RecordedOn
 import app.opentv.data.repo.SubtitlePreference
 import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.isRunningOnTelevision
-import app.opentv.recording.RecordingStorage
-import app.opentv.recording.SmbClient
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -236,7 +234,7 @@ class PlayerController(
     private var hadPlayed = false
 
     /** Where the stream on the player is kept, if it's a finished recording, so its failures say so. */
-    private var recordedOn: RecordingTarget? = null
+    private var recordedOn: RecordedOn? = null
 
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
@@ -486,7 +484,7 @@ class PlayerController(
                 stop()
                 gaveUp = false
                 hadPlayed = false
-                recordedOn = recordingKeptOn(request.key, playable.url)
+                recordedOn = playable.recordedOn
                 guard.started(limitStartUp, recordedOn)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
@@ -725,15 +723,3 @@ private fun Playable.Ready.mediaItem(): MediaItem = MediaItem.Builder()
     .build()
 
 private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
-
-/**
- * Where the finished recording [key] is kept, by the address [app.opentv.data.repo.PlaybackSources] gave it
- * ([url]); null for anything else, a recording still being written (`optvrec://`) included.
- */
-private fun recordingKeptOn(key: MediaKey, url: String): RecordingTarget? = when {
-    key !is MediaKey.Recording -> null
-    SmbClient.isSmb(url) -> RecordingTarget.SMB
-    RecordingStorage.isContent(url) -> RecordingTarget.USB
-    url.startsWith("file:") -> RecordingTarget.INTERNAL
-    else -> null
-}
