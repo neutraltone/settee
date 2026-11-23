@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.OpenSubtitlesFailure
@@ -20,7 +21,6 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -48,6 +48,7 @@ class OpenSubtitlesAccount(
     private val client: OpenSubtitlesClient,
     private val sealer: Sealer,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     /** The signed-in username, or null when signed out. */
     val signedInAs: StateFlow<String?> = settings.openSubtitlesUsername
@@ -128,7 +129,7 @@ class OpenSubtitlesAccount(
         )
     }
 
-    private suspend fun <T> io(block: suspend () -> Result<T>): Result<T> = withContext(Dispatchers.IO) { block() }
+    private suspend fun <T> io(block: suspend () -> Result<T>): Result<T> = withContext(dispatchers.io) { block() }
 
     private companion object {
         /** OpenSubtitles' tokens last 24 hours; renewing a minute early avoids a refused request. */

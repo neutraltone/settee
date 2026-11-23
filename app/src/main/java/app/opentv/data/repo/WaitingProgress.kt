@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.SourceDao
@@ -14,7 +15,6 @@ import app.opentv.data.model.Source
 import app.opentv.sync.SyncPosition
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -33,9 +33,10 @@ class WaitingProgress(
     private val sources: SourceDao,
     private val episodes: EpisodeDao,
     private val settings: AppSettings,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     // Its own scope because the sync screen doesn't wait for a provider, and may be gone before it answers.
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val background = CoroutineScope(SupervisorJob() + dispatchers.io)
 
     /** Stops fetching and waits for a read still running, for a test about to close its database. */
     @VisibleForTesting

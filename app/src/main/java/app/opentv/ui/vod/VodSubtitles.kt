@@ -6,6 +6,7 @@
 package app.opentv.ui.vod
 
 import androidx.media3.common.text.Cue
+import app.opentv.core.AppDispatchers
 import app.opentv.data.model.SubtitleKind
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.SubtitleResult
@@ -20,7 +21,6 @@ import app.opentv.player.DownloadedSubtitleCues
 import app.opentv.player.orderSubtitleResults
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +41,7 @@ class VodSubtitles(
     private val profileSettings: ProfileSettings,
     private val scope: CoroutineScope,
     private val streamTextOff: () -> Unit,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
     private val device: () -> String = { Locale.getDefault().language },
 ) {
     sealed interface Results {
@@ -106,7 +107,7 @@ class VodSubtitles(
     /** Shows [subtitle]. [picked] when the viewer chose it, which updates the Subtitle Preference. */
     fun show(subtitle: DownloadedSubtitle, picked: Boolean) {
         scope.launch {
-            val cues = withContext(Dispatchers.IO) { DownloadedSubtitleCues.parse(subtitle.file.readText()) }
+            val cues = withContext(dispatchers.io) { DownloadedSubtitleCues.parse(subtitle.file.readText()) }
             streamTextOff()
             _showing.value = Showing(subtitle, cues)
             openSubtitles.store.played(subtitle)

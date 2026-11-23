@@ -42,7 +42,6 @@ import app.opentv.recording.SmbConfig
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.SidePanel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -178,7 +177,10 @@ private fun TestConnectionRow(nas: NasDetails) {
             testing = true
             note = null
             scope.launch {
-                val result = withContext(Dispatchers.IO) { runCatching { SmbClient.test(nas.config()) } }
+                val result =
+                    withContext(ServiceLocator.get(context).dispatchers.io) {
+                        runCatching { SmbClient.test(nas.config()) }
+                    }
                 testing = false
                 val failure = result.exceptionOrNull()?.let {
                     ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
@@ -321,7 +323,7 @@ private fun storageNote(): String? {
     val resources = LocalResources.current
     var note by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        note = withContext(Dispatchers.IO) {
+        note = withContext(ServiceLocator.get(context).dispatchers.io) {
             val dir = RecordingStorage.internalDir(context)
             val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
             resources.getString(

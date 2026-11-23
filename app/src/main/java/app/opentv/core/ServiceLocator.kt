@@ -57,7 +57,6 @@ import app.opentv.ui.HomeSnapshots
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,6 +96,8 @@ object ServiceLocator {
      * lets a test say which of two devices changed something last. [openRecordingFile] replaces where
      * a recording's bytes go, so a test can fill the storage, and [captureReconnectMillis] how long a
      * recording waits before connecting again, so one whose stream has gone ends without waiting.
+     * [dispatchers] are the threads repositories and view models run their background work on, so a
+     * test can tell when that work has finished.
      */
     @Suppress("LongParameterList") // All but context are only passed by tests.
     class Graph(
@@ -104,6 +105,7 @@ object ServiceLocator {
         http: OkHttpClient? = null,
         settingsFile: String? = null,
         val clock: () -> Long = System::currentTimeMillis,
+        val dispatchers: AppDispatchers = AppDispatchers(),
         val decoders: DecoderList = DeviceDecoders(),
         private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
         val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
@@ -124,7 +126,7 @@ object ServiceLocator {
 
         /** Each Profile's last finished Home, drawn at once on a cold start (#595). */
         val homeSnapshots: HomeSnapshots by lazy {
-            HomeSnapshots(java.io.File(appContext.filesDir, "home"), DATABASE_VERSION, clock)
+            HomeSnapshots(java.io.File(appContext.filesDir, "home"), DATABASE_VERSION, clock, dispatchers)
         }
 
         val database: OpenTvDatabase by lazy {
@@ -170,7 +172,7 @@ object ServiceLocator {
         val stremioClient: StremioClient by lazy { StremioClient(httpClient) }
 
         val sourceRepository: SourceRepository by lazy {
-            SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient)
+            SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient, dispatchers)
         }
 
         val catalogRepository: CatalogRepository by lazy {
@@ -184,6 +186,7 @@ object ServiceLocator {
                 settings = settings,
                 tmdbKey = tmdbKey,
                 wording = errorWording,
+                dispatchers = dispatchers,
             ).apply { staging = appContext.cacheDir }
         }
 
@@ -201,6 +204,7 @@ object ServiceLocator {
                         database.episodes().forSeries(series.sourceId, series.seriesId)
                 },
                 clock = clock,
+                dispatchers = dispatchers,
             )
         }
 
@@ -213,16 +217,17 @@ object ServiceLocator {
                 settings.hiddenCategories,
                 settings.hiddenUnlocked,
                 decoders,
-                lineupSharing,
+                dispatchers = dispatchers,
+                sharing = lineupSharing,
             )
         }
 
         // Held here rather than inside the lineup so stopBackgroundWork can end its shared reads, which
         // outlive the last screen by ChannelLineup.SHARE_MILLIS.
-        private val lineupSharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        private val lineupSharing = CoroutineScope(SupervisorJob() + dispatchers.default)
 
         /** Every film and show grouped into titles, for lists and covers (ADR 0007). */
-        val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
+        val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders, dispatchers) }
 
         val vodQualities: VodQualities by lazy {
             VodQualities(
@@ -251,6 +256,7 @@ object ServiceLocator {
                     override var name by settings::selfEnabledGuide
                     override var matchedCatalogueSync by settings::matchedCatalogueSync
                 },
+                dispatchers = dispatchers,
             )
         }
 
@@ -260,7 +266,7 @@ object ServiceLocator {
          * left to show it, and a rolled-back write leaves nothing to clear up.
          */
         val appScope = CoroutineScope(
-            SupervisorJob() + Dispatchers.IO +
+            SupervisorJob() + dispatchers.io +
                 CoroutineExceptionHandler { _, e -> Log.w("ServiceLocator", "Background work failed", e) },
         )
 
@@ -304,8 +310,13 @@ object ServiceLocator {
                         OpenSubtitlesClient(httpClient, key, BuildConfig.VERSION_NAME),
                         KeystoreSealer(),
                         clock,
+                        dispatchers,
                     ),
-                    store = DownloadedSubtitles(java.io.File(appContext.filesDir, "subtitles"), clock),
+                    store = DownloadedSubtitles(
+                        java.io.File(appContext.filesDir, "subtitles"),
+                        clock,
+                        dispatchers = dispatchers,
+                    ),
                     catalog = catalogRepository,
                     sources = sourceRepository,
                 )
@@ -325,7 +336,7 @@ object ServiceLocator {
 
         /** The last opens and errors, in files of their own so they're readable when the database isn't. */
         val diagnosticsLog: DiagnosticsLog by lazy {
-            DiagnosticsLog(java.io.File(appContext.filesDir, "diagnostics"), appScope, Dispatchers.IO)
+            DiagnosticsLog(java.io.File(appContext.filesDir, "diagnostics"), appScope, dispatchers.io)
         }
 
         val diagnosticsExport: DiagnosticsExport by lazy { DiagnosticsExport(settings) }
@@ -341,7 +352,7 @@ object ServiceLocator {
                     cache = appContext.cacheDir,
                     files = appContext.filesDir,
                 ),
-                Dispatchers.IO,
+                dispatchers.io,
             )
         }
 
@@ -352,7 +363,7 @@ object ServiceLocator {
                 guide = epgRepository,
                 settings = settings,
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
-                clock = System::currentTimeMillis,
+                clock = clock,
                 scope = appScope,
             )
         }
@@ -363,7 +374,14 @@ object ServiceLocator {
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */
         val waitingProgress: WaitingProgress by lazy {
-            WaitingProgress(viewerLibrary, catalogRepository, database.sources(), database.episodes(), settings)
+            WaitingProgress(
+                viewerLibrary,
+                catalogRepository,
+                database.sources(),
+                database.episodes(),
+                settings,
+                dispatchers,
+            )
         }
 
         val profileSettings: ProfileSettings by lazy {

@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import android.util.Log
 import app.opentv.R
+import app.opentv.core.AppDispatchers
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.data.db.ChannelDao
@@ -34,7 +35,6 @@ import java.io.InputStream
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -79,6 +79,7 @@ data class NowAndNext(val now: Programme?, val next: Programme?)
 internal fun List<Programme>.onNowAt(nowUtcMillis: Long): Programme? =
     firstOrNull()?.takeIf { it.startUtcMillis <= nowUtcMillis }
 
+@Suppress("LongParameterList") // dispatchers is only passed by ServiceLocator and tests.
 class EpgRepository(
     private val programmeDao: ProgrammeDao,
     private val refreshDao: GuideRefreshDao,
@@ -91,6 +92,7 @@ class EpgRepository(
     /** Words a feed that failed: its last result is shown in Guide settings. */
     private val wording: ErrorWording,
     private val selfEnabledGuide: SelfEnabledGuide,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
 
     /**
@@ -182,7 +184,7 @@ class EpgRepository(
         // one on would wait for its download, which the refresh after it redoes the match for. Off
         // the caller's thread, which is the main one, since a big lineup takes a moment to match.
         try {
-            withContext(Dispatchers.Default) { runMatcher() }
+            withContext(dispatchers.default) { runMatcher() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -274,7 +276,7 @@ class EpgRepository(
         force: Boolean = false,
         skipFetchedSince: Long? = null,
         progress: (SyncProgress) -> Unit = {},
-    ): SyncSummary = withContext(Dispatchers.IO) {
+    ): SyncSummary = withContext(dispatchers.io) {
         val guideDropped = ensureFeeds()
         maybeAutoEnableRegionalFeed()
 

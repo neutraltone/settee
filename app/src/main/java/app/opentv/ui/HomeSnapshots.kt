@@ -5,6 +5,7 @@
  */
 package app.opentv.ui
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
@@ -17,7 +18,6 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -37,10 +37,11 @@ class HomeSnapshots(
     /** The database's schema version: a Home saved under another is never drawn, its ids may mean other rows. */
     private val schemaVersion: Int,
     private val clock: () -> Long,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun save(profileId: Long, home: HomeState) = withContext(Dispatchers.IO) {
+    suspend fun save(profileId: Long, home: HomeState) = withContext(dispatchers.io) {
         dir.mkdirs()
         val saved = SavedHome(
             format = FORMAT,
@@ -62,7 +63,7 @@ class HomeSnapshots(
         next.renameTo(file(profileId))
     }
 
-    suspend fun read(profileId: Long): HomeState? = withContext(Dispatchers.IO) {
+    suspend fun read(profileId: Long): HomeState? = withContext(dispatchers.io) {
         val text = runCatching { file(profileId).readText() }.getOrNull() ?: return@withContext null
         val saved = runCatching { json.decodeFromString(SavedHome.serializer(), text) }.getOrNull()
             ?: return@withContext null
@@ -95,12 +96,12 @@ class HomeSnapshots(
 
     /** Forgets [profileId]'s saved Home, as when the Profile is removed: a new one can be given its id. */
     suspend fun forget(profileId: Long) {
-        withContext(Dispatchers.IO) { file(profileId).delete() }
+        withContext(dispatchers.io) { file(profileId).delete() }
     }
 
     /** Forgets every Profile's saved Home, as when a provider is removed: another can be given its row ids. */
     suspend fun forgetAll() {
-        withContext(Dispatchers.IO) { dir.listFiles()?.forEach { it.delete() } }
+        withContext(dispatchers.io) { dir.listFiles()?.forEach { it.delete() } }
     }
 
     private fun file(profileId: Long) = File(dir, "$profileId.json")

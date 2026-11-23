@@ -97,7 +97,7 @@ class TestCatalog(
             MutableStateFlow(emptySet()),
             MutableStateFlow(false),
             ANY_SIZE_DECODERS,
-            sharing,
+            sharing = sharing,
         )
 
     private val refreshing = CoroutineScope(SupervisorJob() + Dispatchers.Default)

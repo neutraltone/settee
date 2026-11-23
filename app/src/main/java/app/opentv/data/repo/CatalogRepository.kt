@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.util.Log
 import androidx.room.withTransaction
 import app.opentv.R
+import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
@@ -45,7 +46,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ChannelResult
@@ -161,6 +161,7 @@ class CatalogRepository(
      * so the channel manager, which adds and tests providers through this module, words them the same.
      */
     val wording: ErrorWording,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     private val sourceDao = database.sources()
     private val channelDao = database.channels()
@@ -173,7 +174,7 @@ class CatalogRepository(
     private val tmdb = TmdbClient(http, tmdbKey)
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val background = CoroutineScope(SupervisorJob() + dispatchers.io)
 
     /**
      * Waits for the work [background] is still doing. Tests close their database straight after a
@@ -194,7 +195,7 @@ class CatalogRepository(
             tmdb = object : MovieTmdb {
                 override val ready get() = tmdb.isConfigured()
 
-                override suspend fun lookUp(movie: Movie) = withContext(Dispatchers.IO) { tmdbMetaOf(movie) }
+                override suspend fun lookUp(movie: Movie) = withContext(dispatchers.io) { tmdbMetaOf(movie) }
             },
         )
     }
@@ -206,7 +207,7 @@ class CatalogRepository(
             tmdb = object : SeriesTmdb {
                 override val ready get() = tmdb.isConfigured()
 
-                override suspend fun lookUp(series: Series) = withContext(Dispatchers.IO) { tmdbMetaOf(series) }
+                override suspend fun lookUp(series: Series) = withContext(dispatchers.io) { tmdbMetaOf(series) }
             },
             pace = lookupPace,
         )
@@ -288,7 +289,7 @@ class CatalogRepository(
      * or a match — the add-on feature stays inert rather than guessing — and a failure when TMDB
      * didn't answer.
      */
-    suspend fun imdbIdFor(movie: Movie): Result<String?> = withContext(Dispatchers.IO) {
+    suspend fun imdbIdFor(movie: Movie): Result<String?> = withContext(dispatchers.io) {
         tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
     }
 
@@ -340,16 +341,16 @@ class CatalogRepository(
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
 
     /** Every movie, newest first — for a caller that wants to build its own groupings. */
-    suspend fun allMovies(): List<Movie> = withContext(Dispatchers.IO) { movieDao.all() }
+    suspend fun allMovies(): List<Movie> = withContext(dispatchers.io) { movieDao.all() }
 
     /** Every series, newest first. */
-    suspend fun allSeries(): List<Series> = withContext(Dispatchers.IO) { seriesDao.all() }
+    suspend fun allSeries(): List<Series> = withContext(dispatchers.io) { seriesDao.all() }
 
     /** Changes when the movies or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
-    suspend fun movieFingerprint(): String = withContext(Dispatchers.IO) { movieDao.fingerprint() }
+    suspend fun movieFingerprint(): String = withContext(dispatchers.io) { movieDao.fingerprint() }
 
     /** Changes when the series or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
-    suspend fun seriesFingerprint(): String = withContext(Dispatchers.IO) { seriesDao.fingerprint() }
+    suspend fun seriesFingerprint(): String = withContext(dispatchers.io) { seriesDao.fingerprint() }
 
     /**
      * For you's genre rows for movies, from an ALREADY-LOADED list: [VodViewModel.loadHomeFeeds] reads
@@ -363,7 +364,7 @@ class CatalogRepository(
         started: Set<Long>,
         recent: List<Long>,
         now: Long = System.currentTimeMillis(),
-    ): List<GenreGroup<Movie>> = withContext(Dispatchers.Default) {
+    ): List<GenreGroup<Movie>> = withContext(dispatchers.default) {
         val byId = all.associateBy { it.id }
         genreRowsFrom(all, movieRanking(now), recent.mapNotNull(byId::get), leftOut = { it.id in started })
     }
@@ -378,7 +379,7 @@ class CatalogRepository(
         dismissed: Set<SeriesRef>,
         recent: List<SeriesRef>,
         now: Long = System.currentTimeMillis(),
-    ): List<GenreGroup<Series>> = withContext(Dispatchers.Default) {
+    ): List<GenreGroup<Series>> = withContext(dispatchers.default) {
         val byRef = all.associateBy { it.ref }
         genreRowsFrom(
             all,
@@ -399,7 +400,7 @@ class CatalogRepository(
         started: Set<Long>,
         limit: Int = 30,
         now: Long = System.currentTimeMillis(),
-    ): List<Movie> = withContext(Dispatchers.Default) {
+    ): List<Movie> = withContext(dispatchers.default) {
         recommendFrom(all, movieRanking(now), limit, tallied = { it.id in started }, leftOut = { it.id in started })
     }
 
@@ -414,7 +415,7 @@ class CatalogRepository(
         dismissed: Set<SeriesRef>,
         limit: Int = 30,
         now: Long = System.currentTimeMillis(),
-    ): List<Series> = withContext(Dispatchers.Default) {
+    ): List<Series> = withContext(dispatchers.default) {
         recommendFrom(
             all,
             seriesRanking(now),
@@ -432,7 +433,7 @@ class CatalogRepository(
      * in, each best-rated first. Matched on their [personKey], so only that person, however a
      * provider spells the accents.
      */
-    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<VodTitle> = withContext(Dispatchers.IO) {
+    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<VodTitle> = withContext(dispatchers.io) {
         val key = personKey(name)
         if (key.isEmpty()) return@withContext emptyList()
         val movies = movieDao.moviesWithPerson(key, perKind)
@@ -449,7 +450,7 @@ class CatalogRepository(
      * Null if the film isn't stored; one a refresh deletes while it asks is returned as it was, unsaved,
      * so its page shows rather than waiting for ever.
      */
-    suspend fun movieDetail(id: Long, now: Long = System.currentTimeMillis()): Movie? = withContext(Dispatchers.IO) {
+    suspend fun movieDetail(id: Long, now: Long = System.currentTimeMillis()): Movie? = withContext(dispatchers.io) {
         val movie = movieDao.byId(id) ?: return@withContext null
         val source = sourceDao.byId(movie.sourceId)
 
@@ -490,7 +491,7 @@ class CatalogRepository(
      */
     // On [background], not the caller's coroutine: XtreamApi blocks a thread on OkHttp's execute(),
     // which cancelling can't interrupt, so a timeout around the call itself would wait for it anyway.
-    suspend fun openMoviePage(id: Long, timer: CoroutineContext = Dispatchers.Default): Opened<Movie> {
+    suspend fun openMoviePage(id: Long, timer: CoroutineContext = dispatchers.default): Opened<Movie> {
         val asking = background.async { movieDetail(id) }
         val answered = try {
             withContext(timer) { withTimeoutOrNull(OPENING_LIMIT) { asking.await() } }
@@ -509,7 +510,7 @@ class CatalogRepository(
      * that would write every highlighted show's episodes, stamped as first seen while browsing. The
      * series page uses [openSeries].
      */
-    suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(Dispatchers.IO) {
+    suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(dispatchers.io) {
         seriesDetails(id, now, opening = false, onFetched = {}).lastOrNull()
     }
 
@@ -542,7 +543,7 @@ class CatalogRepository(
     fun openSeriesPage(
         id: Long,
         now: Long = System.currentTimeMillis(),
-        timer: CoroutineContext = Dispatchers.Default,
+        timer: CoroutineContext = dispatchers.default,
         onFetched: (Result<Unit>) -> Unit = {},
     ): Flow<Opened<Series>> = flow {
         if (seriesDao.byId(id) == null) {
@@ -632,7 +633,7 @@ class CatalogRepository(
             // 2) TMDB, in a build with a key, at once when something is still missing or TMDB's answer
             //    is six months old, so a series the background pass hasn't reached still fills in.
             tmdbAnswered(result, now)?.let { emit(it) }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(dispatchers.io)
 
     /**
      * [series] with TMDB's answer saved onto it as it's stored now, if it [wantsTmdb]; null if TMDB
@@ -682,7 +683,7 @@ class CatalogRepository(
         movie: Movie,
         limit: Int = MORE_LIKE_THIS_LIMIT,
         now: Long = System.currentTimeMillis(),
-    ): List<Movie> = withContext(Dispatchers.IO) {
+    ): List<Movie> = withContext(dispatchers.io) {
         val picked = movieSuggestions.idsFor(movie.likeThis(tmdb.isConfigured()), limit, now)
         val byId = movieDao.byIds(picked).associateBy { it.id }
         picked.mapNotNull(byId::get)
@@ -693,7 +694,7 @@ class CatalogRepository(
         series: Series,
         limit: Int = MORE_LIKE_THIS_LIMIT,
         now: Long = System.currentTimeMillis(),
-    ): List<Series> = withContext(Dispatchers.IO) {
+    ): List<Series> = withContext(dispatchers.io) {
         val picked = seriesSuggestions.idsFor(series.likeThis(tmdb.isConfigured()), limit, now)
         val byId = seriesDao.byIds(picked).associateBy { it.id }
         picked.mapNotNull(byId::get)
@@ -819,7 +820,7 @@ class CatalogRepository(
     }
 
     /** Live channels only — the fast path so the guide can show before VOD and the guide load. */
-    suspend fun fetchLive(source: Source, nowUtcMillis: Long): SyncResult = withContext(Dispatchers.IO) {
+    suspend fun fetchLive(source: Source, nowUtcMillis: Long): SyncResult = withContext(dispatchers.io) {
         try {
             when (source.kind) {
                 SourceKind.XTREAM -> syncXtreamLive(source, nowUtcMillis)
@@ -848,7 +849,7 @@ class CatalogRepository(
      * update times have moved by the time this returns, so [detectNewEpisodes] gets this one chance
      * at [VodFetch.updated].
      */
-    suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(Dispatchers.IO) {
+    suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(dispatchers.io) {
         if (!source.kind.carriesMoviesAndShows) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
             .onFailure { if (it is CancellationException) throw it }
@@ -857,7 +858,7 @@ class CatalogRepository(
     }
 
     suspend fun detectNewEpisodes(source: Source, updated: List<Series>, nowUtcMillis: Long) =
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
         }
 
@@ -930,7 +931,7 @@ class CatalogRepository(
      * [progress] hears how far through saving the downloaded list it is.
      */
     suspend fun fetchMovies(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
             var count = 0
             val list = fetchList {
@@ -945,7 +946,7 @@ class CatalogRepository(
 
     /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
     suspend fun fetchShows(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
             var saved = SavedSeries(0, emptyList(), stamp = 0)
             val list = fetchList {
@@ -1110,7 +1111,7 @@ class CatalogRepository(
      * [beforeWrite] is for tests: it runs between reading the rows and writing them back, where a
      * refresh or a synced hidden channel can land.
      */
-    suspend fun renormalizeAll(beforeWrite: suspend () -> Unit = {}): Int = withContext(Dispatchers.IO) {
+    suspend fun renormalizeAll(beforeWrite: suspend () -> Unit = {}): Int = withContext(dispatchers.io) {
         val existing = channelDao.everyRow()
         if (existing.isEmpty()) return@withContext 0
 
@@ -1154,11 +1155,11 @@ class CatalogRepository(
      * rebuilt from credentials. The `channels` table is live-only (movies and series have their own
      * tables), so every row here is a live channel whose URL derives from [XtreamApi.liveStreamUrl].
      */
-    suspend fun setLiveFormat(sourceId: Long, format: LiveStreamFormat) = withContext(Dispatchers.IO) {
+    suspend fun setLiveFormat(sourceId: Long, format: LiveStreamFormat) = withContext(dispatchers.io) {
         channelDao.switchLiveFormat(sourceId, format, api::liveStreamUrl)
     }
 
-    suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {
+    suspend fun deleteSource(sourceId: Long) = withContext(dispatchers.io) {
         // One transaction: cut off partway, a provider would be left with no channels or no guide.
         database.withTransaction {
             channelDao.deleteForSource(sourceId)

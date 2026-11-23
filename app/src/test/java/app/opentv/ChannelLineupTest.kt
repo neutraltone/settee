@@ -53,7 +53,14 @@ class ChannelLineupTest {
     private val unlocked = MutableStateFlow(false)
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lineup =
-        ChannelLineup(db, catalogue.viewerLibrary.favourites, lockedKeys, unlocked, ANY_SIZE_DECODERS, sharing)
+        ChannelLineup(
+            db,
+            catalogue.viewerLibrary.favourites,
+            lockedKeys,
+            unlocked,
+            ANY_SIZE_DECODERS,
+            sharing = sharing,
+        )
 
     @Before
     fun twoProviders() = runTest {
@@ -343,7 +350,7 @@ class ChannelLineupTest {
         lockedKeys,
         unlocked,
         ANY_SIZE_DECODERS,
-        sharing,
+        sharing = sharing,
         channelDao = dao,
     )
 

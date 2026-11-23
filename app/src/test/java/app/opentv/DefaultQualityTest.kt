@@ -163,7 +163,7 @@ class DefaultQualityTest {
         MutableStateFlow(emptySet()),
         MutableStateFlow(false),
         decoders,
-        sharing,
+        sharing = sharing,
     )
 
     private suspend fun channelOn(decoders: FakeDecoders, vararg names: String): LineupChannel {

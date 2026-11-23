@@ -41,7 +41,6 @@ import app.opentv.update.VersionNotes
 import app.opentv.update.WhatsNew
 import app.opentv.update.WhatsNewDialog
 import app.opentv.update.bundledChangelog
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -108,7 +107,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
         stringResource(R.string.about_whats_new),
         onClick = {
             scope.launch {
-                whatsNew = withContext(Dispatchers.IO) {
+                whatsNew = withContext(ServiceLocator.get(context).dispatchers.io) {
                     WhatsNew.installedNotes(BuildConfig.VERSION_NAME, context.bundledChangelog())
                 }
             }

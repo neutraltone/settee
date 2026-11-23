@@ -5,13 +5,13 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.SubtitleKind
 import app.opentv.data.remote.SubtitleResult
 import java.io.File
 import java.security.MessageDigest
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -57,6 +57,7 @@ class DownloadedSubtitles(
     private val dir: File,
     private val clock: () -> Long = System::currentTimeMillis,
     private val capBytes: Long = CAP_BYTES,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     private val lock = Mutex()
     private val json = Json { ignoreUnknownKeys = true }
@@ -120,7 +121,7 @@ class DownloadedSubtitles(
     private fun Entry.toSubtitle() =
         DownloadedSubtitle(title, fileId, language, kind, release, File(dir, fileName), offsetMillis, lastPlayedMillis)
 
-    private suspend fun <T> locked(block: () -> T): T = withContext(Dispatchers.IO) { lock.withLock { block() } }
+    private suspend fun <T> locked(block: () -> T): T = withContext(dispatchers.io) { lock.withLock { block() } }
 
     @Serializable
     private data class Entry(

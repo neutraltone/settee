@@ -6,10 +6,10 @@
 package app.opentv.data.repo
 
 import androidx.room.InvalidationTracker
+import app.opentv.core.AppDispatchers
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.GuideFingerprint
 import java.util.concurrent.atomic.AtomicLong
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -23,7 +23,10 @@ import kotlinx.coroutines.withContext
  * feed being removed, a moment after; it alone isn't enough, because Room tells observers on its
  * own thread after the write has returned, so a guide stored a moment ago could still be missed.
  */
-internal class StoredGuides(private val db: OpenTvDatabase) {
+internal class StoredGuides(
+    private val db: OpenTvDatabase,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
+) {
     /** Moves on with every change to the programmes table Room tells us of. */
     private val generation = AtomicLong()
     private val registering = Mutex()
@@ -62,7 +65,7 @@ internal class StoredGuides(private val db: OpenTvDatabase) {
         registering.withLock {
             if (watching) return
             // Off the main thread: registering can set up the tracker's triggers in the database.
-            withContext(Dispatchers.IO) { db.invalidationTracker.addObserver(observer) }
+            withContext(dispatchers.io) { db.invalidationTracker.addObserver(observer) }
             watching = true
         }
     }

@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.AppDispatchers
 import app.opentv.core.ViewerError
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Source
@@ -12,7 +13,6 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -25,6 +25,7 @@ class SourceRepository(
     private val api: XtreamApi,
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     fun observeAll(): Flow<List<Source>> = dao.observeAll()
 
@@ -38,7 +39,7 @@ class SourceRepository(
     suspend fun saveRefreshResult(sourceId: Long, failure: ViewerError?) =
         dao.setRefreshFailure(sourceId, failure?.stored())
 
-    suspend fun save(source: Source): Long = withContext(Dispatchers.IO) {
+    suspend fun save(source: Source): Long = withContext(dispatchers.io) {
         val normalised = source.copy(url = normaliseUrl(source.url, source.kind), name = uniqueName(source))
         if (source.id == 0L) {
             dao.insert(normalised)
@@ -58,7 +59,7 @@ class SourceRepository(
     }
 
     /** Checks the details work before the user is committed to them. */
-    suspend fun test(source: Source): Result<TestOutcome> = withContext(Dispatchers.IO) {
+    suspend fun test(source: Source): Result<TestOutcome> = withContext(dispatchers.io) {
         runCatching {
             val normalised = source.copy(url = normaliseUrl(source.url, source.kind))
             when (source.kind) {
