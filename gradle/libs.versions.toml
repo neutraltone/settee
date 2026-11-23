@@ -40,6 +40,8 @@ androidxTestRunner = "1.7.0"
 # Crash reports (ADR 0009). Only sentry-android-core: the umbrella artifact brings NDK and session
 # replay, which Settee never uses.
 sentry = "8.63.0"
+# Only uploads each release's R8 mapping (#577); everything else it can do is off in app/build.gradle.kts.
+sentryGradle = "6.26.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -122,3 +124,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+sentry-android = { id = "io.sentry.android.gradle", version.ref = "sentryGradle" }

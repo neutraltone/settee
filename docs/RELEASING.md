@@ -134,6 +134,25 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
    install it over the first (through the in-app updater or `adb install -r settee.apk`). It
    must install without asking you to uninstall, and keep your sources.
 
+## Crash report stack traces
+
+R8 renames Settee's classes in a release, so a crash report's stack trace is unreadable without
+that release's mapping. The Sentry Gradle plugin bakes an id for the mapping into the APK, which every
+report from it carries, and `release.yml`'s Assemble step uploads the mapping to Sentry under that id
+(#577). It needs, once:
+
+```bash
+gh secret set SENTRY_AUTH_TOKEN --repo neutraltone/settee   # an org auth token with project:releases
+gh variable set SENTRY_ORG --repo neutraltone/settee --body <org slug>
+gh variable set SENTRY_PROJECT --repo neutraltone/settee --body <project slug>
+```
+
+Without the token the build skips the upload and still succeeds, as it does on this Mac, forks and
+PR CI; that release's reports then show renamed classes. The id is a hash of the mapping, so running
+Release again for that tag once the token is set should upload a matching one (it also re-attaches
+the APKs). To check it worked, look for the release's ProGuard file under the Sentry project's Debug
+Files.
+
 ## When an update can't open the database
 
 Every schema from 9 (v0.5.0) on must migrate; only 1–8 and upstream OpenTV's 11 are rebuilt empty

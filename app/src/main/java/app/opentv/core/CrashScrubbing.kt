@@ -8,6 +8,8 @@ package app.opentv.core
 import io.sentry.Breadcrumb
 import io.sentry.SentryEvent
 import io.sentry.protocol.App
+import io.sentry.protocol.DebugImage
+import io.sentry.protocol.DebugMeta
 import io.sentry.protocol.Device
 import io.sentry.protocol.Mechanism
 import io.sentry.protocol.OperatingSystem
@@ -51,7 +53,25 @@ internal object CrashScrubbing {
         transaction = null
         logger = null
         fingerprints = null
+        debugMeta = debugMeta?.let(::debugMeta)
         keepContexts(this)
+    }
+
+    /**
+     * The R8 mapping's id alone, which the Sentry Gradle plugin bakes into a release's APK and uploads
+     * the mapping under (#577), so Sentry can turn the stack trace back into Settee's real names.
+     * Null without one: a debug build isn't minified, and has nothing to match.
+     */
+    private fun debugMeta(from: DebugMeta): DebugMeta? {
+        val mappings = from.images.orEmpty()
+            .filter { it.type == DebugImage.PROGUARD && it.uuid != null }
+            .map { image ->
+                DebugImage().apply {
+                    type = DebugImage.PROGUARD
+                    uuid = image.uuid
+                }
+            }
+        return mappings.takeIf { it.isNotEmpty() }?.let { DebugMeta().apply { images = it } }
     }
 
     /** Device model, free memory, the Android or Fire OS version, and Settee's version: nothing else. */
