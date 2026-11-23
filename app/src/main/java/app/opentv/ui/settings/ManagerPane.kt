@@ -81,4 +81,4 @@ private fun describe(wording: ErrorWording, failed: ManagerServer.State.Failed):
     ServerProblem.TOO_MANY_CODES -> wording.of(R.string.manager_too_many_codes)
 }
 
-private const val START_DELAY_MS = 400L
+internal const val START_DELAY_MS = 400L

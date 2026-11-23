@@ -2288,7 +2288,7 @@ private class LockedTitles(private val catalog: CatalogRepository, private val l
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)
     private val server = SyncServer(viewModelScope)
-    private val client = SyncClient(graph.httpClient)
+    private val client = SyncClient(graph.httpClient, graph.dispatchers)
     private val engine = SyncEngine(graph)
 
     val serverState: StateFlow<SyncServer.State> = server.state

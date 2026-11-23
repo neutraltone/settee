@@ -163,10 +163,12 @@ object ServiceLocator {
                 .build()
         }
 
-        val xtreamApi: XtreamApi by lazy { XtreamApi(httpClient, downloads = appContext.cacheDir) }
+        val xtreamApi: XtreamApi by lazy {
+            XtreamApi(httpClient, downloads = appContext.cacheDir, dispatchers = dispatchers)
+        }
 
         /** Stalker / Ministra portal client (MAC handshake + create_link). */
-        val stalkerApi: StalkerApi by lazy { StalkerApi(httpClient) }
+        val stalkerApi: StalkerApi by lazy { StalkerApi(httpClient, dispatchers = dispatchers) }
 
         /** Neutral Stremio add-on protocol client. Talks only to user-added manifest URLs. */
         val stremioClient: StremioClient by lazy { StremioClient(httpClient) }

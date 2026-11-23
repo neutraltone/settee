@@ -6,6 +6,7 @@
 package app.opentv.data.remote
 
 import android.util.Log
+import app.opentv.core.AppDispatchers
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
@@ -13,7 +14,6 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.remote.ProviderException.Problem
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.builtins.ListSerializer
@@ -50,7 +50,7 @@ import okio.BufferedSource
  * [endpoints] tries the common ones and the first that hands back a token wins, cached per source. The
  * MAC goes in a Cookie, URL-encoded, alongside a MAG-style STB User-Agent — the shape real boxes send.
  *
- * Blocking OkHttp calls wrapped in `withContext(Dispatchers.IO)`, matching [XtreamApi].
+ * Blocking OkHttp calls wrapped in `withContext(dispatchers.io)`, matching [XtreamApi].
  */
 class StalkerApi(
     private val http: OkHttpClient,
@@ -58,6 +58,7 @@ class StalkerApi(
         ignoreUnknownKeys = true
         isLenient = true
     },
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
 
     class StalkerException(message: String, cause: Throwable? = null, problem: Problem = Problem.BAD_REPLY) :
@@ -69,13 +70,13 @@ class StalkerApi(
     private val sessions = ConcurrentHashMap<Long, Session>()
 
     /** Add-source test: proves the portal + MAC produce a token. Throws [StalkerException] if not. */
-    suspend fun handshakeTest(source: Source) = withContext(Dispatchers.IO) {
+    suspend fun handshakeTest(source: Source) = withContext(dispatchers.io) {
         session(source, force = true)
         Unit
     }
 
     /** Live categories ("genres") for the guide's rail. */
-    suspend fun liveCategories(source: Source): List<Category> = withContext(Dispatchers.IO) {
+    suspend fun liveCategories(source: Source): List<Category> = withContext(dispatchers.io) {
         val arr = callRetrying(source, type = "itv", action = "get_genres", read = ::js) as? JsonArray
             ?: return@withContext emptyList()
         arr.mapIndexedNotNull { index, element ->
@@ -97,7 +98,7 @@ class StalkerApi(
      * A big portal's list can be more than a Fire TV Stick's heap will hold as one string, a JSON
      * tree and the channels at once, so it's read one channel at a time, as Xtream's lists are.
      */
-    suspend fun liveChannels(source: Source): List<Channel> = withContext(Dispatchers.IO) {
+    suspend fun liveChannels(source: Source): List<Channel> = withContext(dispatchers.io) {
         val s = session(source)
         callRetrying(source, type = "itv", action = "get_all_channels", read = { channels(it, source, s.endpoint) })
             .orEmpty()
@@ -150,7 +151,7 @@ class StalkerApi(
     }
 
     /** Mint the real, short-lived stream URL for a channel's [cmd]. Null if the portal declines. */
-    suspend fun createLink(source: Source, cmd: String): String? = withContext(Dispatchers.IO) {
+    suspend fun createLink(source: Source, cmd: String): String? = withContext(dispatchers.io) {
         val js = callRetrying(source, type = "itv", action = "create_link", read = ::js) { b ->
             b.addQueryParameter("cmd", cmd)
             b.addQueryParameter("forced_storage", "0")

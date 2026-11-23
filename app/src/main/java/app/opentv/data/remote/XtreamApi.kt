@@ -5,6 +5,7 @@
  */
 package app.opentv.data.remote
 
+import app.opentv.core.AppDispatchers
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
@@ -21,7 +22,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
@@ -66,6 +67,7 @@ class XtreamApi(
         ignoreUnknownKeys = true
         isLenient = true
     },
+    private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
 
     class XtreamException(
@@ -88,7 +90,7 @@ class XtreamApi(
     }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
-    suspend fun authenticate(source: Source): AccountInfo = withContext(Dispatchers.IO) {
+    suspend fun authenticate(source: Source): AccountInfo = withContext(dispatchers.io) {
         val body = getJson(source, action = null).jsonObject
         val userInfo = body["user_info"]?.jsonObjectOrNull
             ?: throw XtreamException("The server did not return account information.")
@@ -120,7 +122,7 @@ class XtreamApi(
         categories(source, "get_series_categories", StreamKind.SERIES)
 
     private suspend fun categories(source: Source, action: String, kind: StreamKind): List<Category> =
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             getJson(source, action).arrayOrEmpty.mapIndexedNotNull { index, element ->
                 val obj = element.jsonObjectOrNull ?: return@mapIndexedNotNull null
                 val id = obj["category_id"].asStringOrNull ?: return@mapIndexedNotNull null
@@ -138,7 +140,7 @@ class XtreamApi(
      * The live channel list, downloaded for reading a batch at a time as [movies] is: a very large
      * line-up's reply is tens of megabytes too.
      */
-    suspend fun liveStreams(source: Source): CatalogueList<Channel> = withContext(Dispatchers.IO) {
+    suspend fun liveStreams(source: Source): CatalogueList<Channel> = withContext(dispatchers.io) {
         // Where a channel falls in the list, for one without a number; counted here, as the list
         // hands parse each object on its own.
         var index = 0
@@ -169,7 +171,7 @@ class XtreamApi(
      * panel's list is tens of megabytes, and holding it as one string plus a [JsonElement] tree plus
      * the movies ran a Fire TV Stick's 128 MB heap out.
      */
-    suspend fun movies(source: Source): CatalogueList<Movie> = withContext(Dispatchers.IO) {
+    suspend fun movies(source: Source): CatalogueList<Movie> = withContext(dispatchers.io) {
         download(source, "get_vod_streams") { obj ->
             val streamId = obj["stream_id"].asStringOrNull ?: return@download null
             val name = obj["name"].asStringOrNull ?: return@download null
@@ -201,7 +203,7 @@ class XtreamApi(
     }
 
     /** The series list, downloaded for reading a batch at a time; see [movies]. */
-    suspend fun series(source: Source): CatalogueList<Series> = withContext(Dispatchers.IO) {
+    suspend fun series(source: Source): CatalogueList<Series> = withContext(dispatchers.io) {
         download(source, "get_series") { obj ->
             val seriesId = obj["series_id"].asStringOrNull ?: return@download null
             val name = obj["name"].asStringOrNull ?: return@download null
@@ -233,7 +235,7 @@ class XtreamApi(
      * on open. Every field is best-effort, and a panel that omits `info` or sends it as `[]` yields
      * all nulls. Null means the panel didn't answer at all, so callers can tell the two apart.
      */
-    suspend fun movieInfo(source: Source, streamId: String): VodInfo? = withContext(Dispatchers.IO) {
+    suspend fun movieInfo(source: Source, streamId: String): VodInfo? = withContext(dispatchers.io) {
         val body = runCatching {
             getJson(source, "get_vod_info", oneTitle = true) { it.addQueryParameter("vod_id", streamId) }
         }.getOrNull() ?: return@withContext null
@@ -260,7 +262,7 @@ class XtreamApi(
      * `[]` yields all nulls. See [seasonEpisodes] for the shapes `episodes` comes in. Throws when
      * the panel doesn't answer, so callers can tell that apart from a series with nothing to give.
      */
-    suspend fun seriesInfo(source: Source, seriesId: String): SeriesReply = withContext(Dispatchers.IO) {
+    suspend fun seriesInfo(source: Source, seriesId: String): SeriesReply = withContext(dispatchers.io) {
         val body = getJson(source, "get_series_info", oneTitle = true) {
             it.addQueryParameter("series_id", seriesId)
         }.jsonObjectOrNull
@@ -300,7 +302,7 @@ class XtreamApi(
      * The provider's guide, with its size where the server gives one (Setup's bar moves on it). The
      * caller must close it.
      */
-    suspend fun openEpg(source: Source): ResponseBody = withContext(Dispatchers.IO) {
+    suspend fun openEpg(source: Source): ResponseBody = withContext(dispatchers.io) {
         val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
@@ -431,7 +433,7 @@ class XtreamApi(
             file.delete()
             throw e
         }
-        return CatalogueList(file, json, parse)
+        return CatalogueList(file, json, parse, dispatchers.io)
     }
 
     /**
@@ -442,6 +444,7 @@ class XtreamApi(
         private val file: File,
         private val json: Json,
         private val parse: (JsonObject) -> T?,
+        private val io: CoroutineDispatcher,
     ) : Closeable {
         /**
          * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
@@ -449,9 +452,7 @@ class XtreamApi(
          * is an empty list, HTML the "not a valid catalogue" message, which can come after some
          * batches if a list is cut off.
          */
-        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) = withContext(
-            Dispatchers.IO,
-        ) {
+        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) = withContext(io) {
             // The file's size is known even when the panel didn't say how big its reply was.
             val size = file.length().coerceAtLeast(1)
             var read = 0L
