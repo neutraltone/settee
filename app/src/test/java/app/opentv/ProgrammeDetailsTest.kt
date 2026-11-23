@@ -335,10 +335,7 @@ class ProgrammeDetailsTest {
 
     /** Waits for the toast an action shows, which may come once it has checked something. */
     private fun awaitToast(): String {
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            ShadowToast.getTextOfLatestToast() != null
-        }
+        compose.waitRunningMainLooper { ShadowToast.getTextOfLatestToast() != null }
         return ShadowToast.getTextOfLatestToast()
     }
 
