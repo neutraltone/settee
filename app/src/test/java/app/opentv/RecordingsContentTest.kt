@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.content.Context
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -35,6 +37,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
@@ -439,12 +442,18 @@ class RecordingsContentTest {
 
     @Test
     fun `a failed recording says what went wrong, with the detail underneath`() {
+        // One cut off when Settee closed, as a cold start stores it (#474).
+        val sentence = ApplicationProvider.getApplicationContext<Context>()
+            .getString(R.string.rec_error_interrupted)
         val failed = completed(1, RecordingStatus.FAILED)
-            .copy(error = ViewerError("The channel stopped.", "HTTP 404").stored())
+            .copy(error = ViewerError(sentence, "Interrupted").stored())
         show(recordings = listOf(failed))
 
-        row("Recorded 1").assert(hasText("The channel stopped.", substring = true))
-        compose.onNodeWithTag(ERROR_DETAIL_TAG, useUnmergedTree = true).assertTextEquals("HTTP 404")
+        row("Recorded 1").assert(hasText(sentence, substring = true))
+        compose.onNodeWithTag(ERROR_DETAIL_TAG, useUnmergedTree = true).assertTextEquals("Interrupted")
+        // The bare word is only the detail line, never the sentence.
+        compose.onNodeWithText("Interrupted", useUnmergedTree = true).assert(hasTestTag(ERROR_DETAIL_TAG))
+        captureScreen("recordings_interrupted")
     }
 
     @Test
