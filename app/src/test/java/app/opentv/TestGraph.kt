@@ -7,7 +7,9 @@ package app.opentv
 
 import android.app.Application
 import android.os.Looper
+import android.view.ViewGroup
 import androidx.compose.ui.test.IdlingResource
+import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -29,6 +31,7 @@ import java.util.WeakHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -204,9 +207,17 @@ class TestGraph(
     fun awaitIdle() {
         when {
             dispatcher != null -> dispatcher.scheduler.runCurrent()
-            compose != null -> compose.waitForIdle()
+            showsScreen() -> compose?.waitForIdle()
             else -> drain("the graph's work to finish") { isIdleNow && RoomWork.isIdleNow }
         }
+    }
+
+    // Compose's waitForIdle waits two seconds for a screen to appear when none has been set yet, so a
+    // view model checked before its screen is drawn (or without one) is waited for directly.
+    private fun showsScreen(): Boolean = when (val rule = compose) {
+        null -> false
+        is AndroidComposeTestRule<*, *> -> rule.activity.findViewById<ViewGroup>(android.R.id.content).childCount > 0
+        else -> true
     }
 
     /**
@@ -280,8 +291,9 @@ class TestGraph(
 
     // ---- IdlingResource ----
 
+    // Asked over and over while a test waits, so it's also where the timers left waiting are run early.
     override val isIdleNow: Boolean
-        get() = work.busy() <= 0
+        get() = work.busy() <= 0 || false.also { soon.fireIfAllThatsLeft() }
 
     override fun getDiagnosticMessageIfBusy(): String = "${work.busy()} task(s) of the test graph still running"
 
@@ -463,6 +475,41 @@ class TestGraph(
         fun awaitChange() = synchronized(lock) { lock.wait(WAKE_MILLIS) }
     }
 
+    private val soon = Soon()
+
+    /**
+     * The counted timers still to fire. Once they're all the graph has left to do, and the main thread
+     * has nothing due either, the next idle check fires the earliest at once instead of letting the
+     * test sit it out: nothing can be checked before it fires anyway (it's counted), so the wait only
+     * cost real time, two seconds a settle for the guide's paced rebuilds. Fired in the order they're
+     * due, one per check, so whatever each sets off runs before the next.
+     */
+    private class Timer(val due: Long, val task: ScheduledFuture<*>, val run: Runnable)
+
+    private inner class Soon {
+        private val pending = mutableListOf<Timer>()
+
+        fun add(millis: Long, task: ScheduledFuture<*>, run: Runnable): Timer = synchronized(this) {
+            Timer(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis), task, run).also { pending += it }
+        }
+
+        fun remove(timer: Timer) = synchronized(this) { pending.remove(timer) }
+
+        fun fireIfAllThatsLeft() {
+            val onMain = Looper.myLooper() == Looper.getMainLooper()
+            val othersIdle = (!onMain || shadowOf(Looper.getMainLooper()).isIdle) && RoomWork.isIdleNow
+            val next = synchronized(this) {
+                pending.removeAll { it.task.isDone }
+                pending.minByOrNull { it.due }?.takeIf { othersIdle && work.busy() == pending.size }
+            }
+            // Only if it hadn't started: a timer already firing finishes by itself.
+            if (next != null && next.task.cancel(false)) {
+                remove(next)
+                timers.execute(next.run)
+            }
+        }
+    }
+
     /**
      * [delegate], counting what it runs and remembering whose it is, so teardown can stop it. Its
      * timers count too while they're due within [SOON_MILLIS]: a debounce of half a second or a
@@ -490,15 +537,18 @@ class TestGraph(
             if (counts) work.started()
             val done = AtomicBoolean()
             val finish = { if (done.compareAndSet(false, true) && counts) work.finished() }
-            val task = timers.schedule({
+            val run = Runnable {
                 try {
                     fire()
                 } finally {
                     finish()
                 }
-            }, millis, TimeUnit.MILLISECONDS)
+            }
+            val task = timers.schedule(run, millis, TimeUnit.MILLISECONDS)
+            val timer = if (counts) soon.add(millis, task, run) else null
             return DisposableHandle {
                 task.cancel(false)
+                timer?.let(soon::remove)
                 finish()
             }
         }

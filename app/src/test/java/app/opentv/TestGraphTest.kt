@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -109,6 +110,30 @@ class TestGraphTest {
     }
 
     @Test
+    fun `a timer the graph's work sets fires as soon as nothing else is running, rather than in real time`() {
+        aChannel()
+        val graph = testGraph.graph
+        val started = System.nanoTime()
+        compose.setTvContent {
+            val names by remember {
+                // As the guide paces its rebuilds: a result, then a rest before the next is let through.
+                db.sources().observeAll()
+                    .transform { all ->
+                        emit(all.joinToString { it.name })
+                        delay(REST_MILLIS)
+                        emit("Rested")
+                    }
+                    .flowOn(graph.dispatchers.default)
+            }.collectAsState("")
+            BasicText(names)
+        }
+
+        compose.onNodeWithText("Rested").assertExists()
+
+        assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started)).isLessThan(REST_MILLIS / 2)
+    }
+
+    @Test
     fun `work a test leaves running is stopped before the next test starts`() {
         val earlier = TestGraph(name = "earlier-test")
         lateinit var loop: Job
@@ -153,6 +178,9 @@ class TestGraphTest {
 
         const val SLOW_MILLIS = 300L
         const val SETTLE_MILLIS = 500L
+
+        // Under the three seconds within which TestGraph counts a timer as work still settling.
+        const val REST_MILLIS = 2_800L
     }
 }
 
