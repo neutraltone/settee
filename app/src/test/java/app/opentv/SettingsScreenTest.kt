@@ -324,7 +324,7 @@ class SettingsScreenTest {
         entry.type("http://127.0.0.1:9/guide168.xml")
         entry.pressAction()
 
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml") != null }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml") }).isNotNull()
         // Named by its host: a provider's guide link can carry the login.
         assertThat(graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
         compose.onNode(hasText("guide168", substring = true)).assertDoesNotExist()
@@ -374,13 +374,13 @@ class SettingsScreenTest {
         compose.onNode(hasText("Own guide 168") and hasAnyAncestor(isDialog())).assertExists()
         captureScreen("settings_guide_details")
         pressInPanel("Use this guide", Key.DirectionCenter)
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml")?.enabled == false }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml")?.enabled }).isFalse()
 
         pressInPanel("Use this guide", Key.DirectionDown)
         pressInPanel("Remove", Key.DirectionCenter)
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") == null }
+        assertThat(compose.saved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") }).isNull()
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
         compose.waitUntil(UI_WAIT_MILLIS) {
             compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
@@ -732,7 +732,7 @@ class SettingsScreenTest {
         pressInPanel("On", Key.DirectionUp)
         pressInPanel("Off", Key.DirectionCenter)
 
-        compose.waitUntilSaved { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
+        assertThat(compose.saved { graph.profileSettings.subtitlePreference.first() }.enabled).isFalse()
     }
 
     @Test

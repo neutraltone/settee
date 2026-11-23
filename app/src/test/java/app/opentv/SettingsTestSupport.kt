@@ -22,6 +22,12 @@ import kotlinx.coroutines.runBlocking
  */
 internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) = waitRunningMainLooper(saved)
 
+/**
+ * What a press saved, read once the screen and Room are idle (RoomWork): for a save that only goes
+ * through Room, so [waitUntilSaved]'s polling isn't needed. One that hops to `Dispatchers.IO` still is.
+ */
+internal fun <T> ComposeContentTestRule.saved(read: suspend () -> T): T = runOnIdle { runBlocking { read() } }
+
 /** The keyboard over an entry screen, which is a window of its own over Settings. */
 internal fun ComposeContentTestRule.entryKeyboard(): DeviceKeyboard {
     waitForIdle()

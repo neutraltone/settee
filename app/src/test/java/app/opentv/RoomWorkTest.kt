@@ -45,13 +45,23 @@ class RoomWorkTest {
     // standing in for a slow disk. The default executor is kept, since that's what's under test.
     private val slowDisk = CountDownLatch(1)
 
-    private val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), OpenTvDatabase::class.java)
+    private val db = Room.inMemoryDatabaseBuilder(
+        ApplicationProvider.getApplicationContext<Context>(),
+        OpenTvDatabase::class.java,
+    )
         .setQueryCallback({ sql, _ ->
-            if (sql.startsWith("SELECT") && sql.contains("sources")) slowDisk.await(SLOW_READ_MILLIS, TimeUnit.MILLISECONDS)
+            if (sql.startsWith("SELECT") &&
+                sql.contains("sources")
+            ) {
+                slowDisk.await(SLOW_READ_MILLIS, TimeUnit.MILLISECONDS)
+            }
         }, Runnable::run)
         .build()
 
-    private val id = runBlocking { db.sources().insert(Source(name = "Old films", kind = SourceKind.M3U, url = "http://example.com")) }
+    private val id =
+        runBlocking {
+            db.sources().insert(Source(name = "Old films", kind = SourceKind.M3U, url = "http://example.com"))
+        }
 
     @After
     fun close() = db.close()

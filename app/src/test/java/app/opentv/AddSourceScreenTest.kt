@@ -86,9 +86,9 @@ class AddSourceScreenTest {
         }
         show(tv = true, editing = id)
 
-        // The form waits for the providers list, which Room reads off the main thread: checking at
-        // once passed only when that read came back before the screen first went idle.
-        compose.waitUntilAtLeastOneExists(hasText("Edit provider"), UI_WAIT_MILLIS)
+        // The form waits for the providers list, which Room reads off the main thread; each check
+        // waits for that read (RoomWork), so none needs a wait of its own.
+        compose.onNodeWithText("Edit provider").assertExists()
         compose.onNodeWithText(PHONE).assertDoesNotExist()
         compose.onNodeWithText("Playlist URL").assertExists()
         compose.onNodeWithText("Username").assertDoesNotExist()
@@ -116,7 +116,8 @@ class AddSourceScreenTest {
         }
 
         // Leaving waits for the providers list too, as the edit form does.
-        compose.waitRunningMainLooper { finished }
+        compose.waitForIdle()
+        assertThat(finished).isTrue()
     }
 
     @Test
