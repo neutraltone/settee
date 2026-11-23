@@ -6,7 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasAnyAncestor
@@ -35,7 +34,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -109,11 +107,7 @@ class PlayerScreenOptionsTest {
         compose.waitForIdle()
     }
 
-    // Each Quality's write resumes on the main looper, which waitUntil alone doesn't run.
-    private fun favouriteIds(): Set<Long> {
-        shadowOf(Looper.getMainLooper()).idle()
-        return runBlocking { graph.viewerLibrary.favourites.channelIds().first() }
-    }
+    private fun favouriteIds(): Set<Long> = runBlocking { graph.viewerLibrary.favourites.channelIds().first() }
 
     private fun inListMatcher(text: String) = hasText(text) and hasAnyAncestor(isDialog())
 
@@ -127,10 +121,7 @@ class PlayerScreenOptionsTest {
 
         compose.onNode(inListMatcher("Record now")).performClick()
 
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            runBlocking { graph.recordingRepository.active() }.isNotEmpty()
-        }
+        compose.waitRunningMainLooper { runBlocking { graph.recordingRepository.active() }.isNotEmpty() }
         val recording = runBlocking { graph.recordingRepository.active().single() }
         assertThat(recording.channelId).isEqualTo(runBlocking { idOf("10") })
     }
@@ -144,7 +135,8 @@ class PlayerScreenOptionsTest {
         compose.onNode(inListMatcher("Add to Favourites")).performClick()
 
         val qualities = runBlocking { setOf(idOf("10"), idOf("20")) }
-        compose.waitUntil(TIMEOUT_MILLIS) { favouriteIds().containsAll(qualities) }
+        // Each Quality's write resumes on the main looper, which this wait runs.
+        compose.waitRunningMainLooper { favouriteIds().containsAll(qualities) }
         compose.waitForIdle()
         openList()
         waitInList("Remove from Favourites")
@@ -161,7 +153,8 @@ class PlayerScreenOptionsTest {
 
         compose.onNode(inListMatcher("Remove from Favourites")).performClick()
 
-        compose.waitUntil(TIMEOUT_MILLIS) { favouriteIds().isEmpty() }
+        // So does each removal.
+        compose.waitRunningMainLooper { favouriteIds().isEmpty() }
     }
 
     @Test

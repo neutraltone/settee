@@ -495,7 +495,9 @@ class VodPlayerRowTest {
 
             hold.release()
             // The reply comes back on another thread and finishes on the main one, whose queue
-            // waitUntil doesn't run, so this runs it while waiting.
+            // waitUntil doesn't run, so this runs it while waiting. Not waitRunningMainLooper: its
+            // waitUntil steps Compose's clock a frame per check, and a slow reply would let the controls
+            // hide, so the checks below would pass without the buttons having had a chance to show.
             untilOnMain { loading.episodeSteps.value.next }
             compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
             compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()

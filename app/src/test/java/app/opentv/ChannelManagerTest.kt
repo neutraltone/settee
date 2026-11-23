@@ -6,7 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
@@ -37,7 +36,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -112,10 +110,7 @@ class ChannelManagerTest {
             view = LocalView.current
             ChannelManagerScreen(onBack = { left = true }, viewModel = viewModel)
         }
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            viewModel.managerRows.value.isNotEmpty()
-        }
+        compose.waitRunningMainLooper { viewModel.managerRows.value.isNotEmpty() }
         compose.waitForIdle()
     }
 
@@ -176,8 +171,7 @@ class ChannelManagerTest {
         compose.onNode(hasText("Add to Favourites") and hasClickAction()).performKeyInput {
             pressKey(Key.DirectionCenter)
         }
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
+        compose.waitRunningMainLooper {
             runBlocking { graph.viewerLibrary.favourites.channelIds().first().isNotEmpty() }
         }
 

@@ -6,7 +6,6 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -44,7 +43,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -151,9 +149,7 @@ class VodLoadFailedTest {
         compose.waitForIdle()
     }
 
-    /** Waits for [text], running the main looper on each check, where the view model's work lands. */
-    private fun awaitText(text: String) = compose.waitUntil(10_000) {
-        shadowOf(Looper.getMainLooper()).idle()
+    private fun awaitText(text: String) = compose.waitRunningMainLooper {
         compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
     }
 
@@ -195,10 +191,7 @@ class VodLoadFailedTest {
 
         press(Key.DirectionCenter)
 
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            asking.reached.count == 0L
-        }
+        compose.waitRunningMainLooper { asking.reached.count == 0L }
         awaitText(app.getString(R.string.vod_loading_movies))
         assertNone(UNREACHABLE)
         asking.release()
@@ -244,10 +237,7 @@ class VodLoadFailedTest {
         setMovies()
 
         awaitText("Heat")
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            panel.asked.contains("get_vod_streams") && !viewModel.vodLoading.value
-        }
+        compose.waitRunningMainLooper { panel.asked.contains("get_vod_streams") && !viewModel.vodLoading.value }
         assertNone(UNREACHABLE)
         awaitText("Heat")
     }
@@ -263,8 +253,7 @@ class VodLoadFailedTest {
         var errorShown = false
         setMovies()
 
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
+        compose.waitRunningMainLooper {
             if (compose.onAllNodes(hasText(UNREACHABLE, substring = true)).fetchSemanticsNodes().isNotEmpty()) {
                 errorShown = true
             }

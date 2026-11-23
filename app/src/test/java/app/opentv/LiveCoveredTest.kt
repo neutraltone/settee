@@ -189,10 +189,7 @@ class LiveCoveredTest {
     private fun idleMainLooper() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun awaitRows() {
-        compose.waitUntil(10_000) {
-            idleMainLooper()
-            viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() }
-        }
+        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() } }
         compose.waitForIdle()
     }
 
@@ -247,10 +244,7 @@ class LiveCoveredTest {
         }
 
         back()
-        compose.waitUntil(10_000) {
-            idleMainLooper()
-            rowsList(NEWS)
-        }
+        compose.waitRunningMainLooper { rowsList(NEWS) }
         compose.waitForIdle()
 
         channelCell("Channel Two").assertIsFocused()
@@ -265,10 +259,7 @@ class LiveCoveredTest {
         setApp()
         awaitRows()
         compose.runOnIdle { viewModel.nudgeGuideDay(1) }
-        compose.waitUntil(10_000) {
-            idleMainLooper()
-            rowsList(TOMORROW)
-        }
+        compose.waitRunningMainLooper { rowsList(TOMORROW) }
         compose.waitForIdle()
         compose.onNode(hasText(TOMORROW)).assertIsDisplayed()
 
@@ -279,10 +270,7 @@ class LiveCoveredTest {
         // Whether or not today's rows were built before the guide stopped, it draws today.
         compose.onNode(hasText("Today")).assertIsDisplayed()
         compose.onNode(hasText(TOMORROW)).assertDoesNotExist()
-        compose.waitUntil(10_000) {
-            idleMainLooper()
-            !rowsList(TOMORROW)
-        }
+        compose.waitRunningMainLooper { !rowsList(TOMORROW) }
         compose.waitForIdle()
         compose.onNode(hasText("Today")).assertIsDisplayed()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(0)

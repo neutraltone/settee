@@ -236,10 +236,7 @@ class LiveBrowseTest {
      * a Right pressed then stays on the channel, and the presses after it land a cell short.
      */
     private fun awaitRows() {
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() }
-        }
+        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() } }
         compose.waitForIdle()
     }
 
@@ -586,10 +583,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("News") and hasClickAction()).assertIsFocused()
 
         press(Key.DirectionCenter)
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" }
-        }
+        compose.waitRunningMainLooper { viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" } }
         compose.waitForIdle()
         press(Key.DirectionRight)
 

@@ -7,7 +7,6 @@ package app.opentv
 
 import android.app.Application
 import android.content.pm.PackageManager
-import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -155,15 +154,8 @@ class VodBrowseTest {
         compose.waitForIdle()
     }
 
-    /**
-     * Waits for Recommended, worked out in the background and handed back on the main thread. The
-     * main looper is run on each check: Compose's own wait doesn't always run it, which left the
-     * view model's work unfinished until the wait gave up.
-     */
-    private fun awaitRecommended(done: () -> Boolean) = compose.waitUntil(10_000) {
-        shadowOf(Looper.getMainLooper()).idle()
-        done()
-    }
+    /** Waits for Recommended, worked out in the background and handed back on the main thread. */
+    private fun awaitRecommended(done: () -> Boolean) = compose.waitRunningMainLooper(done)
 
     /** The title on the first cover of the first row, Recommended's. */
     private val firstTitle get() = viewModel.recommendedMovies.value.first().displayTitle
