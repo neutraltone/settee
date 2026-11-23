@@ -174,7 +174,7 @@ class AddSourceScreenTest {
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testError != null } }
         val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
         captureScreen("add_source_test_failed")
