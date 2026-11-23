@@ -102,11 +102,8 @@ class TestGraph(
     val dispatcher: TestDispatcher? = if (virtualTime) StandardTestDispatcher() else null
 
     private val work = Work()
-    private val timers = Executors.newSingleThreadScheduledExecutor {
-        Thread(it, "TestGraph timers").apply {
-            isDaemon =
-                true
-        }
+    private val timers = Executors.newSingleThreadScheduledExecutor { task ->
+        Thread(task, "TestGraph timers").also { it.isDaemon = true }
     }
     private val jobs: MutableSet<Job> = Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
     private val io: CoroutineDispatcher = dispatcher ?: Tracked(Dispatchers.IO, "io")
