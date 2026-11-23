@@ -73,6 +73,15 @@ class ProviderRoutesTest {
     @get:Rule(order = 0)
     val openSubtitlesGraph = TestGraph(name = "provider-routes-opensubtitles", http = panel.http, swapIn = false)
 
+    /** The same app as [graph], in a build with Settee's Sentry DSN; nothing it'd send leaves the test. */
+    @get:Rule(order = 0)
+    val crashReportsGraph =
+        TestGraph(name = "provider-routes-crash-reports", http = panel.http, swapIn = false, crashReportsTo = CRASH_REPORTS)
+
+    /** And with both OpenSubtitles' key and Sentry's DSN. */
+    @get:Rule(order = 0)
+    val bothGraph = TestGraph(name = "provider-routes-both", http = panel.http, swapIn = false, crashReportsTo = CRASH_REPORTS)
+
     @get:Rule(order = 1)
     val testGraph = TestGraph(compose, name = "provider-routes-test", http = panel.http)
 
@@ -296,14 +305,19 @@ class ProviderRoutesTest {
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
     }
 
-    /** A build with Settee's Sentry DSN, for [graph]; nothing Crash Reports would send leaves the test. */
-    private fun withCrashReports(graph: ServiceLocator.Graph = this.graph): ServiceLocator.Graph = graph.apply {
-        sentryDsn = "https://k@sentry.example.org/1"
-        crashOutbox = CrashReports.Outbox {}
-        crashReportsGraphs += this
+    private val crashReportsGraphs = mutableListOf<ServiceLocator.Graph>()
+
+    /** The app in a build with Settee's Sentry DSN. */
+    private val withCrashReports by lazy {
+        compose.registerIdlingResource(crashReportsGraph)
+        crashReportsGraph.graph.also { crashReportsGraphs += it }
     }
 
-    private val crashReportsGraphs = mutableListOf<ServiceLocator.Graph>()
+    /** The app in a build with OpenSubtitles' key and Settee's Sentry DSN. */
+    private val withBoth by lazy {
+        compose.registerIdlingResource(bothGraph)
+        bothGraph.graph.apply { openSubtitlesKey = "k" }.also { crashReportsGraphs += it }
+    }
 
     @After
     fun turnCrashReportsOff() {
@@ -312,7 +326,7 @@ class ProviderRoutesTest {
 
     @Test
     fun `with crash reports, the first provider goes on to their step, and Not now to Setup with them off`() {
-        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports)))
 
         savePlaylist()
 
@@ -322,7 +336,7 @@ class ProviderRoutesTest {
         openSubtitlesStepButton("Not now").performClick()
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.SETUP)
-        assertThat(graph.crashReports.on.value).isFalse()
+        assertThat(withCrashReports.crashReports.on.value).isFalse()
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.CRASH_REPORTS_STEP)
         compose.onAllNodesWithText("Take me to Settee").onFirst().assertExists()
@@ -330,7 +344,7 @@ class ProviderRoutesTest {
 
     @Test
     fun `Send crash reports on their step turns them on and goes on to Setup`() {
-        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports)))
         savePlaylist()
         compose.waitForIdle()
 
@@ -338,14 +352,14 @@ class ProviderRoutesTest {
 
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.SETUP)
-        assertThat(graph.crashReports.on.value).isTrue()
+        assertThat(withCrashReports.crashReports.on.value).isTrue()
     }
 
     @Test
     fun `with OpenSubtitles and crash reports, OpenSubtitles' Not now goes on to the crash reports step`() {
         setApp(
             start = Routes.ADD_SOURCE,
-            sources = testGraph.track(SourcesViewModel(app, withCrashReports(withOpenSubtitles))),
+            sources = testGraph.track(SourcesViewModel(app, withBoth)),
         )
         savePlaylist()
         compose.waitForIdle()
@@ -363,7 +377,7 @@ class ProviderRoutesTest {
     @Test
     fun `Back on the crash reports step goes back to the form and takes the provider away`() {
         val guide = panel.hold("xmltv.php")
-        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports())))
+        setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports)))
         savePlaylist()
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.CRASH_REPORTS_STEP)
@@ -374,8 +388,8 @@ class ProviderRoutesTest {
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
         compose.waitForIdle()
-        assertThat(runBlocking { graph.sourceRepository.all() }).isEmpty()
-        assertThat(graph.crashReports.on.value).isFalse()
+        assertThat(runBlocking { withCrashReports.sourceRepository.all() }).isEmpty()
+        assertThat(withCrashReports.crashReports.on.value).isFalse()
     }
 
     @Test
@@ -724,3 +738,6 @@ class ProviderRoutesTest {
 
 /** The start of what a playlist with no channels says (core/ErrorWording). */
 private const val NO_CHANNELS = "There are no channels at that address"
+
+/** Settee's Sentry project, as a release build has it; nothing sent there leaves the test. */
+private val CRASH_REPORTS = CrashReports.Destination("https://k@sentry.example.org/1", CrashReports.Outbox {})

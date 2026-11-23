@@ -43,10 +43,9 @@ class CrashQuestionTest {
 
     private fun launch(dsn: String = DSN) = CrashReports(
         settings,
-        dsn,
+        CrashReports.Destination(dsn, CrashReports.Outbox { synchronized(sent) { sent += it } }),
         release = "1.4.0",
         environment = "test",
-        outbox = { synchronized(sent) { sent += it } },
         // The test's main looper only runs when the test lets it: no freeze is a freeze here.
         freezes = CrashReports.Freezes(notResponding = { false }),
         background = Runnable::run,

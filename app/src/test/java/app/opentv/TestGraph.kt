@@ -19,6 +19,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppDispatchers
+import app.opentv.core.CrashReports
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.player.DecoderList
@@ -80,6 +81,7 @@ import org.robolectric.Shadows.shadowOf
  * own, so a sync test's second device doesn't. [statements] hears every statement the database
  * runs, on the thread running it, for a test that counts reads. [openRecordingFile] and
  * [captureReconnectMillis] are the graph's own, for a recording's storage and its reconnects.
+ * [crashReportsTo] too: no Crash Reports, as in a debug build, unless a test gives them somewhere to go.
  */
 // Each parameter is a Graph setting a test may need, and each function one of the ways a test waits;
 // the counting behind them is in TestGraphWork.kt.
@@ -96,6 +98,7 @@ class TestGraph(
     private val statements: ((String) -> Unit)? = null,
     private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
     private val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
+    private val crashReportsTo: CrashReports.Destination = CrashReports.Destination(dsn = ""),
 ) : TestRule,
     IdlingResource {
     init {
@@ -135,6 +138,7 @@ class TestGraph(
             decoders = decoders ?: DeviceDecoders(),
             openRecordingFile = openRecordingFile,
             captureReconnectMillis = captureReconnectMillis,
+            crashReportsTo = crashReportsTo,
         ) { openDatabase().also { opened = true } }
     }
 

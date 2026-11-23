@@ -39,7 +39,14 @@ class CrashReportsTest {
     private var freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { false })
 
     private fun crashReports(dsn: String = DSN, release: String = "1.4.0") =
-        CrashReports(settings, dsn, release, environment = "test", outbox, freezes, background = Runnable::run).also {
+        CrashReports(
+            settings,
+            CrashReports.Destination(dsn, outbox),
+            release,
+            environment = "test",
+            freezes,
+            background = Runnable::run,
+        ).also {
             reports = it
             it.start(app)
         }

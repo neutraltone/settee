@@ -46,9 +46,7 @@ class PrivacySettingsTest {
 
     /** Crash Reports as a build with [dsn] has them; nothing they'd send leaves the test. */
     private fun crashReports(dsn: String): CrashReports {
-        graph.sentryDsn = dsn
-        graph.crashOutbox = CrashReports.Outbox { sent += it }
-        return graph.crashReports
+        return CrashReports(graph.settings, CrashReports.Destination(dsn, CrashReports.Outbox { sent += it }), "1.4.0", "test")
     }
 
     private fun show(crashReports: CrashReports, section: SettingsSection = SettingsSection.Privacy) =

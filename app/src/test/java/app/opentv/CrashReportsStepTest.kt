@@ -46,9 +46,7 @@ class CrashReportsStepTest {
     private val sent = mutableListOf<String>()
 
     private val crashReports: CrashReports by lazy {
-        graph.sentryDsn = DSN
-        graph.crashOutbox = CrashReports.Outbox { sent += it }
-        graph.crashReports
+        CrashReports(graph.settings, CrashReports.Destination(DSN, CrashReports.Outbox { sent += it }), "1.4.0", "test")
     }
 
     private var done = false

@@ -29,9 +29,10 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Crash Reports (ADR 0009): crashes and freezes sent to Sentry, only from a build with Settee's
- * [dsn] and only while the viewer has them [on], with nothing in them that could identify the
- * viewer or their Provider ([CrashScrubbing]). The only code that touches Sentry's SDK: screens,
- * view models and the app go through this, so a rule changes in one place.
+ * DSN and only while the viewer has them [on], with nothing in them that could identify the
+ * viewer or their Provider ([CrashScrubbing]). Only this and its own helpers in `core/`
+ * ([CrashScrubbing], [HeldCrash]) touch Sentry's SDK, and nothing outside `core/` does: screens, view
+ * models and the app go through this, so a rule changes in one place (CrashReportsBoundaryTest).
  *
  * Sentry is started here, by hand, never by its auto-init content provider (removed in the
  * manifest), so nothing of it runs before the DSN and the viewer's choice have been checked. A
@@ -42,21 +43,25 @@ import kotlinx.coroutines.flow.asStateFlow
  * nor anything at launch but an uncaught-exception handler, a sleeping [FreezeWatch] thread and a
  * check for the held file.
  *
- * [outbox] replaces Sentry's own transport, so a test can see each envelope exactly as it would
- * leave the device. Null, as in the app, sends them to Sentry. [freezes] and [background] are the
- * same kind of seam: what counts as a freeze, and where sending a held crash runs.
+ * [to] says where reports go: Settee's Sentry project, or a test's [Outbox] in place of Sentry's own
+ * transport, so a test can see each envelope exactly as it would leave the device. [freezes] and
+ * [background] are the same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
 // The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place.
-@Suppress("LongParameterList", "TooManyFunctions") // outbox, freezes and background are only passed by tests.
 class CrashReports(
     private val settings: AppSettings,
-    private val dsn: String,
+    private val to: Destination,
     private val release: String,
     private val environment: String,
-    private val outbox: Outbox? = null,
     private val freezes: Freezes = Freezes(),
     private val background: Executor = Executors.newSingleThreadExecutor(),
 ) {
+    /**
+     * Where reports go: the project [dsn] names, which is blank in a build without Settee's key (so
+     * none go at all), and, for a test, an [outbox] that takes the place of Sentry's own transport.
+     */
+    class Destination(val dsn: String, val outbox: Outbox? = null)
+
     /** Where envelopes go instead of Sentry: each one serialized, as it would be sent. */
     fun interface Outbox {
         fun send(envelope: String)
@@ -85,10 +90,13 @@ class CrashReports(
     }
 
     /** Whether this build can send Crash Reports at all. Without, nothing offers them. */
-    val available: Boolean = dsn.isNotBlank()
+    val available: Boolean = to.dsn.isNotBlank()
 
     /** Whether this device sends Crash Reports: the viewer's choice, off until they turn it on. */
     val on: StateFlow<Boolean> = settings.crashReportsOn
+
+    /** Whether Setup offers its Crash Reports step: a build that has them, on a device that hasn't said yes. */
+    val offersSetupStep: Boolean get() = available && !on.value
 
     @Volatile private var context: Context? = null
 
@@ -206,31 +214,54 @@ class CrashReports(
     fun report(kind: Handled, error: Throwable) {
         if (!available || !on.value || !Sentry.isEnabled()) return
         val hint = Hint().apply { set(HANDLED_HINT, kind) }
-        Sentry.captureException(reported(kind, error), hint)
-    }
-
-    /**
-     * [error] as a [HandledError] named after [kind] and each class in its chain, with the same stack
-     * traces, and the original messages only where [Handled.keepsMessages] says they're safe.
-     */
-    private fun reported(kind: Handled, error: Throwable): Throwable {
-        fun copy(from: Throwable, depth: Int): HandledError {
-            val message = if (kind.keepsMessages) "${from.javaClass.name}: ${from.message}" else from.javaClass.name
-            val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
-            return HandledError(message, cause).apply { stackTrace = from.stackTrace }
-        }
-        val copied = copy(error, 0)
-        return HandledError("${kind.name}: ${copied.message}", copied.cause).apply { stackTrace = error.stackTrace }
+        Sentry.captureException(HandledError.of(kind, error), hint)
     }
 
     /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
-    class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause)
+    class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause) {
+        internal companion object {
+            /** Causes copied: enough for any real chain, and an end to a looping one. */
+            private const val MAX_CAUSES = 8
+
+            /**
+             * [error] as a [HandledError] named after [kind] and each class in its chain, with the same
+             * stack traces, and the original messages only where [Handled.keepsMessages] says they're safe.
+             */
+            fun of(kind: Handled, error: Throwable): HandledError {
+                fun copy(from: Throwable, depth: Int): HandledError {
+                    val message = if (kind.keepsMessages) "${from.javaClass.name}: ${from.message}" else from.javaClass.name
+                    val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
+                    return HandledError(message, cause).apply { stackTrace = from.stackTrace }
+                }
+                val copied = copy(error, 0)
+                return HandledError("${kind.name}: ${copied.message}", copied.cause).apply { stackTrace = error.stackTrace }
+            }
+        }
+    }
 
     @Synchronized
     private fun startSentry() {
         val context = context ?: return
         if (started) return
-        SentryAndroid.init(context) { options -> configure(options) }
+        SentryAndroid.init(context) { options ->
+            options.dsn = to.dsn
+            options.release = release
+            options.environment = environment
+            cacheDir = options.cacheDirPath
+            options.errorsAndFreezesOnly()
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
+                // Checked again here: a crash can land between turning reports off and Sentry closing.
+                // While off, the held crash being sent is the only event let through: a handled error
+                // (HANDLED_HINT) or anything else is dropped, never held, since only the crash handler
+                // and the freeze watch hold.
+                if (!on.value && event.eventId != sendingHeld) {
+                    null
+                } else {
+                    CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+                }
+            }
+            to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it)) }
+        }
         started = true
     }
 
@@ -259,65 +290,9 @@ class CrashReports(
         kept?.listFiles()?.forEach(File::deleteRecursively)
     }
 
-    private fun configure(options: SentryAndroidOptions) {
-        options.dsn = dsn
-        options.release = release
-        options.environment = environment
-        cacheDir = options.cacheDirPath
-
-        // Errors and freezes only (ADR 0009): no tracing, profiling, replay, screenshots, view
-        // hierarchy, breadcrumbs of any kind, sessions or anything sendDefaultPii would add.
-        options.isSendDefaultPii = false
-        options.isAnrEnabled = true
-        options.tracesSampleRate = null
-        options.profilesSampleRate = null
-        options.isEnableAppStartProfiling = false
-        options.isEnableAutoActivityLifecycleTracing = false
-        options.isEnableUserInteractionTracing = false
-        options.isEnableFramesTracking = false
-        options.sessionReplay.sessionSampleRate = 0.0
-        options.sessionReplay.onErrorSampleRate = 0.0
-        options.isAttachScreenshot = false
-        options.isAttachViewHierarchy = false
-        options.isAttachThreads = false
-        options.isAttachServerName = false
-        options.isEnableActivityLifecycleBreadcrumbs = false
-        options.isEnableAppLifecycleBreadcrumbs = false
-        options.isEnableSystemEventBreadcrumbs = false
-        options.isEnableAppComponentBreadcrumbs = false
-        options.isEnableNetworkEventBreadcrumbs = false
-        options.isEnableUserInteractionBreadcrumbs = false
-        options.maxBreadcrumbs = 0
-        options.isEnableAutoSessionTracking = false
-        options.isSendClientReports = false
-        options.isEnableNdk = false
-        options.isEnableRootCheck = false
-        options.isCollectAdditionalContext = false
-
-        options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-            // Checked again here: a crash can land between turning reports off and Sentry closing.
-            // While off, the held crash being sent is the only event let through: a handled error
-            // (HANDLED_HINT) or anything else is dropped, never held, since only the crash handler
-            // and the freeze watch hold.
-            if (!on.value && event.eventId != sendingHeld) {
-                null
-            } else {
-                CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
-            }
-        }
-        options.beforeSendTransaction = SentryOptions.BeforeSendTransactionCallback { _, _ -> null }
-        options.beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
-            CrashScrubbing.breadcrumb(breadcrumb)
-        }
-        outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it)) }
-    }
-
     private companion object {
         /** The hint a handled error's event carries, naming its [Handled] kind. */
         const val HANDLED_HINT = "settee.handled"
-
-        /** Causes copied into a [HandledError]: enough for any real chain, and an end to a looping one. */
-        const val MAX_CAUSES = 8
 
         const val HELD_FILE = "crash-reports/held.json"
         const val MOST_REFUSALS = 2
@@ -349,5 +324,42 @@ class CrashReports(
         override fun close(isRestarting: Boolean) = Unit
 
         override fun close() = Unit
+    }
+}
+
+/** Errors and freezes only (ADR 0009): everything else Sentry can collect or send, off. */
+private fun SentryAndroidOptions.errorsAndFreezesOnly() {
+    // No tracing, profiling, replay, screenshots, view hierarchy, breadcrumbs of any kind, sessions or
+    // anything sendDefaultPii would add.
+    isSendDefaultPii = false
+    isAnrEnabled = true
+    tracesSampleRate = null
+    profilesSampleRate = null
+    isEnableAppStartProfiling = false
+    isEnableAutoActivityLifecycleTracing = false
+    isEnableUserInteractionTracing = false
+    isEnableFramesTracking = false
+    sessionReplay.sessionSampleRate = 0.0
+    sessionReplay.onErrorSampleRate = 0.0
+    isAttachScreenshot = false
+    isAttachViewHierarchy = false
+    isAttachThreads = false
+    isAttachServerName = false
+    isEnableActivityLifecycleBreadcrumbs = false
+    isEnableAppLifecycleBreadcrumbs = false
+    isEnableSystemEventBreadcrumbs = false
+    isEnableAppComponentBreadcrumbs = false
+    isEnableNetworkEventBreadcrumbs = false
+    isEnableUserInteractionBreadcrumbs = false
+    maxBreadcrumbs = 0
+    isEnableAutoSessionTracking = false
+    isSendClientReports = false
+    isEnableNdk = false
+    isEnableRootCheck = false
+    isCollectAdditionalContext = false
+
+    beforeSendTransaction = SentryOptions.BeforeSendTransactionCallback { _, _ -> null }
+    beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
+        CrashScrubbing.breadcrumb(breadcrumb)
     }
 }

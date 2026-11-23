@@ -36,10 +36,12 @@ class HandledErrorReportsTest {
     private val sent = mutableListOf<String>()
     private val reports = CrashReports(
         settings,
-        dsn = "https://k@sentry.example.org/1",
+        CrashReports.Destination(
+            "https://k@sentry.example.org/1",
+            CrashReports.Outbox { envelope -> synchronized(sent) { sent += envelope } },
+        ),
         release = "1.4.0",
         environment = "test",
-        outbox = { envelope -> synchronized(sent) { sent += envelope } },
     ).also { it.start(app) }
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
