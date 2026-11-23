@@ -90,6 +90,51 @@ class CrashReports(
         screen = route?.substringBefore('/')?.substringBefore('?')?.substringBefore('{')?.takeIf { it.isNotBlank() }
     }
 
+    /**
+     * The handled errors Settee reports (ADR 0009): only failures Settee's own code can cause. Closed
+     * on purpose: a Provider's failures (HTTP errors, dead streams, web pages instead of video) and
+     * playback errors have no kind here, so they can't leave the device. [keepsMessages]: whether the
+     * error's own messages are sent (scrubbed) or only its classes and stack trace.
+     */
+    enum class Handled(internal val keepsMessages: Boolean) {
+        /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
+        XTREAM_PARSE(keepsMessages = false),
+
+        /**
+         * Room refusing to open the database: a missing migration or a schema that doesn't match.
+         * Its message names versions and tables, never rows.
+         */
+        DATABASE_MIGRATION(keepsMessages = true),
+    }
+
+    /**
+     * Reports [error], a handled error of [kind], while Crash Reports are on, through the same
+     * scrubber as a crash. Off, it's dropped, never held for the after-crash question: that's for
+     * crashes the viewer saw, and a handled error was already shown as one.
+     */
+    fun report(kind: Handled, error: Throwable) {
+        if (!available || !on.value || !Sentry.isEnabled()) return
+        val hint = Hint().apply { set(HANDLED_HINT, kind) }
+        Sentry.captureException(reported(kind, error), hint)
+    }
+
+    /**
+     * [error] as a [HandledError] named after [kind] and each class in its chain, with the same stack
+     * traces, and the original messages only where [Handled.keepsMessages] says they're safe.
+     */
+    private fun reported(kind: Handled, error: Throwable): Throwable {
+        fun copy(from: Throwable, depth: Int): HandledError {
+            val message = if (kind.keepsMessages) "${from.javaClass.name}: ${from.message}" else from.javaClass.name
+            val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
+            return HandledError(message, cause).apply { stackTrace = from.stackTrace }
+        }
+        val copied = copy(error, 0)
+        return HandledError("${kind.name}: ${copied.message}", copied.cause).apply { stackTrace = error.stackTrace }
+    }
+
+    /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
+    class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause)
+
     @Synchronized
     private fun startSentry() {
         val context = context ?: return
@@ -152,6 +197,14 @@ class CrashReports(
             CrashScrubbing.breadcrumb(breadcrumb)
         }
         outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it)) }
+    }
+
+    private companion object {
+        /** The hint a handled error's event carries, naming its [Handled] kind. */
+        const val HANDLED_HINT = "settee.handled"
+
+        /** Causes copied into a [HandledError]: enough for any real chain, and an end to a looping one. */
+        const val MAX_CAUSES = 8
     }
 
     /** Sentry's transport, swapped for one that hands each envelope to an [Outbox]. */

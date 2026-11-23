@@ -164,7 +164,12 @@ object ServiceLocator {
         }
 
         val xtreamApi: XtreamApi by lazy {
-            XtreamApi(httpClient, downloads = appContext.cacheDir, dispatchers = dispatchers)
+            XtreamApi(
+                httpClient,
+                downloads = appContext.cacheDir,
+                dispatchers = dispatchers,
+                reportParseFailure = { crashReports.report(CrashReports.Handled.XTREAM_PARSE, it) },
+            )
         }
 
         /** Stalker / Ministra portal client (MAC handshake + create_link). */

@@ -17,13 +17,17 @@ import androidx.annotation.WorkerThread
  *
  * Only opening is caught here, not the queries after it: an IllegalStateException from a query is a
  * bug, and catching those as well would hide it.
+ *
+ * [reportMigrationFailure] hears of Room's refusals, which are Settee's own to fix, so Crash Reports
+ * can send them (#576); not SQLite's, which are the device's.
  */
 @WorkerThread
-fun OpenTvDatabase.wontOpen(): RuntimeException? = try {
+fun OpenTvDatabase.wontOpen(reportMigrationFailure: (IllegalStateException) -> Unit = {}): RuntimeException? = try {
     openHelper.writableDatabase
     null
 } catch (missingMigration: IllegalStateException) {
     // Room's: no migration from the version on disk, or a schema that doesn't match.
+    reportMigrationFailure(missingMigration)
     missingMigration
 } catch (unreadable: SQLException) {
     // SQLite's: a full disk, or a file it can't open.

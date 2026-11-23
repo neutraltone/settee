@@ -43,7 +43,11 @@ timed, after a week. Turn off Settings → Display → Skip intros and credits a
 ## Crash reports
 
 When Settee crashes or stops responding, it can send a report to Sentry so the bug can be found and
-fixed. Crash reports are **off until you turn them on**: on the last step of setting Settee up, in
+fixed. So can two errors Settee shows rather than crashing, because they usually mean a bug in Settee: a
+provider's list that Settee couldn't read, and Settee's own database failing to open after an update.
+For the first, the report says where in Settee's code reading failed, never what the provider sent.
+
+Crash reports are **off until you turn them on**: on the last step of setting Settee up, in
 Settings → Privacy, or by answering Send or Always send when Settee asks about a crash the next time
 it opens. Say Don't send twice and it stops asking. Settings → Privacy turns them off again at any
 time, and turning them off throws away any report still waiting to go. The choice belongs to each
