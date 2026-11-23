@@ -41,6 +41,15 @@ val openSubtitlesApiKey: String = builtInKey("OPENSUBTITLES_API_KEY", "opensubti
  */
 val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
 
+/*
+ * Settee's Sentry DSN, for crash reports a viewer has turned on (ADR 0009). From the SENTRY_DSN secret
+ * in CI, or sentry.dsn in local.properties, which git ignores. Only release builds (and the .pr
+ * builds made from them) get it: debug builds always have a blank one, and blank means crash
+ * reporting doesn't exist in that build. A DSN can always be pulled out of an APK; it can only send,
+ * and Sentry's own filters limit misuse.
+ */
+val sentryDsn: String = builtInKey("SENTRY_DSN", "sentry.dsn")
+
 // The profile generator's builds of the app take this plus a suffix (androidComponents below).
 val releaseApplicationId = "uk.neutraltone.settee"
 
@@ -98,6 +107,8 @@ android {
                 it.isLetterOrDigit() || it in ".-_"
             }}\"",
         )
+        // Blank here, so debug builds never report; the release build type sets the real one.
+        buildConfigField("String", "SENTRY_DSN", "\"\"")
     }
 
     signingConfigs {
@@ -121,6 +132,12 @@ android {
             // could never replace the release install anyway, and on a device it needs telling
             // apart from both that and the debug build. The badge is in src/local (sourceSets).
             if (isLocalRelease) applicationIdSuffix = ".pr"
+            // A DSN is a URL: anything that isn't one is dropped rather than break BuildConfig.
+            buildConfigField(
+                "String",
+                "SENTRY_DSN",
+                "\"${sentryDsn.filter { it.isLetterOrDigit() || it in ":/@.-_" }}\"",
+            )
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -357,6 +374,7 @@ dependencies {
     // drive via a user-granted tree URI, with no storage permission.
     implementation(libs.androidx.documentfile)
     implementation(libs.coil.compose)
+    implementation(libs.sentry.android.core)
     implementation(libs.zxing.core)
     // Installs the baseline profile on a sideloaded APK, which no app store does for us: on the
     // first run, or at the next background dexopt (docs/PERFORMANCE.md).

@@ -101,6 +101,8 @@ jobs:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
           # Settee's one TMDB key; without it the release simply never asks TMDB.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # Settee's Sentry DSN; without it the release has no crash reports and never offers them.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: ./gradlew assembleRelease
 
       # Two copies of the same APK: the fixed-name settee.apk makes releases/latest/download/settee.apk

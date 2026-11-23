@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -38,7 +39,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -314,6 +317,15 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     // rotation keeps the same count, and with it the back stack.
     var navGeneration by rememberSaveable { mutableIntStateOf(0) }
     val navController = key(navGeneration) { rememberNavController() }
+    // The screen a Crash Report names: the route's name only, which CrashReports cuts down to.
+    val crashReports = ServiceLocator.get(LocalContext.current).crashReports
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            crashReports.screenOpened(destination.route)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
@@ -368,7 +380,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
         if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
     }
 
-    val bootContext = androidx.compose.ui.platform.LocalContext.current
+    val bootContext = LocalContext.current
 
     // A tapped reminder notification asks for a specific channel. Consume it so it fires once and
     // never re-triggers on a later launch.

@@ -76,6 +76,8 @@ open class OpenTvApp :
     override fun onCreate() {
         super.onCreate()
         val graph = ServiceLocator.get(this)
+        // First, so a crash in the rest of the launch is caught; costs a setting read unless reports are on.
+        graph.crashReports.start(this)
         SyncWorker.schedule(this)
 
         // Cold-start reconciliation: a recording still marked "in progress" at process start is an

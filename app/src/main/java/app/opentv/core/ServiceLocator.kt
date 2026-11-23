@@ -326,6 +326,28 @@ object ServiceLocator {
         }
 
         /**
+         * Settee's Sentry DSN; blank, as in every debug build and any build without Settee's key,
+         * means no Crash Reports. A test sets its own, and [crashOutbox], before [crashReports] is
+         * first used, to see what would be sent whatever the build has.
+         */
+        internal var sentryDsn: String = BuildConfig.SENTRY_DSN
+
+        /** Where a test catches what [crashReports] would send; null sends it to Sentry. */
+        internal var crashOutbox: CrashReports.Outbox? = null
+
+        /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
+        val crashReports: CrashReports by lazy {
+            CrashReports(
+                settings,
+                sentryDsn,
+                release = BuildConfig.VERSION_NAME,
+                // The owner's .pr test builds report too, told apart from the release here.
+                environment = if (BuildConfig.APPLICATION_ID.endsWith(".pr")) "pr" else "production",
+                outbox = crashOutbox,
+            )
+        }
+
+        /**
          * The phone's way in, for providers and OpenSubtitles' sign-in. One for the app, so Setup's
          * OpenSubtitles step carries on with the address the phone sent the first provider through.
          */

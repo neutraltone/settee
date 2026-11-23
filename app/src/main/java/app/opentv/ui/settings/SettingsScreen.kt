@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Sync
@@ -62,6 +63,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.CrashReports
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.OpenSubtitles
 import app.opentv.ui.design.HighlightStyle
@@ -84,6 +86,7 @@ enum class SettingsSection(@StringRes val title: Int, @StringRes val hint: Int, 
     Addons(R.string.settings_pane_addons, R.string.settings_pane_addons_hint, Icons.Filled.Extension),
     OpenSubtitles(R.string.opensubtitles_name, R.string.settings_pane_opensubtitles_hint, Icons.Filled.Subtitles),
     Manager(R.string.settings_pane_manager, R.string.settings_pane_manager_hint, Icons.Filled.PhoneAndroid),
+    Privacy(R.string.settings_pane_privacy, R.string.settings_pane_privacy_hint, Icons.Filled.PrivacyTip),
     Diagnostics(R.string.settings_pane_diagnostics, R.string.settings_pane_diagnostics_hint, Icons.Filled.MonitorHeart),
     About(R.string.settings_pane_about, R.string.settings_pane_about_hint, Icons.Filled.Info),
 }
@@ -152,6 +155,8 @@ fun SettingsScreen(
     checkForUpdate: UpdateCheck = CheckGitHub,
     // And one so tests can have OpenSubtitles whatever key the build has; the app's own by default.
     openSubtitles: OpenSubtitles? = ServiceLocator.get(LocalContext.current).openSubtitles,
+    // And Crash Reports, so tests can have them whatever DSN the build has.
+    crashReports: CrashReports = ServiceLocator.get(LocalContext.current).crashReports,
 ) {
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
@@ -206,10 +211,7 @@ fun SettingsScreen(
         ) {
             Text(stringResource(R.string.nav_settings), SetteeType.ScreenTitle)
             Spacer(Modifier.height(SetteeSpace.RowGap))
-            // Only a build with Settee's OpenSubtitles key has the section.
-            SettingsSection.entries.filter {
-                it != SettingsSection.OpenSubtitles || openSubtitles != null
-            }.forEach { section ->
+            shownSections(openSubtitles, crashReports).forEach { section ->
                 SectionRow(
                     section = section,
                     isCurrent = section == memory.section,
@@ -258,6 +260,7 @@ fun SettingsScreen(
                         onOpenDiagnostics,
                         checkForUpdate,
                         openSubtitles,
+                        crashReports,
                     )
                 }
             }
@@ -265,6 +268,20 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * The sections this build has: only one with Settee's OpenSubtitles key has that section, and only one
+ * with its Sentry DSN has Privacy, whose one setting is Crash Reports.
+ */
+private fun shownSections(openSubtitles: OpenSubtitles?, crashReports: CrashReports) = SettingsSection.entries.filter {
+    when (it) {
+        SettingsSection.OpenSubtitles -> openSubtitles != null
+        SettingsSection.Privacy -> crashReports.available
+        else -> true
+    }
+}
+
+// One branch per section, each a single call: splitting the when up would only hide that.
+@Suppress("CyclomaticComplexMethod")
 @Composable
 private fun Pane(
     section: SettingsSection,
@@ -277,6 +294,7 @@ private fun Pane(
     onOpenDiagnostics: () -> Unit,
     checkForUpdate: UpdateCheck,
     openSubtitles: OpenSubtitles?,
+    crashReports: CrashReports,
 ) {
     when (section) {
         SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
@@ -289,6 +307,7 @@ private fun Pane(
         SettingsSection.Addons -> AddonsPane()
         SettingsSection.OpenSubtitles -> openSubtitles?.let { OpenSubtitlesPane(it) }
         SettingsSection.Manager -> ManagerPane()
+        SettingsSection.Privacy -> PrivacyPane(crashReports)
         SettingsSection.Diagnostics -> DiagnosticsPane(onOpenDiagnostics)
         SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }
