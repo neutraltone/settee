@@ -87,6 +87,16 @@ a PR adds, reverted ones included, not other branches; pushes to `main` scan its
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
+Branch protection requires a PR to be up to date with `main` before it merges. Two PRs that were each
+green on their own base have broken `main` this way before, and a merge queue isn't available for a
+user-owned repo. If a PR is behind, use **Update branch** and let CI run again.
+
+**A failing test your PR doesn't touch is flaky, not yours to fix there.** Re-run the failed job once
+and comment on #617 (the test, its line, the run, and whether the re-run passed). Don't open a
+one-test `test:` PR: the cause is shared by most UI tests (they can't see when Room and IO work has
+finished), and #615/#616 fix it structurally. If it fails again on the re-run, or your PR touches it,
+it's real: fix it in the PR. Don't add a test-retry plugin; a test that passes on retry is still flaky.
+
 `screenshots.yml` renders the screenshots of a PR's merge base and head in one job, and writes a before |
 after table of the changed screens into the description between `<!-- screenshots:start -->` markers,
 uploading the images with `gh --attach` as `RELEASE_PLEASE_TOKEN`, since Actions' own token can't (later pushes also get a comment of what changed since the
