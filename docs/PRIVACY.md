@@ -61,6 +61,8 @@ A report contains only:
   one crash on ten devices
 - the stack trace: which parts of Settee's own code were running, with any web addresses cut down to
   their path and anything shaped like a MAC address hidden
+- an id for the exact build, the same in every copy of a release, so the stack trace can be matched
+  to Settee's code
 
 A report never contains your provider's address, username, password or MAC, the names of your
 providers, profiles or channels, or what you were watching. Settee removes everything not on the list
