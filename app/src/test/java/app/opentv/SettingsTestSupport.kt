@@ -18,9 +18,9 @@ import kotlinx.coroutines.runBlocking
 
 /**
  * Waits for what a press saved. The save resumes on the main thread between its steps, so a condition
- * that only reads the database would never let it finish without [waitUntilMainCaughtUp].
+ * that only reads the database would never let it finish without [waitRunningMainLooper].
  */
-internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) = waitUntilMainCaughtUp(saved)
+internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) = waitRunningMainLooper(saved)
 
 /** The keyboard over an entry screen, which is a window of its own over Settings. */
 internal fun ComposeContentTestRule.entryKeyboard(): DeviceKeyboard {

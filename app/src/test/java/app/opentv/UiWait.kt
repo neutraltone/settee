@@ -5,7 +5,9 @@
  */
 package app.opentv
 
+import android.os.Looper
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import org.robolectric.Shadows.shadowOf
 
 /**
  * How long a UI test waits for a screen to reach the state it checks. A wait ends as soon as it does,
@@ -15,12 +17,12 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 const val UI_WAIT_MILLIS = 15_000L
 
 /**
- * Waits until [condition] holds, running the main looper before each check. A view model's database
- * reads and network answers come back on the main thread, and under Robolectric its looper runs only
- * when a test idles it. [ComposeTestRule.waitUntil] never does that, it only moves Compose's clock and
- * sleeps. So an answer that arrives after the screen last went idle stays queued, however long the wait.
+ * Waits up to [UI_WAIT_MILLIS] for [condition], running the main looper before each check. Work off
+ * the main thread (a Room read, a connection test) comes back on that looper, and `waitUntil` with a
+ * condition that only reads a value never runs it, so the answer would never arrive. A wait for nodes,
+ * such as `waitUntilAtLeastOneExists`, needs no help: fetching them waits for idle, which runs it.
  */
-fun ComposeTestRule.waitUntilMainCaughtUp(condition: () -> Boolean) = waitUntil(UI_WAIT_MILLIS) {
-    waitForIdle()
+fun ComposeTestRule.waitRunningMainLooper(condition: () -> Boolean) = waitUntil(UI_WAIT_MILLIS) {
+    shadowOf(Looper.getMainLooper()).idle()
     condition()
 }

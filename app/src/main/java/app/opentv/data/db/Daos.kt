@@ -1920,10 +1920,11 @@ interface RecordingDao {
 
     /**
      * On a cold start, any row still marked RECORDING is a leftover from a process that was
-     * killed mid-capture — reconcile it to FAILED so the UI never shows a phantom "recording".
+     * killed mid-capture — reconcile it to FAILED, with [error] as why, so the UI never shows a
+     * phantom "recording".
      */
-    @Query("UPDATE recordings SET status = 'FAILED', error = 'Interrupted' WHERE status = 'RECORDING'")
-    suspend fun failInterrupted()
+    @Query("UPDATE recordings SET status = 'FAILED', error = :error WHERE status = 'RECORDING'")
+    suspend fun failInterrupted(error: String)
 }
 
 @Dao

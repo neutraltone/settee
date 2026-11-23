@@ -12,7 +12,9 @@ import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -50,6 +52,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi", application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
 class AddSourceScreenTest {
 
     @get:Rule
@@ -82,10 +85,10 @@ class AddSourceScreenTest {
             )
         }
         show(tv = true, editing = id)
-        // Until the providers have been read, the form doesn't know which kind of form to show.
-        compose.waitUntilMainCaughtUp { viewModel.ui.value.loaded }
 
-        compose.onNodeWithText("Edit provider").assertExists()
+        // The form waits for the providers list, which Room reads off the main thread: checking at
+        // once passed only when that read came back before the screen first went idle.
+        compose.waitUntilAtLeastOneExists(hasText("Edit provider"), UI_WAIT_MILLIS)
         compose.onNodeWithText(PHONE).assertDoesNotExist()
         compose.onNodeWithText("Playlist URL").assertExists()
         compose.onNodeWithText("Username").assertDoesNotExist()
@@ -112,7 +115,8 @@ class AddSourceScreenTest {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
 
-        compose.waitUntilMainCaughtUp { finished }
+        // Leaving waits for the providers list too, as the edit form does.
+        compose.waitRunningMainLooper { finished }
     }
 
     @Test
@@ -143,7 +147,7 @@ class AddSourceScreenTest {
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            compose.waitUntilMainCaughtUp { viewModel.ui.value.let { !it.testing && it.testResult != null } }
+            compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testResult != null } }
 
             compose.onNodeWithText("Found your playlist. Save to load its channels.").assertExists()
             captureScreen("add_source_test_ok")
@@ -170,7 +174,7 @@ class AddSourceScreenTest {
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntilMainCaughtUp { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        compose.waitRunningMainLooper { viewModel.ui.value.let { !it.testing && it.testError != null } }
         val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
         captureScreen("add_source_test_failed")
@@ -350,7 +354,8 @@ class AddSourceScreenTest {
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
         compose.onNodeWithText(XTREAM).assertDoesNotExist()
-        compose.onNodeWithText("Then enter this code on your phone").assertExists()
+        // The QR screen waits for the providers list too, as the edit form does.
+        compose.waitUntilAtLeastOneExists(hasText("Then enter this code on your phone"), UI_WAIT_MILLIS)
         captureScreen("add_source_qr")
 
         Espresso.pressBack()
