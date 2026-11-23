@@ -14,7 +14,6 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -56,7 +55,7 @@ class PlaylistTestConnectionTest {
     fun close() = test.close()
 
     @Test
-    fun `a playlist address that answers not found fails, with the HTTP status on the detail line`() = runTest {
+    fun `a playlist address that answers not found fails, with the HTTP status on the detail line`() = testing {
         answer = { status(404, "Not Found") }
 
         val result = sources.test(playlist)
@@ -66,7 +65,7 @@ class PlaylistTestConnectionTest {
     }
 
     @Test
-    fun `a web page at the address fails as there being no channels there`() = runTest {
+    fun `a web page at the address fails as there being no channels there`() = testing {
         answer = { ok("<!DOCTYPE html>\n<html><head><title>Login</title></head><body>Sign in</body></html>") }
 
         val result = sources.test(playlist)
@@ -77,7 +76,7 @@ class PlaylistTestConnectionTest {
     }
 
     @Test
-    fun `a playlist passes from its first lines, without downloading the whole of a big one`() = runTest {
+    fun `a playlist passes from its first lines, without downloading the whole of a big one`() = testing {
         val body = HugePlaylist(totalBytes = 50L * 1024 * 1024)
         answer = { status(200, "OK").body(body.buffer().asResponseBody("audio/x-mpegurl".toMediaType())) }
 
@@ -88,7 +87,7 @@ class PlaylistTestConnectionTest {
     }
 
     @Test
-    fun `the playlist is fetched as the provider's own player, with the User-Agent set on the source`() = runTest {
+    fun `the playlist is fetched as the provider's own player, with the User-Agent set on the source`() = testing {
         sources.test(playlist.copy(userAgent = "VLC/3.0.20"))
 
         assertThat(asked.single().header("User-Agent")).isEqualTo("VLC/3.0.20")

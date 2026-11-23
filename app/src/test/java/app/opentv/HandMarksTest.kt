@@ -20,7 +20,6 @@ import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,7 +46,7 @@ class HandMarksTest {
     private suspend fun statusOf(ep: Episode): WatchStatus = library.episodeStatuses().first()[ep.id]
 
     @Test
-    fun `an episode never played can be marked Watched`() = runTest {
+    fun `an episode never played can be marked Watched`() = testing {
         library.marks.markWatched("ep:${testEpisode(1, 2).id}")
 
         assertThat(statusOf(testEpisode(1, 2))).isEqualTo(WatchStatus.Watched)
@@ -61,7 +60,7 @@ class HandMarksTest {
     private suspend fun seriesCards() = library.continueWatchingSeries().first()
 
     @Test
-    fun `marking an episode Watched makes the one after it Up Next`() = runTest {
+    fun `marking an episode Watched makes the one after it Up Next`() = testing {
         db.episodes().upsertAll(episodes)
 
         library.marks.markWatched("ep:${testEpisode(1, 3).id}")
@@ -75,7 +74,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `marking the latest Watched episode Unwatched makes it Up Next again`() = runTest {
+    fun `marking the latest Watched episode Unwatched makes it Up Next again`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         watch(testEpisode(1, 2))
@@ -89,7 +88,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `the series page plays an episode marked Unwatched next, as Continue Watching does`() = runTest {
+    fun `the series page plays an episode marked Unwatched next, as Continue Watching does`() = testing {
         watch(testEpisode(1, 1))
         watch(testEpisode(1, 2))
 
@@ -100,7 +99,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `removing an In Progress movie from Continue Watching clears its resume point`() = runTest {
+    fun `removing an In Progress movie from Continue Watching clears its resume point`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         val card = library.continueWatchingMovies().first().single()
 
@@ -111,7 +110,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `removing a series from Continue Watching hides it`() = runTest {
+    fun `removing a series from Continue Watching hides it`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
 
@@ -121,7 +120,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a removed series comes back when one of its episodes is next played`() = runTest {
+    fun `a removed series comes back when one of its episodes is next played`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         library.marks.removeFromContinueWatching(seriesCards().single())
@@ -132,7 +131,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a removed series comes back when one of its episodes is next marked`() = runTest {
+    fun `a removed series comes back when one of its episodes is next marked`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         library.marks.removeFromContinueWatching(seriesCards().single())
@@ -144,7 +143,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a removed series comes back when a new episode arrives`() = runTest {
+    fun `a removed series comes back when a new episode arrives`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         library.marks.removeFromContinueWatching(seriesCards().single())
@@ -155,7 +154,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a removed series stays away when its episodes are fetched again unchanged`() = runTest {
+    fun `a removed series stays away when its episodes are fetched again unchanged`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         library.marks.removeFromContinueWatching(seriesCards().single())
@@ -166,7 +165,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `removing a series at an In Progress episode clears that episode's resume point`() = runTest {
+    fun `removing a series at an In Progress episode clears that episode's resume point`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         now += 60_000
@@ -179,7 +178,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `removing a series takes it out of only the active Profile's Continue Watching`() = runTest {
+    fun `removing a series takes it out of only the active Profile's Continue Watching`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         activeProfile.value = 2L
@@ -192,7 +191,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `playing a title marked Watched picks up from how far it is played again`() = runTest {
+    fun `playing a title marked Watched picks up from how far it is played again`() = testing {
         library.marks.markWatched("ep:${testEpisode(1, 2).id}")
 
         now += 60_000
@@ -203,7 +202,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `an Unwatched mark synced from another device replaces older progress here`() = runTest {
+    fun `an Unwatched mark synced from another device replaces older progress here`() = testing {
         watch(testEpisode(1, 2))
 
         val merged = library.mergeSynced(
@@ -231,7 +230,7 @@ class HandMarksTest {
     )
 
     @Test
-    fun `a series removed on another device is removed here too`() = runTest {
+    fun `a series removed on another device is removed here too`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
 
@@ -243,7 +242,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `an older removal synced from another device never replaces a newer one here`() = runTest {
+    fun `an older removal synced from another device never replaces a newer one here`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         now += 60_000
@@ -256,7 +255,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a movie's status is how far the Profile is with it, hand marks included`() = runTest {
+    fun `a movie's status is how far the Profile is with it, hand marks included`() = testing {
         assertThat(library.marks.statusOf("movie:3")).isEqualTo(WatchStatus.Unwatched)
 
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
@@ -267,7 +266,7 @@ class HandMarksTest {
     }
 
     @Test
-    fun `a removed series comes back when one of its episodes is next marked Unwatched`() = runTest {
+    fun `a removed series comes back when one of its episodes is next marked Unwatched`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         watch(testEpisode(1, 2))

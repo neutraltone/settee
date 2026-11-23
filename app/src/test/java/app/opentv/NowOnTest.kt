@@ -23,7 +23,6 @@ import app.opentv.data.repo.nowOn
 import com.google.common.truth.Truth.assertThat
 import java.util.Collections
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -52,7 +51,7 @@ class NowOnTest {
     private val lineup = catalogue.lineup
 
     @Before
-    fun provider() = runTest {
+    fun provider() = testing {
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
     }
 
@@ -95,7 +94,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `when two programmes overlap on a guide, the one that started first is on now`() = runTest {
+    fun `when two programmes overlap on a guide, the one that started first is on now`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         store(on("itv.hd", "Quiz", start = 200, end = 2_000, feedId = 2), on("itv.hd", "News", start = 0, end = 1_000))
@@ -104,7 +103,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `a programme a whole day long is still on now in its last minute`() = runTest {
+    fun `a programme a whole day long is still on now in its last minute`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         val now = 3 * DAY
@@ -114,7 +113,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `a programme with more than a day still to run is on now`() = runTest {
+    fun `a programme with more than a day still to run is on now`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         val now = 3 * DAY
@@ -124,7 +123,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `a guide that gains programmes is used from then on`() = runTest {
+    fun `a guide that gains programmes is used from then on`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV FHD", "itv.fhd")
         guide("UK| ITV HD", "itv.hd")
@@ -137,7 +136,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `a guide whose last programmes are pruned stops shadowing one that has them`() = runTest {
+    fun `a guide whose last programmes are pruned stops shadowing one that has them`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV FHD", "itv.fhd")
         guide("UK| ITV HD", "itv.hd")
@@ -150,7 +149,7 @@ class NowOnTest {
     }
 
     @Test
-    fun `asking every minute doesn't read which guides have programmes again until the guide changes`() = runTest {
+    fun `asking every minute doesn't read which guides have programmes again until the guide changes`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         store(on("itv.hd", "News", start = 0, end = 10 * MINUTE))

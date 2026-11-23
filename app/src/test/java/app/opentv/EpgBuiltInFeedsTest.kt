@@ -17,7 +17,6 @@ import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.EpgRepository
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -92,7 +91,7 @@ class EpgBuiltInFeedsTest {
     private suspend fun feed(name: String) = db.epgFeeds().all().single { it.builtIn && it.name == name }
 
     @Test
-    fun `a built-in guide whose address moved keeps its row and switch and takes the new address`() = runTest {
+    fun `a built-in guide whose address moved keeps its row and switch and takes the new address`() = testing {
         db.epgFeeds().insert(
             EpgFeed(
                 name = usa,
@@ -120,7 +119,7 @@ class EpgBuiltInFeedsTest {
     }
 
     @Test
-    fun `a guide Settee switched on by itself doesn't count as a failure when it fails`() = runTest {
+    fun `a guide Settee switched on by itself doesn't count as a failure when it fails`() = testing {
         americanChannels()
 
         val summary = guide.syncAll(nowUtcMillis = NOW)
@@ -133,7 +132,7 @@ class EpgBuiltInFeedsTest {
     }
 
     @Test
-    fun `a custom guide sharing the self-enabled guide's name still counts when it fails`() = runTest {
+    fun `a custom guide sharing the self-enabled guide's name still counts when it fails`() = testing {
         americanChannels()
         guide.syncAll(nowUtcMillis = NOW)
         guide.addCustomFeed(usa, "https://example.com/guide.xml")
@@ -145,7 +144,7 @@ class EpgBuiltInFeedsTest {
     }
 
     @Test
-    fun `once the viewer switches that guide on themselves, its failures count`() = runTest {
+    fun `once the viewer switches that guide on themselves, its failures count`() = testing {
         americanChannels()
         guide.syncAll(nowUtcMillis = NOW)
 

@@ -21,6 +21,7 @@ import app.opentv.data.repo.nowOn
 import app.opentv.ui.player.nowAndNext
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -32,8 +33,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -63,7 +62,7 @@ class ChannelLineupTest {
         )
 
     @Before
-    fun twoProviders() = runTest {
+    fun twoProviders() = testing {
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "http://example.org"))
     }
@@ -104,12 +103,12 @@ class ChannelLineupTest {
     private suspend fun scope(scope: LineupScope): List<LineupChannel> = lineup.channels(scope).first()
 
     @Test
-    fun `leaving as a Channel is starred still stars every Quality`() = runTest {
+    fun `leaving as a Channel is starred still stars every Quality`() = testing {
         seed("UK| ITV HD")
         seed("UK| ITV FHD", sourceId = 2)
         val itv = all().single()
 
-        val starring = launch(UnconfinedTestDispatcher(testScheduler)) { lineup.setFavourite(itv, favourite = true) }
+        val starring = launch(start = CoroutineStart.UNDISPATCHED) { lineup.setFavourite(itv, favourite = true) }
         starring.cancel()
         starring.join()
 
@@ -122,28 +121,28 @@ class ChannelLineupTest {
     private fun List<LineupChannel>.names(): List<List<String>> = map { channel -> channel.qualities.map { it.name } }
 
     @Test
-    fun `rows of one name and region are one channel, and another region is another`() = runTest {
+    fun `rows of one name and region are one channel, and another region is another`() = testing {
         seed("UK| ITV HD", "UK| ITV FHD", "US| ITV")
 
         assertThat(all().names()).containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"), listOf("US| ITV"))
     }
 
     @Test
-    fun `a row with no region joins the one regional channel of its name`() = runTest {
+    fun `a row with no region joins the one regional channel of its name`() = testing {
         seed("UK| BBC One HD", "BBC One")
 
         assertThat(all().names()).containsExactly(listOf("UK| BBC One HD", "BBC One"))
     }
 
     @Test
-    fun `channels named in Arabic are a channel each, not one per region`() = runTest {
+    fun `channels named in Arabic are a channel each, not one per region`() = testing {
         seed("AR| الجزيرة", "AR| العربية", "AR| الحدث")
 
         assertThat(all().names()).containsExactly(listOf("AR| الجزيرة"), listOf("AR| العربية"), listOf("AR| الحدث"))
     }
 
     @Test
-    fun `rows named only a region and a quality stay separate channels`() = runTest {
+    fun `rows named only a region and a quality stay separate channels`() = testing {
         seed("RU| HD")
         seed("RU| HD", sourceId = 2)
 
@@ -151,14 +150,14 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a row with no region stays on its own when its name has several regions`() = runTest {
+    fun `a row with no region stays on its own when its name has several regions`() = testing {
         seed("UK| ITV", "US| ITV", "ITV")
 
         assertThat(all().names()).containsExactly(listOf("UK| ITV"), listOf("US| ITV"), listOf("ITV"))
     }
 
     @Test
-    fun `a channel has the same qualities in every scope it shows in`() = runTest {
+    fun `a channel has the same qualities in every scope it shows in`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         category(sourceId = 2, id = "20", name = "UK| Entertainment")
         seed("UK| ITV HD", sourceId = 1, categoryId = "10")
@@ -172,7 +171,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a category lists only its own provider's channels when another provider uses the same id`() = runTest {
+    fun `a category lists only its own provider's channels when another provider uses the same id`() = testing {
         category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
         category(sourceId = 2, id = "3", name = "SPORTS")
         seed("UK| Dave", sourceId = 1, categoryId = "3")
@@ -182,7 +181,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `the channel manager's category lists only its own provider's channels, hidden ones too`() = runTest {
+    fun `the channel manager's category lists only its own provider's channels, hidden ones too`() = testing {
         category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
         category(sourceId = 2, id = "3", name = "SPORTS")
         seed("UK| Dave", "UK| Gold", sourceId = 1, categoryId = "3")
@@ -194,7 +193,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a category two providers both have lists both providers' channels, whatever their ids`() = runTest {
+    fun `a category two providers both have lists both providers' channels, whatever their ids`() = testing {
         category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
         category(sourceId = 2, id = "9", name = "UK| Entertainment")
         seed("UK| Dave", sourceId = 1, categoryId = "3")
@@ -205,7 +204,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a category two providers both have lists only the chosen provider's channels`() = runTest {
+    fun `a category two providers both have lists only the chosen provider's channels`() = testing {
         category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
         category(sourceId = 2, id = "9", name = "UK| Entertainment")
         seed("UK| Dave", sourceId = 1, categoryId = "3")
@@ -218,7 +217,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel plays the quality its scope came from first`() = runTest {
+    fun `a channel plays the quality its scope came from first`() = testing {
         seed("UK| ITV HD", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
 
@@ -227,7 +226,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a locked category leaves every scope a viewer browses, and every channel's qualities`() = runTest {
+    fun `a locked category leaves every scope a viewer browses, and every channel's qualities`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         category(sourceId = 2, id = "66", name = "UK| Adult")
         seed("UK| ITV HD", sourceId = 1, categoryId = "10")
@@ -243,7 +242,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `locking a category locks it in every region`() = runTest {
+    fun `locking a category locks it in every region`() = testing {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         category(sourceId = 2, id = "67", name = "US| ADULT")
         seed("UK| Late Night", sourceId = 1, categoryId = "66")
@@ -254,7 +253,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a category with no name to clean is locked on its own provider only`() = runTest {
+    fun `a category with no name to clean is locked on its own provider only`() = testing {
         category(sourceId = 1, id = "7", name = "★★★")
         category(sourceId = 2, id = "7", name = "★★★")
         seed("UK| Late Night", sourceId = 1, categoryId = "7")
@@ -265,7 +264,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `unlocking shows locked categories until the lock is back`() = runTest {
+    fun `unlocking shows locked categories until the lock is back`() = testing {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         seed("UK| Late Night", sourceId = 1, categoryId = "66")
         lockedKeys.value = setOf("adult")
@@ -276,7 +275,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `the management scopes show locked and hidden channels so they can be managed`() = runTest {
+    fun `the management scopes show locked and hidden channels so they can be managed`() = testing {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         seed("UK| Late Night HD", "UK| Late Night", sourceId = 1, categoryId = "66")
         db.channels().setHidden(row("UK| Late Night").id, true)
@@ -289,7 +288,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `starring a channel stars every quality, and its star is the same in every scope`() = runTest {
+    fun `starring a channel stars every quality, and its star is the same in every scope`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         seed("UK| ITV HD", sourceId = 1, categoryId = "10")
         seed("UK| ITV FHD", sourceId = 2)
@@ -305,7 +304,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel is a favourite when any quality is, and shows once among the favourites`() = runTest {
+    fun `a channel is a favourite when any quality is, and shows once among the favourites`() = testing {
         seed("UK| ITV HD", "UK| BBC One", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
         catalogue.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
@@ -315,7 +314,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `the favourites look every channel's name up in one query, however many qualities are starred`() = runTest {
+    fun `the favourites look every channel's name up in one query, however many qualities are starred`() = testing {
         seed("UK| ITV HD", "UK| ITV SD", "UK| BBC One", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
         all().forEach { lineup.setFavourite(it, favourite = true) }
@@ -355,7 +354,7 @@ class ChannelLineupTest {
     )
 
     @Test
-    fun `every channel is listed from one read of the channels table`() = runTest {
+    fun `every channel is listed from one read of the channels table`() = testing {
         seed("UK| ITV HD", "UK| BBC One")
         val dao = CountingChannelDao(db.channels())
 
@@ -364,7 +363,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `the channel manager open alongside every channel shares its read of the channels table`() = runTest {
+    fun `the channel manager open alongside every channel shares its read of the channels table`() = testing {
         seed("UK| ITV HD", "UK| BBC One")
         val dao = CountingChannelDao(db.channels())
         val counted = countedLineup(dao)
@@ -406,7 +405,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `every channel is listed in the viewer's order, then by name`() = runTest {
+    fun `every channel is listed in the viewer's order, then by name`() = testing {
         mixedCatalogue()
 
         val channels = all()
@@ -423,7 +422,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `one provider's channels are listed in the same order, played from that provider`() = runTest {
+    fun `one provider's channels are listed in the same order, played from that provider`() = testing {
         mixedCatalogue()
 
         val first = scope(LineupScope.All(sourceId = 1))
@@ -441,7 +440,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `hiding, showing and renaming a channel update every channel's list`() = runTest {
+    fun `hiding, showing and renaming a channel update every channel's list`() = testing {
         seed("UK| BBC One", "UK| ITV")
         val channels = lineup.channels(LineupScope.All())
         assertThat(channels.first().map { it.primary.name }).containsExactly("UK| BBC One", "UK| ITV").inOrder()
@@ -457,7 +456,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `unstarring a channel unstars every quality`() = runTest {
+    fun `unstarring a channel unstars every quality`() = testing {
         seed("UK| ITV HD", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
         catalogue.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
@@ -476,7 +475,7 @@ class ChannelLineupTest {
     )
 
     @Test
-    fun `a channel's programme on now comes from the guide it uses`() = runTest {
+    fun `a channel's programme on now comes from the guide it uses`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         programmesOn("itv.hd")
@@ -485,7 +484,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel's card gets what's on now and what's on after it, from the guide it uses`() = runTest {
+    fun `a channel's card gets what's on now and what's on after it, from the guide it uses`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         db.programmes().insertOrReplace(
@@ -528,7 +527,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `two guide feeds for one channel don't make what's next repeat what's on now`() = runTest {
+    fun `two guide feeds for one channel don't make what's next repeat what's on now`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         db.programmes().insertOrReplace(
@@ -559,7 +558,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `between programmes the card has nothing on now, only what's next`() = runTest {
+    fun `between programmes the card has nothing on now, only what's next`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         db.programmes().insertOrReplace(
@@ -588,7 +587,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel whose last programme has ended has nothing on now`() = runTest {
+    fun `a channel whose last programme has ended has nothing on now`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
         programmesOn("itv.hd")
@@ -597,7 +596,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `what's on now for many channels comes from each one's guide, nothing where there's none`() = runTest {
+    fun `what's on now for many channels comes from each one's guide, nothing where there's none`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD", "UK| BBC One", "UK| Dave")
         guide("UK| ITV FHD", "itv.empty")
         guide("UK| ITV HD", "itv.hd")
@@ -629,14 +628,14 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel with no guide has nothing on now`() = runTest {
+    fun `a channel with no guide has nothing on now`() = testing {
         seed("UK| ITV HD")
 
         assertThat(nowAndNext(lineup, catalogue.guide, all().single(), nowMillis = 500)?.now?.title).isNull()
     }
 
     @Test
-    fun `a channel's guide is the first guide id with programmes, its primary quality's first`() = runTest {
+    fun `a channel's guide is the first guide id with programmes, its primary quality's first`() = testing {
         seed("UK| ITV FHD", "UK| ITV HD", "UK| ITV SD")
         guide("UK| ITV FHD", "itv.empty")
         guide("UK| ITV HD", "itv.hd")
@@ -652,7 +651,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `a channel with no guide programmes has no guide id`() = runTest {
+    fun `a channel with no guide programmes has no guide id`() = testing {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
 
@@ -662,7 +661,7 @@ class ChannelLineupTest {
     private suspend fun zap(fromRow: String, delta: Int): String? = lineup.zap(row(fromRow).id, delta)?.primary?.name
 
     @Test
-    fun `channel up and down follow the channels you started from`() = runTest {
+    fun `channel up and down follow the channels you started from`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         seed("UK| BBC News", "UK| Sky News", sourceId = 1, categoryId = "10")
         seed("UK| Dave", sourceId = 1)
@@ -675,7 +674,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `zapping from a quality that isn't the primary moves on from its own channel`() = runTest {
+    fun `zapping from a quality that isn't the primary moves on from its own channel`() = testing {
         seed("UK| BBC News", "UK| ITV FHD", "UK| ITV HD", "UK| Sky News")
 
         lineup.zapFrom(LineupScope.All())
@@ -685,7 +684,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `after hiding the channel you're watching, channel up and down carry on in the same list`() = runTest {
+    fun `after hiding the channel you're watching, channel up and down carry on in the same list`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         seed("UK| BBC News", "UK| ITN", "UK| Sky News", sourceId = 1, categoryId = "10")
         seed("UK| Dave", sourceId = 1)
@@ -698,7 +697,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `zapping passes over locked categories`() = runTest {
+    fun `zapping passes over locked categories`() = testing {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         seed("UK| BBC News", "UK| ITV", sourceId = 1)
         seed("UK| Late Night", sourceId = 2, categoryId = "66")
@@ -711,7 +710,7 @@ class ChannelLineupTest {
     }
 
     @Test
-    fun `zapping from a channel outside the list you started from goes through every channel`() = runTest {
+    fun `zapping from a channel outside the list you started from goes through every channel`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")
         seed("UK| BBC News", sourceId = 1, categoryId = "10")
         seed("UK| Dave", "UK| ITV", sourceId = 2)
@@ -723,7 +722,7 @@ class ChannelLineupTest {
 
     @Test
     fun `a hidden row still counts when deciding which channel a row joins, so the manager agrees with the guide`() =
-        runTest {
+        testing {
             seed("UK| ITV", "US| ITV", "ITV")
             db.channels().setHidden(row("US| ITV").id, true)
 
@@ -733,7 +732,7 @@ class ChannelLineupTest {
         }
 
     @Test
-    fun `a 40k-row catalogue folds within a time budget`() = runTest {
+    fun `a 40k-row catalogue folds within a time budget`() = testing {
         val names = (0 until 20_000).flatMap { i -> listOf("UK| Station$i HD", "UK| Station$i FHD") }
         seed(*names.toTypedArray())
 

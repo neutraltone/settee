@@ -11,7 +11,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.repo.CatalogueRefresh
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -42,7 +41,7 @@ class PersonCreditsUpgradeTest {
     }
 
     @Test
-    fun `starting the app doesn't go through films and shows saved before credits were kept`() = runTest {
+    fun `starting the app doesn't go through films and shows saved before credits were kept`() = testing {
         helper.createDatabase(NAME, 9).apply {
             execSQL(
                 "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, `cast`, director) " +
@@ -66,7 +65,7 @@ class PersonCreditsUpgradeTest {
     }
 
     @Test
-    fun `films given a genre before cast was kept are looked up again for it`() = runTest {
+    fun `films given a genre before cast was kept are looked up again for it`() = testing {
         helper.createDatabase(NAME, 9).apply {
             execSQL(
                 "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, genre) " +

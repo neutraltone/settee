@@ -11,7 +11,6 @@ import app.opentv.data.model.Programme
 import app.opentv.data.repo.EpgRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +33,7 @@ class EpgRepositoryTest {
     )
 
     @Test
-    fun `the programme on now is the one that has started and not ended`() = runTest {
+    fun `the programme on now is the one that has started and not ended`() = testing {
         programme("Early", start = 0, end = 1_000)
         programme("Late", start = 1_000, end = 2_000)
 
@@ -44,14 +43,14 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme that hasn't started yet isn't on now`() = runTest {
+    fun `a programme that hasn't started yet isn't on now`() = testing {
         programme("Later", start = 1_000, end = 2_000)
 
         assertThat(guide.programmeOnNow("itv", nowUtcMillis = 999)).isNull()
     }
 
     @Test
-    fun `a refreshed guide shows the provider's corrections to a programme it already had`() = runTest {
+    fun `a refreshed guide shows the provider's corrections to a programme it already had`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "Nwes", "First go"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -66,7 +65,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `refreshing an unchanged guide doesn't add programmes`() = runTest {
+    fun `refreshing an unchanged guide doesn't add programmes`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(
             slot("c1", "10", "11", "News", "Headlines"),
@@ -81,7 +80,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme left out of a refreshed guide stays until it's old enough to drop`() = runTest {
+    fun `a programme left out of a refreshed guide stays until it's old enough to drop`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(
             slot("c1", "10", "11", "News", "Headlines"),
@@ -96,7 +95,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme the refreshed guide moved is replaced by what's on in its place`() = runTest {
+    fun `a programme the refreshed guide moved is replaced by what's on in its place`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -113,7 +112,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a refreshed guide that fails to download keeps the programmes it had`() = runTest {
+    fun `a refreshed guide that fails to download keeps the programmes it had`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -125,7 +124,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a refreshed guide cut off part way keeps the programmes it had`() = runTest {
+    fun `a refreshed guide cut off part way keeps the programmes it had`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -145,7 +144,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a guide cut off part way still keeps the channels it read, and counts as failed`() = runTest {
+    fun `a guide cut off part way still keeps the channels it read, and counts as failed`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = "<tv>" +
             """<channel id="bbc1.uk"><display-name>BBC One</display-name></channel>""" +
@@ -162,7 +161,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme too old to keep in a refreshed guide doesn't cost the ones that aired since`() = runTest {
+    fun `a programme too old to keep in a refreshed guide doesn't cost the ones that aired since`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "1200", "1300", "Lunchtime", day = "20251231"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -177,7 +176,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a refreshed guide keeps the programmes of a channel it left out`() = runTest {
+    fun `a refreshed guide keeps the programmes of a channel it left out`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(
             airing("c1", "2000", "2200", "Film"),
@@ -195,7 +194,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a refreshed guide covering less of the day keeps the programmes before and after it`() = runTest {
+    fun `a refreshed guide covering less of the day keeps the programmes before and after it`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(
             airing("c1", "0800", "0900", "Breakfast"),
@@ -214,7 +213,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a custom guide with no name is refused, not named after its address, which can carry the login`() = runTest {
+    fun `a custom guide with no name is refused, not named after its address, which can carry the login`() = testing {
         val url = "http://example.com/xmltv.php?username=u&password=p"
 
         val refused = runCatching { guide.addCustomFeed("  ", url) }.exceptionOrNull()
@@ -224,14 +223,14 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a custom guide's address typed without http is saved with it`() = runTest {
+    fun `a custom guide's address typed without http is saved with it`() = testing {
         guide.addCustomFeed("Mine", "example.com/guide.xml")
 
         assertThat(guide.observeFeeds().first().map { it.url }).contains("http://example.com/guide.xml")
     }
 
     @Test
-    fun `a custom guide's address that still isn't one is never saved`() = runTest {
+    fun `a custom guide's address that still isn't one is never saved`() = testing {
         val before = guide.observeFeeds().first()
 
         guide.addCustomFeed("Mine", "http://")
@@ -241,7 +240,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a refreshed guide leaves another guide's programmes for the same channel alone`() = runTest {
+    fun `a refreshed guide leaves another guide's programmes for the same channel alone`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         guide.addCustomFeed("Other", "http://example.com/other/xmltv.php")
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
@@ -259,7 +258,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `the guide window holds only the programmes overlapping it, in channel then start order`() = runTest {
+    fun `the guide window holds only the programmes overlapping it, in channel then start order`() = testing {
         programme("Before", start = 0, end = 1_000)
         programme("Overlaps the start", start = 500, end = 1_500)
         catalogue.db.programmes().insertOrReplace(
@@ -286,7 +285,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme in the guide window is found in full with its description`() = runTest {
+    fun `a programme in the guide window is found in full with its description`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Headlines"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -299,7 +298,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme listed before the guide refreshed is still found, with the refreshed description`() = runTest {
+    fun `a programme listed before the guide refreshed is still found, with the refreshed description`() = testing {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "First go"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -312,7 +311,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme two feeds list is found with the description either of them has`() = runTest {
+    fun `a programme two feeds list is found with the description either of them has`() = testing {
         catalogue.db.programmes().insertOrReplace(
             listOf(
                 Programme(feedId = 1, epgChannelId = "itv", startUtcMillis = 0, endUtcMillis = 1_000, title = "News"),
@@ -332,7 +331,7 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme the guide has dropped isn't found`() = runTest {
+    fun `a programme the guide has dropped isn't found`() = testing {
         programme("News", start = 0, end = 1_000)
         val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().single()
 

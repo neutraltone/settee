@@ -11,7 +11,6 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.resumeItem
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,7 +62,7 @@ class ResumeArtworkTest {
     }
 
     @Test
-    fun `a movie's card shows its wide backdrop, not its portrait cover`() = runTest {
+    fun `a movie's card shows its wide backdrop, not its portrait cover`() = testing {
         val heat = storedMovie(backdrop = "https://example.com/backdrop.jpg")
 
         val card = resumeItem(test.catalog, ContinueWatchingCard.Movie(heat.id, 0.4f))
@@ -72,7 +71,7 @@ class ResumeArtworkTest {
     }
 
     @Test
-    fun `a movie with no backdrop falls back to its cover`() = runTest {
+    fun `a movie with no backdrop falls back to its cover`() = testing {
         val heat = storedMovie(backdrop = null)
 
         val card = resumeItem(test.catalog, ContinueWatchingCard.Movie(heat.id, 0.4f))
@@ -81,7 +80,7 @@ class ResumeArtworkTest {
     }
 
     @Test
-    fun `an episode's card shows the episode's own still, or the show's backdrop without one`() = runTest {
+    fun `an episode's card shows the episode's own still, or the show's backdrop without one`() = testing {
         db.series().upsertAll(listOf(show))
         val withStill = testEpisode(1, 2).copy(stillUrl = "https://example.com/still.jpg")
         val without = testEpisode(1, 3)

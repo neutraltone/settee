@@ -8,7 +8,6 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.CatalogRepository.SyncResult
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,7 +28,7 @@ class CatalogueMemoryTest {
     fun close() = test.close()
 
     @Test
-    fun `a portal's channel list too big for memory says so, and the next sync can try again`() = runTest {
+    fun `a portal's channel list too big for memory says so, and the next sync can try again`() = testing {
         test.db.sources().insert(STALKER_SOURCE)
         test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
         test.panel.replies["get_all_channels"] = "!oom"

@@ -12,7 +12,6 @@ import app.opentv.data.db.EPISODES_OF_PLAYED_SERIES
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.PlaybackPosition
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +33,7 @@ class PlayedSeriesEpisodesTest {
     fun close() = db.close()
 
     @Test
-    fun `each Profile gets every episode of the series it has played, and none of the others`() = runTest {
+    fun `each Profile gets every episode of the series it has played, and none of the others`() = testing {
         db.episodes().upsertAll(
             listOf(
                 episode(101, sourceId = 1, seriesId = "a"),

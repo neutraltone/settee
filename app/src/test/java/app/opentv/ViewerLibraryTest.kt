@@ -21,7 +21,6 @@ import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,35 +47,35 @@ class ViewerLibraryTest {
     private suspend fun statusOf(episodeId: Long): WatchStatus = library.episodeStatuses().first()[episodeId]
 
     @Test
-    fun `an episode played part way is In Progress with how far through it is and how long is left`() = runTest {
+    fun `an episode played part way is In Progress with how far through it is and how long is left`() = testing {
         library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 2_400_000)
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.25f, remainingMillis = 1_800_000))
     }
 
     @Test
-    fun `an episode played past 93 percent is Watched`() = runTest {
+    fun `an episode played past 93 percent is Watched`() = testing {
         library.recordProgress("ep:7", positionMillis = 930_001, durationMillis = 1_000_000)
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.Watched)
     }
 
     @Test
-    fun `an episode stopped at exactly 93 percent is still In Progress`() = runTest {
+    fun `an episode stopped at exactly 93 percent is still In Progress`() = testing {
         library.recordProgress("ep:7", positionMillis = 930_000, durationMillis = 1_000_000)
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.93f, remainingMillis = 70_000))
     }
 
     @Test
-    fun `episodes skipped over stay Unwatched`() = runTest {
+    fun `episodes skipped over stay Unwatched`() = testing {
         library.recordProgress("ep:9", positionMillis = 1_000_000, durationMillis = 1_000_000)
 
         assertThat(statusOf(8)).isEqualTo(WatchStatus.Unwatched)
     }
 
     @Test
-    fun `another Profile's progress is not this Profile's`() = runTest {
+    fun `another Profile's progress is not this Profile's`() = testing {
         library.recordProgress("ep:7", positionMillis = 1_000_000, durationMillis = 1_000_000)
 
         activeProfile.value = 2L
@@ -85,7 +84,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `synced progress with no known duration is In Progress with no idea how long is left`() = runTest {
+    fun `synced progress with no known duration is In Progress with no idea how long is left`() = testing {
         library.mergeSynced(
             PlaybackPosition(
                 profileId = 1,
@@ -100,7 +99,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `the first 5 seconds of a title aren't saved, and an old resume point stands`() = runTest {
+    fun `the first 5 seconds of a title aren't saved, and an old resume point stands`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
 
         val saved = library.recordProgress("movie:3", positionMillis = 5_000, durationMillis = 2_400_000)
@@ -110,14 +109,14 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a title played for only its first seconds stays Unwatched`() = runTest {
+    fun `a title played for only its first seconds stays Unwatched`() = testing {
         library.recordProgress("ep:7", positionMillis = 3_000, durationMillis = 2_400_000)
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
     }
 
     @Test
-    fun `progress with no known duration isn't saved`() = runTest {
+    fun `progress with no known duration isn't saved`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
 
         val saved = library.recordProgress("movie:3", positionMillis = 900_000, durationMillis = 0)
@@ -127,7 +126,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `just past the first 5 seconds a title is saved`() = runTest {
+    fun `just past the first 5 seconds a title is saved`() = testing {
         val saved = library.recordProgress("movie:3", positionMillis = 5_001, durationMillis = 2_400_000)
 
         assertThat(saved).isTrue()
@@ -135,26 +134,26 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `an In Progress title resumes where the Profile stopped`() = runTest {
+    fun `an In Progress title resumes where the Profile stopped`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
 
         assertThat(library.resumeFrom("movie:3")).isEqualTo(600_000)
     }
 
     @Test
-    fun `a Watched title starts again from the beginning`() = runTest {
+    fun `a Watched title starts again from the beginning`() = testing {
         library.recordProgress("movie:3", positionMillis = 2_300_000, durationMillis = 2_400_000)
 
         assertThat(library.resumeFrom("movie:3")).isEqualTo(0)
     }
 
     @Test
-    fun `a title never played starts from the beginning`() = runTest {
+    fun `a title never played starts from the beginning`() = testing {
         assertThat(library.resumeFrom("movie:3")).isEqualTo(0)
     }
 
     @Test
-    fun `In Progress movies are listed most recently played first, leaving out Watched ones`() = runTest {
+    fun `In Progress movies are listed most recently played first, leaving out Watched ones`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         now += 60_000
         library.recordProgress("movie:4", positionMillis = 2_400_000, durationMillis = 2_400_000)
@@ -168,7 +167,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `the movies a Profile has started are the ones it has any progress on, Watched or not`() = runTest {
+    fun `the movies a Profile has started are the ones it has any progress on, Watched or not`() = testing {
         library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
         library.recordProgress("movie:4", positionMillis = 2_400_000, durationMillis = 2_400_000)
         library.recordProgress("ep:7", positionMillis = 6_000, durationMillis = 2_400_000)
@@ -179,7 +178,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a movie taken out of Continue Watching no longer counts as started`() = runTest {
+    fun `a movie taken out of Continue Watching no longer counts as started`() = testing {
         library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
         library.recordProgress("movie:4", positionMillis = 6_000, durationMillis = 2_400_000)
 
@@ -189,7 +188,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `the series a Profile has started are the ones it has progress on any episode of, Watched or not`() = runTest {
+    fun `the series a Profile has started are the ones it has progress on any episode of, Watched or not`() = testing {
         db.episodes().upsertAll(
             listOf(
                 testEpisode(1, 1),
@@ -210,7 +209,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a series whose only progress was marked Unwatched by hand no longer counts as started`() = runTest {
+    fun `a series whose only progress was marked Unwatched by hand no longer counts as started`() = testing {
         db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2).copy(seriesId = "other")))
         library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
         library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
@@ -221,7 +220,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a series with one episode marked Unwatched and another played still counts as started`() = runTest {
+    fun `a series with one episode marked Unwatched and another played still counts as started`() = testing {
         db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2)))
         library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
         library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
@@ -232,7 +231,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `progress on an episode that no longer exists starts no series`() = runTest {
+    fun `progress on an episode that no longer exists starts no series`() = testing {
         library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
 
         assertThat(library.history.startedSeries(profileId = 1)).isEmpty()
@@ -240,7 +239,7 @@ class ViewerLibraryTest {
 
     @Test
     fun `the series removed from a Profile's Continue Watching are the ones it dismissed, and only its own`() =
-        runTest {
+        testing {
             db.episodes().upsertAll(listOf(testEpisode(1, 1)))
             library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
 
@@ -251,7 +250,7 @@ class ViewerLibraryTest {
         }
 
     @Test
-    fun `a nonsense negative position from sync counts as the very start`() = runTest {
+    fun `a nonsense negative position from sync counts as the very start`() = testing {
         library.mergeSynced(synced(profileId = 1, positionMillis = -5_000, updatedAtMillis = now))
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f, remainingMillis = 1_000_000))
@@ -259,7 +258,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `an In Progress movie stays listed however many titles were Watched after it`() = runTest {
+    fun `an In Progress movie stays listed however many titles were Watched after it`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         for (episode in 100L until 140L) {
             now += 60_000
@@ -271,7 +270,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a stored key that names no title is skipped`() = runTest {
+    fun `a stored key that names no title is skipped`() = testing {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 2_400_000)
         for (malformed in listOf("movie:", "movie:x", "movie:3:4", "ep:", "ep:x", "ep:7:8")) {
@@ -285,7 +284,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a stored key that names no episode leaves a series' card and main action alone`() = runTest {
+    fun `a stored key that names no episode leaves a series' card and main action alone`() = testing {
         val episode = testEpisode(1, 1)
         db.episodes().upsertAll(listOf(episode))
         library.recordProgress("ep:${episode.id}", positionMillis = 600_000, durationMillis = 2_400_000)
@@ -308,7 +307,7 @@ class ViewerLibraryTest {
     )
 
     @Test
-    fun `progress synced from another device replaces older progress here`() = runTest {
+    fun `progress synced from another device replaces older progress here`() = testing {
         library.recordProgress("ep:7", positionMillis = 100_000, durationMillis = 1_000_000)
 
         val merged = library.mergeSynced(synced(profileId = 1, positionMillis = 950_000, updatedAtMillis = now + 1))
@@ -318,7 +317,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `progress synced from another device never overwrites newer progress here`() = runTest {
+    fun `progress synced from another device never overwrites newer progress here`() = testing {
         library.recordProgress("ep:7", positionMillis = 500_000, durationMillis = 1_000_000)
 
         val merged = library.mergeSynced(synced(profileId = 1, positionMillis = 950_000, updatedAtMillis = now - 1))
@@ -328,7 +327,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `synced progress lands on the Profile it belongs to`() = runTest {
+    fun `synced progress lands on the Profile it belongs to`() = testing {
         library.mergeSynced(synced(profileId = 2, positionMillis = 500_000, updatedAtMillis = now))
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
@@ -375,7 +374,7 @@ class ViewerLibraryTest {
     private suspend fun lastFinishedName() = library.lastFinished().first()?.name
 
     @Test
-    fun `the title a Profile finished last is the newest film or episode it watched past 93 percent`() = runTest {
+    fun `the title a Profile finished last is the newest film or episode it watched past 93 percent`() = testing {
         storeFilm(3, "Old Film")
         storeFilm(4, "Half Watched")
         storeShow("The Show")
@@ -393,7 +392,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `finishing a film after an episode makes the film the one finished last`() = runTest {
+    fun `finishing a film after an episode makes the film the one finished last`() = testing {
         storeFilm(3, "New Film")
         storeShow("The Show")
         db.episodes().upsertAll(listOf(testEpisode(1, 1)))
@@ -405,7 +404,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a Profile that has finished nothing has no title finished last, nor does another Profile's`() = runTest {
+    fun `a Profile that has finished nothing has no title finished last, nor does another Profile's`() = testing {
         storeFilm(3, "Someone Else's")
         storeFilm(4, "Started")
         activeProfile.value = 2L
@@ -417,7 +416,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a finished title the provider no longer lists is passed over for the one before`() = runTest {
+    fun `a finished title the provider no longer lists is passed over for the one before`() = testing {
         storeFilm(3, "Still Here")
         library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
         now += 60_000
@@ -427,7 +426,7 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `a finished title of a kind that isn't wanted is passed over for the newest one that is`() = runTest {
+    fun `a finished title of a kind that isn't wanted is passed over for the newest one that is`() = testing {
         storeFilm(3, "Hidden Film")
         storeShow("The Show")
         db.episodes().upsertAll(listOf(testEpisode(1, 1)))

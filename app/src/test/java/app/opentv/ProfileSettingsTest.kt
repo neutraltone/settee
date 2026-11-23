@@ -25,7 +25,6 @@ import app.opentv.data.repo.SubtitlePreference
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,13 +50,13 @@ class ProfileSettingsTest {
     private suspend fun preference(): SubtitlePreference = settings.subtitlePreference.first()
 
     @Test
-    fun `a Profile that has never chosen has subtitles off and follows the device language`() = runTest {
+    fun `a Profile that has never chosen has subtitles off and follows the device language`() = testing {
         assertThat(preference()).isEqualTo(SubtitlePreference(enabled = false, language = null))
         assertThat(db.profileSettings().all()).isEmpty()
     }
 
     @Test
-    fun `turning subtitles on and then off is remembered`() = runTest {
+    fun `turning subtitles on and then off is remembered`() = testing {
         settings.setSubtitlesOn(true)
         assertThat(preference().enabled).isTrue()
 
@@ -66,14 +65,14 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `picking a track turns subtitles on in that track's language`() = runTest {
+    fun `picking a track turns subtitles on in that track's language`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         assertThat(preference()).isEqualTo(SubtitlePreference(enabled = true, language = "fr"))
     }
 
     @Test
-    fun `the language is kept as its base code however the stream wrote it`() = runTest {
+    fun `the language is kept as its base code however the stream wrote it`() = testing {
         settings.pickSubtitleTrack(language = "eng")
         assertThat(preference().language).isEqualTo("en")
 
@@ -82,7 +81,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `picking a Downloaded Subtitle remembers its language and its kind`() = runTest {
+    fun `picking a Downloaded Subtitle remembers its language and its kind`() = testing {
         settings.pickSubtitleTrack(language = "de", kind = SubtitleKind.HEARING_IMPAIRED)
 
         assertThat(preference())
@@ -90,7 +89,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `picking a stream's own track changes the language but leaves the kind alone`() = runTest {
+    fun `picking a stream's own track changes the language but leaves the kind alone`() = testing {
         settings.pickSubtitleTrack(language = "de", kind = SubtitleKind.FORCED)
 
         settings.pickSubtitleTrack(language = "fr")
@@ -101,14 +100,14 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `a Profile that never picked from OpenSubtitles wants standard subtitles`() = runTest {
+    fun `a Profile that never picked from OpenSubtitles wants standard subtitles`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         assertThat(preference().kind).isEqualTo(SubtitleKind.STANDARD)
     }
 
     @Test
-    fun `picking a track with no language keeps the language picked before`() = runTest {
+    fun `picking a track with no language keeps the language picked before`() = testing {
         settings.pickSubtitleTrack(language = "fr")
         settings.setSubtitlesOn(false)
 
@@ -118,7 +117,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `each Profile keeps its own Subtitle Preference`() = runTest {
+    fun `each Profile keeps its own Subtitle Preference`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         activeProfile.value = 2L
@@ -129,7 +128,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `the Subtitle Preference survives a restart`() = runTest {
+    fun `the Subtitle Preference survives a restart`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         val afterRestart = ProfileSettings(db, MutableStateFlow(1L))
@@ -139,7 +138,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `deleting a Profile deletes its settings and no one else's`() = runTest {
+    fun `deleting a Profile deletes its settings and no one else's`() = testing {
         settings.pickSubtitleTrack(language = "fr")
         activeProfile.value = 2L
         settings.setSubtitlesOn(true)
@@ -150,7 +149,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `a newer choice from another device replaces this one`() = runTest {
+    fun `a newer choice from another device replaces this one`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         val taken = settings.mergeSynced(
@@ -162,7 +161,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `an older choice from another device leaves this one alone`() = runTest {
+    fun `an older choice from another device leaves this one alone`() = testing {
         settings.pickSubtitleTrack(language = "fr")
 
         val taken = settings.mergeSynced(
@@ -197,13 +196,13 @@ class ProfileSettingsTest {
     )
 
     @Test
-    fun `a Profile that never arranged Home gets the usual rows, all shown, with the Live Preview`() = runTest {
+    fun `a Profile that never arranged Home gets the usual rows, all shown, with the Live Preview`() = testing {
         assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
         assertThat(db.profileSettings().all()).isEmpty()
     }
 
     @Test
-    fun `moving and hiding Home's rows is remembered across a restart`() = runTest {
+    fun `moving and hiding Home's rows is remembered across a restart`() = testing {
         val arranged = HomeArrangement(
             channelsFirst,
             hidden = setOf(RECENT_MOVIES),
@@ -217,7 +216,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `each Profile arranges its own Home`() = runTest {
+    fun `each Profile arranges its own Home`() = testing {
         settings.arrangeHome(HomeArrangement(usualRows.reversed(), hidden = emptySet(), livePreview = true))
 
         activeProfile.value = 2L
@@ -226,7 +225,7 @@ class ProfileSettingsTest {
     }
 
     @Test
-    fun `restoring the usual order shows every row and the Live Preview again`() = runTest {
+    fun `restoring the usual order shows every row and the Live Preview again`() = testing {
         settings.arrangeHome(HomeArrangement(usualRows.reversed(), hidden = setOf(RECENT_SHOWS), livePreview = false))
 
         settings.arrangeHome(HomeArrangement.USUAL)
@@ -236,7 +235,7 @@ class ProfileSettingsTest {
 
     @Test
     fun `a row missing from a stored arrangement goes last and shown, and a row Home no longer knows is dropped`() =
-        runTest {
+        testing {
             // Written by an older or newer release: no Favourite movies yet, and a row since retired.
             db.profileSettings().upsert(
                 ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,because,retiredRow,recentShows", now),
@@ -252,14 +251,14 @@ class ProfileSettingsTest {
         }
 
     @Test
-    fun `a stored arrangement that can't be read is the usual one`() = runTest {
+    fun `a stored arrangement that can't be read is the usual one`() = testing {
         db.profileSettings().upsert(ProfileSetting(1L, "home.rows", "nonsense", now))
 
         assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
     }
 
     @Test
-    fun `a hidden row keeps its place, so showing it puts it back where it was`() = runTest {
+    fun `a hidden row keeps its place, so showing it puts it back where it was`() = testing {
         val hidden = HomeArrangement(usualRows, hidden = emptySet(), livePreview = true)
             .withShown(FAVOURITE_SHOWS, false)
 

@@ -22,7 +22,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -44,7 +43,7 @@ class DefaultQualityTest {
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Before
-    fun provider() = runTest {
+    fun provider() = testing {
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
     }
 
@@ -55,7 +54,7 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `a Channel skips a 4K Quality on a device whose decoders stop at 1080p`() = runTest {
+    fun `a Channel skips a 4K Quality on a device whose decoders stop at 1080p`() = testing {
         val channel = channelOn(decodersUpTo(1088), "News 4K", "News HD")
 
         assertThat(channel.primary.name).isEqualTo("News HD")
@@ -63,12 +62,12 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `4K stays the default where a decoder lists 2160`() = runTest {
+    fun `4K stays the default where a decoder lists 2160`() = testing {
         assertThat(channelOn(decodersUpTo(2160), "News 4K", "News HD").primary.name).isEqualTo("News 4K")
     }
 
     @Test
-    fun `either H_264 or HEVC listing the height counts, as the name doesn't say which a stream uses`() = runTest {
+    fun `either H_264 or HEVC listing the height counts, as the name doesn't say which a stream uses`() = testing {
         val h264Only = FakeDecoders(
             MimeTypes.VIDEO_H264 to DecoderSize(3840, 2160),
             MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088),
@@ -78,30 +77,30 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `a decoder for another codec doesn't count`() = runTest {
+    fun `a decoder for another codec doesn't count`() = testing {
         val av1Only = FakeDecoders(MimeTypes.VIDEO_AV1 to DecoderSize(3840, 2160))
 
         assertThat(channelOn(av1Only, "News 4K", "News HD").primary.name).isEqualTo("News HD")
     }
 
     @Test
-    fun `an 8K Quality needs a decoder that lists 4320`() = runTest {
+    fun `an 8K Quality needs a decoder that lists 4320`() = testing {
         assertThat(channelOn(decodersUpTo(2160), "News 8K", "News 4K").primary.name).isEqualTo("News 4K")
         assertThat(channelOn(decodersUpTo(4320), "News 8K", "News 4K").primary.name).isEqualTo("News 8K")
     }
 
     @Test
-    fun `when every Quality is skipped the best still plays, so it gets the sentence`() = runTest {
+    fun `when every Quality is skipped the best still plays, so it gets the sentence`() = testing {
         assertThat(channelOn(decodersUpTo(1088), "News 8K", "News 4K").primary.name).isEqualTo("News 8K")
     }
 
     @Test
-    fun `a name with no tag counts as playable`() = runTest {
+    fun `a name with no tag counts as playable`() = testing {
         assertThat(channelOn(decodersUpTo(480), "News").primary.name).isEqualTo("News")
     }
 
     @Test
-    fun `what's below the Quality playing is what it can step down to, once each`() = runTest {
+    fun `what's below the Quality playing is what it can step down to, once each`() = testing {
         val channel = channelOn(decodersUpTo(1088), "News 4K", "News HD", "News HD", "News SD")
 
         assertThat(channel.primary.name).isEqualTo("News HD")
@@ -111,7 +110,7 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `a default Quality stays on the provider the viewer filtered to`() = runTest {
+    fun `a default Quality stays on the provider the viewer filtered to`() = testing {
         val lineup = twoProviderNews()
 
         assertThat(lineup.only(LineupScope.All(sourceId = 1)).primary.name).isEqualTo("News 4K")
@@ -119,7 +118,7 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `with no provider filter it can come from another provider`() = runTest {
+    fun `with no provider filter it can come from another provider`() = testing {
         val lineup = twoProviderNews()
 
         assertThat(lineup.only(LineupScope.All()).primary.name).isEqualTo("News HD")
@@ -127,7 +126,7 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `the channel manager shows the row it found`() = runTest {
+    fun `the channel manager shows the row it found`() = testing {
         val lineup = twoProviderNews()
 
         assertThat(lineup.only(LineupScope.ManageSearch("4K")).primary.name).isEqualTo("News 4K")

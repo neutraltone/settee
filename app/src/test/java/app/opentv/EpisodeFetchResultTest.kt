@@ -13,7 +13,6 @@ import com.google.common.truth.Truth.assertThat
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,7 +29,7 @@ class EpisodeFetchResultTest {
     fun close() = test.close()
 
     @Test
-    fun `a fetch the panel answers reports success and stores the episodes`() = runTest {
+    fun `a fetch the panel answers reports success and stores the episodes`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         test.panel.replies["get_series_info:7"] =
             """{"info": {}, "episodes": {"1": [{"id": "1", "episode_num": 1, "title": "Pilot"}]}}"""
@@ -41,7 +40,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a panel that doesn't answer reports failure`() = runTest {
+    fun `a panel that doesn't answer reports failure`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         test.panel.replies["get_series_info:7"] = "!"
 
@@ -49,7 +48,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a panel that times out reports the timeout, so the page can say so`() = runTest {
+    fun `a panel that times out reports the timeout, so the page can say so`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         test.panel.replies["get_series_info:7"] = "!timeout"
 
@@ -59,7 +58,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a panel that answers with no episodes and no details has still answered`() = runTest {
+    fun `a panel that answers with no episodes and no details has still answered`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         test.panel.replies["get_series_info:7"] = "{}"
 
@@ -67,7 +66,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a cancelled fetch is cancelled, not a provider failure`() = runTest {
+    fun `a cancelled fetch is cancelled, not a provider failure`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         val hold = test.panel.hold("get_series_info:7")
         var result: Boolean? = null
@@ -81,7 +80,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a series with no episodes isn't a failure`() = runTest {
+    fun `a series with no episodes isn't a failure`() = testing {
         test.db.sources().insert(PANEL_SOURCE)
         test.panel.replies["get_series_info:7"] = """{"info": {}, "episodes": {}}"""
 
@@ -89,7 +88,7 @@ class EpisodeFetchResultTest {
     }
 
     @Test
-    fun `a playlist has nothing to fetch, which isn't a failure`() = runTest {
+    fun `a playlist has nothing to fetch, which isn't a failure`() = testing {
         val playlist = Source(id = 3, name = "Playlist", kind = SourceKind.M3U, url = "http://example.com/list.m3u")
 
         assertThat(test.catalog.ensureEpisodes(playlist, "7")).isTrue()

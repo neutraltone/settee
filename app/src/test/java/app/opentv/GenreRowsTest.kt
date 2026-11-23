@@ -12,7 +12,6 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.GenreGroup
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -110,21 +109,21 @@ class GenreRowsTest {
     private fun List<GenreGroup<*>>.genres() = map { it.genre }
 
     @Test
-    fun `every genre with enough unwatched titles gets a row, not only the biggest dozen`() = runTest {
+    fun `every genre with enough unwatched titles gets a row, not only the biggest dozen`() = testing {
         val all = (0 until 15).flatMap { movies("Genre $it", from = it * 100L) }
 
         assertThat(movieRows(all)).hasSize(15)
     }
 
     @Test
-    fun `a genre with fewer than eight unwatched titles gets no row`() = runTest {
+    fun `a genre with fewer than eight unwatched titles gets no row`() = testing {
         val all = movies("Drama", from = 1) + movies("Comedy", from = 100, count = 7)
 
         assertThat(movieRows(all).genres()).containsExactly("Drama")
     }
 
     @Test
-    fun `the genres of the titles watched last come first, newest first, then the biggest others`() = runTest {
+    fun `the genres of the titles watched last come first, newest first, then the biggest others`() = testing {
         val all = movies("Drama", from = 100, count = 12) +
             movies("Comedy", from = 200, count = 10) +
             movies("Horror", from = 300, count = 9) +
@@ -137,7 +136,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `a title with several genres puts them in the order the provider lists them`() = runTest {
+    fun `a title with several genres puts them in the order the provider lists them`() = testing {
         val all = movies("Drama", from = 100) + movies("Crime", from = 200) + listOf(movie(1, "Drama, Crime"))
         play("movie:1", at = 10)
 
@@ -145,7 +144,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `only the last twenty titles watched order the rows`() = runTest {
+    fun `only the last twenty titles watched order the rows`() = testing {
         val watched = (1L..21L).map { movie(it, if (it == 1L) "Western" else "Drama") }
         val all = movies("Western", from = 100) + movies("Drama", from = 200) +
             movies("Comedy", from = 300, count = 20) + watched
@@ -155,7 +154,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `a title the Profile has started or watched is in no row`() = runTest {
+    fun `a title the Profile has started or watched is in no row`() = testing {
         val all = movies("Drama", from = 1, count = 10)
         play("movie:1", at = 10)
         library.recordProgress("movie:2", positionMillis = 2_400_000, durationMillis = 2_400_000)
@@ -164,7 +163,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `a movie marked Unwatched is back in its row and doesn't order the rows`() = runTest {
+    fun `a movie marked Unwatched is back in its row and doesn't order the rows`() = testing {
         val all = movies("Drama", from = 100, count = 10) + movies("Comedy", from = 200) + listOf(movie(1, "Comedy"))
         play("movie:1", at = 10)
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 1, progress = 0f))
@@ -176,12 +175,12 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `a row holds at most twenty titles`() = runTest {
+    fun `a row holds at most twenty titles`() = testing {
         assertThat(movieRows(movies("Drama", from = 1, count = 30)).single().items).hasSize(20)
     }
 
     @Test
-    fun `a row's titles go by rating with a bonus for being new, a rating of ten counting as average`() = runTest {
+    fun `a row's titles go by rating with a bonus for being new, a rating of ten counting as average`() = testing {
         val all = movies("Drama", from = 100, count = 4) + listOf(
             movie(1, "Drama", rating = 8.5, added = NOW - 2 * YEAR),
             movie(2, "Drama", rating = 7.5, added = NOW - DAY),
@@ -193,7 +192,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `two Profiles get their own order`() = runTest {
+    fun `two Profiles get their own order`() = testing {
         val all = movies("Drama", from = 100) + movies("Comedy", from = 200) +
             listOf(movie(1, "Drama"), movie(2, "Comedy"))
         play("movie:1", at = 10, profileId = 1)
@@ -204,7 +203,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `shows are ordered by the show with the newest episode played`() = runTest {
+    fun `shows are ordered by the show with the newest episode played`() = testing {
         val all = seriesOf("Drama", from = 100) + seriesOf("Comedy", from = 200, count = 9) +
             listOf(series(1, "Drama"), series(2, "Comedy"))
         playSeries(1, at = 30)
@@ -214,7 +213,7 @@ class GenreRowsTest {
     }
 
     @Test
-    fun `a show removed from Continue Watching is in no row and doesn't order the rows`() = runTest {
+    fun `a show removed from Continue Watching is in no row and doesn't order the rows`() = testing {
         val all = seriesOf("Drama", from = 100, count = 9) +
             seriesOf("Comedy", from = 200) +
             listOf(series(1, "Comedy"))

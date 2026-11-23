@@ -11,7 +11,6 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +40,7 @@ class EpgProviderFeedsTest {
     private suspend fun feeds() = guide.observeFeeds().first()
 
     @Test
-    fun `a provider feed whose provider is gone is removed with its programmes and aliases`() = runTest {
+    fun `a provider feed whose provider is gone is removed with its programmes and aliases`() = testing {
         val gone = provider("Gone")
         val kept = provider("Kept")
         guide.ensureFeeds()
@@ -59,7 +58,7 @@ class EpgProviderFeedsTest {
     }
 
     @Test
-    fun `a provider that's switched off keeps its feed, still switched on`() = runTest {
+    fun `a provider that's switched off keeps its feed, still switched on`() = testing {
         val resting = provider("Resting")
         guide.ensureFeeds()
         db.sources().update(db.sources().byId(resting)!!.copy(enabled = false))
@@ -71,7 +70,7 @@ class EpgProviderFeedsTest {
     }
 
     @Test
-    fun `custom and built-in feeds are never removed as a gone provider's`() = runTest {
+    fun `custom and built-in feeds are never removed as a gone provider's`() = testing {
         val gone = provider("Gone")
         guide.addCustomFeed("My guide", "https://example.com/guide.xml")
         guide.ensureFeeds()

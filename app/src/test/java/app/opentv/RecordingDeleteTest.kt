@@ -21,7 +21,6 @@ import app.opentv.recording.RecordingStorage
 import com.google.common.truth.Truth.assertThat
 import java.io.File
 import java.io.IOException
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Rule
@@ -107,7 +106,7 @@ class RecordingDeleteTest {
     }
 
     @Test
-    fun `a recording whose file is removed leaves Recordings with nothing to say`() = runTest {
+    fun `a recording whose file is removed leaves Recordings with nothing to say`() = testing {
         val id = recordings.insert(finished("/rec/News.ts"))
 
         val error = engine.delete(recordings.byId(id)!!)
@@ -118,7 +117,7 @@ class RecordingDeleteTest {
     }
 
     @Test
-    fun `a recording on a NAS that can't be reached stays, and the viewer is told why`() = runTest {
+    fun `a recording on a NAS that can't be reached stays, and the viewer is told why`() = testing {
         val id = recordings.insert(finished("smb://nas.example.com/recordings/News.ts"))
         refusal = IOException("unreachable")
 
@@ -131,7 +130,7 @@ class RecordingDeleteTest {
     }
 
     @Test
-    fun `a recording on this device whose file won't go stays, and the viewer is told why`() = runTest {
+    fun `a recording on this device whose file won't go stays, and the viewer is told why`() = testing {
         val id = recordings.insert(finished("/rec/News.ts"))
         refusal = IOException("refused")
 
@@ -142,7 +141,7 @@ class RecordingDeleteTest {
     }
 
     @Test
-    fun `a USB recording whose drive is unplugged stays, and the viewer is told to plug it back in`() = runTest {
+    fun `a USB recording whose drive is unplugged stays, and the viewer is told to plug it back in`() = testing {
         val id = recordings.insert(finished("content://com.android.externalstorage.documents/document/News.ts"))
         refusal = RecordingStorage.Unavailable(R.string.rec_error_usb_unavailable)
 

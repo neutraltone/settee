@@ -15,7 +15,6 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.ReminderRepository
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,7 +61,7 @@ class ReminderChannelTest {
         channels.forSource(sourceId).single { it.streamId == streamId }
 
     @Test
-    fun `a reminder switches to its channel after the channel misses a refresh`() = runTest {
+    fun `a reminder switches to its channel after the channel misses a refresh`() = testing {
         val sourceId = db.sources().insert(
             Source(name = "Home", kind = SourceKind.M3U, url = "https://example.com/h.m3u"),
         )
@@ -78,7 +77,7 @@ class ReminderChannelTest {
     }
 
     @Test
-    fun `a programme is reminded of once`() = runTest {
+    fun `a programme is reminded of once`() = testing {
         val sourceId = db.sources().insert(
             Source(name = "Home", kind = SourceKind.M3U, url = "https://example.com/h.m3u"),
         )

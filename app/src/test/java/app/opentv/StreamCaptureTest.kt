@@ -22,7 +22,6 @@ import com.google.common.truth.Truth.assertThat
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
-import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -73,7 +72,7 @@ class StreamCaptureTest {
     fun close() = test.close()
 
     @Test
-    fun `a Stalker recording mints a fresh link on every reconnect and keeps appending`() = runTest {
+    fun `a Stalker recording mints a fresh link on every reconnect and keeps appending`() = testing {
         val id = stalkerRecording()
         val out = ByteArrayOutputStream()
 
@@ -91,7 +90,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `storage running out ends the capture at once, saying it's full, with what was written`() = runTest {
+    fun `storage running out ends the capture at once, saying it's full, with what was written`() = testing {
         val outcome = StreamCapture(provider, clock = { legs.size * 1_000L }) { ready }
             .run(FullAfter(6), endAtMillis = 10_000L)
 
@@ -101,7 +100,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `a NAS saying its disk is full is storage full too`() = runTest {
+    fun `a NAS saying its disk is full is storage full too`() = testing {
         // How smbj words it, wrapped as smbj wraps a failed write.
         val full = RuntimeException(
             "Write failed",
@@ -115,7 +114,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `storage that fails a write any other way ends the capture at once, saying it was lost`() = runTest {
+    fun `storage that fails a write any other way ends the capture at once, saying it was lost`() = testing {
         val gone = IOException("write failed: EIO (I/O error)")
 
         val outcome = StreamCapture(provider, clock = { legs.size * 1_000L }) { ready }
@@ -126,7 +125,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `a connection that breaks after sending video is reconnected, however often, until the end`() = runTest {
+    fun `a connection that breaks after sending video is reconnected, however often, until the end`() = testing {
         val breaking = providerAnswering { request -> ok(request, BreaksAfter("abc")) }
         val out = ByteArrayOutputStream()
 
@@ -138,7 +137,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `a provider refusing every request ends the capture with its refusal`() = runTest {
+    fun `a provider refusing every request ends the capture with its refusal`() = testing {
         val refusing = providerAnswering { request -> answer(request, 403, "".toResponseBody()) }
 
         val outcome = StreamCapture(refusing, clock = { legs.size * 1_000L }) { ready }
@@ -148,7 +147,7 @@ class StreamCaptureTest {
     }
 
     @Test
-    fun `a stream that stops sending anything ends the capture, saying it stopped`() = runTest {
+    fun `a stream that stops sending anything ends the capture, saying it stopped`() = testing {
         val stopping = providerAnswering { request ->
             ok(request, (if (legs.size == 1) "abc" else "").toResponseBody("video/mp2t".toMediaType()))
         }

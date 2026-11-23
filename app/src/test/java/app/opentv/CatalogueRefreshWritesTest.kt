@@ -20,7 +20,6 @@ import app.opentv.data.model.personKey
 import com.google.common.truth.Truth.assertThat
 import java.util.Collections
 import java.util.concurrent.Executor
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,7 +77,7 @@ class CatalogueRefreshWritesTest {
             .use { channels.replaceCatalogue(sourceId, syncStamp, it) }
 
     @Test
-    fun `refreshing an unchanged channel list again updates its rows without trying to insert them`() = runTest {
+    fun `refreshing an unchanged channel list again updates its rows without trying to insert them`() = testing {
         val sourceId = source()
         val list = listOf(channel(sourceId, "a"), channel(sourceId, "b"))
         channels.replaceCatalogue(sourceId, list, syncStamp = 1)
@@ -97,7 +96,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `refreshing a channel list read in batches again updates its rows without trying to insert them`() = runTest {
+    fun `refreshing a channel list read in batches again updates its rows without trying to insert them`() = testing {
         val sourceId = source(SourceKind.XTREAM)
         val list = listOf(channel(sourceId, "a"), channel(sourceId, "b"))
         refreshInBatches(sourceId, list, syncStamp = 1)
@@ -115,7 +114,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new channel listed twice in one refresh is one row, as its last listing`() = runTest {
+    fun `a new channel listed twice in one refresh is one row, as its last listing`() = testing {
         val sourceId = source()
 
         channels.replaceCatalogue(
@@ -130,7 +129,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new channel listed twice in a batch is one row, as its last listing`() = runTest {
+    fun `a new channel listed twice in a batch is one row, as its last listing`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         refreshInBatches(
@@ -145,7 +144,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new channel carrying an id is added under that id`() = runTest {
+    fun `a new channel carrying an id is added under that id`() = testing {
         val sourceId = source()
 
         channels.replaceCatalogue(sourceId, listOf(channel(sourceId, "a").copy(id = 7)), syncStamp = 1)
@@ -154,7 +153,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new channel carrying an id in a batch is added under that id`() = runTest {
+    fun `a new channel carrying an id in a batch is added under that id`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         refreshInBatches(sourceId, listOf(channel(sourceId, "a").copy(id = 7)), syncStamp = 1)
@@ -178,7 +177,7 @@ class CatalogueRefreshWritesTest {
     )
 
     @Test
-    fun `refreshing films already stored updates them without trying to insert them`() = runTest {
+    fun `refreshing films already stored updates them without trying to insert them`() = testing {
         val sourceId = source(SourceKind.XTREAM)
         movies.upsertAll(listOf(movie(sourceId, "a"), movie(sourceId, "b")))
         assertThat(writes("INSERT", "movies")).isNotEmpty()
@@ -201,7 +200,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a film new in a refresh has its cast credited under its new id`() = runTest {
+    fun `a film new in a refresh has its cast credited under its new id`() = testing {
         val sourceId = source(SourceKind.XTREAM)
         movies.upsertAll(listOf(movie(sourceId, "a")))
         val a = movies.forSource(sourceId).single()
@@ -214,7 +213,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new film listed twice in one refresh is one row, as its last listing`() = runTest {
+    fun `a new film listed twice in one refresh is one row, as its last listing`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         movies.upsertAll(
@@ -234,7 +233,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a film saved with an id that isn't stored yet is added under that id, credits and all`() = runTest {
+    fun `a film saved with an id that isn't stored yet is added under that id, credits and all`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         movies.upsertAll(listOf(movie(sourceId, "a", cast = "Jane Doe").copy(id = 7)))
@@ -256,7 +255,7 @@ class CatalogueRefreshWritesTest {
     )
 
     @Test
-    fun `refreshing shows already stored updates them without trying to insert them`() = runTest {
+    fun `refreshing shows already stored updates them without trying to insert them`() = testing {
         val sourceId = source(SourceKind.XTREAM)
         shows.upsertAll(listOf(show(sourceId, "a"), show(sourceId, "b")))
         assertThat(writes("INSERT", "series")).isNotEmpty()
@@ -278,7 +277,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a show new in a refresh has its cast credited under its new id`() = runTest {
+    fun `a show new in a refresh has its cast credited under its new id`() = testing {
         val sourceId = source(SourceKind.XTREAM)
         shows.upsertAll(listOf(show(sourceId, "a")))
         val a = shows.forSource(sourceId).single()
@@ -290,7 +289,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a new show listed twice in one refresh is one row, as its last listing`() = runTest {
+    fun `a new show listed twice in one refresh is one row, as its last listing`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         shows.upsertAll(
@@ -310,7 +309,7 @@ class CatalogueRefreshWritesTest {
     }
 
     @Test
-    fun `a show saved with an id that isn't stored yet is added under that id, credits and all`() = runTest {
+    fun `a show saved with an id that isn't stored yet is added under that id, credits and all`() = testing {
         val sourceId = source(SourceKind.XTREAM)
 
         shows.upsertAll(listOf(show(sourceId, "a", cast = "Jane Doe").copy(id = 7)))

@@ -14,7 +14,6 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.EpgRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -80,7 +79,7 @@ class EpgFeedRemovedMidSyncTest {
     fun close() = db.close()
 
     @Test
-    fun `a feed removed while it downloads leaves no programmes or aliases`() = runTest {
+    fun `a feed removed while it downloads leaves no programmes or aliases`() = testing {
         guide.addCustomFeed("My guide", url)
 
         val summary = guide.syncAll(nowUtcMillis = 0, force = true)

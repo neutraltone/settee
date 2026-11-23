@@ -21,7 +21,6 @@ import com.google.common.truth.Truth.assertThat
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +51,7 @@ class CatchUpMarksTest {
     private suspend fun seriesCards() = library.continueWatchingSeries().first()
 
     @Test
-    fun `marking up to an episode marks it and every earlier one across seasons, and Up Next follows it`() = runTest {
+    fun `marking up to an episode marks it and every earlier one across seasons, and Up Next follows it`() = testing {
         db.episodes().upsertAll(episodes)
 
         library.catchUp.markWatchedUpTo(testEpisode(2, 2))
@@ -69,7 +68,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `marking up to an episode leaves the specials alone`() = runTest {
+    fun `marking up to an episode leaves the specials alone`() = testing {
         db.episodes().upsertAll(episodes + testEpisode(0, 1))
 
         library.catchUp.markWatchedUpTo(testEpisode(1, 2))
@@ -79,7 +78,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `marking up to a special marks only the specials before it`() = runTest {
+    fun `marking up to a special marks only the specials before it`() = testing {
         db.episodes().upsertAll(episodes + testEpisode(0, 1) + testEpisode(0, 2) + testEpisode(0, 3))
 
         library.catchUp.markWatchedUpTo(testEpisode(0, 2))
@@ -97,7 +96,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `Up Next follows the chosen episode even when it was already Watched and an earlier one wasn't`() = runTest {
+    fun `Up Next follows the chosen episode even when it was already Watched and an earlier one wasn't`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 3))
         watch(testEpisode(1, 1))
@@ -110,7 +109,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `a bulk mark keeps how far each episode was played and applies to the active Profile only`() = runTest {
+    fun `a bulk mark keeps how far each episode was played and applies to the active Profile only`() = testing {
         db.episodes().upsertAll(episodes)
         library.recordProgress("ep:${testEpisode(1, 1).id}", positionMillis = 600_000, durationMillis = 2_400_000)
 
@@ -123,7 +122,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `no two episodes in a bulk mark share a stamp, and none is ahead of the clock`() = runTest {
+    fun `no two episodes in a bulk mark share a stamp, and none is ahead of the clock`() = testing {
         db.episodes().upsertAll(episodes)
 
         library.catchUp.markWatchedUpTo(testEpisode(3, 3))
@@ -134,7 +133,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `a bulk mark over a long series reaches the database as one write`() = runTest {
+    fun `a bulk mark over a long series reaches the database as one write`() = testing {
         val long = (1..200).map { testEpisode(1, it) }
         db.episodes().upsertAll(long)
         val counting = CountingPositions(db.positions())
@@ -147,7 +146,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `an episode listed with the same numbers as the chosen one but after it is left alone`() = runTest {
+    fun `an episode listed with the same numbers as the chosen one but after it is left alone`() = testing {
         val repeat = testEpisode(1, 1).copy(id = 99, episodeId = "repeat")
         db.episodes().upsertAll(episodes + repeat)
 
@@ -158,7 +157,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `an earlier episode already Watched keeps when it was played, so only what changed syncs`() = runTest {
+    fun `an earlier episode already Watched keeps when it was played, so only what changed syncs`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         val played = db.positions().get(1, "ep:${testEpisode(1, 1).id}")
@@ -172,7 +171,7 @@ class CatchUpMarksTest {
 
     @Test
     fun `marking a season Unwatched doesn't override another device's progress on an episode not played here`() =
-        runTest {
+        testing {
             db.episodes().upsertAll(episodes)
             watch(testEpisode(1, 1))
             val elsewhere = PlaybackPosition(
@@ -209,7 +208,7 @@ class CatchUpMarksTest {
 
     @Test
     fun `marking a season Watched makes Up Next the episode after its last, even with a later season played`() =
-        runTest {
+        testing {
             db.episodes().upsertAll(episodes)
             watch(testEpisode(3, 1))
 
@@ -226,7 +225,7 @@ class CatchUpMarksTest {
         }
 
     @Test
-    fun `marking a season Unwatched works Up Next out from what remains`() = runTest {
+    fun `marking a season Unwatched works Up Next out from what remains`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 1))
         watch(testEpisode(2, 1))
@@ -241,7 +240,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `marking up to here has something to do only while an earlier episode isn't Watched`() = runTest {
+    fun `marking up to here has something to do only while an earlier episode isn't Watched`() = testing {
         db.episodes().upsertAll(episodes + testEpisode(0, 1))
         assertThat(library.catchUp.hasEarlierToMark(testEpisode(1, 1))).isFalse()
         assertThat(library.catchUp.hasEarlierToMark(testEpisode(1, 2))).isTrue()
@@ -254,7 +253,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `a bulk mark merged on another device in any order gives the same Up Next`() = runTest {
+    fun `a bulk mark merged on another device in any order gives the same Up Next`() = testing {
         db.episodes().upsertAll(episodes)
         library.catchUp.markWatchedUpTo(testEpisode(2, 2))
         val sent = db.positions().forProfile(1)
@@ -272,7 +271,7 @@ class CatchUpMarksTest {
     }
 
     @Test
-    fun `a specials season can be marked Watched with the rest`() = runTest {
+    fun `a specials season can be marked Watched with the rest`() = testing {
         val specials = listOf(testEpisode(0, 1), testEpisode(0, 2))
         db.episodes().upsertAll(episodes + specials)
 

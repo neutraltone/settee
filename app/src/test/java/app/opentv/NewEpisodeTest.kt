@@ -16,7 +16,6 @@ import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,7 +70,7 @@ class NewEpisodeTest {
         library.recordProgress("ep:${ep.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
 
     @Test
-    fun `a new season after the finale is fetched and comes back as a New Episode`() = runTest {
+    fun `a new season after the finale is fetched and comes back as a New Episode`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(2, 3))
         added["s"] = listOf(testEpisode(3, 1))
@@ -89,7 +88,7 @@ class NewEpisodeTest {
     }
 
     @Test
-    fun `marking an old episode Unwatched doesn't stop a new one coming back as a New Episode`() = runTest {
+    fun `marking an old episode Unwatched doesn't stop a new one coming back as a New Episode`() = testing {
         db.episodes().upsertAll(episodes)
         for (ep in episodes) {
             watch(ep)
@@ -111,7 +110,7 @@ class NewEpisodeTest {
     }
 
     @Test
-    fun `a series the Profile is part way through is not fetched`() = runTest {
+    fun `a series the Profile is part way through is not fetched`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 2))
 
@@ -121,7 +120,7 @@ class NewEpisodeTest {
     }
 
     @Test
-    fun `a series nobody has watched is not fetched`() = runTest {
+    fun `a series nobody has watched is not fetched`() = testing {
         db.episodes().upsertAll(episodes)
 
         seriesUpdated(series)
@@ -130,7 +129,7 @@ class NewEpisodeTest {
     }
 
     @Test
-    fun `a series only another Profile is caught up on is still fetched`() = runTest {
+    fun `a series only another Profile is caught up on is still fetched`() = testing {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 2))
         activeProfile.value = 2L
@@ -143,7 +142,7 @@ class NewEpisodeTest {
     }
 
     @Test
-    fun `one series failing to fetch doesn't stop the others`() = runTest {
+    fun `one series failing to fetch doesn't stop the others`() = testing {
         val broken = testEpisode(1, 1).copy(id = 101, seriesId = "broken", episodeId = "b-1-1")
         db.episodes().upsertAll(episodes + broken)
         watch(broken)

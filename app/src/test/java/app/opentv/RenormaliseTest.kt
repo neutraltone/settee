@@ -13,7 +13,6 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,7 +49,7 @@ class RenormaliseTest {
         db.categories().upsertAll(listOf(Category(id = id, sourceId = sourceId, name = name, kind = StreamKind.LIVE)))
 
     @Test
-    fun `cleaning a channel's name keys it by its name, region dropped, as the lineup looks it up`() = runTest {
+    fun `cleaning a channel's name keys it by its name, region dropped, as the lineup looks it up`() = testing {
         provider(1)
         category(sourceId = 1, id = "7", name = "UK| GENERAL")
         db.channels().replaceCatalogue(1, listOf(channel(1, "a", "UK| BBC One HD", categoryId = "7")), syncStamp = 1)
@@ -63,7 +62,7 @@ class RenormaliseTest {
     }
 
     @Test
-    fun `two providers with the same category id each label their channels from their own category`() = runTest {
+    fun `two providers with the same category id each label their channels from their own category`() = testing {
         provider(1)
         provider(2)
         category(sourceId = 1, id = "7", name = "UK| GENERAL HD")
@@ -78,7 +77,7 @@ class RenormaliseTest {
     }
 
     @Test
-    fun `what a refresh or another device changes while names are being cleaned stays changed`() = runTest {
+    fun `what a refresh or another device changes while names are being cleaned stays changed`() = testing {
         provider(1)
         category(sourceId = 1, id = "7", name = "UK| GENERAL")
         db.channels().replaceCatalogue(
@@ -104,7 +103,7 @@ class RenormaliseTest {
     }
 
     @Test
-    fun `a playlist with more group-titles than SQLite can take in one query still gets cleaned`() = runTest {
+    fun `a playlist with more group-titles than SQLite can take in one query still gets cleaned`() = testing {
         // Past the 32,766 bound variables Robolectric's SQLite allows, and far past the Stick's 999.
         val groups = 33_000
         provider(1, SourceKind.M3U)

@@ -20,7 +20,6 @@ import app.opentv.data.repo.ProfileSettings
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,7 +63,7 @@ class LivePreviewFromBeforeTest {
     }
 
     @Test
-    fun `a device that had the Live Preview off turns it off for each Profile that hadn't arranged Home`() = runTest {
+    fun `a device that had the Live Preview off turns it off for each Profile that hadn't arranged Home`() = testing {
         twoProfiles()
         val alexs = HomeArrangement(HomeRowKind.entries.reversed(), hidden = emptySet(), livePreview = true)
         profileSettings.arrangeHome(alexs)
@@ -77,7 +76,7 @@ class LivePreviewFromBeforeTest {
     }
 
     @Test
-    fun `it's carried over once, so a Profile can turn the Live Preview back on`() = runTest {
+    fun `it's carried over once, so a Profile can turn the Live Preview back on`() = testing {
         twoProfiles()
         oneZeroSwitch(on = false)
         carryLivePreviewFromBefore(settings, profileSettings)
@@ -90,7 +89,7 @@ class LivePreviewFromBeforeTest {
     }
 
     @Test
-    fun `a device that had it on, or never touched it, writes nothing`() = runTest {
+    fun `a device that had it on, or never touched it, writes nothing`() = testing {
         twoProfiles()
         oneZeroSwitch(on = true)
 
@@ -100,7 +99,7 @@ class LivePreviewFromBeforeTest {
     }
 
     @Test
-    fun `an arrangement chosen on any other device wins over the one carried over`() = runTest {
+    fun `an arrangement chosen on any other device wins over the one carried over`() = testing {
         twoProfiles()
         oneZeroSwitch(on = false)
         carryLivePreviewFromBefore(settings, profileSettings)

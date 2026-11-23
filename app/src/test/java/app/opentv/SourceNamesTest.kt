@@ -14,7 +14,6 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +38,7 @@ class SourceNamesTest {
     fun close() = test.close()
 
     @Test
-    fun `a second provider with a name already taken gets its own`() = runTest {
+    fun `a second provider with a name already taken gets its own`() = testing {
         sources.save(source("Provider"))
         sources.save(source("Provider"))
         sources.save(source("Provider"))
@@ -48,7 +47,7 @@ class SourceNamesTest {
     }
 
     @Test
-    fun `saving a provider again keeps its name`() = runTest {
+    fun `saving a provider again keeps its name`() = testing {
         val id = sources.save(source("Provider"))
 
         sources.save(source("Provider", id))
@@ -57,7 +56,7 @@ class SourceNamesTest {
     }
 
     @Test
-    fun `renaming a provider to a name already taken gets its own`() = runTest {
+    fun `renaming a provider to a name already taken gets its own`() = testing {
         sources.save(source("Provider"))
         val id = sources.save(source("Other"))
 
