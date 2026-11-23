@@ -5,16 +5,23 @@
  */
 package app.opentv.core
 
+import android.app.ActivityManager
 import android.app.Application
+import android.app.ApplicationExitInfo
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.TestGraph
 import com.google.common.truth.Truth.assertThat
+import io.sentry.Sentry
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowActivityManager
 
 /**
  * What [CrashReports] would send to Sentry, caught by a fake outbox in place of Sentry's own transport:
@@ -26,6 +33,10 @@ import org.robolectric.annotation.Config
 class CrashReportsTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
+
+    /** Only to let the main thread run until it's idle, as it is once Settee has launched. */
+    @get:Rule
+    val mainThread = TestGraph(swapIn = false)
     private val settings = AppSettings.separate(app, "crash-reports-test")
     private val sent = mutableListOf<String>()
     private val outbox = CrashReports.Outbox { envelope -> synchronized(sent) { sent += envelope } }
@@ -64,6 +75,30 @@ class CrashReportsTest {
     }
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
+
+    /**
+     * Waits for what Sentry set off as it started, reading Android's exit history among it, to be done:
+     * it runs on Sentry's one background thread, so anything handed to that thread after runs after.
+     */
+    private fun sentryStartingWorkDone() {
+        Sentry.getCurrentScopes().options.executorService.submit {}.get(10, java.util.concurrent.TimeUnit.SECONDS)
+    }
+
+    private fun freezeWatching() = Thread.getAllStackTraces().keys.any { it.name == "Settee freeze watch" && it.isAlive }
+
+    /** Android ending Settee for not responding at [atMillis], keeping the main thread's stack (Android 11+). */
+    private fun androidEndedSetteeForFreeze(atMillis: Long) {
+        shadowOf(app.getSystemService(ActivityManager::class.java)).addApplicationExitInfo(
+            ShadowActivityManager.ApplicationExitInfoBuilder.newBuilder()
+                .setProcessName(app.packageName)
+                .setPid(FROZEN_PID)
+                .setReason(ApplicationExitInfo.REASON_ANR)
+                .setImportance(ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
+                .setTimestamp(atMillis)
+                .setTraceInputStream(THREAD_DUMP.byteInputStream())
+                .build(),
+        )
+    }
 
     @Before
     fun setUp() {
@@ -384,12 +419,18 @@ class CrashReportsTest {
     }
 
     @Test
-    fun `off, a freeze is held, and Send sends it as a freeze with the main thread's stack`() {
+    @Config(sdk = [25])
+    fun `off, before Android 11, a freeze is watched for once Settee has launched, and Send sends it with the main thread's stack`() {
         val notFreezing = freezes
         // Anything the main thread sits on for 50ms here, and Android agrees it's a freeze.
         freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { true }, held = freezesHeld::countDown)
         crashReports()
+        // Nothing watches until the main thread has done the launch's work queued ahead of the watch.
+        assertThat(freezeWatching()).isFalse()
 
+        mainThread.awaitIdle()
+
+        assertThat(freezeWatching()).isTrue()
         // The test thread is the main thread, and its looper only runs when the test lets it: it's frozen.
         assertThat(freezesHeld.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue()
         freezes = notFreezing
@@ -399,6 +440,94 @@ class CrashReportsTest {
         assertThat(event).contains("ApplicationNotResponding")
         assertThat(event).contains("\"type\":\"ANR\"")
         assertThat(event).contains("CrashReportsTest")
+    }
+
+    @Test
+    fun `off, from Android 11 nothing watches the main thread, and a freeze Android ended Settee for is held from its history`() {
+        crashReports()
+        mainThread.awaitIdle()
+        assertThat(freezeWatching()).isFalse()
+
+        androidEndedSetteeForFreeze(atMillis = System.currentTimeMillis() + 1)
+
+        assertThat(nextLaunch().askAboutHeld.value).isTrue()
+        reports.answer(CrashReports.Answer.SEND)
+        val event = sentEvents().single()
+        assertThat(event).contains("ApplicationNotResponding")
+        assertThat(event).contains("\"type\":\"ANR\"")
+        assertThat(event).contains("HomeScreen")
+        assertThat(event).contains("\"handled\":false")
+    }
+
+    @Test
+    fun `a freeze from before Settee first looked isn't held, since nobody knows what the viewer said then`() {
+        androidEndedSetteeForFreeze(atMillis = System.currentTimeMillis() - 60_000)
+
+        assertThat(crashReports().askAboutHeld.value).isFalse()
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+    }
+
+    @Test
+    fun `a freeze from while reports were off isn't sent by Sentry once they're turned on`() {
+        androidEndedSetteeForFreeze(atMillis = System.currentTimeMillis() - 60_000)
+        crashReports()
+
+        reports.setOn(true)
+        sentryStartingWorkDone()
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `a freeze from while reports were on is sent by Sentry at the next launch`() {
+        settings.setCrashReportsOn(true, atMillis = System.currentTimeMillis() - 120_000)
+        androidEndedSetteeForFreeze(atMillis = System.currentTimeMillis() - 60_000)
+
+        crashReports()
+        sentryStartingWorkDone()
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(sentEvents().single()).contains("HomeScreen")
+    }
+
+    @Test
+    fun `turning reports off throws away a report still waiting to go`() {
+        val waiting = mutableListOf<Runnable>()
+        reports = CrashReports(
+            settings,
+            CrashReports.Destination(DSN, outbox, queue = { synchronized(waiting) { waiting += it } }),
+            "1.4.0",
+            environment = "test",
+            freezes,
+            background = Runnable::run,
+        ).also { it.start(app) }
+        reports.setOn(true)
+        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+        assertThat(synchronized(waiting) { waiting.size }).isEqualTo(1)
+
+        reports.setOn(false)
+        synchronized(waiting) { waiting.toList() }.forEach(Runnable::run)
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `a report waiting to go while reports stay on goes when its turn comes`() {
+        val waiting = mutableListOf<Runnable>()
+        reports = CrashReports(
+            settings,
+            CrashReports.Destination(DSN, outbox, queue = { synchronized(waiting) { waiting += it } }),
+            "1.4.0",
+            environment = "test",
+            freezes,
+            background = Runnable::run,
+        ).also { it.start(app) }
+        reports.setOn(true)
+        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+
+        synchronized(waiting) { waiting.toList() }.forEach(Runnable::run)
+
+        assertThat(sentEvents()).hasSize(1)
     }
 
     @Test
@@ -430,5 +559,28 @@ class CrashReportsTest {
 
     private companion object {
         const val DSN = "https://k@sentry.example.org/1"
+
+        const val FROZEN_PID = 4321
+
+        /** The main thread's part of an ANR's thread dump, as Android keeps it. */
+        val THREAD_DUMP = """
+            |----- pid 4321 at 2026-11-23 10:00:00.000000000+0000 -----
+            |Cmd line: uk.neutraltone.settee
+            |
+            |"main" prio=5 tid=1 Sleeping
+            |  | group="main" sCount=1 ucsCount=0 flags=1 obj=0x71f0e8b8 self=0xb400007b2b2a4380
+            |  | sysTid=4321 nice=-10 cgrp=top-app sched=0/0 handle=0x7c6d0f84f8
+            |  | state=S schedstat=( 0 0 0 ) utm=0 stm=0 core=0 HZ=100
+            |  | stack=0x7fd8a6e000-0x7fd8a70000 stackSize=8188KB
+            |  | held mutexes=
+            |  at java.lang.Thread.sleep(Native method)
+            |  - sleeping on <0x0a1b2c3d> (a java.lang.Object)
+            |  at app.opentv.ui.HomeScreen.loadRows(HomeScreen.kt:42)
+            |  at android.os.Handler.dispatchMessage(Handler.java:106)
+            |  at android.os.Looper.loop(Looper.java:288)
+            |
+            |----- end 4321 -----
+            |
+        """.trimMargin()
     }
 }

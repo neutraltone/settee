@@ -6,6 +6,7 @@
 package app.opentv.core
 
 import android.content.Context
+import android.os.Handler
 import android.os.Looper
 import io.sentry.SentryEvent
 import io.sentry.SentryLevel
@@ -109,16 +110,19 @@ internal data class HeldCrash(
             return HeldCrash(freeze = false, timeMillis = now, release = release, exceptions = chain.toList())
         }
 
-        /** The main thread stuck at [mainStack] for [afterMillis], named as Sentry names an ANR. */
-        fun freeze(mainStack: Array<StackTraceElement>, afterMillis: Long, release: String, now: Long) = HeldCrash(
+        /**
+         * The main thread stuck at [mainStack] for [afterMillis], or for as long as it took Android to
+         * end Settee when that's null, named as Sentry names an ANR.
+         */
+        fun freeze(mainStack: List<StackTraceElement>, afterMillis: Long?, release: String, now: Long) = HeldCrash(
             freeze = true,
             timeMillis = now,
             release = release,
             exceptions = listOf(
                 Thrown(
                     "io.sentry.android.core.ApplicationNotResponding",
-                    "Application Not Responding for at least $afterMillis ms.",
-                    mainStack.top(),
+                    afterMillis?.let { "Application Not Responding for at least $it ms." } ?: "Application Not Responding.",
+                    mainStack.take(MOST_FRAMES),
                 ),
             ),
         )
@@ -154,10 +158,11 @@ internal data class HeldCrash(
 }
 
 /**
- * Where a [HeldCrash] waits, and what holds one: an uncaught-exception handler and, while [watching],
- * a [FreezeWatch]. One file, so a newer crash replaces an older, written whole and then moved into
- * place, so a crash while writing can't leave half of one. Each crash or freeze is held only if
- * [shouldHold] says so when it happens.
+ * Where a [HeldCrash] waits, and what holds one: an uncaught-exception handler, and for freezes either
+ * Android's exit history, read back at the next launch ([lookBack], Android 11 and later), or, on
+ * older Androids, a [FreezeWatch] while [start] says to watch. One file, so a newer crash replaces an
+ * older, written whole and then moved into place, so a crash while writing can't leave half of one.
+ * Each crash or freeze is held only if [shouldHold] says so when it happens.
  */
 internal class HeldCrashes(
     private val file: File,
@@ -168,13 +173,17 @@ internal class HeldCrashes(
 ) {
     private var handler: HoldingHandler? = null
 
-    private var watch: FreezeWatch? = null
+    @Volatile private var watch: FreezeWatch? = null
+
+    @Volatile private var watchWanted = false
 
     val any: Boolean get() = file.exists()
 
     /**
-     * Starts holding crashes, and freezes too if [watchFreezes]. The handler goes in before Sentry's,
-     * so Sentry's, while it runs, passes each crash on to it.
+     * Starts holding crashes, and freezes too if [watchFreezes] and this Android keeps no exit history.
+     * The handler goes in before Sentry's, so Sentry's, while it runs, passes each crash on to it. The
+     * watch is posted to the main thread, behind the launch's own work already queued there (the first
+     * screen opening), so launching pays nothing for it; and it starts by sleeping.
      */
     fun start(watchFreezes: Boolean) {
         if (handler == null) {
@@ -182,21 +191,50 @@ internal class HeldCrashes(
                 if (shouldHold()) hold(HeldCrash.crash(error, release, System.currentTimeMillis()))
             }.also(Thread::setDefaultUncaughtExceptionHandler)
         }
-        if (watch == null && watchFreezes) {
-            val main = Looper.getMainLooper().thread
-            watch = FreezeWatch(freezes.afterMillis, { freezes.notResponding(context) }) {
-                if (shouldHold()) {
-                    hold(HeldCrash.freeze(main.stackTrace, freezes.afterMillis, release, System.currentTimeMillis()))
-                    freezes.held()
-                }
-            }.also(Thread::start)
+        if (!watchFreezes || PastFreezes.kept || watchWanted) return
+        watchWanted = true
+        Handler(Looper.getMainLooper()).post {
+            if (watchWanted && watch == null) watch = freezeWatch().also(Thread::start)
         }
+    }
+
+    private fun freezeWatch(): FreezeWatch {
+        val main = Looper.getMainLooper().thread
+        return FreezeWatch(freezes.afterMillis, { freezes.notResponding(context) }) {
+            if (shouldHold()) {
+                hold(HeldCrash.freeze(main.stackTrace.toList(), freezes.afterMillis, release, System.currentTimeMillis()))
+                freezes.held()
+            }
+        }
+    }
+
+    /**
+     * Holds the newest freeze Android ended Settee for after [lookedBackTo], the last look, unless a
+     * newer crash is held already. The first look (0) holds nothing: what the viewer had said before
+     * then isn't known. Whether something's held now.
+     */
+    fun lookBack(lookedBackTo: Long): Boolean {
+        if (lookedBackTo > 0 && PastFreezes.kept && shouldHold()) {
+            val freeze = PastFreezes.newest(context, lookedBackTo)
+            val heldAt = runCatching { HeldCrash.fromJson(file.readText()).timeMillis }.getOrNull()
+            if (freeze != null && (heldAt == null || heldAt < freeze.timeMillis)) {
+                hold(HeldCrash.freeze(freeze.mainStack, afterMillis = null, release, freeze.timeMillis))
+                freezes.held()
+            }
+        }
+        return any
+    }
+
+    /** Stops watching for freezes as they happen, as once reports are on, when Sentry watches. */
+    fun stopWatching() {
+        watchWanted = false
+        watch?.quit()
+        watch = null
     }
 
     /** Stops holding, as the process ending does. */
     fun stop() {
-        watch?.quit()
-        watch = null
+        stopWatching()
         handler?.let { if (Thread.getDefaultUncaughtExceptionHandler() === it) it.restore() }
         handler = null
     }

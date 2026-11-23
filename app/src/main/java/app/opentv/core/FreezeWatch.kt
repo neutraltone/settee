@@ -20,7 +20,9 @@ import android.os.Process
  * with nothing waiting on it isn't one to the viewer, so it's only [frozen] once [notResponding]
  * says Android agrees, as Sentry's own watchdog does. Once per freeze, however long it lasts.
  *
- * A daemon thread that starts by sleeping, so launching costs only creating it.
+ * Only before Android 11, which keeps no exit history to read a freeze back from ([PastFreezes]), and
+ * only once the launch has opened the first screen ([HeldCrashes.start]). A daemon thread that starts by sleeping;
+ * what it costs while it runs is a tick on the main thread every [afterMillis] (ADR 0009).
  */
 internal class FreezeWatch(
     private val afterMillis: Long,

@@ -14,6 +14,8 @@ import io.sentry.SentryEnvelope
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
+import io.sentry.android.core.cache.AndroidEnvelopeCache
+import io.sentry.hints.AbnormalExit
 import io.sentry.hints.DiskFlushNotification
 import io.sentry.hints.SubmissionResult
 import io.sentry.transport.ITransport
@@ -40,8 +42,10 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * While they're off, a crash or freeze is held on the device instead ([HeldCrash]), and the next
  * launch asks the viewer whether to send it ([askAboutHeld], [answer]). Holding needs neither Sentry
- * nor anything at launch but an uncaught-exception handler, a sleeping [FreezeWatch] thread and a
- * check for the held file.
+ * nor anything at launch but an uncaught-exception handler and a check for the held file. Freezes are
+ * read back from Android's exit history off the main thread ([PastFreezes]), or, before Android 11,
+ * watched for by a [FreezeWatch] that starts once the launch has opened the first screen (ADR 0009 has
+ * the cost).
  *
  * [to] says where reports go: Settee's Sentry project, or a test's [Outbox] in place of Sentry's own
  * transport, so a test can see each envelope exactly as it would leave the device. [freezes] and
@@ -59,8 +63,10 @@ class CrashReports(
     /**
      * Where reports go: the project [dsn] names, which is blank in a build without Settee's key (so
      * none go at all), and, for a test, an [outbox] that takes the place of Sentry's own transport.
+     * [queue] is where each envelope waits its turn to go to the outbox, as Sentry's own transport
+     * queues them: a test can hold it, to turn reports off while one waits.
      */
-    class Destination(val dsn: String, val outbox: Outbox? = null)
+    class Destination(val dsn: String, val outbox: Outbox? = null, val queue: Executor = Executor(Runnable::run))
 
     /** Where envelopes go instead of Sentry: each one serialized, as it would be sent. */
     fun interface Outbox {
@@ -128,11 +134,20 @@ class CrashReports(
     fun start(context: Context) {
         val app = context.applicationContext
         this.context = app
-        held = HeldCrashes(File(app.noBackupFilesDir, HELD_FILE), app, release, freezes) { !on.value && mayHold }
+        val held = HeldCrashes(File(app.noBackupFilesDir, HELD_FILE), app, release, freezes) { !on.value && mayHold }
+        this.held = held
         // Freezes only while off: while on, Sentry watches for them.
-        if (mayHold) held?.start(watchFreezes = !on.value)
+        if (mayHold) held.start(watchFreezes = !on.value)
         if (available && on.value) startSentry()
-        _askAboutHeld.value = mayHold && !on.value && held?.any == true
+        _askAboutHeld.value = mayHold && !on.value && held.any
+        if (mayHold && !on.value && PastFreezes.kept) {
+            // Off the main thread: the exit history is a call to Android, and the question can wait a moment.
+            background.execute {
+                val since = settings.crashReportsLookedBackTo
+                settings.crashReportsLookedBackTo = System.currentTimeMillis()
+                if (held.lookBack(since)) _askAboutHeld.value = mayHold && !on.value
+            }
+        }
     }
 
     /** The viewer's [answer] to [askAboutHeld]: the held report sent, thrown away, or sent with reports on. */
@@ -174,9 +189,12 @@ class CrashReports(
         held?.discard()
         _askAboutHeld.value = false
         if (on) {
+            held?.stopWatching()
             if (available) startSentry()
         } else {
             stopSentry()
+            // A freeze Android recorded while they were on isn't one to hold.
+            settings.crashReportsLookedBackTo = System.currentTimeMillis()
             if (mayHold) held?.start(watchFreezes = true)
         }
     }
@@ -249,18 +267,26 @@ class CrashReports(
             options.environment = environment
             cacheDir = options.cacheDirPath
             options.errorsAndFreezesOnly()
-            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
+            // Nothing leaves while reports are off, unless it's the held crash the viewer said to send:
+            // checked as each envelope's turn to go comes, so one still queued when they're turned
+            // off stays behind. In place of Sentry's own gate, which waits for a connection; offline,
+            // an envelope fails to go and is kept for later, as it would be anyway.
+            options.setTransportGate { on.value || sendingHeld != null }
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
                 // Checked again here: a crash can land between turning reports off and Sentry closing.
                 // While off, the held crash being sent is the only event let through: a handled error
-                // (HANDLED_HINT) or anything else is dropped, never held, since only the crash handler
-                // and the freeze watch hold.
-                if (!on.value && event.eventId != sendingHeld) {
+                // or anything else is dropped, never held, since only the crash handler and the
+                // freeze watch hold. A freeze or crash Sentry finds in Android's exit history from
+                // before reports were turned on happened while the viewer hadn't said yes.
+                val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
+                val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
+                if (event.eventId != sendingHeld && (!on.value || fromBefore)) {
                     null
                 } else {
                     CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
                 }
             }
-            to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it)) }
+            to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it, to.queue)) }
         }
         started = true
     }
@@ -277,17 +303,21 @@ class CrashReports(
             Sentry.flush(FLUSH_MILLIS)
             stopSentry(throwAwayWaiting = false)
         }
+        sendingHeld = null
     }
 
     @Synchronized
     private fun stopSentry(throwAwayWaiting: Boolean = true) {
+        // Closing flushes what's queued, but the transport gate reads the consent, already off by now
+        // when turning reports off, so nothing queued gets out: it stays in the cache, emptied below.
         if (started) Sentry.close()
         started = false
         if (!throwAwayWaiting) return
         // Envelopes Sentry kept to send later, such as one written as the app crashed offline. Where
-        // Sentry keeps them by default when it hasn't started in this process.
+        // Sentry keeps them by default when it hasn't started in this process. Its markers of which
+        // exits it has looked at stay, so it doesn't look at them again.
         val kept = cacheDir?.let(::File) ?: context?.cacheDir?.resolve("sentry")
-        kept?.listFiles()?.forEach(File::deleteRecursively)
+        kept?.listFiles()?.filter { it.name !in SENTRY_MARKERS }?.forEach(File::deleteRecursively)
     }
 
     private companion object {
@@ -298,22 +328,39 @@ class CrashReports(
         const val MOST_REFUSALS = 2
         const val FREEZE_MILLIS = 5_000L
         const val FLUSH_MILLIS = 15_000L
+
+        /** Files in Sentry's cache that only say which of Android's exit records it has looked at. */
+        val SENTRY_MARKERS = setOf(
+            AndroidEnvelopeCache.LAST_ANR_REPORT,
+            AndroidEnvelopeCache.LAST_TOMBSTONE_REPORT,
+            AndroidEnvelopeCache.LAST_MEMORY_LIMITER_REPORT,
+        )
     }
 
-    /** Sentry's transport, swapped for one that hands each envelope to an [Outbox]. */
-    private class OutboxTransport(private val options: SentryOptions, private val outbox: Outbox) : ITransport {
-        class Factory(private val outbox: Outbox) : ITransportFactory {
+    /**
+     * Sentry's transport, swapped for one that hands each envelope to an [Outbox] once its turn on
+     * [queue] comes, if the transport gate lets it go then, as Sentry's own transport does.
+     */
+    private class OutboxTransport(
+        private val options: SentryOptions,
+        private val outbox: Outbox,
+        private val queue: Executor,
+    ) : ITransport {
+        class Factory(private val outbox: Outbox, private val queue: Executor) : ITransportFactory {
             override fun create(options: SentryOptions, requestDetails: RequestDetails): ITransport =
-                OutboxTransport(options, outbox)
+                OutboxTransport(options, outbox, queue)
         }
 
-        override fun send(envelope: SentryEnvelope, hint: Hint) {
-            val bytes = ByteArrayOutputStream()
-            options.serializer.serialize(envelope, bytes)
-            outbox.send(bytes.toString(Charsets.UTF_8.name()))
+        override fun send(envelope: SentryEnvelope, hint: Hint) = queue.execute {
+            val going = options.transportGate.isConnected
+            if (going) {
+                val bytes = ByteArrayOutputStream()
+                options.serializer.serialize(envelope, bytes)
+                outbox.send(bytes.toString(Charsets.UTF_8.name()))
+            }
             // What Sentry's own transport tells a crash waiting to hear it's gone, so it stops waiting.
             val sdkHint = HintUtils.getSentrySdkHint(hint)
-            (sdkHint as? SubmissionResult)?.setResult(true)
+            (sdkHint as? SubmissionResult)?.setResult(going)
             (sdkHint as? DiskFlushNotification)?.markFlushed()
         }
 
@@ -357,6 +404,10 @@ private fun SentryAndroidOptions.errorsAndFreezesOnly() {
     isEnableNdk = false
     isEnableRootCheck = false
     isCollectAdditionalContext = false
+    // Sentry reads Android's exit history at start: only its newest freeze, and never the thread dump
+    // as a raw file, which would bypass the allow-list.
+    isReportHistoricalAnrs = false
+    isAttachAnrThreadDump = false
 
     beforeSendTransaction = SentryOptions.BeforeSendTransactionCallback { _, _ -> null }
     beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
