@@ -17,19 +17,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 /**
- * Waits for what a press saved. A condition that only reads the database never lets the main
- * thread run, and the save resumes there between its steps, so on its own it would never finish:
- * each check here lets it catch up first.
+ * Waits for what a press saved. The save resumes on the main thread between its steps, so a condition
+ * that only reads the database would never let it finish without [waitUntilMainCaughtUp].
  */
-internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) {
-    val until = System.currentTimeMillis() + 5_000
-    while (true) {
-        waitForIdle()
-        if (saved()) return
-        check(System.currentTimeMillis() < until) { "what was saved still isn't there after 5 seconds" }
-        Thread.sleep(10)
-    }
-}
+internal fun ComposeContentTestRule.waitUntilSaved(saved: () -> Boolean) = waitUntilMainCaughtUp(saved)
 
 /** The keyboard over an entry screen, which is a window of its own over Settings. */
 internal fun ComposeContentTestRule.entryKeyboard(): DeviceKeyboard {

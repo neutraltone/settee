@@ -8,7 +8,6 @@ package app.opentv
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.os.Looper
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -83,6 +82,8 @@ class AddSourceScreenTest {
             )
         }
         show(tv = true, editing = id)
+        // Until the providers have been read, the form doesn't know which kind of form to show.
+        compose.waitUntilMainCaughtUp { viewModel.ui.value.loaded }
 
         compose.onNodeWithText("Edit provider").assertExists()
         compose.onNodeWithText(PHONE).assertDoesNotExist()
@@ -111,7 +112,7 @@ class AddSourceScreenTest {
             AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
         }
 
-        compose.waitUntil(UI_WAIT_MILLIS) { finished }
+        compose.waitUntilMainCaughtUp { finished }
     }
 
     @Test
@@ -142,11 +143,7 @@ class AddSourceScreenTest {
             compose.onNodeWithText("Test connection").requestFocus()
 
             device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-            // The answer comes back on the main looper, which nothing else runs while this waits.
-            compose.waitUntil(UI_WAIT_MILLIS) {
-                shadowOf(Looper.getMainLooper()).idle()
-                viewModel.ui.value.let { !it.testing && it.testResult != null }
-            }
+            compose.waitUntilMainCaughtUp { viewModel.ui.value.let { !it.testing && it.testResult != null } }
 
             compose.onNodeWithText("Found your playlist. Save to load its channels.").assertExists()
             captureScreen("add_source_test_ok")
@@ -173,7 +170,7 @@ class AddSourceScreenTest {
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(UI_WAIT_MILLIS) { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        compose.waitUntilMainCaughtUp { viewModel.ui.value.let { !it.testing && it.testError != null } }
         val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
         captureScreen("add_source_test_failed")
