@@ -20,7 +20,9 @@ import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.Tab
 import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
+import app.opentv.ui.onboarding.CrashReportsStepScreen
 import app.opentv.ui.onboarding.OpenSubtitlesStepScreen
+import app.opentv.ui.onboarding.offersCrashReports
 import app.opentv.ui.onboarding.offersOpenSubtitles
 import app.opentv.ui.setup.SetupScreen
 
@@ -43,13 +45,15 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
         AddSourceScreen(
             viewModel = sources,
             onFinished = { nav.ifStillOn(entry) { leaveAddPage() } },
-            // The first provider's Setup is already loading; OpenSubtitles' step, when there is one,
-            // comes first, in front of it. Not once the viewer has left: the save carries on without it.
+            // The first provider's Setup is already loading; OpenSubtitles' and Crash Reports' steps,
+            // when there are any, come first, in front of it. Not once the viewer has left: the save
+            // carries on without it.
             onSetup = { nav.ifStillOn(entry) { navigate(firstStep(sources)) } },
         )
     }
 
     openSubtitlesStep(nav, sources)
+    crashReportsStep(nav, sources)
 
     composable(Routes.SETUP) {
         val setup by sources.setup.collectAsState()
@@ -133,9 +137,23 @@ private fun LeavesOnceSaved(
     }
 }
 
-/** Where a first provider goes once saved: OpenSubtitles' step when there is one, then Setup. */
+/** Where a first provider goes once saved: OpenSubtitles' step when there is one, then the rest. */
 private fun firstStep(sources: SourcesViewModel): String =
-    if (sources.graph.offersOpenSubtitles()) Routes.OPENSUBTITLES_STEP else Routes.SETUP
+    if (sources.graph.offersOpenSubtitles()) Routes.OPENSUBTITLES_STEP else afterOpenSubtitles(sources)
+
+/** Where Setup goes after OpenSubtitles' step: Crash Reports' step when there is one, then Setup. */
+private fun afterOpenSubtitles(sources: SourcesViewModel): String =
+    if (sources.graph.offersCrashReports()) Routes.CRASH_REPORTS_STEP else Routes.SETUP
+
+/**
+ * Back from one of Setup's steps: to the form the provider was saved from, still filled in, which is
+ * why it stays under the steps. The save is taken back, or the form would show a provider already
+ * loading, and saving it again would add a second.
+ */
+private fun NavController.backToForm(sources: SourcesViewModel) {
+    sources.undoSetup()
+    popBackStack()
+}
 
 /** Setup's optional OpenSubtitles step. */
 private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: SourcesViewModel) {
@@ -144,22 +162,33 @@ private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: Sourc
         // A failed login goes back to the form, which says why, as from Setup itself.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         val openSubtitles = sources.graph.openSubtitles
-        val goToSetup = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
+        // Off the back stack as it goes, so Back from the next step goes to the form: rebuilt, this
+        // step would offer a sign-in that may already have happened.
+        val goOn = {
+            nav.navigate(afterOpenSubtitles(sources)) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } }
+        }
         if (openSubtitles == null) {
-            LaunchedEffect(Unit) { goToSetup() }
+            LaunchedEffect(Unit) { goOn() }
         } else {
             OpenSubtitlesStepScreen(
                 sources.graph,
                 openSubtitles,
-                onDone = goToSetup,
-                // Back to the form the provider was saved from, still filled in, which is why it stays
-                // under this step. The save is taken back, or the form would show a provider already
-                // loading, and saving it again would add a second.
-                onBack = {
-                    sources.undoSetup()
-                    nav.popBackStack()
-                },
+                onDone = goOn,
+                onBack = { nav.backToForm(sources) },
             )
         }
+    }
+}
+
+/** Setup's Crash Reports step, offered only by a build with Settee's Sentry DSN. */
+private fun NavGraphBuilder.crashReportsStep(nav: NavController, sources: SourcesViewModel) {
+    composable(Routes.CRASH_REPORTS_STEP) {
+        val setup by sources.setup.collectAsState()
+        LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
+        CrashReportsStepScreen(
+            sources.graph.crashReports,
+            onDone = { nav.navigate(Routes.SETUP) { popUpTo(Routes.CRASH_REPORTS_STEP) { inclusive = true } } },
+            onBack = { nav.backToForm(sources) },
+        )
     }
 }
