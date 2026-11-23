@@ -123,7 +123,7 @@ class VodOpenSubtitlesTest {
         // database under it failed whichever test had just ended there. Short of the wait if the test
         // failed with something still held, so its own failure is the one reported.
         runCatching {
-            compose.waitUntil(WAIT_MILLIS) {
+            compose.waitRunningMainLooper {
                 compose.mainClock.advanceTimeBy(FRAME_MILLIS)
                 scope.coroutineContext.job.children.none()
             }
@@ -166,8 +166,10 @@ class VodOpenSubtitlesTest {
         press(Key.DirectionCenter)
     }
 
+    // The subtitles' scope is on the main looper, so what they launch, and each answer they get back,
+    // such as what they read about the film from the database, lands only when the looper runs.
     private fun until(condition: () -> Boolean) {
-        compose.waitUntil(WAIT_MILLIS) {
+        compose.waitRunningMainLooper {
             compose.mainClock.advanceTimeBy(FRAME_MILLIS)
             condition()
         }
@@ -320,7 +322,6 @@ class VodOpenSubtitlesTest {
     private companion object {
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L
-        const val WAIT_MILLIS = 10_000L
         const val FRAME_MILLIS = 50L
     }
 }
