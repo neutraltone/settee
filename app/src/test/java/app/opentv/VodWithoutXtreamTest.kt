@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -16,15 +15,15 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
@@ -48,25 +47,24 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class VodWithoutXtreamTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     private var settingsOpened = 0
     private var addProviderOpened = 0
 
     @After
     fun close() {
-        viewModels.clear()
         graph.settings.forgetDatabaseRows()
-        graph.database.close()
     }
 
     /** Movies' or Shows' [tab] open behind the rail, as the app draws it, with nothing highlighted yet. */
@@ -108,9 +106,7 @@ class VodWithoutXtreamTest {
         }
     }
 
-    private fun awaitText(text: String) = compose.waitUntil(10_000) {
-        compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun awaitText(text: String) = compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
 
     private fun assertNone(text: String) {
         compose.waitForIdle()

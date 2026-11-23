@@ -24,9 +24,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -44,7 +42,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -62,12 +59,8 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class VodOpenSubtitlesTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
-    private val players = TestPlayers(app)
-    private val controller = players.controller()
     private val site = FakeOpenSubtitles().apply {
         replies["GET /subtitles"] = """
             {"data": [
@@ -80,14 +73,20 @@ class VodOpenSubtitlesTest {
         replies["POST /download"] = """{"link": "https://dl.opensubtitles.example/f.srt", "remaining": 4}"""
         replies["GET /f.srt"] = "1\n00:00:00,000 --> 01:00:00,000\nHello\n"
     }
-    private val graph = ServiceLocator.Graph(app, http = site.http).apply { openSubtitlesKey = "k" }
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(VodPlayerViewModel(app, graph))
+
+    @get:Rule
+    val testGraph = TestGraph(compose, http = site.http)
+
+    private val app = testGraph.app
+    private val players = TestPlayers(app)
+    private val controller = players.controller()
+    private val graph = testGraph.graph.apply { openSubtitlesKey = "k" }
+    private val viewModel = testGraph.track(VodPlayerViewModel(app, graph))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** The film player's OpenSubtitles side, on a device in English. */
     private fun vodSubtitles() =
-        VodSubtitles(graph.openSubtitles!!, graph.profileSettings, scope, controller::disableText) {
+        VodSubtitles(graph.openSubtitles!!, graph.profileSettings, scope, controller::disableText, graph.dispatchers) {
             "en"
         }
 
@@ -120,20 +119,12 @@ class VodOpenSubtitlesTest {
     fun release() {
         // What the subtitles launched finishes first. Cancelling doesn't stop a write already running on
         // Room's own thread (the Subtitle Preference, written after a pick is drawn), and closing the
-        // database under it failed whichever test had just ended there. Short of the wait if the test
-        // failed with something still held, so its own failure is the one reported.
-        runCatching {
-            compose.waitRunningMainLooper {
-                compose.mainClock.advanceTimeBy(FRAME_MILLIS)
-                scope.coroutineContext.job.children.none()
-            }
-        }
+        // database under it failed whichever test had just ended there. Skipped if the test failed
+        // with something still held, so its own failure is the one reported.
+        runCatching { settle() }
         scope.cancel()
         controller.release()
         players.close()
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
     }
 
     private fun showFilm(withOpenSubtitles: VodSubtitles? = subtitles) {
@@ -167,12 +158,11 @@ class VodOpenSubtitlesTest {
     }
 
     // The subtitles' scope is on the main looper, so what they launch, and each answer they get back,
-    // such as what they read about the film from the database, lands only when the looper runs.
+    // such as what they read about the film from the database, lands only when the looper runs:
+    // settling runs it, and moves the screen's clock past what its frames wait out.
     private fun until(condition: () -> Boolean) {
-        compose.waitRunningMainLooper {
-            compose.mainClock.advanceTimeBy(FRAME_MILLIS)
-            condition()
-        }
+        settle()
+        assertThat(condition()).isTrue()
         settle()
     }
 
@@ -254,7 +244,7 @@ class VodOpenSubtitlesTest {
     fun `the result being downloaded waits with the small aerial TV on its row`() {
         showFilm()
         until { subtitles.subject.value != null }
-        val held = java.util.concurrent.CountDownLatch(1)
+        val held = TestGraph.Held()
         site.downloadsHeld = held
         openSubtitleList()
         compose.onNode(entryRow).performClick()
@@ -265,7 +255,7 @@ class VodOpenSubtitlesTest {
         until { compose.onAllNodes(hasContentDescription("Downloading")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("English").assertIsFocused()
         captureScreen("vod_player_opensubtitles_downloading")
-        held.countDown()
+        held.release()
         until { exists(DOWNLOADED_SUBTITLE_TAG) }
     }
 
@@ -322,6 +312,5 @@ class VodOpenSubtitlesTest {
     private companion object {
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L
-        const val FRAME_MILLIS = 50L
     }
 }

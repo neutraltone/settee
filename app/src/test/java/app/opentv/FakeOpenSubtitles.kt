@@ -33,7 +33,7 @@ class FakeOpenSubtitles {
     val bodies: MutableList<String> = Collections.synchronizedList(mutableListOf())
 
     /** Held open, downloads wait until it counts down, so a test can see what shows while one is fetched. */
-    @Volatile var downloadsHeld: java.util.concurrent.CountDownLatch? = null
+    @Volatile var downloadsHeld: TestGraph.Held? = null
 
     /** Held open, the account's allowance check waits likewise, so a test can see what shows meanwhile. */
     @Volatile var accountHeld: java.util.concurrent.CountDownLatch? = null
@@ -44,7 +44,7 @@ class FakeOpenSubtitles {
         request.body?.let { body -> bodies += Buffer().also(body::writeTo).readUtf8() }
         val path = request.url.encodedPath.removePrefix("/api/v1")
         // Bounded, so a test that fails before letting go fails rather than hangs.
-        if (path == "/download") downloadsHeld?.await(10, java.util.concurrent.TimeUnit.SECONDS)
+        if (path == "/download") downloadsHeld?.await(10)
         if (path == "/infos/user") accountHeld?.await(10, java.util.concurrent.TimeUnit.SECONDS)
         val reply = replies["${request.method} $path"] ?: if (path == "/subtitles") """{"data": []}""" else "{}"
         if (reply == "!") throw java.io.IOException("OpenSubtitles timed out")

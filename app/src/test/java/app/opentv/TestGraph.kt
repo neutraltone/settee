@@ -80,7 +80,8 @@ import org.robolectric.Shadows.shadowOf
  * [name] gives the graph settings and a database file of its own, for two devices in one test or a
  * test that changes settings the process's other tests would see; without one, it has the process's
  * settings, as `ServiceLocator.Graph(app)` does. Only the graph with [swapIn] stands in for the app's
- * own, so a sync test's second device doesn't.
+ * own, so a sync test's second device doesn't. [statements] hears every statement the database
+ * runs, on the thread running it, for a test that counts reads.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // Each is a Graph setting a test may need.
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -92,6 +93,7 @@ class TestGraph(
     private val clock: (() -> Long)? = null,
     private val decoders: DecoderList? = null,
     private val swapIn: Boolean = true,
+    private val statements: ((String) -> Unit)? = null,
 ) : TestRule,
     IdlingResource {
     init {
@@ -367,6 +369,7 @@ class TestGraph(
     }
 
     private fun onStatement(sql: String) {
+        statements?.invoke(sql)
         val held = gate ?: return
         if (readsCatalogueRows(sql.trimStart())) held.await(HELD_SECONDS)
     }

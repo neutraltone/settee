@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -20,17 +19,17 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
@@ -57,17 +56,19 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class VodLoadFailedTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private val panel = FakePanel()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val testGraph = TestGraph(compose, http = panel.http)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val panel = FakePanel()
-    private val graph = ServiceLocator.Graph(app, http = panel.http)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.vod(app, graph) }
+    private val app = testGraph.app
+    private val graph = testGraph.graph
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     /** The providers Provider setup was pressed for. */
     private val edited = mutableListOf<Long>()
@@ -79,9 +80,7 @@ class VodLoadFailedTest {
 
     @After
     fun close() {
-        viewModels.clear()
         graph.settings.forgetDatabaseRows()
-        graph.database.close()
     }
 
     private fun setMovies() = setTab(Tab.MOVIES)
@@ -149,9 +148,7 @@ class VodLoadFailedTest {
         compose.waitForIdle()
     }
 
-    private fun awaitText(text: String) = compose.waitRunningMainLooper {
-        compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
-    }
+    private fun awaitText(text: String) = compose.onAllNodes(hasText(text, substring = true)).onFirst().assertExists()
 
     @Test
     fun `Movies whose download can't reach the provider says so and offers Try again`() {
@@ -191,7 +188,8 @@ class VodLoadFailedTest {
 
         press(Key.DirectionCenter)
 
-        compose.waitRunningMainLooper { asking.reached.count == 0L }
+        compose.waitForIdle()
+        assertThat(asking.reached.count).isEqualTo(0L)
         awaitText(app.getString(R.string.vod_loading_movies))
         assertNone(UNREACHABLE)
         asking.release()
@@ -237,7 +235,8 @@ class VodLoadFailedTest {
         setMovies()
 
         awaitText("Heat")
-        compose.waitRunningMainLooper { panel.asked.contains("get_vod_streams") && !viewModel.vodLoading.value }
+        compose.waitForIdle()
+        assertThat(panel.asked.contains("get_vod_streams") && !viewModel.vodLoading.value).isTrue()
         assertNone(UNREACHABLE)
         awaitText("Heat")
     }
@@ -250,15 +249,17 @@ class VodLoadFailedTest {
             // Recorded before the tab opens, as Setup's or a background refresh's would be.
             graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
         }
-        var errorShown = false
+        fun errorOnScreen() =
+            compose.onAllNodes(hasText(UNREACHABLE, substring = true)).fetchSemanticsNodes().isNotEmpty()
+        // Held while their rows are worked out, then let through.
+        testGraph.hold()
         setMovies()
 
-        compose.waitRunningMainLooper {
-            if (compose.onAllNodes(hasText(UNREACHABLE, substring = true)).fetchSemanticsNodes().isNotEmpty()) {
-                errorShown = true
-            }
-            compose.onAllNodes(hasText("Heat")).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.waitForIdle()
+        var errorShown = errorOnScreen()
+        testGraph.release()
+        compose.onAllNodes(hasText("Heat")).onFirst().assertExists()
+        errorShown = errorShown || errorOnScreen()
 
         assertThat(errorShown).isFalse()
     }

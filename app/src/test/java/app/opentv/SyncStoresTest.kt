@@ -5,10 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
@@ -29,10 +25,11 @@ import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncFavourite
 import app.opentv.sync.SyncHiddenChannel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import org.junit.After
+import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -43,13 +40,16 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class SyncStoresTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
+    // Two devices, neither standing in for the app's own graph.
+    @get:Rule(order = 0)
+    val graphA = TestGraph(name = "sync-stores-a", swapIn = false)
 
-    private inner class Device(val rowIdOffset: Long) {
-        val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
-            .allowMainThreadQueries()
-            .build()
-        val graph = ServiceLocator.Graph(app) { db }
+    @get:Rule(order = 1)
+    val graphB = TestGraph(name = "sync-stores-b", swapIn = false)
+
+    private inner class Device(val rowIdOffset: Long, testGraph: TestGraph) {
+        val graph = testGraph.graph
+        val db: OpenTvDatabase = graph.database
         val library get() = graph.viewerLibrary
         val sourceId = 1 + rowIdOffset
 
@@ -96,17 +96,14 @@ class SyncStoresTest {
         )
     }
 
-    private val deviceA = Device(rowIdOffset = 0)
-    private val deviceB = Device(rowIdOffset = 100)
+    private val deviceA = Device(rowIdOffset = 0, graphA)
+    private val deviceB = Device(rowIdOffset = 100, graphB)
 
-    @After
-    fun close() {
-        deviceA.db.close()
-        deviceB.db.close()
-    }
+    /** Each store's calls, made on the test's thread; nothing here needs the main thread to turn. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
 
     @Test
-    fun `Profiles arrive by name and none is removed or doubled`() = runTest {
+    fun `Profiles arrive by name and none is removed or doubled`() = testing {
         deviceA.graph.profiles.create("Alex")
         deviceB.graph.profiles.create("alex")
         deviceB.graph.profiles.create("Sam")
@@ -118,7 +115,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `Favourites land on the Profile with the same name, counted once`() = runTest {
+    fun `Favourites land on the Profile with the same name, counted once`() = testing {
         deviceB.graph.profiles.create("Spare")
         val onB = deviceB.alex()
         deviceA.db.favourites().upsert(Favourite(deviceA.alex(), StreamKind.LIVE, "Provider", "c1"))
@@ -131,14 +128,14 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `a Favourite for a Profile this device doesn't have is left out`() = runTest {
+    fun `a Favourite for a Profile this device doesn't have is left out`() = testing {
         val item = SyncFavourite(profile = "Nobody", kind = StreamKind.LIVE.name, source = "Provider", id = "c1")
 
         assertThat(deviceB.library.favourites.import(listOf(item))).isEqualTo(0)
     }
 
     @Test
-    fun `a Favourite finds its Profile by the same rule that matches a Profile's name`() = runTest {
+    fun `a Favourite finds its Profile by the same rule that matches a Profile's name`() = testing {
         // Lowercasing and ignoring case disagree about this name; Profiles ignores case.
         deviceB.graph.profiles.create("\u0130pek")
         val item = SyncFavourite(profile = "ipek", kind = StreamKind.LIVE.name, source = "Provider", id = "c1")
@@ -149,7 +146,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `Continue Watching removals travel by source and Profile name, newest wins`() = runTest {
+    fun `Continue Watching removals travel by source and Profile name, newest wins`() = testing {
         deviceA.seedSource()
         deviceB.seedSource()
         deviceB.graph.profiles.create("Spare")
@@ -167,7 +164,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `settings land on the Profile with the same name and the newer choice wins`() = runTest {
+    fun `settings land on the Profile with the same name and the newer choice wins`() = testing {
         deviceB.graph.profiles.create("Spare")
         val onB = deviceB.alex()
         deviceA.db.profileSettings().upsert(ProfileSetting(deviceA.alex(), "subtitles.on", "true", 2_000))
@@ -184,7 +181,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `a Profile's Home arrangement travels whole, and the newer one wins`() = runTest {
+    fun `a Profile's Home arrangement travels whole, and the newer one wins`() = testing {
         deviceB.graph.profiles.create("Spare")
         val onA = ProfileSettings(deviceA.db, MutableStateFlow(deviceA.alex()), clock = { 3_000 })
         val onB = ProfileSettings(deviceB.db, MutableStateFlow(deviceB.alex()), clock = { 2_000 })
@@ -204,7 +201,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `progress and a hand mark travel by source name and provider id`() = runTest {
+    fun `progress and a hand mark travel by source name and provider id`() = testing {
         deviceA.seedSource()
         deviceB.seedSource()
         deviceA.seedMovie()
@@ -227,7 +224,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `an episode moved on from at the Next Episode card reaches the other device as Watched`() = runTest {
+    fun `an episode moved on from at the Next Episode card reaches the other device as Watched`() = testing {
         deviceA.seedSource()
         deviceB.seedSource()
         deviceA.graph.profiles.all()
@@ -243,7 +240,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `an episode this device hasn't stored waits, and a movie it hasn't is dropped`() = runTest {
+    fun `an episode this device hasn't stored waits, and a movie it hasn't is dropped`() = testing {
         deviceA.seedSource()
         deviceB.seedSource()
         deviceA.seedMovie()
@@ -260,7 +257,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `hidden channels travel by source name and stream id, counted when newly hidden`() = runTest {
+    fun `hidden channels travel by source name and stream id, counted when newly hidden`() = testing {
         deviceA.seedSource()
         deviceB.seedSource()
         deviceA.seedChannel()
@@ -276,7 +273,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `a separator row the parser hid doesn't travel as a viewer's change`() = runTest {
+    fun `a separator row the parser hid doesn't travel as a viewer's change`() = testing {
         deviceA.seedSource()
         deviceA.seedChannel(hidden = true)
 
@@ -284,7 +281,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `when a channel's hidden state changed survives a Catalogue Refresh`() = runTest {
+    fun `when a channel's hidden state changed survives a Catalogue Refresh`() = testing {
         deviceA.seedSource()
         deviceA.seedChannel()
         deviceA.graph.catalogRepository.setChannelHidden(1, true)
@@ -297,7 +294,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `a hidden channel from a source this device doesn't have changes nothing`() = runTest {
+    fun `a hidden channel from a source this device doesn't have changes nothing`() = testing {
         deviceB.seedSource()
         deviceB.seedChannel()
 
@@ -308,7 +305,7 @@ class SyncStoresTest {
     }
 
     @Test
-    fun `only finished recordings on the NAS travel, once each`() = runTest {
+    fun `only finished recordings on the NAS travel, once each`() = testing {
         val recordings = deviceA.graph.recordingRepository
         recordings.insert(recording("smb://nas.example.com/share/a.ts", RecordingStatus.COMPLETED))
         recordings.insert(recording("smb://nas.example.com/share/b.ts", RecordingStatus.RECORDING))

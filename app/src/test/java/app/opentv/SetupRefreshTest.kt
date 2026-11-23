@@ -5,19 +5,19 @@
  */
 package app.opentv
 
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.SetupStep
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,7 +29,11 @@ import org.robolectric.annotation.Config
 class SetupRefreshTest {
 
     private var now = 1_000_000_000L
-    private val test = TestCatalog(ApplicationProvider.getApplicationContext(), clock = { now })
+
+    @get:Rule
+    val testGraph = TestGraph(name = "setup-refresh-test")
+
+    private val test = TestCatalog(testGraph.app, testGraph.database, dispatchers = testGraph.graph.dispatchers) { now }
     private val panel = test.panel
     private val refresh = test.refresh()
 
@@ -50,6 +54,23 @@ class SetupRefreshTest {
         test.close()
     }
 
+    /**
+     * The catalogue's threads, where a test runs its overlapping requests so the graph counts them
+     * from the moment they're made: a request that has joined another is then one waiting on it.
+     */
+    private val catalogueThreads get() = testGraph.graph.dispatchers.default
+
+    /** Waits for every request to have gone as far as it can, off the catalogue's threads, not counted as one. */
+    private suspend fun settle() = withContext(Dispatchers.Default) { testGraph.awaitIdle() }
+
+    /** A test body in real time, as the catalogue's threads keep it. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
+
+    /** Hears every state the refresh passes through, as it's set, until the test ends. */
+    private fun watch(heard: suspend (CatalogueRefresh.State) -> Unit) {
+        testGraph.launch { withContext(Dispatchers.Unconfined) { refresh.state.collect(heard) } }
+    }
+
     private suspend fun setUp(): CatalogueRefresh.Outcome {
         test.db.sources().insert(PANEL_SOURCE)
         val outcome = refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
@@ -58,7 +79,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `setup adds the channels, then the guide, then movies, then shows, one after another`() = runTest {
+    fun `setup adds the channels, then the guide, then movies, then shows, one after another`() = testing {
         setUp()
 
         assertThat(panel.asked.filterNot { it.startsWith("get_vod_info") }).containsExactly(
@@ -75,7 +96,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `with Live TV switched off, setup leaves out the guide`() = runTest {
+    fun `with Live TV switched off, setup leaves out the guide`() = testing {
         test.settings.setLiveEnabled(false)
 
         setUp()
@@ -87,7 +108,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `with Movies switched off, setup fetches shows but not movies`() = runTest {
+    fun `with Movies switched off, setup fetches shows but not movies`() = testing {
         test.settings.setMoviesEnabled(false)
 
         setUp()
@@ -99,7 +120,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `with Shows switched off, setup fetches movies but not shows`() = runTest {
+    fun `with Shows switched off, setup fetches movies but not shows`() = testing {
         test.settings.setSeriesEnabled(false)
 
         setUp()
@@ -111,7 +132,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `a playlist has no movies or shows to fetch`() = runTest {
+    fun `a playlist has no movies or shows to fetch`() = testing {
         val playlist = Source(id = 2, name = "List", kind = SourceKind.M3U, url = "http://example.com/list.m3u")
         panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
         test.db.sources().insert(playlist)
@@ -125,7 +146,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `each step is named only while it runs`() = runTest {
+    fun `each step is named only while it runs`() = testing {
         val guide = panel.hold("xmltv.php")
         val movies = panel.hold("get_vod_streams")
         test.db.sources().insert(PANEL_SOURCE)
@@ -145,7 +166,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `each step that's done says how many it found`() = runTest {
+    fun `each step that's done says how many it found`() = testing {
         panel.replies["get_live_streams"] =
             """[{"stream_id": 1, "name": "BBC One", "epg_channel_id": "bbc1"}, {"stream_id": 2, "name": "Dave"}]"""
 
@@ -160,7 +181,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `a guide that won't download doesn't stop setup, which says it didn't load`() = runTest {
+    fun `a guide that won't download doesn't stop setup, which says it didn't load`() = testing {
         panel.replies["xmltv.php"] = "!"
 
         setUp()
@@ -172,7 +193,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `movies or shows that won't download don't stop setup, which says which`() = runTest {
+    fun `movies or shows that won't download don't stop setup, which says which`() = testing {
         panel.replies["get_vod_streams"] = "!"
         panel.replies["get_series"] = "!"
 
@@ -184,7 +205,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `a login that fails says why, fetches nothing else and leaves no provider behind`() = runTest {
+    fun `a login that fails says why, fetches nothing else and leaves no provider behind`() = testing {
         panel.replies["get_live_streams"] = "[]"
 
         val outcome = setUp()
@@ -197,11 +218,11 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `setup remembers which provider it's adding only until the channels are in`() = runTest {
+    fun `setup remembers which provider it's adding only until the channels are in`() = testing {
         val channels = panel.hold("get_live_streams")
         test.db.sources().insert(PANEL_SOURCE)
         // In the background: it returns once the channels are in, which this test is holding up.
-        val started = backgroundScope.async(Dispatchers.Default) {
+        val started = async(catalogueThreads) {
             refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
         }
 
@@ -216,7 +237,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `opening Movies or Shows after setup doesn't fetch them a second time`() = runTest {
+    fun `opening Movies or Shows after setup doesn't fetch them a second time`() = testing {
         setUp()
         panel.asked.clear()
 
@@ -227,7 +248,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `the bar fills each step's share as it finishes, and is full only once setup is`() = runTest {
+    fun `the bar fills each step's share as it finishes, and is full only once setup is`() = testing {
         val guide = panel.hold("xmltv.php")
         val movies = panel.hold("get_vod_streams")
         test.db.sources().insert(PANEL_SOURCE)
@@ -248,7 +269,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `the bar moves while the guide downloads, not only when it's done`() = runTest {
+    fun `the bar moves while the guide downloads, not only when it's done`() = testing {
         panel.replies["xmltv.php"] = buildString {
             append("<tv>")
             repeat(3_000) {
@@ -260,9 +281,7 @@ class SetupRefreshTest {
             append("</tv>")
         }
         val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
-        backgroundScope.launch(Dispatchers.Unconfined) {
-            refresh.state.collect { it.setup?.let { s -> bars += s.bar } }
-        }
+        watch { it.setup?.let { s -> bars += s.bar } }
 
         setUp()
 
@@ -271,13 +290,11 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `the bar moves while movies are saved, from where their download leaves it`() = runTest {
+    fun `the bar moves while movies are saved, from where their download leaves it`() = testing {
         panel.replies["get_vod_streams"] =
             (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }
         val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
-        backgroundScope.launch(Dispatchers.Unconfined) {
-            refresh.state.collect { it.setup?.let { s -> bars += s.bar } }
-        }
+        watch { it.setup?.let { s -> bars += s.bar } }
 
         setUp()
 
@@ -289,14 +306,14 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `once the guide is in, the module's last result says so, as adding a provider does`() = runTest {
+    fun `once the guide is in, the module's last result says so, as adding a provider does`() = testing {
         setUp()
 
         assertThat(refresh.state.value.last).isInstanceOf(CatalogueRefresh.Outcome.GuideLoaded::class.java)
     }
 
     @Test
-    fun `while setup builds the guide, screens are told it's building`() = runTest {
+    fun `while setup builds the guide, screens are told it's building`() = testing {
         val guide = panel.hold("xmltv.php")
         test.db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
@@ -311,18 +328,18 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `movies and shows another refresh is already fetching are still counted when setup shares them`() = runTest {
+    fun `movies and shows another refresh is already fetching are still counted when setup shares them`() = testing {
         val guide = panel.hold("xmltv.php")
         val vod = panel.hold("get_vod_streams")
         test.db.sources().insert(PANEL_SOURCE)
-        withContext(Dispatchers.Default) {
+        withContext(catalogueThreads) {
             refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
             // Left for Live TV once the channels were in, then opened Movies while the guide loads.
             val opened = during(guide) { async { refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows) } }
             during(vod) {
                 guide.release()
-                // Long enough for setup to reach movies and share the download that's running.
-                Thread.sleep(500)
+                // As far as setup goes with movies held: to them, sharing the download that's running.
+                settle()
                 vod.release()
             }
             opened.await()
@@ -336,7 +353,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `while the guide arrives, setup counts its programmes so far`() = runTest {
+    fun `while the guide arrives, setup counts its programmes so far`() = testing {
         panel.unsized += "xmltv.php"
         panel.replies["xmltv.php"] = buildString {
             append("<tv>")
@@ -347,12 +364,10 @@ class SetupRefreshTest {
             append("</tv>")
         }
         val counts = java.util.Collections.synchronizedList(mutableListOf<Int>())
-        backgroundScope.launch(Dispatchers.Unconfined) {
-            refresh.state.collect { state ->
-                state.setup?.takeIf { it.running == SetupStep.GUIDE }?.let {
-                    counts +=
-                        it.found
-                }
+        watch { state ->
+            state.setup?.takeIf { it.running == SetupStep.GUIDE }?.let {
+                counts +=
+                    it.found
             }
         }
 
@@ -363,10 +378,10 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `undoing setup while the channels load leaves no provider behind, and setup says it was undone`() = runTest {
+    fun `undoing setup while the channels load leaves no provider behind, and setup says it was undone`() = testing {
         val channels = panel.hold("get_live_streams")
         test.db.sources().insert(PANEL_SOURCE)
-        val started = backgroundScope.async(Dispatchers.Default) {
+        val started = async(catalogueThreads) {
             refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
         }
 
@@ -387,7 +402,7 @@ class SetupRefreshTest {
     }
 
     @Test
-    fun `undoing setup once the channels are in stops it and takes away what it saved`() = runTest {
+    fun `undoing setup once the channels are in stops it and takes away what it saved`() = testing {
         val movies = panel.hold("get_vod_streams")
         test.db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))

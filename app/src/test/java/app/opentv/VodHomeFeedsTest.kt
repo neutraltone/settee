@@ -5,71 +5,42 @@
  */
 package app.opentv
 
-import android.app.Application
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.db.ALL_MOVIES
 import app.opentv.data.db.ALL_SERIES
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
 import java.util.Collections
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which the view model doesn't need.
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodHomeFeedsTest {
-
-    private val app: Application = ApplicationProvider.getApplicationContext()
 
     // Every statement the database runs, logged as it runs, from whichever thread runs it.
     private val statements: MutableList<String> = Collections.synchronizedList(mutableListOf())
 
     // Its own settings, so a Profile switched here isn't still active in the next test, and its own
     // database, so its statements can be counted.
-    private val graph = ServiceLocator.Graph(
-        app,
-        settingsFile = "vod-home-feeds-test",
-        openDatabase = {
-            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
-                .allowMainThreadQueries()
-                .setQueryCallback({ sql, _ -> statements += sql.trim() }, Runnable::run)
-                .build()
-        },
-    )
+    @get:Rule
+    val testGraph = TestGraph(name = "vod-home-feeds-test", statements = { sql -> statements += sql.trim() })
 
-    @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        graph.database.close()
-        Dispatchers.resetMain()
-    }
+    /** A test's steps on the main thread, as Movies and Shows take them; see [TestGraph.runOnMain]. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = testGraph.runOnMain(block)
 
     private fun movie(id: Long, rating: Double, genre: String? = null) = Movie(
         id = id,
@@ -103,14 +74,12 @@ class VodHomeFeedsTest {
     private fun episodeOf(seriesId: Long) =
         testEpisode(1, 1).copy(id = seriesId, seriesId = "$seriesId", episodeId = "$seriesId")
 
-    private val viewModels = ViewModelsInTest()
-
-    private suspend fun openWithTwoMovies() = viewModels.track(VodViewModel(app, graph)).also {
+    private suspend fun openWithTwoMovies() = testGraph.track(VodViewModel(app, graph)).also {
         graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
         it.loadHomeFeeds().join()
     }
 
-    private suspend fun openWithTwoSeries() = viewModels.track(VodViewModel(app, graph)).also {
+    private suspend fun openWithTwoSeries() = testGraph.track(VodViewModel(app, graph)).also {
         graph.database.series().upsertAll(listOf(series(1, rating = 9.0), series(2, rating = 8.0)))
         graph.database.episodes().upsertAll(listOf(episodeOf(1)))
         it.loadHomeFeeds().join()
@@ -129,22 +98,18 @@ class VodHomeFeedsTest {
     /** How many times the whole movie library, and the whole series library, have been read. */
     private fun libraryReads() = statements.count { it == ALL_MOVIES } to statements.count { it == ALL_SERIES }
 
-    /**
-     * Waits until Recommended's movies are [ids], in real time: a Profile switch rebuilds the rows on
-     * its own, reading on threads the test scheduler can't wait for.
-     */
-    private suspend fun VodViewModel.awaitRecommendedMovies(vararg ids: Long) = withContext(Dispatchers.Default) {
-        withTimeout(5_000) { recommendedMovies.first { row -> row.map { it.id } == ids.toList() } }
-    }
+    /** Waits until Recommended's movies are [ids]: a Profile switch rebuilds the rows on its own. */
+    private suspend fun VodViewModel.awaitRecommendedMovies(vararg ids: Long) =
+        recommendedMovies.first { row -> row.map { it.id } == ids.toList() }
 
     // Home is still drawing when the app's one model is built, and Movies and Shows may be off. The
     // rows are built one at a time, in the order asked for, so once Movies' own build has finished,
     // any read that building the model or switching Profile started has finished too.
     @Test
-    fun `nothing reads either library until Movies or Shows opens, whatever Profile is switched to`() = runTest {
+    fun `nothing reads either library until Movies or Shows opens, whatever Profile is switched to`() = testing {
         withTwoOfEach()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
-        val vod = viewModels.track(VodViewModel(app, graph))
+        val vod = testGraph.track(VodViewModel(app, graph))
         graph.settings.setActiveProfile(OTHER_PROFILE)
         assertThat(vod.recommendingMovies.value).isTrue()
         assertThat(vod.recommendingSeries.value).isTrue()
@@ -157,10 +122,10 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `switching Profile once Movies has opened rebuilds the rows for the new Profile`() = runTest {
+    fun `switching Profile once Movies has opened rebuilds the rows for the new Profile`() = testing {
         withTwoOfEach()
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
-        val vod = viewModels.track(VodViewModel(app, graph))
+        val vod = testGraph.track(VodViewModel(app, graph))
         vod.loadHomeFeeds().join()
         assertThat(vod.recommendedMovieIds()).containsExactly(2L)
 
@@ -170,7 +135,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `a movie the Profile has started is gone from Recommended the next time Movies opens`() = runTest {
+    fun `a movie the Profile has started is gone from Recommended the next time Movies opens`() = testing {
         val vod = openWithTwoMovies()
         assertThat(vod.recommendedMovieIds()).containsExactly(1L, 2L).inOrder()
 
@@ -181,11 +146,11 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `Recommended lists a film once, and one started in any Version is gone in all of them`() = runTest {
+    fun `Recommended lists a film once, and one started in any Version is gone in all of them`() = testing {
         graph.database.movies().upsertAll(
             listOf(movie(1, 9.0).copy(tmdbId = "8363"), movie(2, 9.0).copy(tmdbId = "8363"), movie(3, 8.0)),
         )
-        val vod = viewModels.track(VodViewModel(app, graph))
+        val vod = testGraph.track(VodViewModel(app, graph))
         vod.loadHomeFeeds().join()
         assertThat(vod.recommendedMovieIds()).hasSize(2)
 
@@ -196,7 +161,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `a series the Profile has started is gone from Recommended the next time Shows opens`() = runTest {
+    fun `a series the Profile has started is gone from Recommended the next time Shows opens`() = testing {
         val vod = openWithTwoSeries()
         assertThat(vod.recommendedSeriesIds()).containsExactly(1L, 2L).inOrder()
 
@@ -207,7 +172,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `a series removed from Continue Watching with no progress left is gone the next time Shows opens`() = runTest {
+    fun `a series removed from Continue Watching with no progress left is gone the next time Shows opens`() = testing {
         val vod = openWithTwoSeries()
         graph.viewerLibrary.recordProgress("ep:1", positionMillis = 600_000, durationMillis = 2_400_000)
         graph.viewerLibrary.marks.markUnwatched("ep:1")
@@ -224,7 +189,7 @@ class VodHomeFeedsTest {
 
     // A new name isn't something the rows are ranked by, so it only shows if the library was read again.
     @Test
-    fun `reopening with nothing changed doesn't read the library again`() = runTest {
+    fun `reopening with nothing changed doesn't read the library again`() = testing {
         val vod = openWithTwoSeries()
         graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
         vod.loadHomeFeeds().join()
@@ -238,7 +203,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `Recommended follows a refresh that swaps titles and leaves the catalogue the same size`() = runTest {
+    fun `Recommended follows a refresh that swaps titles and leaves the catalogue the same size`() = testing {
         val vod = openWithTwoSeries()
 
         graph.database.series().deleteForSource(1)
@@ -249,7 +214,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `Recommended follows a rating filled in later`() = runTest {
+    fun `Recommended follows a rating filled in later`() = testing {
         val vod = openWithTwoSeries()
 
         graph.database.series().upsertAll(listOf(series(2, rating = 9.4)))
@@ -259,7 +224,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `the genre rows follow a genre filled in later`() = runTest {
+    fun `the genre rows follow a genre filled in later`() = testing {
         val vod = openWithTwoSeries()
 
         graph.database.series().upsertAll((3L..10L).map { series(it, rating = 8.0, genre = "Drama") })
@@ -269,7 +234,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `starting a movie doesn't read the series library again`() = runTest {
+    fun `starting a movie doesn't read the series library again`() = testing {
         val vod = openWithTwoSeries()
         graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
         vod.loadHomeFeeds().join()
@@ -287,8 +252,8 @@ class VodHomeFeedsTest {
         (from until from + count).map { movie(it, rating = 7.0, genre = genre) }
 
     @Test
-    fun `a movie the Profile has started is gone from its genre row the next time Movies opens`() = runTest {
-        val vod = viewModels.track(VodViewModel(app, graph))
+    fun `a movie the Profile has started is gone from its genre row the next time Movies opens`() = testing {
+        val vod = testGraph.track(VodViewModel(app, graph))
         graph.database.movies().upsertAll(movies("Drama", from = 1))
         vod.loadHomeFeeds().join()
 
@@ -299,8 +264,8 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `the genre of the movie watched last moves to the top of the genre rows`() = runTest {
-        val vod = viewModels.track(VodViewModel(app, graph))
+    fun `the genre of the movie watched last moves to the top of the genre rows`() = testing {
+        val vod = testGraph.track(VodViewModel(app, graph))
         graph.database.movies().upsertAll(movies("Drama", from = 100, count = 10) + movies("Comedy", from = 1))
         vod.loadHomeFeeds().join()
         assertThat(vod.movieGenreRows.value.map { it.genre }).containsExactly("Drama", "Comedy").inOrder()
@@ -312,8 +277,8 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `the genre of the show watched last moves to the top of the genre rows`() = runTest {
-        val vod = viewModels.track(VodViewModel(app, graph))
+    fun `the genre of the show watched last moves to the top of the genre rows`() = testing {
+        val vod = testGraph.track(VodViewModel(app, graph))
         graph.database.series().upsertAll(
             (100L..109L).map { series(it, rating = 7.0, genre = "Drama") } +
                 (1L..9L).map { series(it, rating = 7.0, genre = "Comedy") },
@@ -330,13 +295,14 @@ class VodHomeFeedsTest {
     // The new rating only arrives with the scan, so the row seen without the title and in its old
     // order can only have been drawn before the scan finished.
     @Test
-    fun `a started series leaves Recommended before the library has been read again`() = runTest {
+    fun `a started series leaves Recommended before the library has been read again`() = testing {
         val vod = openWithTwoSeries()
         graph.database.series().upsertAll(listOf(series(3, rating = 7.0)))
         vod.loadHomeFeeds().join()
         val seen = mutableListOf<List<Long>>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            vod.recommendedSeries.collect { row -> seen += row.map { it.id } }
+        // Unconfined, so it hears every value as it's set, as the screen's frames would.
+        testGraph.launch {
+            withContext(Dispatchers.Unconfined) { vod.recommendedSeries.collect { row -> seen += row.map { it.id } } }
         }
 
         graph.database.series().upsertAll(listOf(series(3, rating = 9.4)))
@@ -347,7 +313,7 @@ class VodHomeFeedsTest {
     }
 
     @Test
-    fun `Recommended follows the catalogue when its size changes`() = runTest {
+    fun `Recommended follows the catalogue when its size changes`() = testing {
         val vod = openWithTwoSeries()
 
         graph.database.series().upsertAll(listOf(series(3, rating = 9.4)))

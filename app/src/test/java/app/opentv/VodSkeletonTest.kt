@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -18,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
@@ -32,12 +32,12 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.SKELETON_CARD
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.CoverGrid
@@ -48,7 +48,6 @@ import app.opentv.ui.vod.SeriesScreen
 import app.opentv.ui.vod.TitleRow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -68,16 +67,16 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class VodSkeletonTest {
 
-    @get:Rule
-    val compose = createComposeRule()
+    private val compose = createComposeRule()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val catalogue = HeldCatalogue(app, "vod-skeleton-test")
-    private val graph = catalogue.graph
-    private val viewModels = TestViewModels()
+    @get:Rule
+    val testGraph = TestGraph(compose, name = "vod-skeleton-test")
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp(): Unit = runBlocking {
         val db = graph.database
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.movies().upsertAll(listOf(heat))
@@ -87,14 +86,7 @@ class VodSkeletonTest {
         graph.viewerLibrary.recordProgress("ep:5", positionMillis = HALF, durationMillis = HALF * 2)
         graph.viewerLibrary.favourites.set(heat, true)
         graph.viewerLibrary.favourites.set(severance, true)
-        catalogue.hold()
-    }
-
-    @After
-    fun tearDown() {
-        catalogue.release()
-        viewModels.clear()
-        catalogue.close()
+        testGraph.hold()
     }
 
     @Test
@@ -105,10 +97,10 @@ class VodSkeletonTest {
                 onResume = {},
                 providers = ProvidersCarry.NO_PROVIDER,
                 isSyncing = false,
-                viewModel = viewModels.vod(app, graph),
+                viewModel = testGraph.viewModel { VodViewModel(app, graph) },
             )
         }
-        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        compose.onAllNodes(hasTestTag(SKELETON_CARD)).onFirst().assertExists()
 
         intoTheScreen()
         compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
@@ -127,10 +119,10 @@ class VodSkeletonTest {
                 onResume = {},
                 providers = ProvidersCarry.NO_PROVIDER,
                 isSyncing = false,
-                viewModel = viewModels.vod(app, graph),
+                viewModel = testGraph.viewModel { VodViewModel(app, graph) },
             )
         }
-        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        compose.onAllNodes(hasTestTag(SKELETON_CARD)).onFirst().assertExists()
 
         intoTheScreen()
         compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
@@ -148,15 +140,15 @@ class VodSkeletonTest {
                 onResume = {},
                 providers = ProvidersCarry.NO_PROVIDER,
                 isSyncing = false,
-                viewModel = viewModels.vod(app, graph),
+                viewModel = testGraph.viewModel { VodViewModel(app, graph) },
             )
         }
-        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        compose.onAllNodes(hasTestTag(SKELETON_CARD)).onFirst().assertExists()
         intoTheScreen()
 
-        catalogue.release()
+        testGraph.release()
         // Its card and its Favourite's: Continue Watching's is the first, at the top.
-        compose.waitUntilNodeCount(hasText("Heat") and hasClickAction(), 2, 5_000)
+        compose.onAllNodes(hasText("Heat") and hasClickAction()).assertCountEquals(2)
         compose.waitForIdle()
 
         compose.onAllNodes(hasText("Heat") and hasClickAction())[0].assertIsFocused()

@@ -7,8 +7,6 @@ package app.opentv
 
 import android.app.Application
 import androidx.media3.common.MimeTypes
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
@@ -27,16 +25,11 @@ import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.ItemOptionsViewModel
 import app.opentv.ui.options.OptionsSubject
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -47,25 +40,22 @@ import org.robolectric.annotation.Config
  * What's recorded is what this device can play, so a viewer can always watch what they recorded. Another
  * app is handed the Channel's best, since this device's decoders don't limit it (#184).
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class RecordingPlaysHereTest {
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(
-        app,
-        decoders = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088)),
-    )
+    @get:Rule
+    val testGraph = TestGraph(decoders = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088)))
+
+    private val app = testGraph.app
+    private val graph = testGraph.graph
     private val db = graph.database
-    private val viewModels = ViewModelsInTest()
-    private val viewModel = viewModels.track(ItemOptionsViewModel(app, graph))
+    private val viewModel = testGraph.track(ItemOptionsViewModel(app, graph))
     private val now = System.currentTimeMillis()
     private val laterStart = now + 2 * HOUR
 
     @Before
-    fun setUp() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp(): Unit = runBlocking {
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         val rows = listOf("News 4K", "News HD").mapIndexed { i, name ->
             Channel(
@@ -95,18 +85,13 @@ class RecordingPlaysHereTest {
         )
     }
 
-    @After
-    fun close() {
-        viewModels.stopAll()
-        runBlocking { graph.stopBackgroundWork() }
-        db.close()
-        Dispatchers.resetMain()
-    }
+    /** A test's steps on the main thread, as the options panel takes them; see [TestGraph.runOnMain]. */
+    private fun testing(block: suspend CoroutineScope.() -> Unit) = testGraph.runOnMain(block)
 
     private suspend fun news(): LineupChannel = graph.channelLineup.channels(LineupScope.All()).first().single()
 
     @Test
-    fun `Record now records the Quality this device plays, not one too big for it`() = runTest {
+    fun `Record now records the Quality this device plays, not one too big for it`() = testing {
         val news = news()
 
         viewModel.choose(OptionsSubject.OfChannel(news), ItemOption.RecordNow).join()
@@ -116,7 +101,7 @@ class RecordingPlaysHereTest {
     }
 
     @Test
-    fun `a series rule is set on the Quality this device plays`() = runTest {
+    fun `a series rule is set on the Quality this device plays`() = testing {
         val news = news()
         val series = viewModel.optionsFor(OptionsSubject.OfChannel(news))
             .filterIsInstance<ItemOption.RecordWholeSeries>().single()
@@ -128,7 +113,7 @@ class RecordingPlaysHereTest {
     }
 
     @Test
-    fun `moving to another provider for a clash doesn't move up to a Quality too big to play`() = runTest {
+    fun `moving to another provider for a clash doesn't move up to a Quality too big to play`() = testing {
         db.sources().insert(Source(id = 2, name = "Other", kind = SourceKind.XTREAM, url = "http://example.org"))
         val rows = listOf("News 4K", "News HD").mapIndexed { i, name ->
             Channel(
@@ -170,7 +155,7 @@ class RecordingPlaysHereTest {
     }
 
     @Test
-    fun `what's recordable leaves out what's too big, unless that's all there is`() = runTest {
+    fun `what's recordable leaves out what's too big, unless that's all there is`() = testing {
         val lineup = graph.channelLineup
         val news = news()
         val hd = news.qualities.first { it.name == "News HD" }
@@ -182,7 +167,7 @@ class RecordingPlaysHereTest {
     }
 
     @Test
-    fun `another app is handed the best Quality`() = runTest {
+    fun `another app is handed the best Quality`() = testing {
         viewModel.channels.openInExternalPlayer(app, news())
 
         val chooser = Shadows.shadowOf(app).nextStartedActivity

@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.app.Application
 import android.content.pm.PackageManager
 import android.view.KeyEvent
 import android.view.View
@@ -16,6 +15,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
@@ -24,6 +25,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -31,8 +33,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -40,6 +40,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.ProvidersCarry
@@ -47,7 +48,6 @@ import app.opentv.ui.vod.SeriesScreen
 import coil.size.Size
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,28 +63,23 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class VodBrowseTest {
 
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val testGraph = TestGraph(compose)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
+    private val app = testGraph.app
+    private val graph = testGraph.graph
 
     // Made once a test has saved its library, as the app makes it once a sync has: made first, it
     // works out its rows from an empty library, and the screen's reload waits behind that.
-    private val viewModel by lazy { viewModels.vod(app, graph) }
+    private val viewModel by lazy { testGraph.viewModel { VodViewModel(app, graph) } }
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
-
-    @After
-    fun close() {
-        viewModels.clear()
-        graph.database.close()
-    }
 
     private fun movie(id: Long, name: String, category: String = "action", added: Long = id) = Movie(
         id = id,
@@ -145,17 +140,20 @@ class VodBrowseTest {
                 )
             }
         }
-        compose.waitUntilAtLeastOneExists(hasText("Heat"), 5_000)
+        compose.onAllNodes(hasText("Heat")).onFirst().assertExists()
         // Recommended is worked out in the background and lands above Recently added: wait for its
         // covers, not its title, which its placeholder shows from the start, so the rows don't move
         // under the Highlight partway through a test.
         awaitRecommended { !viewModel.recommendingMovies.value && viewModel.recommendedMovies.value.isNotEmpty() }
-        compose.waitUntilAtLeastOneExists(cover(firstTitle), 5_000)
+        compose.onAllNodes(cover(firstTitle)).onFirst().assertExists()
         compose.waitForIdle()
     }
 
-    /** Waits for Recommended, worked out in the background and handed back on the main thread. */
-    private fun awaitRecommended(done: () -> Boolean) = compose.waitRunningMainLooper(done)
+    /** Recommended, once worked out in the background and handed back on the main thread, is [done]. */
+    private fun awaitRecommended(done: () -> Boolean) {
+        compose.waitForIdle()
+        assertThat(done()).isTrue()
+    }
 
     /** The title on the first cover of the first row, Recommended's. */
     private val firstTitle get() = viewModel.recommendedMovies.value.first().displayTitle
@@ -188,7 +186,7 @@ class VodBrowseTest {
         pressOkOnMoviesInTheRail()
 
         firstCover(firstTitle).assertIsFocused()
-        compose.waitUntilAtLeastOneExists(hasText(synopsisOf(firstTitle)), 5_000)
+        assertBackdrop(hasText(synopsisOf(firstTitle)))
         captureScreen("movies_first_highlight")
     }
 
@@ -276,8 +274,8 @@ class VodBrowseTest {
         press(Key.DirectionDown)
 
         press(Key.DirectionCenter)
-        compose.waitUntilDoesNotExist(hasText("Brazil"), 5_000)
-        compose.waitUntilAtLeastOneExists(cover("Heat"), 5_000)
+        compose.onAllNodes(hasText("Brazil")).assertCountEquals(0)
+        compose.onAllNodes(cover("Heat")).onFirst().assertExists()
         compose.onNodeWithText("Action").assertIsFocused()
         press(Key.DirectionRight)
         compose.onNodeWithText("For you").assertDoesNotExist()
@@ -297,8 +295,8 @@ class VodBrowseTest {
         press(Key.DirectionDown)
 
         press(Key.DirectionCenter)
-        compose.waitUntilDoesNotExist(hasText("Brazil"), 5_000)
-        compose.waitUntilAtLeastOneExists(cover("Heat"), 5_000)
+        compose.onAllNodes(hasText("Brazil")).assertCountEquals(0)
+        compose.onAllNodes(cover("Heat")).onFirst().assertExists()
 
         val grid = compose.onNode(cover("Heat")).getUnclippedBoundsInRoot()
         assertThat((grid.right - grid.left).value).isWithin(0.5f).of((forYou.right - forYou.left).value)
@@ -307,13 +305,19 @@ class VodBrowseTest {
 
     private fun synopsisOf(title: String) = "What happens in $title."
 
+    /** The backdrop says [what], once the Highlight has rested long enough for it to follow. */
+    private fun assertBackdrop(what: SemanticsMatcher) {
+        compose.mainClock.advanceTimeBy(BACKDROP_REST_MILLIS)
+        compose.onAllNodes(what).onFirst().assertExists()
+    }
+
     @Test
     fun `the backdrop changes only once the Highlight has rested on a title`() {
         setMovies()
         pressOkOnMoviesInTheRail()
         val first = firstTitle
         val second = secondTitle
-        compose.waitUntilAtLeastOneExists(hasText(synopsisOf(first)), 5_000)
+        assertBackdrop(hasText(synopsisOf(first)))
 
         compose.mainClock.autoAdvance = false
         press(Key.DirectionRight)
@@ -323,11 +327,12 @@ class VodBrowseTest {
         compose.onNodeWithText(synopsisOf(second)).assertDoesNotExist()
 
         compose.mainClock.advanceTimeBy(200)
-        // The paused clock has to be stepped for the screen to draw what the database sent back.
-        compose.waitUntil(UI_WAIT_MILLIS) {
-            compose.mainClock.advanceTimeByFrame()
-            compose.onAllNodesWithText(synopsisOf(second)).fetchSemanticsNodes().isNotEmpty()
-        }
+        // The paused clock has to be stepped for the screen to draw what the database sent back: the
+        // old synopsis fades out before the new one shows.
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(FADE_MILLIS)
+        compose.waitForIdle()
+        compose.onAllNodesWithText(synopsisOf(second)).onFirst().assertExists()
         compose.onNodeWithText(synopsisOf(first)).assertDoesNotExist()
     }
 
@@ -341,7 +346,7 @@ class VodBrowseTest {
         pressOkOnMoviesInTheRail()
 
         compose.onNode(isFocused() and hasText("Heat", substring = true)).assertExists()
-        compose.waitUntilAtLeastOneExists(hasText(synopsisOf("Heat")), 5_000)
+        assertBackdrop(hasText(synopsisOf("Heat")))
         captureScreen("movies_continue_watching_highlight")
     }
 
@@ -353,11 +358,11 @@ class VodBrowseTest {
         }
         setMovies()
         pressOkOnMoviesInTheRail()
-        compose.waitUntilAtLeastOneExists(hasText(synopsisOf("Heat")), 5_000)
+        assertBackdrop(hasText(synopsisOf("Heat")))
         val withStatus = compose.onNodeWithText(synopsisOf("Heat")).getUnclippedBoundsInRoot().top
 
         press(Key.DirectionDown)
-        compose.waitUntilAtLeastOneExists(hasText(synopsisOf(firstTitle)), 5_000)
+        assertBackdrop(hasText(synopsisOf(firstTitle)))
         val without = compose.onNodeWithText(synopsisOf(firstTitle)).getUnclippedBoundsInRoot().top
 
         assertThat(without).isEqualTo(withStatus)
@@ -399,7 +404,7 @@ class VodBrowseTest {
         compose.waitForIdle()
 
         compose.onNode(isFocused() and hasText("Slow Horses", substring = true)).assertExists()
-        compose.waitUntilAtLeastOneExists(hasText("Spies."), 5_000)
+        assertBackdrop(hasText("Spies."))
     }
 
     @Test
@@ -412,9 +417,9 @@ class VodBrowseTest {
         setMovies()
         pressOkOnMoviesInTheRail()
         press(Key.DirectionLeft)
-        compose.waitUntilAtLeastOneExists(hasText("Big"), 5_000)
+        compose.onAllNodes(hasText("Big")).onFirst().assertExists()
         compose.onNodeWithText("Big").performClick()
-        compose.waitUntilAtLeastOneExists(cover("Film 100"), 5_000)
+        compose.onAllNodes(cover("Film 100")).onFirst().assertExists()
         press(Key.DirectionRight)
 
         press(Key.DirectionDown, times = 6)
@@ -426,7 +431,8 @@ class VodBrowseTest {
         val lastShown = covers.maxOf { it.config[SemanticsProperties.Text].first().text.removePrefix("Film ").toInt() }
         fun rowsOn(rows: Int) = "https://example.com/${lastShown + rows * columns}.jpg"
 
-        compose.waitUntil(UI_WAIT_MILLIS) { artwork.requests.any { it.first == rowsOn(4) } }
+        compose.waitForIdle()
+        assertThat(artwork.requests.any { it.first == rowsOn(4) }).isTrue()
         assertThat(artwork.requests.map { it.first }).doesNotContain(rowsOn(8))
         // The Stick's 1080p at xhdpi: a 118 x 177 dp cover is 236 x 354 pixels.
         assertThat(artwork.requests.first { it.first == rowsOn(4) }.second).isEqualTo(Size(236, 354))
@@ -495,10 +501,10 @@ class VodBrowseTest {
                 }, onResume = {}, providers = ProvidersCarry.NO_PROVIDER, isSyncing = false, viewModel = viewModel)
             }
         }
-        compose.waitUntilAtLeastOneExists(cover("Slow Horses"), 5_000)
+        compose.onAllNodes(cover("Slow Horses")).onFirst().assertExists()
         // Recommended's covers, not its title, which its placeholder shows from the start.
         awaitRecommended { !viewModel.recommendingSeries.value && viewModel.recommendedSeries.value.isNotEmpty() }
-        compose.waitUntilAtLeastOneExists(cover(viewModel.recommendedSeries.value.first().displayTitle), 5_000)
+        compose.onAllNodes(cover(viewModel.recommendedSeries.value.first().displayTitle)).onFirst().assertExists()
         compose.waitForIdle()
 
         compose.onNode(hasContentDescription("Shows") or hasText("Shows")).requestFocus()
@@ -507,7 +513,7 @@ class VodBrowseTest {
         compose.waitForIdle()
 
         firstCover(viewModel.recommendedSeries.value.first().displayTitle).assertIsFocused()
-        compose.waitUntilAtLeastOneExists(hasText("Spies.") or hasText("Work."), 5_000)
+        assertBackdrop(hasText("Spies.") or hasText("Work."))
         captureScreen("shows_first_highlight")
 
         press(Key.DirectionLeft)
@@ -549,3 +555,9 @@ class VodBrowseTest {
         assertThat(widths.dedupeRuns()).containsExactly(closed, closed - 214f, closed).inOrder()
     }
 }
+
+/** How long the backdrop waits for the Highlight to rest before following it (RestingBackdrop). */
+private const val BACKDROP_REST_MILLIS = 400L
+
+/** The backdrop's fade out of the old title (ART_FADE_MILLIS), and a few frames to draw the new one. */
+private const val FADE_MILLIS = 300L
