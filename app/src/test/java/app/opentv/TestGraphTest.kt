@@ -209,6 +209,22 @@ class TestGraphTest {
         assertThat(failure).hasMessageThat().contains("never released")
     }
 
+    @Test
+    fun `a read on the main thread isn't held, since only the main thread could release it`() {
+        val held = TestGraph(name = "main-thread-hold").apply { heldMillis = FORGOTTEN_MILLIS }
+
+        val failure = runCatching {
+            held.around {
+                held.hold()
+                // A blocking read made where the test runs, as a main-thread caller's would be.
+                held.database.openHelper.readableDatabase.query("SELECT * FROM channels").close()
+                held.release()
+            }
+        }.exceptionOrNull()
+
+        assertThat(failure).isNull()
+    }
+
     /** Reads on and on, as a screen's view model does, until it's stopped. */
     class LeftRunning(app: Application, graph: ServiceLocator.Graph) : AndroidViewModel(app) {
         init {

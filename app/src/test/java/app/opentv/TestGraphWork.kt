@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.os.Looper
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -193,8 +194,14 @@ internal class ReadGate(var heldMillis: Long) {
         gate = null
     }
 
-    /** Holds [sql] here, on the thread about to run it, when it's a read of rows and a hold is on. */
+    /**
+     * Holds [sql] here, on the thread about to run it, when it's a read of rows and a hold is on. Never
+     * on the main thread: the test runs there, so a read held on it could only be released after it
+     * gave up, which held every check behind it for [heldMillis] and failed the test (VodLoadFailedTest
+     * on CI, when a view model on Main read its rows while Compose settled).
+     */
     fun onStatement(sql: String) {
+        if (Looper.myLooper() == Looper.getMainLooper()) return
         val held = gate ?: return
         if (readsCatalogueRows(sql.trimStart()) && !held.awaitMillis(heldMillis)) forgotten = true
     }
