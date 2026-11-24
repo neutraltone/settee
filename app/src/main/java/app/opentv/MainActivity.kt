@@ -70,7 +70,7 @@ import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
 import app.opentv.ui.recordings.RecordingSwitchWarning
 import app.opentv.ui.settings.ProfilesScreen
-import app.opentv.ui.settings.SettingsMemory
+import app.opentv.ui.settings.rememberSettingsMemory
 import app.opentv.ui.vod.LocalCoverBadges
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PersonScreen
@@ -345,7 +345,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
     // Which Settings section was open, kept while the app runs, as the tabs keep theirs.
-    val settingsMemory = remember { SettingsMemory() }
+    val settingsMemory = rememberSettingsMemory()
     val sourcesUi by sourcesViewModel.ui.collectAsState()
     val profiles by profilesViewModel.profiles.collectAsState()
     val activeProfileId by profilesViewModel.activeProfileId.collectAsState()

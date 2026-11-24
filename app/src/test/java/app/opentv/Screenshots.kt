@@ -6,6 +6,8 @@
 package app.opentv
 
 import android.graphics.drawable.ColorDrawable
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,6 +74,15 @@ fun ComposeContentTestRule.setTvContent(content: @Composable () -> Unit) {
  * turns round: [StateRestorationTester.emulateSavedInstanceStateRestore] rebuilds it.
  */
 fun StateRestorationTester.setTvContent(content: @Composable () -> Unit) {
+    InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+    setContent { TvScreen(content) }
+}
+
+/**
+ * [setTvContent] for an activity that draws itself, as MainActivity does, so that Android making the
+ * activity again (a language change) draws it again from what it saved.
+ */
+fun ComponentActivity.setTvContent(content: @Composable () -> Unit) {
     InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
     setContent { TvScreen(content) }
 }
