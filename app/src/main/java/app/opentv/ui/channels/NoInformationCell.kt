@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -68,8 +69,8 @@ internal fun NoInformationCell(
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionRight -> onNextDay?.invoke() != null
-                    Key.DirectionLeft -> onPrevDay?.invoke() != null
+                    Key.DirectionRight -> onNextDay?.unlessHeld(event) != null
+                    Key.DirectionLeft -> onPrevDay?.unlessHeld(event) != null
                     else -> false
                 }
             }
@@ -83,4 +84,12 @@ internal fun NoInformationCell(
             modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = CELL_PADDING),
         )
     }
+}
+
+/**
+ * Pages a day with this, unless [event] is the remote repeating a held key: holding Right runs along
+ * the row and stops at the day's end, rather than paging through the days a landing at a time.
+ */
+internal fun (() -> Unit).unlessHeld(event: KeyEvent) {
+    if (event.nativeKeyEvent.repeatCount == 0) this()
 }

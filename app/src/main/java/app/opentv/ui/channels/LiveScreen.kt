@@ -228,6 +228,9 @@ fun LiveScreen(
     // The guide's day pages: where the Highlight lands on the new day, a row's first or last cell.
     // Cleared once it has, so the row coming back into view later doesn't take the Highlight again.
     var landOn by remember { mutableStateOf<Pair<Any, Boolean>?>(null) }
+    // A day's landing still to happen ignores further pages, or a second Right before it lands pages
+    // again (#448). A category without that row would never land, so a new one drops it.
+    LaunchedEffect(guideRows.scope) { landOn = null }
 
     val current = when {
         favouritesOnly -> FAVOURITES
@@ -301,12 +304,16 @@ fun LiveScreen(
                         dayLabel = dayLabel,
                         dayOffset = guideDayOffset,
                         onNextDay = { row: ChannelsViewModel.Row ->
-                            landOn = row.key to false
-                            viewModel.nudgeGuideDay(1)
+                            if (landOn == null) {
+                                landOn = row.key to false
+                                viewModel.nudgeGuideDay(1)
+                            }
                         }.takeIf { guideDayOffset < ChannelsViewModel.GUIDE_MAX_DAYS },
                         onPrevDay = { row: ChannelsViewModel.Row ->
-                            landOn = row.key to true
-                            viewModel.nudgeGuideDay(-1)
+                            if (landOn == null) {
+                                landOn = row.key to true
+                                viewModel.nudgeGuideDay(-1)
+                            }
                         }.takeIf { guideDayOffset > 0 },
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus || opening.held,
