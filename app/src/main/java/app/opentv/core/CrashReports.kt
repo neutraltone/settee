@@ -266,25 +266,23 @@ class CrashReports(
      * after-crash Send is. Never in a build without a DSN, which never offers it.
      */
     fun report(kind: Handled, error: Throwable) {
-        if (kind == Handled.VIEWER_REPORT) {
-            // The screen it was pressed on, not whichever is open by the time it goes.
-            if (available && error is ErrorReport) send(report = error, at = screen)
-            return
-        }
-        if (!available || !on.value || !Sentry.isEnabled()) return
         val service = kind.service
         val failure = error as? ServiceFailure
-        if (service == null || failure == null) {
-            Sentry.captureException(HandledError.of(kind, error))
-            return
-        }
-        // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
-        // stack that shows which client asked. The request and the reply were never in it.
-        val sent = HandledError("${kind.name} ${failure.message}", null).apply { stackTrace = failure.stackTrace }
-        Sentry.captureException(sent) { scope ->
-            scope.setTag(CrashScrubbing.SERVICE_TAG, service)
-            scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
-            scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
+        when {
+            // From the screen it was pressed on, not whichever is open by the time it goes.
+            kind == Handled.VIEWER_REPORT -> if (available && error is ErrorReport) send(report = error, at = screen)
+            !available || !on.value || !Sentry.isEnabled() -> Unit
+            service == null || failure == null -> Sentry.captureException(HandledError.of(kind, error))
+            // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and
+            // the stack that shows which client asked. The request and the reply were never in it.
+            else -> failure?.let { failed ->
+                val sent = HandledError("${kind.name} ${failed.message}", null).apply { stackTrace = failed.stackTrace }
+                Sentry.captureException(sent) { scope ->
+                    scope.setTag(CrashScrubbing.SERVICE_TAG, service)
+                    scope.setTag(CrashScrubbing.OPERATION_TAG, failed.operation.tag)
+                    scope.setTag(CrashScrubbing.STATUS_TAG, failed.status)
+                }
+            }
         }
     }
 

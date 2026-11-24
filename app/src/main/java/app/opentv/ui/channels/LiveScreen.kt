@@ -64,7 +64,6 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.ProviderFailure
-import app.opentv.ui.sendReportFor
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -76,6 +75,7 @@ import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.rememberOpeningPlace
+import app.opentv.ui.sendReportFor
 import app.opentv.ui.vod.rememberSidebarSlide
 import java.text.SimpleDateFormat
 import java.util.Date

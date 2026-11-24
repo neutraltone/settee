@@ -73,6 +73,7 @@ import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
+import app.opentv.ui.LocalReportedSource
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
@@ -81,8 +82,6 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.label
-import app.opentv.ui.reportedSourceOf
-import app.opentv.ui.sendReportFor
 import app.opentv.ui.player.BackOnRelease
 import app.opentv.ui.player.OK_KEYS
 import app.opentv.ui.player.PlayerChoice
@@ -100,6 +99,8 @@ import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.backOnRelease
 import app.opentv.ui.player.isBack
 import app.opentv.ui.player.trackLabel
+import app.opentv.ui.reportedSourceOf
+import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -213,8 +214,8 @@ fun VodPlayerScreen(
     val finished by viewModel.finished.collectAsState()
     LaunchedEffect(finished) { if (finished) onBack() }
 
-    CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles) {
-        VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack, reportedSource)
+    CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles, LocalReportedSource provides reportedSource) {
+        VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
     }
 }
 
@@ -263,7 +264,7 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
  * The player's picture, transport bar and Next Episode card, with everything about playback that the
  * remote drives. [VodPlayerScreen] owns the stream, resume, saving progress and moving between
  * episodes; this owns what the viewer sees and presses, and pausing behind another app.
- * [reportedSource] is the kind of provider it plays from, for Send report on a failure.
+ * [LocalReportedSource] is the kind of provider it plays from, for Send report on a failure.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -273,7 +274,6 @@ fun VodPlayerContent(
     growingRec: Boolean,
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
-    reportedSource: ReportedSource? = null,
 ) {
     // Leave the film when the sleep timer runs out (VodPlayerScreen saves the position on dispose).
     SleepTimerEffect(onRunOut = onBack)
@@ -607,7 +607,7 @@ fun VodPlayerContent(
                 current,
                 onRetry = controller::retry,
                 onBack = onBack,
-                sendReport = sendReportFor(current.reason, reportedSource),
+                sendReport = sendReportFor(current.reason, LocalReportedSource.current),
             )
 
             else -> Unit

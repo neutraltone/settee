@@ -35,9 +35,9 @@ import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.ListRowInset
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.SendReport
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
-import app.opentv.ui.design.SendReport
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
 import app.opentv.ui.providerFailures
@@ -97,7 +97,9 @@ internal fun ProvidersPane(
                 )
                 // Under Refresh again, so it's Down from it.
                 sendReportFor(failure, ReportedSource.of(source.kind))?.let { send ->
-                    Column(Modifier.padding(horizontal = ListRowInset)) { SendReport(failure.sentence, failure.detail, send) }
+                    Column(Modifier.padding(horizontal = ListRowInset)) {
+                        SendReport(failure.sentence, failure.detail, send)
+                    }
                 }
             }
         }

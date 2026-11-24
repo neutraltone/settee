@@ -6,6 +6,7 @@
 package app.opentv.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import app.opentv.core.CrashReports
@@ -31,6 +32,9 @@ fun sendReportFor(error: ViewerError?, source: ReportedSource?): (() -> Unit)? {
         }
     }
 }
+
+/** The kind of provider what a player shows comes from, for Send report on its failure: set by the player. */
+val LocalReportedSource = compositionLocalOf<ReportedSource?> { null }
 
 /**
  * The kind of Source [key] plays from, for an Error Report: a film or episode is an Xtream panel's

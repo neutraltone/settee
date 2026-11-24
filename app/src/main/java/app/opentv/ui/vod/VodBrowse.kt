@@ -62,7 +62,6 @@ import app.opentv.ui.ExpectedRows
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
-import app.opentv.ui.sendReportFor
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.browseKey
@@ -81,6 +80,7 @@ import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
