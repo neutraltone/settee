@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -35,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,7 +66,9 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ChoicePanel
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
+import app.opentv.ui.options.RowHighlight
 import app.opentv.ui.options.label
+import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
 
 /**
@@ -82,6 +82,9 @@ import coil.compose.AsyncImage
  * [deleteFailure] is why a recording the viewer deleted is still here, shown under the title, out of
  * the Highlight's way, until their next press or the Highlight leaves the screen, either of which
  * tells [onDismissFailure].
+ *
+ * The Highlight passes to the next row when its row goes (or the one before, for the last), and
+ * [onEmptied] is told when it goes with the last row and there's nowhere left in the list for it.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -94,6 +97,7 @@ fun RecordingsContent(
     modifier: Modifier = Modifier,
     deleteFailure: ViewerError? = null,
     onDismissFailure: () -> Unit = {},
+    onEmptied: () -> Unit = {},
     now: () -> Long = System::currentTimeMillis,
 ) {
     // By key, not the row: the list can change under an open panel (a booking starts, a recording
@@ -101,9 +105,16 @@ fun RecordingsContent(
     val panels = remember { Panels() }
     var hadFocus by remember { mutableStateOf(false) }
     val rows = remember(sections) { sections.flatMap { it.rows } }
-    val heir = rememberHeir(remember(rows) { rows.map { it.key } })
     val listState = rememberLazyListState()
-    val rowReturn = rememberRowReturn(sections, heir, listState)
+    val items = remember(sections) { rowItems(sections) }
+    val highlight = rememberRowHighlight(
+        rows,
+        listState,
+        itemIndex = { items[it] },
+        keepScroll = true,
+        onEmptied = onEmptied,
+    ) { it.key }
+    val rowReturn = rememberRowReturn(sections, highlight)
     val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
     ScreenFrame(modifier) {
         // Also cleared when the Highlight leaves the screen (for the rail, or another tab), whose
@@ -136,10 +147,11 @@ fun RecordingsContent(
             } else {
                 CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RoomForHeading(room) }) {
                     LazyColumn(
-                        heir.watchPresses.then(dismissOnPress),
+                        dismissOnPress,
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
                     ) {
+                        var index = 0
                         sections.forEach { section ->
                             item(key = section.heading, contentType = "heading") {
                                 Text(
@@ -149,6 +161,7 @@ fun RecordingsContent(
                                 )
                             }
                             section.rows.forEach { row ->
+                                val rowIndex = index++
                                 item(key = row.key, contentType = "row") {
                                     RecordingsRowItem(
                                         row = row,
@@ -161,7 +174,8 @@ fun RecordingsContent(
                                             }
                                         },
                                         onOptions = { panels.optionsOn = row.key },
-                                        modifier = rowReturn.modifierFor(row.key),
+                                        modifier = highlight.modifier(rowIndex, row.key)
+                                            .then(rowReturn.modifierFor(row.key)),
                                     )
                                 }
                             }
@@ -171,7 +185,7 @@ fun RecordingsContent(
             }
         }
     }
-    RowPanels(panels, rows, heir, onChoose)
+    RowPanels(panels, rows, onChoose)
 }
 
 /**
@@ -179,38 +193,39 @@ fun RecordingsContent(
  * row (KeptShell asks, [OnShellReturn]): the row last highlighted, by key so it's found wherever the
  * list has moved it, and the first row when it has gone. Saved, so it outlives the screen being built
  * again under a player. Without this nothing in Recordings answered, and the Highlight fell to the
- * rail (#432). Through [Heir], the list's one way of asking for a row.
+ * rail (#432). Through [RowHighlight], the list's one way of asking for a row.
  *
- * Its [RowReturn.modifierFor] goes on each row, in place of [Heir.modifierFor].
+ * Its [RowReturn.modifierFor] goes on each row, after [RowHighlight.modifier].
  */
 @Composable
-private fun rememberRowReturn(sections: List<RecordingsSection>, heir: Heir, listState: LazyListState): RowReturn {
+private fun rememberRowReturn(sections: List<RecordingsSection>, highlight: RowHighlight): RowReturn {
     val last = rememberSaveable { mutableStateOf<String?>(null) }
     val latest by rememberUpdatedState(sections)
     // Built again after Android let the app go, the list starts empty until the database answers.
     OnShellReturn(ready = sections.isNotEmpty()) {
-        // In the list's own order, headings and all, so a key's place is its index in the list.
-        val items = latest.flatMap { listOf<Any>(it.heading) + it.rows.map { row -> row.key } }
         val rows = latest.flatMap { it.rows }.map { it.key }
         val target = last.value?.takeIf { it in rows } ?: rows.firstOrNull() ?: return@OnShellReturn
-        heir.aimAt(target)
-        val shown = listState.layoutInfo.visibleItemsInfo.any { it.key == target }
-        if (!shown) listState.scrollToItem(items.indexOf(target))
-        // The requester goes on the row when it's next composed, scrolled to or not.
-        withFrameNanos {}
-        heir.take()
+        highlight.aimAt(target)
     }
-    return remember(heir, last) { RowReturn(heir, last) }
+    return remember(last) { RowReturn(last) }
 }
 
 /** Keeps [last] on the row that last had the Highlight. */
-private class RowReturn(private val heir: Heir, private val last: MutableState<String?>) {
+private class RowReturn(private val last: MutableState<String?>) {
     // One per row, kept, so a row composed again gets the same modifier rather than a new one to apply.
     private val tracking = mutableMapOf<String, Modifier>()
 
-    fun modifierFor(row: String): Modifier = heir.modifierFor(row).then(
-        tracking.getOrPut(row) { Modifier.onFocusChanged { if (it.hasFocus) last.value = row } },
-    )
+    fun modifierFor(row: String): Modifier =
+        tracking.getOrPut(row) { Modifier.onFocusChanged { if (it.hasFocus) last.value = row } }
+}
+
+/** Each row's place among the list's items, headings and all. */
+private fun rowItems(sections: List<RecordingsSection>): List<Int> = buildList {
+    var item = 0
+    sections.forEach { section ->
+        item++ // its heading
+        section.rows.forEach { _ -> add(item++) }
+    }
 }
 
 /** Which row's options are open, by key, and what it's being asked about. */
@@ -221,12 +236,7 @@ private class Panels {
 
 /** A row's options panel, and the question before an option that removes the row. */
 @Composable
-private fun RowPanels(
-    panels: Panels,
-    rows: List<RecordingsRow>,
-    heir: Heir,
-    onChoose: (RecordingsRow, ItemOption) -> Unit,
-) {
+private fun RowPanels(panels: Panels, rows: List<RecordingsRow>, onChoose: (RecordingsRow, ItemOption) -> Unit) {
     rows.firstOrNull { it.key == panels.optionsOn }?.let { row ->
         OptionsPanel(
             title = row.title,
@@ -248,10 +258,7 @@ private fun RowPanels(
             labelOf = { if (it == Answer.Keep) stringResource(R.string.rec_delete_keep) else ask.option.label() },
             onChoose = { answer ->
                 panels.asking = null
-                if (answer == Answer.Go) {
-                    heir.expectToLose(row.key)
-                    onChoose(row, ask.option)
-                }
+                if (answer == Answer.Go) onChoose(row, ask.option)
             },
             onDismiss = { panels.asking = null },
         )
