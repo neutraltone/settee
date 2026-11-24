@@ -195,6 +195,11 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
                 resources.getString(R.string.error_opensubtitles_sign_in),
                 ViewerError.detailOf("SignInRejected", "HTTP 401"),
             )
+        is OpenSubtitlesFailure.KeyRejected ->
+            ViewerError(
+                resources.getString(R.string.error_opensubtitles_key_rejected),
+                ViewerError.detailOf("KeyRejected", "HTTP 403"),
+            )
         is OpenSubtitlesFailure.TokenRejected ->
             ofHardware(
                 R.string.error_opensubtitles_token_tv,
