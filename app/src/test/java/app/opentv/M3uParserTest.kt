@@ -71,6 +71,48 @@ class M3uParserTest {
     }
 
     @Test
+    fun `a channel with commas in its name keeps the whole name`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="news",News, Weather & Sport
+            http://example.com/news.m3u8
+            #EXTINF:-1,Live: Rovers vs United, 15:00
+            http://example.com/event.m3u8
+        """.trimIndent()
+
+        val names = M3uParser.parse(playlist, sourceId = 1).channels.map { it.name }
+
+        assertThat(names).containsExactly("News, Weather & Sport", "Live: Rovers vs United, 15:00").inOrder()
+    }
+
+    @Test
+    fun `a comma inside a quoted attribute does not cut the name`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="ns" group-title="News, Sport" tvg-name="Fallback, Name",Sport Extra
+            http://example.com/ns.m3u8
+        """.trimIndent()
+
+        val channel = M3uParser.parse(playlist, sourceId = 1).channels.single()
+
+        assertThat(channel.name).isEqualTo("Sport Extra")
+        assertThat(channel.categoryId).isEqualTo("News, Sport")
+    }
+
+    @Test
+    fun `a comma inside a quoted attribute does not stop the tvg-name fallback`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="x" group-title="News, Sport" tvg-name="Fallback Name",
+            http://example.com/x.m3u8
+        """.trimIndent()
+
+        val channel = M3uParser.parse(playlist, sourceId = 1).channels.single()
+
+        assertThat(channel.name).isEqualTo("Fallback Name")
+    }
+
+    @Test
     fun `duplicate tvg-ids do not collide`() {
         // Providers routinely list SD and HD variants under one tvg-id. The unique index on
         // (sourceId, streamId) would otherwise abort the entire import.
