@@ -10,8 +10,10 @@ package app.opentv.core
  * request, as a Crash Report names it (ADR 0010): what Settee was asking ([operation]) and how it
  * failed ([status], `http-403` or `unreadable-reply`). Nothing else, so nothing from the request or
  * the reply can ride along. Built only through [ofStatus] and [unreadable], which decide what counts.
+ * An exception only for its stack trace, which shows the client that asked; never thrown.
  */
-class ServiceFailure private constructor(val operation: Operation, val status: String) {
+class ServiceFailure private constructor(val operation: Operation, val status: String) :
+    Exception("${operation.tag} $status") {
 
     /** What Settee was asking the service: a fixed list, so the tag can only ever be one of these. */
     enum class Operation(val tag: String) {

@@ -7,10 +7,16 @@ package app.opentv.core
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.FakeJsonHttp
 import app.opentv.FakeOpenSubtitles
+import app.opentv.data.remote.IntroDbClient
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.SubtitleSearch
+import app.opentv.data.remote.TheIntroDbClient
+import app.opentv.data.remote.TmdbClient
+import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -125,6 +131,158 @@ class ServiceFailureReportsTest {
     @Test
     fun `with crash reports off, a 403 at sign-in is dropped`() {
         signIn("!403 {}")
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    /** TMDB as the app builds it, answering every request with [reply] (see [FakeJsonHttp]). */
+    private fun tmdb(reply: String) = TmdbClient(
+        FakeJsonHttp { reply }.http,
+        "0123456789abcdef0123456789abcdef",
+        reportFailure = { reports.report(CrashReports.Handled.TMDB, it) },
+    )
+
+    @Test
+    fun `a 403 from TMDB's search arrives naming the service, the call and the status, and not the title`() {
+        reports.setOn(true)
+
+        assertThat(tmdb("!403").movieMetaOrFailure("A film", 2001, tmdbId = null).isFailure).isTrue()
+
+        val event = sentEvents().single()
+        assertThat(event).contains("TMDB search http-403")
+        assertThat(event).contains(""""service":"tmdb"""")
+        assertThat(event).doesNotContain("A film")
+        assertThat(event).doesNotContain("0123456789abcdef")
+        assertThat(event).doesNotContain("api.themoviedb.org")
+    }
+
+    @Test
+    fun `details TMDB answers with a page Settee can't read arrive as unreadable`() {
+        reports.setOn(true)
+
+        assertThat(tmdb("<html>Blocked</html>").movieMetaOrFailure("A film", null, tmdbId = "603").isFailure).isTrue()
+
+        assertThat(sentEvents().single()).contains("TMDB details unreadable-reply")
+    }
+
+    @Test
+    fun `TMDB's 404, its way of saying there's no such title, never arrives`() {
+        reports.setOn(true)
+
+        assertThat(tmdb("404").movieMetaOrFailure("A film", null, tmdbId = "603").getOrThrow()).isNull()
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `TMDB not answering, its trouble and its rate limit never arrive`() {
+        reports.setOn(true)
+
+        for (reply in listOf("!", "!500", "!503", "!429")) {
+            assertThat(tmdb(reply).movieMetaOrFailure("A film", null, tmdbId = "603").isFailure).isTrue()
+        }
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `with crash reports off, a 403 from TMDB is dropped`() {
+        assertThat(tmdb("!403").movieMetaOrFailure("A film", null, tmdbId = "603").isFailure).isTrue()
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    private fun introDb(reply: String) =
+        IntroDbClient(FakeJsonHttp { reply }.http) { reports.report(CrashReports.Handled.INTRODB, it) }
+
+    private fun theIntroDb(reply: String) =
+        TheIntroDbClient(FakeJsonHttp { reply }.http) { reports.report(CrashReports.Handled.INTRODB, it) }
+
+    @Test
+    fun `a 403 from IntroDB or TheIntroDB arrives as a timings failure, without the show`() {
+        reports.setOn(true)
+
+        assertThat(introDb("!403").timings("tt0903747", 1, 2).isFailure).isTrue()
+        assertThat(theIntroDb("!410").timings("1396", 1, 2).isFailure).isTrue()
+
+        val events = sentEvents()
+        assertThat(events).hasSize(2)
+        assertThat(events[0]).contains("INTRODB timings http-403")
+        assertThat(events[1]).contains("INTRODB timings http-410")
+        events.forEach { event ->
+            assertThat(event).contains(""""service":"introdb"""")
+            assertThat(event).doesNotContain("tt0903747")
+            assertThat(event).doesNotContain("introdb.app")
+        }
+    }
+
+    @Test
+    fun `a page in front of TheIntroDB arrives as unreadable`() {
+        reports.setOn(true)
+
+        assertThat(theIntroDb("<html>Just a moment</html>").timings("1396", 1, 2).isFailure).isTrue()
+
+        assertThat(sentEvents().single()).contains("INTRODB timings unreadable-reply")
+    }
+
+    @Test
+    fun `an episode IntroDB hasn't timed, no answer, its trouble and its rate limit never arrive`() {
+        reports.setOn(true)
+
+        for (reply in listOf("404", "!", "!500", "!429")) {
+            introDb(reply).timings("tt0903747", 1, 2)
+            theIntroDb(reply).timings("1396", 1, 2)
+        }
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `with crash reports off, a 403 from IntroDB is dropped`() {
+        assertThat(introDb("!403").timings("tt0903747", 1, 2).isFailure).isTrue()
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    private fun checkForUpdate(reply: String) = runBlocking {
+        UpdateChecker(FakeJsonHttp { reply }.http, "0.1.0") {
+            reports.report(CrashReports.Handled.UPDATE_CHECK, it)
+        }.check()
+    }
+
+    @Test
+    fun `a 404 from GitHub's latest release arrives as an update check failure`() {
+        reports.setOn(true)
+
+        assertThat(checkForUpdate("!404")).isInstanceOf(UpdateChecker.Outcome.CouldNotCheck::class.java)
+
+        val event = sentEvents().single()
+        assertThat(event).contains("UPDATE_CHECK latest-release http-404")
+        assertThat(event).contains(""""service":"update-check"""")
+        assertThat(event).doesNotContain("api.github.com")
+    }
+
+    @Test
+    fun `a latest release Settee can't read arrives as unreadable`() {
+        reports.setOn(true)
+
+        assertThat(checkForUpdate("<html>Unicorn</html>")).isInstanceOf(UpdateChecker.Outcome.CouldNotCheck::class.java)
+
+        assertThat(sentEvents().single()).contains("UPDATE_CHECK latest-release unreadable-reply")
+    }
+
+    @Test
+    fun `GitHub not answering, its trouble and its rate limit never arrive`() {
+        reports.setOn(true)
+
+        for (reply in listOf("!", "!500", "!502", "!429")) checkForUpdate(reply)
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `with crash reports off, a 404 from GitHub is dropped`() {
+        checkForUpdate("!404")
 
         assertThat(sentEvents()).isEmpty()
     }

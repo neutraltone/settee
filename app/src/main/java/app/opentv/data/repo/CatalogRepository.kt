@@ -154,8 +154,11 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
-    /** Settee's built-in TMDB Key (`BuildConfig.TMDB_API_KEY`); blank in a build without one, which never asks TMDB. */
-    tmdbKey: String,
+    /**
+     * TMDB back-fill for VOD detail pages, with Settee's built-in key: a build without one has it
+     * unconfigured, and never asks TMDB. See [TmdbClient].
+     */
+    private val tmdb: TmdbClient,
     /**
      * Words a failed download for the viewer; nothing here shows an exception's own message. Public
      * so the channel manager, which adds and tests providers through this module, words them the same.
@@ -169,9 +172,6 @@ class CatalogRepository(
     private val movieDao = database.movies()
     private val seriesDao = database.series()
     private val episodeDao = database.episodes()
-
-    /** TMDB back-fill for VOD detail pages, gated on the build having a TMDB Key. See [TmdbClient]. */
-    private val tmdb = TmdbClient(http, tmdbKey)
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
     private val background = CoroutineScope(SupervisorJob() + dispatchers.io)

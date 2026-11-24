@@ -7,9 +7,12 @@ package app.opentv.update
 
 import app.opentv.core.AppDispatchers
 import app.opentv.core.ErrorWording
+import app.opentv.core.ServiceFailure
+import app.opentv.core.ServiceFailure.Operation
 import app.opentv.data.remote.GitHubRelease
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -38,6 +41,8 @@ class UpdateChecker(
     private val currentVersionName: String,
     private val repoSlug: String = REPO_SLUG,
     private val dispatchers: AppDispatchers = AppDispatchers(),
+    /** Hears GitHub turning down Settee's own request, for a Crash Report (ADR 0010). */
+    private val reportFailure: (ServiceFailure) -> Unit = {},
 ) {
     data class Update(
         val versionName: String,
@@ -68,11 +73,22 @@ class UpdateChecker(
                 .build()
 
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext Outcome.CouldNotCheck("HTTP ${response.code}")
+                if (!response.isSuccessful) {
+                    ServiceFailure.ofStatus(Operation.LATEST_RELEASE, response.code)?.let(reportFailure)
+                    return@withContext Outcome.CouldNotCheck("HTTP ${response.code}")
+                }
                 val body = response.body.string()
-                if (body.isBlank()) return@withContext Outcome.CouldNotCheck(EMPTY_REPLY)
+                if (body.isBlank()) {
+                    reportFailure(ServiceFailure.unreadable(Operation.LATEST_RELEASE))
+                    return@withContext Outcome.CouldNotCheck(EMPTY_REPLY)
+                }
 
-                val release = json.decodeFromString<GitHubRelease>(body)
+                val release = try {
+                    json.decodeFromString<GitHubRelease>(body)
+                } catch (unreadable: SerializationException) {
+                    reportFailure(ServiceFailure.unreadable(Operation.LATEST_RELEASE))
+                    throw unreadable
+                }
                 if (release.draft || release.prerelease) return@withContext Outcome.UpToDate
                 if (!isNewer(release.tagName, currentVersionName)) return@withContext Outcome.UpToDate
 

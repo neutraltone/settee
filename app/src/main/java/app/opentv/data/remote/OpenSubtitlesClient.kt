@@ -205,18 +205,22 @@ class OpenSubtitlesClient(
      * own, such as a 403 or a reply that isn't JSON, is also reported as [operation]'s.
      */
     private fun call(request: Request, operation: Operation): JsonObject {
-        val response = try {
-            http.newCall(request).execute()
+        // The body is read with the request, so a connection dropped partway is Unreachable, not a
+        // reply Settee couldn't read.
+        val (status, body) = try {
+            http.newCall(request).execute().use { it.code to it.body.string() }
         } catch (e: IOException) {
             throw OpenSubtitlesFailure.Unreachable(e)
         }
-        return response.use {
-            val parsed = runCatching { json.parseToJsonElement(it.body.string()) }.getOrNull() as? JsonObject
-            if (it.isSuccessful && parsed != null) return@use parsed
-            val failure = if (it.isSuccessful) ServiceFailure.unreadable(operation) else ServiceFailure.ofStatus(operation, it.code)
-            failure?.let(reportFailure)
-            throw failureFor(it.code, parsed, request, download = operation == Operation.DOWNLOAD)
+        val parsed = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject
+        val succeeded = status in HTTP_SUCCESS
+        if (succeeded && parsed != null) return parsed
+        val failure = when {
+            succeeded -> ServiceFailure.unreadable(operation)
+            else -> ServiceFailure.ofStatus(operation, status)
         }
+        failure?.let(reportFailure)
+        throw failureFor(status, parsed, request, download = operation == Operation.DOWNLOAD)
     }
 
     /** What an answer of [status] means; a success that isn't JSON is OpenSubtitles' trouble too. */
@@ -232,6 +236,7 @@ class OpenSubtitlesClient(
     private companion object {
         val DEFAULT_BASE = "https://api.opensubtitles.com/api/v1/".toHttpUrl()
         val JSON_TYPE = "application/json".toMediaType()
+        val HTTP_SUCCESS = 200..299
         const val HTTP_UNAUTHORISED = 401
         const val HTTP_NOT_ACCEPTABLE = 406
     }

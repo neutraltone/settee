@@ -5,6 +5,7 @@
  */
 package app.opentv.data.remote
 
+import app.opentv.core.ServiceFailure
 import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.TimingsSource
 import kotlinx.serialization.json.JsonArray
@@ -20,7 +21,11 @@ import okhttp3.OkHttpClient
  *
  * Blocking, like [TmdbClient]: the caller is already off the main thread.
  */
-class TheIntroDbClient(private val http: OkHttpClient) {
+class TheIntroDbClient(
+    private val http: OkHttpClient,
+    /** Hears TheIntroDB turning down Settee's own request, for a Crash Report (ADR 0010). */
+    private val reportFailure: (ServiceFailure) -> Unit = {},
+) {
 
     /**
      * The timings of [season] episode [episode] of the show TMDB knows as [tmdbId]; null in a success
@@ -34,7 +39,7 @@ class TheIntroDbClient(private val http: OkHttpClient) {
             .addQueryParameter("season", season.toString())
             .addQueryParameter("episode", episode.toString())
             .build()
-        val answer = http.episodeJson(url, "TheIntroDB") ?: return@runCatching null
+        val answer = http.episodeJson(url, "TheIntroDB", reportFailure) ?: return@runCatching null
         // Credits timed in two parts have something between them, but TheIntroDB doesn't say what: it
         // could be a scene or a gap in the timing. Only IntroDB's post-credits marking holds the countdown.
         val credits = answer.segments("credits").firstOrNull()

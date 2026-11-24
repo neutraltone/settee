@@ -52,7 +52,9 @@ internal object CrashScrubbing {
             }
         }
         user = installId?.let { id -> User().apply { this.id = id } }
-        tags = tags(tags, screen)
+        tags = tags.orEmpty().filterKeys { it in TAGS_KEPT }.mapValues { scrub(it.value) }
+            .plus(listOfNotNull(screen?.let { SCREEN_TAG to it }))
+            .takeIf { it.isNotEmpty() }
         extras = null
         breadcrumbs = null
         request = null
@@ -153,12 +155,6 @@ internal object CrashScrubbing {
         isInApp = from.isInApp
         isNative = from.isNative
         platform = from.platform
-    }
-
-    /** The [TAGS_KEPT] of [from], scrubbed, and [screen]; null when there are none. */
-    private fun tags(from: Map<String, String>?, screen: String?): Map<String, String>? {
-        val kept = from.orEmpty().filterKeys { it in TAGS_KEPT }.mapValues { scrub(it.value) }
-        return (kept + listOfNotNull(screen?.let { SCREEN_TAG to it })).takeIf { it.isNotEmpty() }
     }
 
     /**
