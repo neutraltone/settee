@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
     <string name="error_opensubtitles_unreachable_device">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
     <string name="error_opensubtitles_trouble">Az OpenSubtitlesnél gondok vannak. Ez az ő oldalukon van, ezért próbáld később.</string>
+    <string name="error_opensubtitles_key_rejected">Az OpenSubtitles most nem fogadja el a Settee-t. A fiókoddal minden rendben: a Settee frissítésre szorul.</string>
     <string name="error_opensubtitles_limit_anonymous">Elfogyott a mai 5 ingyenes felirat. Továbbiakért jelentkezz be az OpenSubtitlesbe a Beállításokban.</string>
     <string name="error_opensubtitles_limit_account">Elfogytak a mai OpenSubtitles-letöltések. Újabbak %1$s-tól.</string>
     <string name="error_opensubtitles_limit_account_unknown">Elfogytak a mai OpenSubtitles-letöltések. Újabbak holnap.</string>

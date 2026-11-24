@@ -140,6 +140,41 @@ class OpenSubtitlesClientTest {
     }
 
     @Test
+    fun `OpenSubtitles turning down Settee's key is told apart from trouble at their end`() {
+        val keyRefused = """!403 {"message":"You cannot consume this service"}"""
+        site.replies["GET /subtitles"] = keyRefused
+        site.replies["POST /download"] = keyRefused
+        site.replies["POST /login"] = keyRefused
+
+        val searching = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null))
+        val downloading = client.download(fileId = 11, token = null)
+        val signingIn = client.signIn("viewer", "secret")
+
+        assertThat(searching.exceptionOrNull()).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+        assertThat(downloading.exceptionOrNull()).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+        assertThat(signingIn.exceptionOrNull()).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+    }
+
+    @Test
+    fun `a turned-down key is told by the message containing OpenSubtitles' words, as the release check does`() {
+        site.replies["GET /subtitles"] = """!403 {"message":"You cannot consume this service. Contact support."}"""
+
+        val failure = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null)).exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+    }
+
+    @Test
+    fun `any other 403, such as a challenge page, is still trouble at their end`() {
+        site.replies["GET /subtitles"] = "!403 <html><body>Just a moment...</body></html>"
+
+        val failure = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null)).exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OpenSubtitlesFailure.Unreachable::class.java)
+        assertThat((failure as OpenSubtitlesFailure.Unreachable).status).isEqualTo(403)
+    }
+
+    @Test
     fun `a VIP account's own address is used from sign-in on`() {
         site.replies["POST /login"] = """{"user": {}, "token": "t", "base_url": "vip-api.opensubtitles.example"}"""
 

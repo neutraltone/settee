@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles तक नहीं पहुँच पा रहे। देखें कि यह टीवी ऑनलाइन है, फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles तक नहीं पहुँच पा रहे। देखें कि यह डिवाइस ऑनलाइन है, फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles में समस्या है। यह उनकी तरफ़ से है, इसलिए बाद में कोशिश करें।</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles अभी Settee को स्वीकार नहीं कर रहा है। आपका खाता ठीक है: Settee को अपडेट की ज़रूरत है।</string>
     <string name="error_opensubtitles_limit_anonymous">आज के 5 मुफ़्त सबटाइटल इस्तेमाल हो गए। और के लिए सेटिंग में OpenSubtitles में साइन इन करें।</string>
     <string name="error_opensubtitles_limit_account">आज के OpenSubtitles डाउनलोड इस्तेमाल हो गए। और %1$s से।</string>
     <string name="error_opensubtitles_limit_account_unknown">आज के OpenSubtitles डाउनलोड इस्तेमाल हो गए। और कल।</string>

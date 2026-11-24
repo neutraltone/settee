@@ -61,6 +61,16 @@ tools/check-message.sh "feat(#12): add series rules"   # exit 0, or the rule on 
 tools/check-message-test.sh                            # run the examples
 ```
 
+## keys/check_keys.py
+
+Asks TMDB and OpenSubtitles whether the built-in keys in `TMDB_API_KEY` and
+`OPENSUBTITLES_API_KEY` still work. `release.yml` runs it before building; it fails only on a
+service's own invalid-key answer and warns on anything else. See `docs/RELEASING.md`.
+
+```sh
+python3 -m unittest discover -s tools/keys        # its tests, against canned answers
+```
+
 ## stalker_mock.py
 
 A tiny, dependency-free mock **Stalker / Ministra portal** for testing OpenTV's Stalker

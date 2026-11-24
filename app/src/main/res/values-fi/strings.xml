@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitlesiin ei saada yhteyttä. Tarkista, että tämä televisio on verkossa, ja yritä uudelleen.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitlesiin ei saada yhteyttä. Tarkista, että tämä laite on verkossa, ja yritä uudelleen.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitlesissa on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles ei hyväksy Setteetä juuri nyt. Tilisi on kunnossa: Settee tarvitsee päivityksen.</string>
     <string name="error_opensubtitles_limit_anonymous">Päivän 5 ilmaista tekstitystä on käytetty. Kirjaudu OpenSubtitlesiin asetuksissa saadaksesi lisää.</string>
     <string name="error_opensubtitles_limit_account">Päivän OpenSubtitles-lataukset on käytetty. Lisää klo %1$s alkaen.</string>
     <string name="error_opensubtitles_limit_account_unknown">Päivän OpenSubtitles-lataukset on käytetty. Lisää huomenna.</string>

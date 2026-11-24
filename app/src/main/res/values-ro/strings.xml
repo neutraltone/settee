@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nu poate fi accesat. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles nu poate fi accesat. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles are probleme. Sunt de partea lor, așa că încearcă mai târziu.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles nu acceptă Settee în acest moment. Contul tău este în regulă: Settee are nevoie de o actualizare.</string>
     <string name="error_opensubtitles_limit_anonymous">Cele 5 subtitrări gratuite de azi s-au terminat. Conectează-te la OpenSubtitles din Setări pentru mai multe.</string>
     <string name="error_opensubtitles_limit_account">Descărcările de azi de pe OpenSubtitles s-au terminat. Altele de la %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Descărcările de azi de pe OpenSubtitles s-au terminat. Altele mâine.</string>

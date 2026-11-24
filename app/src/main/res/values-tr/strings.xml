@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles\'a ulaşılamıyor. Bu televizyonun çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles\'a ulaşılamıyor. Bu cihazın çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles\'ta sorun var. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles şu anda Settee\'yi kabul etmiyor. Hesabında sorun yok: Settee\'nin güncellenmesi gerekiyor.</string>
     <string name="error_opensubtitles_limit_anonymous">Bugünkü 5 ücretsiz altyazı kullanıldı. Daha fazlası için Ayarlar\'dan OpenSubtitles\'a giriş yapın.</string>
     <string name="error_opensubtitles_limit_account">Bugünkü OpenSubtitles indirmeleri kullanıldı. Yenileri %1$s itibarıyla.</string>
     <string name="error_opensubtitles_limit_account_unknown">Bugünkü OpenSubtitles indirmeleri kullanıldı. Yenileri yarın.</string>
