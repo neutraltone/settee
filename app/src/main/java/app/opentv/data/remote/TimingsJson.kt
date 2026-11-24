@@ -5,6 +5,8 @@
  */
 package app.opentv.data.remote
 
+import app.opentv.core.ServiceFailure
+import app.opentv.core.ServiceFailure.Operation
 import java.io.IOException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -21,16 +23,30 @@ import okhttp3.Request
 
 /**
  * [url]'s JSON answer from the database called [database]; null for a 404, its way of saying it doesn't
- * have the episode. Throws when it didn't answer, or answered with a page in front of the API (a rate
- * limit, a challenge), which isn't JSON.
+ * have the episode, so never reported. Throws when it didn't answer, or answered with a page in front
+ * of the API (a rate limit, a challenge), which isn't JSON; [reportFailure] hears the failures that
+ * are Settee's own (ADR 0010).
  */
-internal fun OkHttpClient.episodeJson(url: HttpUrl, database: String): JsonObject? {
+internal fun OkHttpClient.episodeJson(
+    url: HttpUrl,
+    database: String,
+    reportFailure: (ServiceFailure) -> Unit,
+): JsonObject? {
     val request = Request.Builder().url(url).header("User-Agent", "Settee").build()
     return newCall(request).execute().use { response ->
         when {
             response.code == HTTP_NOT_FOUND -> null
-            !response.isSuccessful -> throw IOException("$database answered ${response.code}")
-            else -> Json.parseToJsonElement(response.body.string()).jsonObject
+            !response.isSuccessful -> {
+                ServiceFailure.ofStatus(Operation.TIMINGS, response.code)?.let(reportFailure)
+                throw IOException("$database answered ${response.code}")
+            }
+            else -> try {
+                Json.parseToJsonElement(response.body.string()).jsonObject
+            } catch (unreadable: IllegalArgumentException) {
+                // SerializationException is one: not JSON, or JSON that isn't an object.
+                reportFailure(ServiceFailure.unreadable(Operation.TIMINGS))
+                throw unreadable
+            }
         }
     }
 }

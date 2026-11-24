@@ -30,6 +30,11 @@ internal object CrashScrubbing {
     /** The tag naming the screen that was open. */
     const val SCREEN_TAG = "screen"
 
+    /** A service failure's tags (ADR 0010): which service, what was asked, and how it failed. */
+    const val SERVICE_TAG = "service"
+    const val OPERATION_TAG = "operation"
+    const val STATUS_TAG = "status"
+
     /** An Error Report's kind (ADR 0010): the detail line's first code. */
     const val ERROR_KIND_TAG = "error-kind"
 
@@ -39,8 +44,9 @@ internal object CrashScrubbing {
     /** The kind of Source (xtream, m3u, stalker, stremio), never which one. */
     const val SOURCE_KIND_TAG = "source-kind"
 
-    /** The tags an event may carry besides the screen, each value [scrub]bed. */
-    private val KEPT_TAGS = setOf(ERROR_KIND_TAG, ERROR_DETAIL_TAG, SOURCE_KIND_TAG)
+    /** The tags an event may carry besides [SCREEN_TAG], each value [scrub]bed. Every other tag is dropped. */
+    private val TAGS_KEPT =
+        setOf(SERVICE_TAG, OPERATION_TAG, STATUS_TAG, ERROR_KIND_TAG, ERROR_DETAIL_TAG, SOURCE_KIND_TAG)
 
     /** Breadcrumbs: none are on the list. Even a navigation one can carry a route's arguments. */
     @Suppress("FunctionOnlyReturningConstant", "UnusedParameter") // The before-breadcrumb hook's shape.
@@ -48,7 +54,6 @@ internal object CrashScrubbing {
 
     /** [event] with only the listed fields, every string in them [scrub]bed, [installId] as its only id. */
     fun event(event: SentryEvent, installId: String?, screen: String?): SentryEvent = event.apply {
-        val kept = tags.orEmpty().filterKeys { it in KEPT_TAGS }.mapValues { (_, value) -> scrub(value) }
         exceptions = exceptions?.map(::exception)
         threads = threads?.map(::thread)
         message = message?.let { from ->
@@ -57,7 +62,9 @@ internal object CrashScrubbing {
             }
         }
         user = installId?.let { id -> User().apply { this.id = id } }
-        tags = (kept + listOfNotNull(screen?.let { SCREEN_TAG to it })).takeIf { it.isNotEmpty() }
+        tags = tags.orEmpty().filterKeys { it in TAGS_KEPT }.mapValues { scrub(it.value) }
+            .plus(listOfNotNull(screen?.let { SCREEN_TAG to it }))
+            .takeIf { it.isNotEmpty() }
         extras = null
         breadcrumbs = null
         request = null

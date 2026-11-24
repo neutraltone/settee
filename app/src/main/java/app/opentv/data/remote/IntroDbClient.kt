@@ -5,6 +5,7 @@
  */
 package app.opentv.data.remote
 
+import app.opentv.core.ServiceFailure
 import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.TimingsSource
 import okhttp3.HttpUrl
@@ -19,7 +20,11 @@ import okhttp3.OkHttpClient
  *
  * Blocking, like [TmdbClient]: the caller is already off the main thread.
  */
-class IntroDbClient(private val http: OkHttpClient) {
+class IntroDbClient(
+    private val http: OkHttpClient,
+    /** Hears IntroDB turning down Settee's own request, for a Crash Report (ADR 0010). */
+    private val reportFailure: (ServiceFailure) -> Unit = {},
+) {
 
     /**
      * The timings of [season] episode [episode] of the show IMDb knows as [imdbId]; null in a success
@@ -31,7 +36,7 @@ class IntroDbClient(private val http: OkHttpClient) {
             .addQueryParameter("season", season.toString())
             .addQueryParameter("episode", episode.toString())
             .build()
-        val answer = http.episodeJson(url, "IntroDB") ?: return@runCatching null
+        val answer = http.episodeJson(url, "IntroDB", reportFailure) ?: return@runCatching null
         val intro = answer["intro"].objectOrNull()
         val recap = answer["recap"].objectOrNull()
         val outro = answer["outro"].objectOrNull()

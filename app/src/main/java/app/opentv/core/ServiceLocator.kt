@@ -54,6 +54,7 @@ import app.opentv.recording.RecordingEngine
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
+import app.opentv.update.UpdateChecker
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -193,19 +194,24 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
-                tmdbKey = tmdbKey,
+                tmdb = tmdb,
                 wording = errorWording,
                 dispatchers = dispatchers,
             ).apply { staging = appContext.cacheDir }
+        }
+
+        /** TMDB, with Settee's own key: unconfigured in a build without one, so never asked. */
+        private val tmdb: TmdbClient by lazy {
+            TmdbClient(httpClient, tmdbKey, reportFailure = reportsFailuresOf(CrashReports.Handled.TMDB))
         }
 
         /** Where episodes' intros and credits fall, for the Next Episode card (#517). */
         val episodeTimings: EpisodeTimingsRepository by lazy {
             EpisodeTimingsRepository(
                 dao = database.episodeTimings(),
-                theIntroDb = TheIntroDbClient(httpClient),
-                introDb = IntroDbClient(httpClient),
-                tmdb = TmdbClient(httpClient, tmdbKey),
+                theIntroDb = TheIntroDbClient(httpClient, reportsFailuresOf(CrashReports.Handled.INTRODB)),
+                introDb = IntroDbClient(httpClient, reportsFailuresOf(CrashReports.Handled.INTRODB)),
+                tmdb = tmdb,
                 shows = object : EpisodeTimingsRepository.Shows {
                     override suspend fun seriesOf(episode: Episode) = catalogRepository.seriesOf(episode)
 
@@ -316,7 +322,12 @@ object ServiceLocator {
                 OpenSubtitles(
                     account = OpenSubtitlesAccount(
                         settings,
-                        OpenSubtitlesClient(httpClient, key, BuildConfig.VERSION_NAME),
+                        OpenSubtitlesClient(
+                            httpClient,
+                            key,
+                            BuildConfig.VERSION_NAME,
+                            reportFailure = reportsFailuresOf(CrashReports.Handled.OPENSUBTITLES),
+                        ),
                         KeystoreSealer(),
                         clock,
                         dispatchers,
@@ -331,6 +342,20 @@ object ServiceLocator {
                 )
             }
         }
+
+        /** GitHub's latest release, for About's check and the automatic one. */
+        val updateChecker: UpdateChecker by lazy {
+            UpdateChecker(
+                httpClient,
+                BuildConfig.VERSION_NAME,
+                dispatchers = dispatchers,
+                reportFailure = reportsFailuresOf(CrashReports.Handled.UPDATE_CHECK),
+            )
+        }
+
+        /** How one of Settee's own services, [kind], reports turning down Settee's request (ADR 0010). */
+        private fun reportsFailuresOf(kind: CrashReports.Handled): (ServiceFailure) -> Unit =
+            { crashReports.report(kind, it) }
 
         /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
         val crashReports: CrashReports by lazy {

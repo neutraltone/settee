@@ -35,11 +35,16 @@ enum class ReportedSource(val tag: String) {
  * category the sentence was chosen by (a provider's problem, an exception's type, Media3's error
  * code, or an HTTP status), and the one part of a failure that's the same in every language and
  * survives being saved, as a Source's last refresh failure is.
+ *
+ * An exception only so it goes through [CrashReports.report] as a [CrashReports.Handled.VIEWER_REPORT]:
+ * its own message and stack trace are never sent, only the cause's classes and stack trace.
  */
-class ErrorReport(val detail: String, val source: ReportedSource?, val cause: Throwable? = null) {
+class ErrorReport(val detail: String, val source: ReportedSource?, cause: Throwable? = null) :
+    Exception(MESSAGE, cause) {
     val kind: String = detail.substringBefore(SEPARATOR).trim().ifBlank { UNKNOWN }
 
     companion object {
+        private const val MESSAGE = "Error Report"
         private const val SEPARATOR = " · "
         private const val UNKNOWN = "Unknown"
 

@@ -125,13 +125,15 @@ class CrashReports(
 
     private var held: HeldCrashes? = null
 
-    // The held crash being sent, by its event's id: the one event the before-send hook lets through
-    // while reports are off, and the one it gives back its own screen and free memory.
-    @Volatile private var sendingHeld: Pair<SentryId?, HeldCrash>? = null
+    // The event being sent on the viewer's say-so: the one the before-send hook lets through while
+    // reports are off, with the screen it gives back.
+    @Volatile private var sendingAsked: Asked? = null
 
-    // The Error Report being sent, by its event's id, with the screen it was sent from: let through
-    // while reports are off, as the held crash is.
-    @Volatile private var sendingReport: Pair<SentryId?, String?>? = null
+    /**
+     * A held crash the viewer said to send, given back its own screen and free memory, or an Error
+     * Report, given the [screen] it was sent from: by its event's id.
+     */
+    private class Asked(val eventId: SentryId?, val crash: HeldCrash?, val screen: String?)
 
     private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
 
@@ -164,7 +166,7 @@ class CrashReports(
     fun answer(answer: Answer) {
         _askAboutHeld.value = false
         when (answer) {
-            Answer.SEND -> held?.take()?.let(::send)
+            Answer.SEND -> held?.take()?.let { send(crash = it) }
             Answer.DONT_SEND -> if (held?.take() != null) settings.addCrashReportsRefusal()
             // Which sends the held one, as turning them on anywhere does.
             Answer.ALWAYS_SEND -> setOn(true)
@@ -198,7 +200,7 @@ class CrashReports(
             held?.stopWatching()
             if (available) {
                 startSentry()
-                held?.take()?.let(::send)
+                held?.take()?.let { send(crash = it) }
             }
         } else {
             held?.discard()
@@ -218,13 +220,14 @@ class CrashReports(
     }
 
     /**
-     * The handled errors Settee reports (ADR 0009, ADR 0010): failures Settee's own code can cause,
-     * and the one failure a viewer chose to send. Closed on purpose: a Provider's failures (HTTP
-     * errors, dead streams, web pages instead of video) and playback errors leave the device only as
-     * a [VIEWER_REPORT] the viewer pressed Send report for. [keepsMessages]: whether the error's own
-     * messages are sent (scrubbed) or only its classes and stack trace.
+     * The handled errors Settee reports (ADRs 0009 and 0010): failures Settee's own code, keys or
+     * requests can cause, and the one failure a viewer chose to send. Closed on purpose: a Provider's
+     * failures (HTTP errors, dead streams, web pages instead of video) and playback errors leave the
+     * device only as a [VIEWER_REPORT] the viewer pressed Send report for. [keepsMessages]: whether the
+     * error's own messages are sent (scrubbed) or only its classes and stack trace. [service]: for one
+     * of Settee's own services, its `service` tag; those are reported as a [ServiceFailure].
      */
-    enum class Handled(internal val keepsMessages: Boolean) {
+    enum class Handled(internal val keepsMessages: Boolean, internal val service: String? = null) {
         /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
         XTREAM_PARSE(keepsMessages = false),
 
@@ -234,8 +237,20 @@ class CrashReports(
          */
         DATABASE_MIGRATION(keepsMessages = true),
 
+        /** OpenSubtitles turning down Settee's key or request. */
+        OPENSUBTITLES(keepsMessages = false, service = "opensubtitles"),
+
+        /** TMDB turning down Settee's key or request. */
+        TMDB(keepsMessages = false, service = "tmdb"),
+
+        /** IntroDB or TheIntroDB: the stack trace tells them apart, through the client that asked. */
+        INTRODB(keepsMessages = false, service = "introdb"),
+
+        /** GitHub's latest-release API, which the update check asks. */
+        UPDATE_CHECK(keepsMessages = false, service = "update-check"),
+
         /**
-         * An Error Report: a failure on screen the viewer pressed Send report for ([sendErrorReport]).
+         * An Error Report: a failure on screen the viewer pressed Send report for, as an [ErrorReport].
          * Its exception's messages can name the Provider, so only its classes and stack trace go.
          */
         VIEWER_REPORT(keepsMessages = false),
@@ -245,45 +260,31 @@ class CrashReports(
      * Reports [error], a handled error of [kind], while Crash Reports are on, through the same
      * scrubber as a crash. Off, it's dropped, never held for the after-crash question: that's for
      * crashes the viewer saw, and a handled error was already shown as one.
-     */
-    fun report(kind: Handled, error: Throwable) {
-        if (!available || !on.value || !Sentry.isEnabled()) return
-        Sentry.captureException(HandledError.of(kind, error))
-    }
-
-    /**
-     * Sends [report], the failure the viewer pressed Send report on (ADR 0010), whether or not Crash
-     * Reports are on, without turning them on: the one event let through while they're off, as the
+     *
+     * A [Handled.VIEWER_REPORT] is the exception: an [ErrorReport] the viewer pressed Send report for
+     * (ADR 0010), sent whether or not Crash Reports are on and without turning them on, as the
      * after-crash Send is. Never in a build without a DSN, which never offers it.
      */
-    fun sendErrorReport(report: ErrorReport) {
-        if (!available) return
-        // The screen it was pressed on, not whichever is open by the time it goes.
-        val at = screen
-        background.execute {
-            val event = report.toEvent()
-            sendingReport = event.eventId to at
-            startSentry()
-            Sentry.captureEvent(event)
-            if (!on.value) {
-                Sentry.flush(FLUSH_MILLIS)
-                stopSentry(throwAwayWaiting = false)
-            }
-            sendingReport = null
+    fun report(kind: Handled, error: Throwable) {
+        if (kind == Handled.VIEWER_REPORT) {
+            // The screen it was pressed on, not whichever is open by the time it goes.
+            if (available && error is ErrorReport) send(report = error, at = screen)
+            return
         }
-    }
-
-    // Its kind and detail line as tags the scrubber lets through (scrubbing the detail), with the
-    // cause's classes and stack trace where there's a cause; a message naming the kind where there isn't.
-    private fun ErrorReport.toEvent(): SentryEvent {
-        val event = cause?.let { SentryEvent(HandledError.of(Handled.VIEWER_REPORT, it)) } ?: SentryEvent().apply {
-            message = io.sentry.protocol.Message().apply { formatted = "${Handled.VIEWER_REPORT.name}: $kind" }
+        if (!available || !on.value || !Sentry.isEnabled()) return
+        val service = kind.service
+        val failure = error as? ServiceFailure
+        if (service == null || failure == null) {
+            Sentry.captureException(HandledError.of(kind, error))
+            return
         }
-        return event.apply {
-            level = SentryLevel.ERROR
-            setTag(CrashScrubbing.ERROR_KIND_TAG, kind)
-            setTag(CrashScrubbing.ERROR_DETAIL_TAG, detail)
-            source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it.tag) }
+        // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
+        // stack that shows which client asked. The request and the reply were never in it.
+        val sent = HandledError("${kind.name} ${failure.message}", null).apply { stackTrace = failure.stackTrace }
+        Sentry.captureException(sent) { scope ->
+            scope.setTag(CrashScrubbing.SERVICE_TAG, service)
+            scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
+            scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
         }
     }
 
@@ -327,21 +328,22 @@ class CrashReports(
             // checked as each envelope's turn to go comes, so one still queued when they're turned
             // off stays behind. In place of Sentry's own gate, which waits for a connection; offline,
             // an envelope fails to go and is kept for later, as it would be anyway.
-            options.setTransportGate { on.value || sendingHeld != null || sendingReport != null }
+            options.setTransportGate { on.value || sendingAsked != null }
             options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
                 // Checked again here: a crash can land between turning reports off and Sentry closing.
                 // While off, the held crash or Error Report being sent is the only event let through:
                 // a handled error or anything else is dropped, never held, since only the crash
-                // handler and the freeze watch hold. A freeze or crash Sentry finds in Android's exit history from
-                // before reports were turned on happened while the viewer hadn't said yes.
+                // handler and the freeze watch hold. A freeze or crash Sentry finds in Android's exit
+                // history from before reports were turned on happened while the viewer hadn't said yes.
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
-                val held = sendingHeld?.takeIf { it.first == event.eventId }?.second
-                val report = sendingReport?.takeIf { it.first == event.eventId }
+                val asked = sendingAsked?.takeIf { it.eventId == event.eventId }
                 when {
-                    held != null -> CrashScrubbing.event(event, settings.crashReportsInstallId, held.at.screen)
-                        .also(held::restoreAt)
-                    report != null -> CrashScrubbing.event(event, settings.crashReportsInstallId, report.second)
+                    asked != null -> {
+                        val crash = asked.crash
+                        CrashScrubbing.event(event, settings.crashReportsInstallId, crash?.at?.screen ?: asked.screen)
+                            .also { crash?.restoreAt(it) }
+                    }
                     !on.value || fromBefore -> null
                     else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
                 }
@@ -351,10 +353,11 @@ class CrashReports(
         started = true
     }
 
-    // Off the main thread: starting Sentry and waiting for the report to go both take a while.
-    private fun send(crash: HeldCrash) = background.execute {
-        val event = crash.toEvent()
-        sendingHeld = event.eventId to crash
+    // Off the main thread: starting Sentry and waiting for the report to go both take a while. A held
+    // [crash], or an Error Report sent from the screen [at].
+    private fun send(crash: HeldCrash? = null, report: ErrorReport? = null, at: String? = null) = background.execute {
+        val event = crash?.toEvent() ?: report?.let(::eventOf) ?: return@execute
+        sendingAsked = Asked(event.eventId, crash, at)
         startSentry()
         Sentry.captureEvent(event)
         if (!on.value) {
@@ -363,7 +366,7 @@ class CrashReports(
             Sentry.flush(FLUSH_MILLIS)
             stopSentry(throwAwayWaiting = false)
         }
-        sendingHeld = null
+        sendingAsked = null
     }
 
     @Synchronized
@@ -428,6 +431,24 @@ class CrashReports(
         override fun close(isRestarting: Boolean) = Unit
 
         override fun close() = Unit
+    }
+}
+
+/**
+ * An Error Report as it goes: its kind and detail line as tags the scrubber lets through (scrubbing
+ * the detail), with the cause's classes and stack trace where there's a cause, and a message naming
+ * the kind where there isn't.
+ */
+private fun eventOf(report: ErrorReport): SentryEvent {
+    val kind = CrashReports.Handled.VIEWER_REPORT
+    val event = report.cause?.let { SentryEvent(CrashReports.HandledError.of(kind, it)) } ?: SentryEvent().apply {
+        message = io.sentry.protocol.Message().apply { formatted = "${kind.name}: ${report.kind}" }
+    }
+    return event.apply {
+        level = SentryLevel.ERROR
+        setTag(CrashScrubbing.ERROR_KIND_TAG, report.kind)
+        setTag(CrashScrubbing.ERROR_DETAIL_TAG, report.detail)
+        report.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it.tag) }
     }
 }
 

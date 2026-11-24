@@ -8,6 +8,7 @@ package app.opentv.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import app.opentv.core.CrashReports
 import app.opentv.core.ErrorReport
 import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
@@ -26,7 +27,7 @@ fun sendReportFor(error: ViewerError?, source: ReportedSource?): (() -> Unit)? {
     val crashReports = ServiceLocator.get(LocalContext.current).crashReports
     return remember(error, source, crashReports) {
         error?.takeIf { crashReports.available && ErrorReport.offeredFor(it) }?.let { shown ->
-            { crashReports.sendErrorReport(ErrorReport(shown.detail, source)) }
+            { crashReports.report(CrashReports.Handled.VIEWER_REPORT, ErrorReport(shown.detail, source)) }
         }
     }
 }

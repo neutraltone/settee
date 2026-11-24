@@ -185,6 +185,10 @@ class HandledErrorReportsTest {
         assertThat(CrashReports.Handled.entries).containsExactly(
             CrashReports.Handled.XTREAM_PARSE,
             CrashReports.Handled.DATABASE_MIGRATION,
+            CrashReports.Handled.OPENSUBTITLES,
+            CrashReports.Handled.TMDB,
+            CrashReports.Handled.INTRODB,
+            CrashReports.Handled.UPDATE_CHECK,
             CrashReports.Handled.VIEWER_REPORT,
         )
     }

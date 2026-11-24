@@ -6,11 +6,14 @@
 package app.opentv.data.remote
 
 import android.util.Log
+import app.opentv.core.ServiceFailure
+import app.opentv.core.ServiceFailure.Operation
 import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.parseReleaseDate
 import java.io.IOException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
@@ -71,6 +74,8 @@ class TmdbClient(
         ignoreUnknownKeys = true
         isLenient = true
     },
+    /** Hears TMDB turning down Settee's own request, for a Crash Report (ADR 0010). */
+    private val reportFailure: (ServiceFailure) -> Unit = {},
 ) {
 
     private val credential: Credential? = Credential.of(apiKey)
@@ -210,13 +215,28 @@ class TmdbClient(
         .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
         .getOrNull()
 
-    /** The answer to [url]; null for a 404, which is TMDB saying there's nothing. Throws if TMDB didn't answer. */
+    /**
+     * The answer to [url]; null for a 404, which is TMDB saying there's nothing, so never reported.
+     * Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a refused key, a
+     * reply it couldn't read).
+     */
     private fun fetch(url: HttpUrl, key: Credential): JsonElement? =
         http.newCall(authorised(url, key)).execute().use { response ->
+            val operation = if ("search" in url.pathSegments) Operation.SEARCH else Operation.DETAILS
             when {
                 response.code == HTTP_NOT_FOUND -> null
-                !response.isSuccessful -> throw IOException("TMDB answered ${response.code}")
-                else -> json.parseToJsonElement(response.body.string())
+                !response.isSuccessful -> {
+                    ServiceFailure.ofStatus(operation, response.code)?.let(reportFailure)
+                    throw IOException("TMDB answered ${response.code}")
+                }
+                // Every endpoint Settee asks answers an object. Lenient parsing reads a page as a bare
+                // string, so a page in front of the API is caught here, not by the parser.
+                else -> response.body.string()
+                    .let { body -> runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject }
+                    ?: run {
+                        reportFailure(ServiceFailure.unreadable(operation))
+                        throw IOException("TMDB's reply couldn't be read")
+                    }
             }
         }
 
