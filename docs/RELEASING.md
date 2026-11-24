@@ -153,15 +153,17 @@ Release again for that tag once the token is set should upload a matching one (i
 the APKs). To check it worked, look for the release's ProGuard file under the Sentry project's Debug
 Files.
 
-After the APKs are published, Release also tells Sentry which commits went into the release and
-records a `production` deploy (#622), under the same name its crash reports carry (`appVersionName`,
-the tag without its `v`). Sentry then shows a new crash's suspect commits, can resolve an issue in
-the next release, and marks one that comes back later as a regression. It works out the commits since
-the previous release through Sentry's GitHub integration, which needs, once: Sentry → Settings →
-Integrations → GitHub, installed on `neutraltone/settee` with that repository added. It uses the same
-token and variables as the mapping upload, is skipped without the token, and never fails a release:
-if Sentry is down, the release still ships and its commits are simply missing there. To check it
-worked, the release in Sentry (Releases → the version) lists its commits.
+After the APKs are published, a second job in Release tells Sentry which commits went into the
+release and, when release-please ran it, records a `production` deploy (#622; a tag rebuilt by hand
+gets no deploy, so it can't pose as the newest). It uses the same name the release's crash reports
+carry (`appVersionName`, the tag without its `v`). Sentry then shows a new crash's suspect commits,
+can resolve an issue in the next release, and marks one that comes back later as a regression. It
+works out the commits since the previous release through Sentry's GitHub integration, which needs,
+once: Sentry → Settings → Integrations → GitHub, installed on `neutraltone/settee` with that
+repository added. It uses the same token and variables as the mapping upload, is skipped without the
+token, and runs in its own job so it never fails a release: if Sentry is down, the APKs are already
+out and its commits are simply missing there. To check it worked, the release in Sentry (Releases →
+the version) lists its commits.
 
 ## When an update can't open the database
 
