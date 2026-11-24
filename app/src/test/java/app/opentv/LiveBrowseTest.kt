@@ -428,12 +428,42 @@ class LiveBrowseTest {
         onTomorrowsLastProgramme()
 
         press(Key.DirectionRight)
+
+        assertOnTheDayAftersFirstProgramme()
+        captureScreen("live_next_day")
+    }
+
+    @Test
+    fun `two quick Rights past a row's last programme move one day, the channel highlighted while it loads`() {
+        onTomorrowsLastProgramme()
+
+        // Both straight into the window, with nothing composed in between.
+        compose.runOnIdle { repeat(2) { view.pressRight() } }
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeByFrame()
+        channelCell("Channel One").assertIsFocused()
+        captureScreen("guide_next_day_loading")
+        compose.mainClock.autoAdvance = true
+
+        assertOnTheDayAftersFirstProgramme()
+    }
+
+    @Test
+    fun `holding Right stops at the day's end, so a repeat past the new day's last programme stays put`() {
+        onTomorrowsLastProgramme()
+        press(Key.DirectionRight)
+        assertOnTheDayAftersFirstProgramme()
+
+        compose.runOnIdle { view.pressRight(repeatCount = 1) }
+
+        assertOnTheDayAftersFirstProgramme()
+    }
+
+    private fun assertOnTheDayAftersFirstProgramme() {
         compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
-
         programmeCell("Day after on 1").assertIsFocused()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(2)
-        captureScreen("live_next_day")
     }
 
     @Test
@@ -771,4 +801,11 @@ class LiveBrowseTest {
         /** GuidePreview's SYNOPSIS_SETTLE_MILLIS, which the band waits before reading a synopsis. */
         const val BAND_SETTLE_MILLIS = 200L
     }
+}
+
+/** Right on the remote, through the window; a [repeatCount] above 0 is it held, and sends no key up. */
+private fun View.pressRight(repeatCount: Int = 0) {
+    val at = android.os.SystemClock.uptimeMillis()
+    dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount))
+    if (repeatCount == 0) dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
 }

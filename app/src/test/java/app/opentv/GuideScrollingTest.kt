@@ -184,6 +184,36 @@ class GuideScrollingTest {
     }
 
     @Test
+    fun `Right past a last programme ending at midnight holds the Highlight on the channel until the next day comes`() {
+        var day by mutableIntStateOf(0)
+        var rowsDay by mutableIntStateOf(0)
+        var landOnRow by mutableStateOf<Any?>(null)
+        compose.setTvContent {
+            GuideGrid(
+                // The day's rows come after its window, as they do from the guide's index.
+                rows = listOf(row(1, halfHours("D$rowsDay", rowsDay * DAY_MS))),
+                windowStartMillis = day * DAY_MS,
+                onWatch = {},
+                dayOffset = day,
+                onNextDay = { row ->
+                    day += 1
+                    landOnRow = row.key
+                },
+                landOnRow = landOnRow,
+                onLanded = { landOnRow = null },
+            )
+        }
+        compose.onNode(programme("D0 47")).requestFocus()
+
+        press(Key.DirectionRight)
+
+        compose.onNode(hasText("Channel 1") and hasClickAction()).assertIsFocused()
+        rowsDay = 1
+        compose.onNode(programme("D1 0")).assertIsFocused()
+        assertThat(day).isEqualTo(1)
+    }
+
+    @Test
     fun `Down from a programme hours along the day lands on the next row's programme at that time`() {
         val rows = listOf(row(1, halfHours("A", 0)), row(2, halfHours("B", 0)))
         compose.setTvContent { GuideGrid(rows = rows, windowStartMillis = 0, onWatch = {}, dayOffset = 1) }
