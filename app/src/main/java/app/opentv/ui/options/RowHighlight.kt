@@ -27,9 +27,10 @@ import androidx.compose.ui.focus.onFocusChanged
  * long way from where the viewer was. Each row wears [modifier] (or [groupModifier]), ahead of what
  * makes it focusable; a row drawn outside the list wears [outside].
  *
- * The highlight goes to the first row that followed the one that left and is still listed, else the
- * nearest one before it: by key rather than by place, as other rows can leave with it (a series
- * link's bookings), and counting places would then skip past the row that moved into the gap.
+ * The highlight goes to the first row that followed the one that left and is still listed, else a new
+ * row now in its place, else the nearest one before it: by key rather than by place, as other rows
+ * can leave with it (a series link's bookings), and counting places would then skip past the row
+ * that moved into the gap.
  */
 internal class RowHighlight(
     private val listState: LazyListState,
@@ -120,8 +121,13 @@ internal class RowHighlight(
         val byKey = if (at < 0) {
             emptySequence()
         } else {
-            before.asSequence().drop(at + 1) + (at - 1 downTo 0).asSequence().map(before::get)
-        }.filter { it in indexOf }
+            // A new row now standing where it stood (a fresh Home row swapping a title, #595) moved into
+            // the gap as much as a following one did, so it comes before the rows above.
+            val newInPlace = rows.getOrNull(index)?.takeIf { it !in before }
+            before.asSequence().drop(at + 1).filter { it in indexOf } +
+                listOfNotNull(newInPlace) +
+                (at - 1 downTo 0).asSequence().map(before::get).filter { it in indexOf }
+        }
         // None of its neighbours left (the rows were all replaced): the row now in its place, then
         // those below it, which moved up into the gap, then those above.
         val target = index.coerceIn(0, rows.lastIndex)
