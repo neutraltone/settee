@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Preimenuj profil</string>
     <string name="profiles_title">Tko gleda?</string>
     <string name="recset_save_to">Spremi snimke na</string>
-    <string name="recset_usb_no_picker">Na ovom uređaju nije dostupan alat za odabir mape.</string>
+    <string name="recset_usb_no_picker_tv">Ovaj TV ne može odabrati mapu na USB disku. Umjesto toga snimajte na ovaj TV ili na svoj NAS.</string>
+    <string name="recset_usb_no_picker_device">Ovaj uređaj ne može odabrati mapu na USB disku. Umjesto toga snimajte na ovaj uređaj ili na svoj NAS.</string>
+    <string name="recset_usb_not_kept">Pristup toj mapi nije moguće zadržati. Odaberite je ponovno ili odaberite drugu mapu na USB disku.</string>
     <string name="recset_field_username">Korisničko ime</string>
     <string name="recset_field_password">Lozinka</string>
     <string name="recset_status_testing">Testiranje…</string>

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Перейменувати профіль</string>
     <string name="profiles_title">Хто дивиться?</string>
     <string name="recset_save_to">Зберігати записи в</string>
-    <string name="recset_usb_no_picker">На цьому пристрої недоступний вибір папки.</string>
+    <string name="recset_usb_no_picker_tv">Цей телевізор не може вибрати папку на USB-накопичувачі. Записуйте натомість на цей телевізор або на свій NAS.</string>
+    <string name="recset_usb_no_picker_device">Цей пристрій не може вибрати папку на USB-накопичувачі. Записуйте натомість на цей пристрій або на свій NAS.</string>
+    <string name="recset_usb_not_kept">Не вдалося зберегти доступ до цієї папки. Виберіть її знову або виберіть іншу папку на USB-накопичувачі.</string>
     <string name="recset_field_username">Ім\'я користувача</string>
     <string name="recset_field_password">Пароль</string>
     <string name="recset_status_testing">Перевірка…</string>

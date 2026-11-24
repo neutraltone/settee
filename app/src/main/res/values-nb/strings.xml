@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Gi profilen nytt navn</string>
     <string name="profiles_title">Hvem ser på?</string>
     <string name="recset_save_to">Lagre opptak til</string>
-    <string name="recset_usb_no_picker">Ingen mappevelger er tilgjengelig på denne enheten.</string>
+    <string name="recset_usb_no_picker_tv">Denne TV-en kan ikke velge en mappe på en USB-stasjon. Ta opp til denne TV-en eller NAS-en din i stedet.</string>
+    <string name="recset_usb_no_picker_device">Denne enheten kan ikke velge en mappe på en USB-stasjon. Ta opp til denne enheten eller NAS-en din i stedet.</string>
+    <string name="recset_usb_not_kept">Fikk ikke beholde tilgangen til den mappen. Velg den igjen, eller velg en annen mappe på USB-stasjonen din.</string>
     <string name="recset_field_username">Brukernavn</string>
     <string name="recset_field_password">Passord</string>
     <string name="recset_status_testing">Tester…</string>

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Mudar nome do perfil</string>
     <string name="profiles_title">Quem está a ver?</string>
     <string name="recset_save_to">Guardar gravações em</string>
-    <string name="recset_usb_no_picker">Não existe seletor de pastas disponível neste dispositivo.</string>
+    <string name="recset_usb_no_picker_tv">Esta televisão não consegue escolher uma pasta numa unidade USB. Grave antes nesta televisão ou no seu NAS.</string>
+    <string name="recset_usb_no_picker_device">Este dispositivo não consegue escolher uma pasta numa unidade USB. Grave antes neste dispositivo ou no seu NAS.</string>
+    <string name="recset_usb_not_kept">Não foi possível manter o acesso a essa pasta. Escolha-a novamente ou escolha outra pasta na sua unidade USB.</string>
     <string name="recset_field_username">Nome de utilizador</string>
     <string name="recset_field_password">Palavra-passe</string>
     <string name="recset_status_testing">A testar…</string>

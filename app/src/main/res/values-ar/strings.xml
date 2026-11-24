@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">إعادة تسمية الملف الشخصي</string>
     <string name="profiles_title">من يشاهد؟</string>
     <string name="recset_save_to">حفظ التسجيلات في</string>
-    <string name="recset_usb_no_picker">أداة اختيار المجلد غير متاحة على هذا الجهاز.</string>
+    <string name="recset_usb_no_picker_tv">لا يمكن لهذا التلفاز اختيار مجلد على محرك USB. سجّل على هذا التلفاز أو على وحدة NAS بدلاً من ذلك.</string>
+    <string name="recset_usb_no_picker_device">لا يمكن لهذا الجهاز اختيار مجلد على محرك USB. سجّل على هذا الجهاز أو على وحدة NAS بدلاً من ذلك.</string>
+    <string name="recset_usb_not_kept">تعذر الاحتفاظ بإمكانية الوصول إلى ذلك المجلد. اختره مرة أخرى، أو اختر مجلداً آخر على محرك USB.</string>
     <string name="recset_field_username">اسم المستخدم</string>
     <string name="recset_field_password">كلمة المرور</string>
     <string name="recset_status_testing">جارٍ الاختبار…</string>

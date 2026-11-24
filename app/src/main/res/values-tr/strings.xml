@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profili yeniden adlandır</string>
     <string name="profiles_title">Kim izliyor?</string>
     <string name="recset_save_to">Kayıtları şuraya kaydet</string>
-    <string name="recset_usb_no_picker">Bu cihazda klasör seçici kullanılamıyor.</string>
+    <string name="recset_usb_no_picker_tv">Bu TV, USB sürücüde klasör seçemiyor. Bunun yerine bu TV\'ye veya NAS\'ınıza kaydedin.</string>
+    <string name="recset_usb_no_picker_device">Bu cihaz, USB sürücüde klasör seçemiyor. Bunun yerine bu cihaza veya NAS\'ınıza kaydedin.</string>
+    <string name="recset_usb_not_kept">Bu klasöre erişim korunamadı. Klasörü yeniden seçin veya USB sürücünüzde başka bir klasör seçin.</string>
     <string name="recset_field_username">Kullanıcı adı</string>
     <string name="recset_field_password">Parola</string>
     <string name="recset_status_testing">Test ediliyor…</string>

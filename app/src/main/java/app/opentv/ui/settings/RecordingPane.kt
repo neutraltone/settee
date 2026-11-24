@@ -32,7 +32,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.AppSettings.RecordingTarget
+import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.core.batteryOptimizationRequests
 import app.opentv.core.isIgnoringBatteryOptimizations
 import app.opentv.core.requestIgnoreBatteryOptimizations
@@ -59,29 +61,48 @@ internal fun RecordingPane() {
     val usbLabel by settings.usbFolderLabel.collectAsState()
     var choosing by remember { mutableStateOf<RecordingChoice?>(null) }
 
+    val wording = remember { ServiceLocator.get(context).errorWording }
+    // Why the last try at a USB folder came to nothing, kept as a row's note rather than a toast, so
+    // it's still there to read once the panel has closed. Choosing any target clears it.
+    var usbProblem by remember { mutableStateOf<ViewerError?>(null) }
+
     // The system's folder picker. On a granted folder, a persistable permission keeps the grant (and
-    // playback of what's recorded there) across restarts.
+    // playback of what's recorded there) across restarts. Without it every recording would fail with
+    // "Can't find your USB drive", so a folder that can't be kept isn't switched to.
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
         if (uri != null) {
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
-            val label = DocumentFile.fromTreeUri(context, uri)?.name
-                ?: uri.lastPathSegment ?: resources.getString(R.string.settings_rec_usb)
-            settings.setUsbTree(uri.toString(), label)
-            settings.setRecordingTarget(RecordingTarget.USB)
+                .onFailure { usbProblem = wording.of(it, R.string.recset_usb_not_kept) }
+                .onSuccess {
+                    usbProblem = null
+                    val label = DocumentFile.fromTreeUri(context, uri)?.name
+                        ?: uri.lastPathSegment ?: resources.getString(R.string.settings_rec_usb)
+                    settings.setUsbTree(uri.toString(), label)
+                    settings.setRecordingTarget(RecordingTarget.USB)
+                }
         }
     }
+    // A Fire TV Stick has no folder picker at all (#486).
     val pickFolder = {
         runCatching { folderPicker.launch(null) }.onFailure {
-            Toast.makeText(context, resources.getString(R.string.recset_usb_no_picker), Toast.LENGTH_LONG).show()
+            usbProblem = wording.ofHardware(
+                R.string.recset_usb_no_picker_tv,
+                R.string.recset_usb_no_picker_device,
+                ErrorWording.codeOf(it),
+            )
         }
     }
 
+    // The problem goes on the row the Highlight comes back to: Save recordings to, unless USB is
+    // already the target and its folder row is where the viewer chose.
+    val targetProblem = usbProblem.takeIf { target != RecordingTarget.USB }
     ListRow(
         stringResource(R.string.recset_save_to),
         onClick = { choosing = RecordingChoice.Target },
         value = stringResource(target.label),
-        note = if (target == RecordingTarget.INTERNAL) storageNote() else null,
+        note = targetProblem?.sentence ?: if (target == RecordingTarget.INTERNAL) storageNote() else null,
+        detail = targetProblem?.detail,
     )
     when (target) {
         RecordingTarget.SMB -> NasRows(settings)
@@ -89,6 +110,8 @@ internal fun RecordingPane() {
             stringResource(R.string.settings_rec_usb_folder),
             onClick = { pickFolder() },
             value = usbLabel?.takeIf { usbTree != null } ?: stringResource(R.string.settings_row_not_set),
+            note = usbProblem?.sentence,
+            detail = usbProblem?.detail,
         )
         RecordingTarget.INTERNAL -> Unit
     }
@@ -102,8 +125,10 @@ internal fun RecordingPane() {
             // USB only counts once a folder is granted, so recordings are never left with nowhere
             // to go.
             onChooseUsb = {
+                usbProblem = null
                 if (usbTree == null) pickFolder() else settings.setRecordingTarget(RecordingTarget.USB)
             },
+            onChooseOther = { usbProblem = null },
             close = { choosing = null },
         )
     }
@@ -235,6 +260,7 @@ private fun RecordingChoicePanel(
     choice: RecordingChoice,
     settings: AppSettings,
     onChooseUsb: () -> Unit,
+    onChooseOther: () -> Unit,
     close: () -> Unit,
 ) {
     val resources = LocalResources.current
@@ -247,7 +273,12 @@ private fun RecordingChoicePanel(
             RecordingChoice.Target -> RecordingTarget.entries.forEach { option ->
                 PanelRow(stringResource(option.label), ticked = option == target, onClick = {
                     close()
-                    if (option == RecordingTarget.USB) onChooseUsb() else settings.setRecordingTarget(option)
+                    if (option == RecordingTarget.USB) {
+                        onChooseUsb()
+                    } else {
+                        onChooseOther()
+                        settings.setRecordingTarget(option)
+                    }
                 })
             }
             RecordingChoice.Start -> MinuteChoices(START_MINUTES, padStart, minutes) {

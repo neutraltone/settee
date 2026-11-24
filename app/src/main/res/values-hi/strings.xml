@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">प्रोफ़ाइल का नाम बदलें</string>
     <string name="profiles_title">कौन देख रहा है?</string>
     <string name="recset_save_to">रिकॉर्डिंग्स सेव करें यहां</string>
-    <string name="recset_usb_no_picker">इस डिवाइस पर कोई फ़ोल्डर पिकर उपलब्ध नहीं है।</string>
+    <string name="recset_usb_no_picker_tv">यह टीवी USB ड्राइव पर फ़ोल्डर नहीं चुन सकता। इसके बजाय इसी टीवी या अपने NAS पर रिकॉर्ड करें।</string>
+    <string name="recset_usb_no_picker_device">यह डिवाइस USB ड्राइव पर फ़ोल्डर नहीं चुन सकता। इसके बजाय इसी डिवाइस या अपने NAS पर रिकॉर्ड करें।</string>
+    <string name="recset_usb_not_kept">उस फ़ोल्डर की पहुंच बनाए नहीं रखी जा सकी। उसे फिर से चुनें, या अपनी USB ड्राइव पर कोई दूसरा फ़ोल्डर चुनें।</string>
     <string name="recset_field_username">यूज़रनेम</string>
     <string name="recset_field_password">पासवर्ड</string>
     <string name="recset_status_testing">टेस्ट हो रहा है…</string>

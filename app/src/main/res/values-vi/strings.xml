@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Đổi tên hồ sơ</string>
     <string name="profiles_title">Ai đang xem?</string>
     <string name="recset_save_to">Lưu bản ghi vào</string>
-    <string name="recset_usb_no_picker">Không có trình chọn thư mục nào khả dụng trên thiết bị này.</string>
+    <string name="recset_usb_no_picker_tv">TV này không thể chọn thư mục trên ổ USB. Hãy ghi hình vào TV này hoặc NAS của bạn.</string>
+    <string name="recset_usb_no_picker_device">Thiết bị này không thể chọn thư mục trên ổ USB. Hãy ghi hình vào thiết bị này hoặc NAS của bạn.</string>
+    <string name="recset_usb_not_kept">Không thể giữ quyền truy cập vào thư mục đó. Hãy chọn lại, hoặc chọn thư mục khác trên ổ USB của bạn.</string>
     <string name="recset_field_username">Tên đăng nhập</string>
     <string name="recset_field_password">Mật khẩu</string>
     <string name="recset_status_testing">Đang kiểm tra…</string>

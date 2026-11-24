@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Nimeä profiili uudelleen</string>
     <string name="profiles_title">Kuka katsoo?</string>
     <string name="recset_save_to">Tallenna tallenteet kohteeseen</string>
-    <string name="recset_usb_no_picker">Kansion valitsin ei ole käytettävissä tällä laitteella.</string>
+    <string name="recset_usb_no_picker_tv">Tämä televisio ei voi valita kansiota USB-asemalta. Tallenna sen sijaan tähän televisioon tai NAS-laitteeseesi.</string>
+    <string name="recset_usb_no_picker_device">Tämä laite ei voi valita kansiota USB-asemalta. Tallenna sen sijaan tähän laitteeseen tai NAS-laitteeseesi.</string>
+    <string name="recset_usb_not_kept">Kansion käyttöoikeutta ei voitu säilyttää. Valitse se uudelleen tai valitse toinen kansio USB-asemaltasi.</string>
     <string name="recset_field_username">Käyttäjätunnus</string>
     <string name="recset_field_password">Salasana</string>
     <string name="recset_status_testing">Testataan…</string>

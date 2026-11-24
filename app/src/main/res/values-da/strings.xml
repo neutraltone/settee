@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Omdøb profil</string>
     <string name="profiles_title">Hvem ser med?</string>
     <string name="recset_save_to">Gem optagelser til</string>
-    <string name="recset_usb_no_picker">Der er ingen mappevælger tilgængelig på denne enhed.</string>
+    <string name="recset_usb_no_picker_tv">Dette tv kan ikke vælge en mappe på et USB-drev. Optag til dette tv eller dit NAS i stedet.</string>
+    <string name="recset_usb_no_picker_device">Denne enhed kan ikke vælge en mappe på et USB-drev. Optag til denne enhed eller dit NAS i stedet.</string>
+    <string name="recset_usb_not_kept">Kunne ikke beholde adgangen til den mappe. Vælg den igen, eller vælg en anden mappe på dit USB-drev.</string>
     <string name="recset_field_username">Brugernavn</string>
     <string name="recset_field_password">Adgangskode</string>
     <string name="recset_status_testing">Tester…</string>

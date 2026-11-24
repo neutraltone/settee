@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profiel hernoemen</string>
     <string name="profiles_title">Wie kijkt er?</string>
     <string name="recset_save_to">Opnames opslaan op</string>
-    <string name="recset_usb_no_picker">Er is geen mapkiezer beschikbaar op dit apparaat.</string>
+    <string name="recset_usb_no_picker_tv">Deze tv kan geen map op een USB-drive kiezen. Neem in plaats daarvan op naar deze tv of je NAS.</string>
+    <string name="recset_usb_no_picker_device">Dit apparaat kan geen map op een USB-drive kiezen. Neem in plaats daarvan op naar dit apparaat of je NAS.</string>
+    <string name="recset_usb_not_kept">Kon de toegang tot die map niet behouden. Kies hem opnieuw, of kies een andere map op je USB-drive.</string>
     <string name="recset_field_username">Gebruikersnaam</string>
     <string name="recset_field_password">Wachtwoord</string>
     <string name="recset_status_testing">Testen…</string>

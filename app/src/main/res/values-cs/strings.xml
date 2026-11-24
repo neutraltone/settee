@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Přejmenovat profil</string>
     <string name="profiles_title">Kdo se dívá?</string>
     <string name="recset_save_to">Ukládat nahrávky na</string>
-    <string name="recset_usb_no_picker">V tomto zařízení není k dispozici žádný výběr složek.</string>
+    <string name="recset_usb_no_picker_tv">Tato televize neumí vybrat složku na USB disku. Nahrávejte místo toho do této televize nebo na svůj NAS.</string>
+    <string name="recset_usb_no_picker_device">Toto zařízení neumí vybrat složku na USB disku. Nahrávejte místo toho do tohoto zařízení nebo na svůj NAS.</string>
+    <string name="recset_usb_not_kept">Přístup k této složce se nepodařilo zachovat. Vyberte ji znovu, nebo vyberte jinou složku na USB disku.</string>
     <string name="recset_field_username">Uživatelské jméno</string>
     <string name="recset_field_password">Heslo</string>
     <string name="recset_status_testing">Testování…</string>

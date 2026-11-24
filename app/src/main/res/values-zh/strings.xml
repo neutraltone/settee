@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">重命名个人资料</string>
     <string name="profiles_title">谁在看？</string>
     <string name="recset_save_to">录制内容保存到</string>
-    <string name="recset_usb_no_picker">本设备不支持文件夹选择器。</string>
+    <string name="recset_usb_no_picker_tv">这台电视无法选择 USB 存储设备上的文件夹。请改为录制到这台电视或你的 NAS。</string>
+    <string name="recset_usb_no_picker_device">本设备无法选择 USB 存储设备上的文件夹。请改为录制到本设备或你的 NAS。</string>
+    <string name="recset_usb_not_kept">无法保留对该文件夹的访问权限。请重新选择，或选择 USB 存储设备上的其他文件夹。</string>
     <string name="recset_field_username">用户名</string>
     <string name="recset_field_password">密码</string>
     <string name="recset_status_testing">测试中…</string>

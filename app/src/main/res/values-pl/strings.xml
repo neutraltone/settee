@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Zmień nazwę profilu</string>
     <string name="profiles_title">Kto ogląda?</string>
     <string name="recset_save_to">Zapisuj nagrania w</string>
-    <string name="recset_usb_no_picker">Na tym urządzeniu nie jest dostępny wybór folderu.</string>
+    <string name="recset_usb_no_picker_tv">Ten telewizor nie może wybrać folderu na dysku USB. Zamiast tego nagrywaj na tym telewizorze lub na swoim NAS.</string>
+    <string name="recset_usb_no_picker_device">To urządzenie nie może wybrać folderu na dysku USB. Zamiast tego nagrywaj na tym urządzeniu lub na swoim NAS.</string>
+    <string name="recset_usb_not_kept">Nie udało się zachować dostępu do tego folderu. Wybierz go ponownie lub wybierz inny folder na dysku USB.</string>
     <string name="recset_field_username">Nazwa użytkownika</string>
     <string name="recset_field_password">Hasło</string>
     <string name="recset_status_testing">Testowanie…</string>
