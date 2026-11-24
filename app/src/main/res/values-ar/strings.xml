@@ -337,10 +337,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">لا يمكن لهذا التلفزيون تشغيل %1$s</string>
     <string name="vod_cant_play_device">لا يمكن لهذا الجهاز تشغيل %1$s</string>
+    <string name="player_no_sound_tv">لا يستطيع هذا التلفاز تشغيل تنسيق الصوت هذا (%1$s). إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعداداته.</string>
+    <string name="player_no_sound_device">لا يستطيع هذا الجهاز تشغيل تنسيق الصوت هذا (%1$s). إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعدادات هذا الجهاز.</string>
     <string name="player_stepped_down_tv">لا يمكن لهذا التلفزيون تشغيل %1$s. يتم تشغيل %2$s بدلاً منها.</string>
     <string name="player_stepped_down_device">لا يمكن لهذا الجهاز تشغيل %1$s. يتم تشغيل %2$s بدلاً منها.</string>
     <string name="player_stepped_down_lower_tv">لا يمكن لهذا التلفزيون تشغيل %1$s. يتم تشغيل جودة أقل بدلاً منها.</string>
     <string name="player_stepped_down_lower_device">لا يمكن لهذا الجهاز تشغيل %1$s. يتم تشغيل جودة أقل بدلاً منها.</string>
+    <string name="player_stepped_down_for_sound_tv">لا يستطيع هذا التلفاز تشغيل تنسيق الصوت هذا (%1$s). يتم تشغيل نسخة أخرى بدلاً منها. إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعداداته.</string>
+    <string name="player_stepped_down_for_sound_device">لا يستطيع هذا الجهاز تشغيل تنسيق الصوت هذا (%1$s). يتم تشغيل نسخة أخرى بدلاً منها. إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعدادات هذا الجهاز.</string>
     <string name="player_stepped_down_unnamed_tv">لا يمكن لهذا التلفزيون تشغيل هذه الجودة. يتم تشغيل جودة أخرى بدلاً منها.</string>
     <string name="player_stepped_down_unnamed_device">لا يمكن لهذا الجهاز تشغيل هذه الجودة. يتم تشغيل جودة أخرى بدلاً منها.</string>
     <string name="vod_language_title">متوفر هنا بـ%1$s فقط</string>

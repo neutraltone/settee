@@ -334,10 +334,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Esta tele no puede reproducir %1$s</string>
     <string name="vod_cant_play_device">Este dispositivo no puede reproducir %1$s</string>
+    <string name="player_no_sound_tv">Este televisor no puede reproducir este formato de audio (%1$s). Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en sus ajustes puede ayudar.</string>
+    <string name="player_no_sound_device">Este dispositivo no puede reproducir este formato de audio (%1$s). Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en los ajustes de este dispositivo puede ayudar.</string>
     <string name="player_stepped_down_tv">Este televisor no puede reproducir %1$s. Se reproduce %2$s en su lugar.</string>
     <string name="player_stepped_down_device">Este dispositivo no puede reproducir %1$s. Se reproduce %2$s en su lugar.</string>
     <string name="player_stepped_down_lower_tv">Este televisor no puede reproducir %1$s. Se reproduce una calidad inferior en su lugar.</string>
     <string name="player_stepped_down_lower_device">Este dispositivo no puede reproducir %1$s. Se reproduce una calidad inferior en su lugar.</string>
+    <string name="player_stepped_down_for_sound_tv">Este televisor no puede reproducir este formato de audio (%1$s). Se reproduce otra versión en su lugar. Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en sus ajustes puede ayudar.</string>
+    <string name="player_stepped_down_for_sound_device">Este dispositivo no puede reproducir este formato de audio (%1$s). Se reproduce otra versión en su lugar. Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en los ajustes de este dispositivo puede ayudar.</string>
     <string name="player_stepped_down_unnamed_tv">Este televisor no puede reproducir esa calidad. Se reproduce otra en su lugar.</string>
     <string name="player_stepped_down_unnamed_device">Este dispositivo no puede reproducir esa calidad. Se reproduce otra en su lugar.</string>
     <string name="vod_language_title">Aquí solo en %1$s</string>

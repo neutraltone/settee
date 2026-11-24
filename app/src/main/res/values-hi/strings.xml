@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">यह टीवी %1$s नहीं चला सकता</string>
     <string name="vod_cant_play_device">यह डिवाइस %1$s नहीं चला सकता</string>
+    <string name="player_no_sound_tv">यह टीवी इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो उसकी सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_no_sound_device">यह डिवाइस इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो इस डिवाइस की सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
     <string name="player_stepped_down_tv">यह टीवी %1$s नहीं चला सकता। इसकी जगह %2$s चल रहा है।</string>
     <string name="player_stepped_down_device">यह डिवाइस %1$s नहीं चला सकता। इसकी जगह %2$s चल रहा है।</string>
     <string name="player_stepped_down_lower_tv">यह टीवी %1$s नहीं चला सकता। इसकी जगह कम क्वालिटी चल रही है।</string>
     <string name="player_stepped_down_lower_device">यह डिवाइस %1$s नहीं चला सकता। इसकी जगह कम क्वालिटी चल रही है।</string>
+    <string name="player_stepped_down_for_sound_tv">यह टीवी इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। इसकी जगह दूसरा वर्शन चल रहा है। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो उसकी सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_stepped_down_for_sound_device">यह डिवाइस इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। इसकी जगह दूसरा वर्शन चल रहा है। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो इस डिवाइस की सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
     <string name="player_stepped_down_unnamed_tv">यह टीवी यह क्वालिटी नहीं चला सकता। इसकी जगह दूसरी क्वालिटी चल रही है।</string>
     <string name="player_stepped_down_unnamed_device">यह डिवाइस यह क्वालिटी नहीं चला सकता। इसकी जगह दूसरी क्वालिटी चल रही है।</string>
     <string name="vod_language_title">यहाँ केवल %1$s में</string>

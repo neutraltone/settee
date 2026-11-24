@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Dette tv kan ikke afspille %1$s</string>
     <string name="vod_cant_play_device">Denne enhed kan ikke afspille %1$s</string>
+    <string name="player_no_sound_tv">Dette tv kan ikke afspille dette lydformat (%1$s). Hvis dit tv eller din soundbar understøtter det, kan det hjælpe at slå surroundlyd til i indstillingerne.</string>
+    <string name="player_no_sound_device">Denne enhed kan ikke afspille dette lydformat (%1$s). Hvis dit tv eller din soundbar understøtter det, kan det hjælpe at slå surroundlyd til i denne enheds indstillinger.</string>
     <string name="player_stepped_down_tv">Dette tv kan ikke afspille %1$s. Afspiller %2$s i stedet.</string>
     <string name="player_stepped_down_device">Denne enhed kan ikke afspille %1$s. Afspiller %2$s i stedet.</string>
     <string name="player_stepped_down_lower_tv">Dette tv kan ikke afspille %1$s. Afspiller en lavere kvalitet i stedet.</string>
     <string name="player_stepped_down_lower_device">Denne enhed kan ikke afspille %1$s. Afspiller en lavere kvalitet i stedet.</string>
+    <string name="player_stepped_down_for_sound_tv">Dette tv kan ikke afspille dette lydformat (%1$s). Afspiller en anden version i stedet. Hvis dit tv eller din soundbar understøtter det, kan det hjælpe at slå surroundlyd til i indstillingerne.</string>
+    <string name="player_stepped_down_for_sound_device">Denne enhed kan ikke afspille dette lydformat (%1$s). Afspiller en anden version i stedet. Hvis dit tv eller din soundbar understøtter det, kan det hjælpe at slå surroundlyd til i denne enheds indstillinger.</string>
     <string name="player_stepped_down_unnamed_tv">Dette tv kan ikke afspille den kvalitet. Afspiller en anden i stedet.</string>
     <string name="player_stepped_down_unnamed_device">Denne enhed kan ikke afspille den kvalitet. Afspiller en anden i stedet.</string>
     <string name="vod_language_title">Kun på %1$s her</string>

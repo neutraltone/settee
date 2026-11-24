@@ -332,10 +332,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">TV này không phát được %1$s</string>
     <string name="vod_cant_play_device">Thiết bị này không phát được %1$s</string>
+    <string name="player_no_sound_tv">TV này không phát được định dạng âm thanh này (%1$s). Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của nó có thể giúp ích.</string>
+    <string name="player_no_sound_device">Thiết bị này không phát được định dạng âm thanh này (%1$s). Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của thiết bị này có thể giúp ích.</string>
     <string name="player_stepped_down_tv">TV này không phát được %1$s. Đang phát %2$s thay thế.</string>
     <string name="player_stepped_down_device">Thiết bị này không phát được %1$s. Đang phát %2$s thay thế.</string>
     <string name="player_stepped_down_lower_tv">TV này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
     <string name="player_stepped_down_lower_device">Thiết bị này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
+    <string name="player_stepped_down_for_sound_tv">TV này không phát được định dạng âm thanh này (%1$s). Đang phát phiên bản khác thay thế. Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của nó có thể giúp ích.</string>
+    <string name="player_stepped_down_for_sound_device">Thiết bị này không phát được định dạng âm thanh này (%1$s). Đang phát phiên bản khác thay thế. Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của thiết bị này có thể giúp ích.</string>
     <string name="player_stepped_down_unnamed_tv">TV này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
     <string name="player_stepped_down_unnamed_device">Thiết bị này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
     <string name="vod_language_title">Ở đây chỉ có tiếng %1$s</string>

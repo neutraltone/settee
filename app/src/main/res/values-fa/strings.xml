@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">این تلویزیون نمی‌تواند %1$s را پخش کند</string>
     <string name="vod_cant_play_device">این دستگاه نمی‌تواند %1$s را پخش کند</string>
+    <string name="player_no_sound_tv">این تلویزیون نمی‌تواند این قالب صدا را پخش کند (%1$s). اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات آن ممکن است کمک کند.</string>
+    <string name="player_no_sound_device">این دستگاه نمی‌تواند این قالب صدا را پخش کند (%1$s). اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات این دستگاه ممکن است کمک کند.</string>
     <string name="player_stepped_down_tv">این تلویزیون نمی‌تواند %1$s را پخش کند. به‌جای آن %2$s پخش می‌شود.</string>
     <string name="player_stepped_down_device">این دستگاه نمی‌تواند %1$s را پخش کند. به‌جای آن %2$s پخش می‌شود.</string>
     <string name="player_stepped_down_lower_tv">این تلویزیون نمی‌تواند %1$s را پخش کند. به‌جای آن کیفیت پایین‌تری پخش می‌شود.</string>
     <string name="player_stepped_down_lower_device">این دستگاه نمی‌تواند %1$s را پخش کند. به‌جای آن کیفیت پایین‌تری پخش می‌شود.</string>
+    <string name="player_stepped_down_for_sound_tv">این تلویزیون نمی‌تواند این قالب صدا را پخش کند (%1$s). به‌جای آن نسخهٔ دیگری پخش می‌شود. اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات آن ممکن است کمک کند.</string>
+    <string name="player_stepped_down_for_sound_device">این دستگاه نمی‌تواند این قالب صدا را پخش کند (%1$s). به‌جای آن نسخهٔ دیگری پخش می‌شود. اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات این دستگاه ممکن است کمک کند.</string>
     <string name="player_stepped_down_unnamed_tv">این تلویزیون نمی‌تواند این کیفیت را پخش کند. به‌جای آن کیفیت دیگری پخش می‌شود.</string>
     <string name="player_stepped_down_unnamed_device">این دستگاه نمی‌تواند این کیفیت را پخش کند. به‌جای آن کیفیت دیگری پخش می‌شود.</string>
     <string name="vod_language_title">اینجا فقط به %1$s</string>

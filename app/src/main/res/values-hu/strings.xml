@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Ez a tévé nem tudja lejátszani a(z) %1$s minőséget</string>
     <string name="vod_cant_play_device">Ez az eszköz nem tudja lejátszani a(z) %1$s minőséget</string>
+    <string name="player_no_sound_tv">Ez a TV nem tudja lejátszani ezt a hangformátumot (%1$s). Ha a TV-je vagy a hangprojektora támogatja, segíthet, ha a beállításaiban bekapcsolja a térhatású hangot.</string>
+    <string name="player_no_sound_device">Ez az eszköz nem tudja lejátszani ezt a hangformátumot (%1$s). Ha a TV-je vagy a hangprojektora támogatja, segíthet, ha ennek az eszköznek a beállításaiban bekapcsolja a térhatású hangot.</string>
     <string name="player_stepped_down_tv">Ez a tévé nem tudja lejátszani a(z) %1$s minőséget. Helyette %2$s minőségben megy.</string>
     <string name="player_stepped_down_device">Ez az eszköz nem tudja lejátszani a(z) %1$s minőséget. Helyette %2$s minőségben megy.</string>
     <string name="player_stepped_down_lower_tv">Ez a tévé nem tudja lejátszani a(z) %1$s minőséget. Helyette alacsonyabb minőségben megy.</string>
     <string name="player_stepped_down_lower_device">Ez az eszköz nem tudja lejátszani a(z) %1$s minőséget. Helyette alacsonyabb minőségben megy.</string>
+    <string name="player_stepped_down_for_sound_tv">Ez a TV nem tudja lejátszani ezt a hangformátumot (%1$s). Helyette egy másik változat megy. Ha a TV-je vagy a hangprojektora támogatja, segíthet, ha a beállításaiban bekapcsolja a térhatású hangot.</string>
+    <string name="player_stepped_down_for_sound_device">Ez az eszköz nem tudja lejátszani ezt a hangformátumot (%1$s). Helyette egy másik változat megy. Ha a TV-je vagy a hangprojektora támogatja, segíthet, ha ennek az eszköznek a beállításaiban bekapcsolja a térhatású hangot.</string>
     <string name="player_stepped_down_unnamed_tv">Ez a tévé nem tudja lejátszani ezt a minőséget. Helyette egy másikban megy.</string>
     <string name="player_stepped_down_unnamed_device">Ez az eszköz nem tudja lejátszani ezt a minőséget. Helyette egy másikban megy.</string>
     <string name="vod_language_title">Itt csak %1$s nyelven</string>

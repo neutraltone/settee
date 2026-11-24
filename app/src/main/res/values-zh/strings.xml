@@ -332,10 +332,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">这台电视无法播放 %1$s</string>
     <string name="vod_cant_play_device">这台设备无法播放 %1$s</string>
+    <string name="player_no_sound_tv">这台电视无法播放此音频格式（%1$s）。如果你的电视或回音壁支持，在其设置中开启环绕声可能会有帮助。</string>
+    <string name="player_no_sound_device">本设备无法播放此音频格式（%1$s）。如果你的电视或回音壁支持，在本设备的设置中开启环绕声可能会有帮助。</string>
     <string name="player_stepped_down_tv">这台电视无法播放 %1$s，正在改为播放 %2$s。</string>
     <string name="player_stepped_down_device">这台设备无法播放 %1$s，正在改为播放 %2$s。</string>
     <string name="player_stepped_down_lower_tv">这台电视无法播放 %1$s，正在改为播放较低画质。</string>
     <string name="player_stepped_down_lower_device">这台设备无法播放 %1$s，正在改为播放较低画质。</string>
+    <string name="player_stepped_down_for_sound_tv">这台电视无法播放此音频格式（%1$s）。正在改为播放另一个版本。如果你的电视或回音壁支持，在其设置中开启环绕声可能会有帮助。</string>
+    <string name="player_stepped_down_for_sound_device">本设备无法播放此音频格式（%1$s）。正在改为播放另一个版本。如果你的电视或回音壁支持，在本设备的设置中开启环绕声可能会有帮助。</string>
     <string name="player_stepped_down_unnamed_tv">这台电视无法播放该画质，正在改为播放其他画质。</string>
     <string name="player_stepped_down_unnamed_device">这台设备无法播放该画质，正在改为播放其他画质。</string>
     <string name="vod_language_title">这里只有%1$s版本</string>

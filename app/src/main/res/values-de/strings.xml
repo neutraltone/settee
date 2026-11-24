@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Dieser Fernseher kann %1$s nicht abspielen</string>
     <string name="vod_cant_play_device">Dieses Gerät kann %1$s nicht abspielen</string>
+    <string name="player_no_sound_tv">Dieser Fernseher kann dieses Audioformat nicht abspielen (%1$s). Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen Surround-Sound einzuschalten.</string>
+    <string name="player_no_sound_device">Dieses Gerät kann dieses Audioformat nicht abspielen (%1$s). Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen dieses Geräts Surround-Sound einzuschalten.</string>
     <string name="player_stepped_down_tv">Dieser Fernseher kann %1$s nicht abspielen. Stattdessen läuft %2$s.</string>
     <string name="player_stepped_down_device">Dieses Gerät kann %1$s nicht abspielen. Stattdessen läuft %2$s.</string>
     <string name="player_stepped_down_lower_tv">Dieser Fernseher kann %1$s nicht abspielen. Stattdessen läuft eine niedrigere Qualität.</string>
     <string name="player_stepped_down_lower_device">Dieses Gerät kann %1$s nicht abspielen. Stattdessen läuft eine niedrigere Qualität.</string>
+    <string name="player_stepped_down_for_sound_tv">Dieser Fernseher kann dieses Audioformat nicht abspielen (%1$s). Stattdessen läuft eine andere Version. Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen Surround-Sound einzuschalten.</string>
+    <string name="player_stepped_down_for_sound_device">Dieses Gerät kann dieses Audioformat nicht abspielen (%1$s). Stattdessen läuft eine andere Version. Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen dieses Geräts Surround-Sound einzuschalten.</string>
     <string name="player_stepped_down_unnamed_tv">Dieser Fernseher kann diese Qualität nicht abspielen. Stattdessen läuft eine andere.</string>
     <string name="player_stepped_down_unnamed_device">Dieses Gerät kann diese Qualität nicht abspielen. Stattdessen läuft eine andere.</string>
     <string name="vod_language_title">Hier nur auf %1$s</string>

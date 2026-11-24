@@ -333,10 +333,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Deze tv kan %1$s niet afspelen</string>
     <string name="vod_cant_play_device">Dit apparaat kan %1$s niet afspelen</string>
+    <string name="player_no_sound_tv">Deze tv kan dit audioformaat niet afspelen (%1$s). Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen ervan.</string>
+    <string name="player_no_sound_device">Dit apparaat kan dit audioformaat niet afspelen (%1$s). Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen van dit apparaat.</string>
     <string name="player_stepped_down_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
     <string name="player_stepped_down_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
     <string name="player_stepped_down_lower_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
     <string name="player_stepped_down_lower_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
+    <string name="player_stepped_down_for_sound_tv">Deze tv kan dit audioformaat niet afspelen (%1$s). In plaats daarvan speelt een andere versie. Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen ervan.</string>
+    <string name="player_stepped_down_for_sound_device">Dit apparaat kan dit audioformaat niet afspelen (%1$s). In plaats daarvan speelt een andere versie. Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen van dit apparaat.</string>
     <string name="player_stepped_down_unnamed_tv">Deze tv kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
     <string name="player_stepped_down_unnamed_device">Dit apparaat kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
     <string name="vod_language_title">Hier alleen in het %1$s</string>

@@ -334,10 +334,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Acest televizor nu poate reda %1$s</string>
     <string name="vod_cant_play_device">Acest dispozitiv nu poate reda %1$s</string>
+    <string name="player_no_sound_tv">Acest televizor nu poate reda acest format audio (%1$s). Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările lui poate ajuta.</string>
+    <string name="player_no_sound_device">Acest dispozitiv nu poate reda acest format audio (%1$s). Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările acestui dispozitiv poate ajuta.</string>
     <string name="player_stepped_down_tv">Acest televizor nu poate reda %1$s. Se redă %2$s în schimb.</string>
     <string name="player_stepped_down_device">Acest dispozitiv nu poate reda %1$s. Se redă %2$s în schimb.</string>
     <string name="player_stepped_down_lower_tv">Acest televizor nu poate reda %1$s. Se redă o calitate mai mică în schimb.</string>
     <string name="player_stepped_down_lower_device">Acest dispozitiv nu poate reda %1$s. Se redă o calitate mai mică în schimb.</string>
+    <string name="player_stepped_down_for_sound_tv">Acest televizor nu poate reda acest format audio (%1$s). Se redă o altă versiune în schimb. Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările lui poate ajuta.</string>
+    <string name="player_stepped_down_for_sound_device">Acest dispozitiv nu poate reda acest format audio (%1$s). Se redă o altă versiune în schimb. Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările acestui dispozitiv poate ajuta.</string>
     <string name="player_stepped_down_unnamed_tv">Acest televizor nu poate reda această calitate. Se redă alta în schimb.</string>
     <string name="player_stepped_down_unnamed_device">Acest dispozitiv nu poate reda această calitate. Se redă alta în schimb.</string>
     <string name="vod_language_title">Aici doar în %1$s</string>
