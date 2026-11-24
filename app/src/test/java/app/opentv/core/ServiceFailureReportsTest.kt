@@ -55,7 +55,7 @@ class ServiceFailureReportsTest {
         openSubtitles.http,
         "k",
         "0.5.0",
-        reportFailure = { reports.report(CrashReports.Handled.OPENSUBTITLES, it) },
+        reportFailure = { reports.report(it) },
     )
 
     private fun signIn(reply: String) {
@@ -139,7 +139,7 @@ class ServiceFailureReportsTest {
     private fun tmdb(reply: String) = TmdbClient(
         FakeJsonHttp { reply }.http,
         "0123456789abcdef0123456789abcdef",
-        reportFailure = { reports.report(CrashReports.Handled.TMDB, it) },
+        reportFailure = { reports.report(it) },
     )
 
     @Test
@@ -193,10 +193,10 @@ class ServiceFailureReportsTest {
     }
 
     private fun introDb(reply: String) =
-        IntroDbClient(FakeJsonHttp { reply }.http) { reports.report(CrashReports.Handled.INTRODB, it) }
+        IntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
 
     private fun theIntroDb(reply: String) =
-        TheIntroDbClient(FakeJsonHttp { reply }.http) { reports.report(CrashReports.Handled.INTRODB, it) }
+        TheIntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
 
     @Test
     fun `a 403 from IntroDB or TheIntroDB arrives as a timings failure, without the show`() {
@@ -245,9 +245,7 @@ class ServiceFailureReportsTest {
     }
 
     private fun checkForUpdate(reply: String) = runBlocking {
-        UpdateChecker(FakeJsonHttp { reply }.http, "0.1.0") {
-            reports.report(CrashReports.Handled.UPDATE_CHECK, it)
-        }.check()
+        UpdateChecker(FakeJsonHttp { reply }.http, "0.1.0") { reports.report(it) }.check()
     }
 
     @Test

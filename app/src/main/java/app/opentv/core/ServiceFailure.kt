@@ -6,14 +6,30 @@
 package app.opentv.core
 
 /**
- * One of Settee's own services (OpenSubtitles, TMDB, IntroDB, the update check) turning down Settee's
- * request, as a Crash Report names it (ADR 0010): what Settee was asking ([operation]) and how it
- * failed ([status], `http-403` or `unreadable-reply`). Nothing else, so nothing from the request or
- * the reply can ride along. Built only through [ofStatus] and [unreadable], which decide what counts.
- * An exception only for its stack trace, which shows the client that asked; never thrown.
+ * One of Settee's own services turning down Settee's request, as a Crash Report names it (ADR 0010):
+ * which [service], what Settee was asking ([operation]) and how it failed ([status], `http-403` or
+ * `unreadable-reply`). Nothing else, so nothing from the request or the reply can ride along. Built
+ * only through [ofStatus] and [unreadable], which decide what counts.
+ *
+ * An exception, unlike the other [HandledReport]s, only for its stack trace, which is sent: it shows
+ * the client that asked, the one way to tell IntroDB from TheIntroDB, which share [Service.INTRODB].
+ * Never thrown.
  */
-class ServiceFailure private constructor(val operation: Operation, val status: String) :
-    Exception("${operation.tag} $status") {
+class ServiceFailure private constructor(val service: Service, val operation: Operation, val status: String) :
+    Exception("${service.name} ${operation.tag} $status"),
+    HandledReport {
+
+    /** Settee's own services, each by the `service` [tag] its reports carry. */
+    enum class Service(val tag: String) {
+        OPENSUBTITLES("opensubtitles"),
+        TMDB("tmdb"),
+
+        /** IntroDB or TheIntroDB: the stack trace tells them apart, through the client that asked. */
+        INTRODB("introdb"),
+
+        /** GitHub's latest-release API, which the update check asks. */
+        UPDATE_CHECK("update-check"),
+    }
 
     /** What Settee was asking the service: a fixed list, so the tag can only ever be one of these. */
     enum class Operation(val tag: String) {
@@ -38,11 +54,11 @@ class ServiceFailure private constructor(val operation: Operation, val status: S
          */
         private val REPORTED = setOf(400, 403, 404, 410)
 
-        /** [code] answered to [operation], or null when it isn't one to report. */
-        fun ofStatus(operation: Operation, code: Int): ServiceFailure? =
-            if (code in REPORTED) ServiceFailure(operation, "http-$code") else null
+        /** [code] answered to [operation] at [service], or null when it isn't one to report. */
+        fun ofStatus(service: Service, operation: Operation, code: Int): ServiceFailure? =
+            if (code in REPORTED) ServiceFailure(service, operation, "http-$code") else null
 
         /** A reply to [operation] Settee couldn't read: a page in front of the API, or an API that changed shape. */
-        fun unreadable(operation: Operation) = ServiceFailure(operation, UNREADABLE)
+        fun unreadable(service: Service, operation: Operation) = ServiceFailure(service, operation, UNREADABLE)
     }
 }

@@ -137,6 +137,9 @@ object ServiceLocator {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
         }
 
+        /** How Settee's own services report turning down Settee's request (ADR 0010): each names itself. */
+        private val reportServiceFailure: (ServiceFailure) -> Unit = { crashReports.report(it) }
+
         // Every client is built from this one, so each marks its calls as network wait for the journeys.
         val httpClient: OkHttpClient by lazy {
             (
@@ -150,7 +153,7 @@ object ServiceLocator {
                     .followRedirects(true)
                     .build()
                 ).newBuilder()
-                .eventListener(journeys.network)
+                .eventListenerFactory(journeys.network)
                 .build()
         }
 
@@ -169,6 +172,7 @@ object ServiceLocator {
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .retryOnConnectionFailure(true)
+                .eventListenerFactory(journeys.streaming)
                 .build()
         }
 
@@ -177,7 +181,7 @@ object ServiceLocator {
                 httpClient,
                 downloads = appContext.cacheDir,
                 dispatchers = dispatchers,
-                reportParseFailure = { crashReports.report(CrashReports.Handled.XTREAM_PARSE, it) },
+                reportParseFailure = { crashReports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, it)) },
             )
         }
 
@@ -208,15 +212,15 @@ object ServiceLocator {
 
         /** TMDB, with Settee's own key: unconfigured in a build without one, so never asked. */
         private val tmdb: TmdbClient by lazy {
-            TmdbClient(httpClient, tmdbKey, reportFailure = reportsFailuresOf(CrashReports.Handled.TMDB))
+            TmdbClient(httpClient, tmdbKey, reportFailure = reportServiceFailure)
         }
 
         /** Where episodes' intros and credits fall, for the Next Episode card (#517). */
         val episodeTimings: EpisodeTimingsRepository by lazy {
             EpisodeTimingsRepository(
                 dao = database.episodeTimings(),
-                theIntroDb = TheIntroDbClient(httpClient, reportsFailuresOf(CrashReports.Handled.INTRODB)),
-                introDb = IntroDbClient(httpClient, reportsFailuresOf(CrashReports.Handled.INTRODB)),
+                theIntroDb = TheIntroDbClient(httpClient, reportServiceFailure),
+                introDb = IntroDbClient(httpClient, reportServiceFailure),
                 tmdb = tmdb,
                 shows = object : EpisodeTimingsRepository.Shows {
                     override suspend fun seriesOf(episode: Episode) = catalogRepository.seriesOf(episode)
@@ -332,7 +336,7 @@ object ServiceLocator {
                             httpClient,
                             key,
                             BuildConfig.VERSION_NAME,
-                            reportFailure = reportsFailuresOf(CrashReports.Handled.OPENSUBTITLES),
+                            reportFailure = reportServiceFailure,
                         ),
                         KeystoreSealer(),
                         clock,
@@ -359,7 +363,7 @@ object ServiceLocator {
                     val waited = "${slow.networkMillis} ms on the network"
                     Log.w("SlowJourney", "${slow.journey.tag} took ${slow.ownMillis} ms of Settee's own, and $waited")
                 } else {
-                    crashReports.report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(slow))
+                    crashReports.report(slow)
                 }
             }
         }
@@ -370,13 +374,9 @@ object ServiceLocator {
                 httpClient,
                 BuildConfig.VERSION_NAME,
                 dispatchers = dispatchers,
-                reportFailure = reportsFailuresOf(CrashReports.Handled.UPDATE_CHECK),
+                reportFailure = reportServiceFailure,
             )
         }
-
-        /** How one of Settee's own services, [kind], reports turning down Settee's request (ADR 0010). */
-        private fun reportsFailuresOf(kind: CrashReports.Handled): (ServiceFailure) -> Unit =
-            { crashReports.report(kind, it) }
 
         /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
         val crashReports: CrashReports by lazy {

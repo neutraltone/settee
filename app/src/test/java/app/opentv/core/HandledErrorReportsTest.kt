@@ -48,7 +48,7 @@ class HandledErrorReportsTest {
 
     /** An Xtream client whose parse failures are reported, as the app's is. */
     private fun xtream(panel: FakePanel) =
-        XtreamApi(panel.http, reportParseFailure = { reports.report(CrashReports.Handled.XTREAM_PARSE, it) })
+        XtreamApi(panel.http, reportParseFailure = { reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, it)) })
 
     /** Signs in to [panel], which fails: every reply here is one Settee refuses. */
     private fun signIn(panel: FakePanel) {
@@ -65,7 +65,7 @@ class HandledErrorReportsTest {
         }
         val database = OpenTvDatabase.build(app)
         return try {
-            database.wontOpen { reports.report(CrashReports.Handled.DATABASE_MIGRATION, it) }
+            database.wontOpen { reports.report(CaughtError(CaughtError.Kind.DATABASE_MIGRATION, it)) }
         } finally {
             database.close()
         }
@@ -182,15 +182,16 @@ class HandledErrorReportsTest {
 
     @Test
     fun `only Settee's own failures can be reported, and playback and provider failures only as a viewer's report`() {
-        assertThat(CrashReports.Handled.entries).containsExactly(
-            CrashReports.Handled.XTREAM_PARSE,
-            CrashReports.Handled.DATABASE_MIGRATION,
-            CrashReports.Handled.OPENSUBTITLES,
-            CrashReports.Handled.TMDB,
-            CrashReports.Handled.INTRODB,
-            CrashReports.Handled.UPDATE_CHECK,
-            CrashReports.Handled.SLOW_JOURNEY,
-            CrashReports.Handled.VIEWER_REPORT,
+        // The rest of HandledReport's kinds are a Slow Journey and an Error Report, closed by its being sealed.
+        assertThat(CaughtError.Kind.entries).containsExactly(
+            CaughtError.Kind.XTREAM_PARSE,
+            CaughtError.Kind.DATABASE_MIGRATION,
+        )
+        assertThat(ServiceFailure.Service.entries).containsExactly(
+            ServiceFailure.Service.OPENSUBTITLES,
+            ServiceFailure.Service.TMDB,
+            ServiceFailure.Service.INTRODB,
+            ServiceFailure.Service.UPDATE_CHECK,
         )
     }
 

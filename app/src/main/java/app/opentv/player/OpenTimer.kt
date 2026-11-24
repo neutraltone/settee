@@ -12,6 +12,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import app.opentv.core.JourneyTimer
 import app.opentv.core.JourneyTimer.Journey
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
@@ -32,7 +33,8 @@ internal class OpenTimer(private val diagnostics: PlaybackDiagnostics?, private 
     AnalyticsListener {
 
     /** An open being timed: for Diagnostics when it has a [kind], and as a journey whatever it is. */
-    private class Pending(val kind: OpenKind?, val startedAt: Long, var source: String?) {
+    private class Pending(val kind: OpenKind?, val startedAt: Long) {
+        var source: ReportedSource? = null
         var onPlayer = false
         var decoding = false
     }
@@ -42,15 +44,13 @@ internal class OpenTimer(private val diagnostics: PlaybackDiagnostics?, private 
     /** [key] was asked for. A restart of the controller's own isn't an open, so it starts nothing. */
     fun asked(key: MediaKey, restart: Boolean) {
         if (restart || (diagnostics == null && journeys == null)) return
-        val source = if (key is MediaKey.AddonStream) JourneyTimer.STREMIO else null
-        pending = Pending(kindOf(key)?.takeIf { diagnostics != null }, SystemClock.elapsedRealtime(), source)
+        pending = Pending(kindOf(key)?.takeIf { diagnostics != null }, SystemClock.elapsedRealtime())
         journeys?.start(Journey.PLAYBACK_START)
     }
 
     /** What was asked for turned out to come from [playable]'s Source. */
     fun resolved(playable: Playable.Ready) {
-        val open = pending ?: return
-        if (open.source == null) open.source = JourneyTimer.sourceOf(playable.sourceKind)
+        pending?.source = playable.source
     }
 
     /** The stream asked for is on the player now; clearing the last one leaves no item, which isn't. */

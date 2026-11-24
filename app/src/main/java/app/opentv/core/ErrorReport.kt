@@ -8,22 +8,18 @@ package app.opentv.core
 /**
  * An Error Report (ADR 0010): one failure the viewer pressed Send report on, as they saw it. Only
  * its [detail] line (code · status · format), which CrashReports scrubs before it goes, never the
- * sentence; its [kind]; the [source]'s kind, as [JourneyTimer.sourceOf] names it (or
- * [JourneyTimer.STREMIO]); and the [cause]'s stack trace where there is one.
+ * sentence; its [kind]; and the kind of [source] it came from. No stack trace: a failure reaches the
+ * screen as a [ViewerError], a sentence and a detail line, with no exception left to send.
  *
  * The kind is the detail line's first code: the [ErrorWording] or [app.opentv.player.PlaybackErrors]
  * category the sentence was chosen by (a provider's problem, an exception's type, Media3's error
  * code, or an HTTP status), and the one part of a failure that's the same in every language and
  * survives being saved, as a Source's last refresh failure is.
- *
- * An exception only so it goes through [CrashReports.report] as a [CrashReports.Handled.VIEWER_REPORT]:
- * its own message and stack trace are never sent, only the cause's classes and stack trace.
  */
-class ErrorReport(val detail: String, val source: String?, cause: Throwable? = null) : Exception(MESSAGE, cause) {
+class ErrorReport(val detail: String, val source: ReportedSource?) : HandledReport {
     val kind: String = detail.substringBefore(SEPARATOR).trim().ifBlank { UNKNOWN }
 
     companion object {
-        private const val MESSAGE = "Error Report"
         private const val SEPARATOR = " · "
         private const val UNKNOWN = "Unknown"
 

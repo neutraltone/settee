@@ -9,6 +9,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.core.ReportedSource
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Recording
@@ -105,8 +106,11 @@ sealed interface Playable {
         val title: String,
         val isLive: Boolean,
         val recordedOn: RecordedOn? = null,
-        /** Its Source's kind, for a Slow Journey's report; null for an add-on's or a finished recording's. */
-        val sourceKind: SourceKind? = null,
+        /**
+         * The kind of Source it plays from, for a Slow Journey's or an Error Report's: Stremio for an
+         * add-on's stream, and null for a recording, kept on the device or the viewer's NAS.
+         */
+        val source: ReportedSource? = null,
     ) : Playable
 
     /**
@@ -210,7 +214,7 @@ class PlaybackSources(
             userAgentOf(source),
             channel.shownName,
             isLive = true,
-            sourceKind = source?.kind,
+            source = ReportedSource.of(source?.kind),
         )
     }
 
@@ -223,14 +227,21 @@ class PlaybackSources(
             userAgentOf(source),
             movie.displayTitle,
             isLive = false,
-            sourceKind = source?.kind,
+            source = ReportedSource.of(source?.kind),
         )
     }
 
     /** An add-on's stream isn't the panel's, so the panel's user agent has no business on it. */
     private suspend fun addonStream(key: MediaKey.AddonStream): Playable.Ready {
         val movie = db.movies().byId(key.movieId).or(Failure.GONE)
-        return Playable.Ready(key, key.url, Source.DEFAULT_USER_AGENT, movie.displayTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            key.url,
+            Source.DEFAULT_USER_AGENT,
+            movie.displayTitle,
+            isLive = false,
+            source = ReportedSource.STREMIO,
+        )
     }
 
     private suspend fun episode(key: MediaKey.Episode): Playable.Ready {
@@ -242,7 +253,7 @@ class PlaybackSources(
             userAgentOf(source),
             episode.playerTitle,
             isLive = false,
-            sourceKind = source?.kind,
+            source = ReportedSource.of(source?.kind),
         )
     }
 
@@ -270,7 +281,7 @@ class PlaybackSources(
             userAgentOf(source),
             "${channel.shownName} · ${programme.title}",
             isLive = false,
-            sourceKind = source.kind,
+            source = ReportedSource.of(source.kind),
         )
     }
 

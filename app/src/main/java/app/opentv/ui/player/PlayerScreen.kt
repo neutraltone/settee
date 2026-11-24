@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -81,7 +79,6 @@ import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
-import app.opentv.ui.LocalReportedSource
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
@@ -98,7 +95,6 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
-import app.opentv.ui.reportedSourceOf
 import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -305,56 +301,50 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
 
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
     val openOptions = LocalOpenOptions.current
-    // Send report names only the kind of the channel's provider.
-    val reportedSource by produceState<String?>(null, channel?.primary?.id) {
-        value = channel?.primary?.id?.let { graph.reportedSourceOf(MediaKey.Live(it)) }
-    }
 
-    CompositionLocalProvider(LocalReportedSource provides reportedSource) {
-        LivePlayerContent(
-            controller = controller,
-            settings = settings,
-            queue = queue,
-            variants = channel?.switchable.orEmpty(),
-            currentId = currentId,
-            previousId = previousId,
-            onNow = { now ->
-                // Keyed by the row each Channel plays, which is what the list's items are.
-                val channels = lineupChannels
-                val byKey = graph.channelLineup.nowOn(channels, now)
-                channels.mapNotNull { c -> byKey[c.key]?.let { c.primary.id to it } }.toMap()
-            },
-            cardChannel = channel?.let {
-                CardChannel(it.key, it.primary.number, it.primary.shownName, it.primary.logoUrl)
-            },
-            nowAndNext = { now ->
-                channel?.let { nowAndNext(graph.channelLineup, graph.epgRepository, it, now) }
-            },
-            recordingThis = activeRecording() != null,
-            livePause = livePause,
-            pausePromptDismissed = pausePromptDismissed,
-            onPlayChannel = ::playChannelId,
-            onZap = ::zap,
-            onTune = { tuneTo(it) },
-            onToggleRecord = ::toggleRecord,
-            favourite = favourite,
-            onToggleFavourite = ::toggleFavourite,
-            onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
-            onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
-            subtitlePicks = subtitlePicks,
-            onBack = onBack,
-            onChannelOptions = { item, onWatch ->
-                scope.launch {
-                    // The list holds queue items, not Channels. As when playing, a channel hidden or
-                    // locked since the list was built still answers, on its own.
-                    val picked = graph.channelLineup.channelOf(item.id)
-                        ?: graph.catalogRepository.channel(item.id)?.let { LineupChannel(it, listOf(it)) }
-                        ?: return@launch
-                    openOptions?.invoke(OptionsSubject.OfChannel(picked, onWatch), LeaveDirectly)
-                }
-            },
-        )
-    }
+    LivePlayerContent(
+        controller = controller,
+        settings = settings,
+        queue = queue,
+        variants = channel?.switchable.orEmpty(),
+        currentId = currentId,
+        previousId = previousId,
+        onNow = { now ->
+            // Keyed by the row each Channel plays, which is what the list's items are.
+            val channels = lineupChannels
+            val byKey = graph.channelLineup.nowOn(channels, now)
+            channels.mapNotNull { c -> byKey[c.key]?.let { c.primary.id to it } }.toMap()
+        },
+        cardChannel = channel?.let {
+            CardChannel(it.key, it.primary.number, it.primary.shownName, it.primary.logoUrl)
+        },
+        nowAndNext = { now ->
+            channel?.let { nowAndNext(graph.channelLineup, graph.epgRepository, it, now) }
+        },
+        recordingThis = activeRecording() != null,
+        livePause = livePause,
+        pausePromptDismissed = pausePromptDismissed,
+        onPlayChannel = ::playChannelId,
+        onZap = ::zap,
+        onTune = { tuneTo(it) },
+        onToggleRecord = ::toggleRecord,
+        favourite = favourite,
+        onToggleFavourite = ::toggleFavourite,
+        onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
+        onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
+        subtitlePicks = subtitlePicks,
+        onBack = onBack,
+        onChannelOptions = { item, onWatch ->
+            scope.launch {
+                // The list holds queue items, not Channels. As when playing, a channel hidden or
+                // locked since the list was built still answers, on its own.
+                val picked = graph.channelLineup.channelOf(item.id)
+                    ?: graph.catalogRepository.channel(item.id)?.let { LineupChannel(it, listOf(it)) }
+                    ?: return@launch
+                openOptions?.invoke(OptionsSubject.OfChannel(picked, onWatch), LeaveDirectly)
+            }
+        },
+    )
 }
 
 /** The Channel a [ChannelCard] names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
@@ -585,7 +575,8 @@ fun LivePlayerContent(
     // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
     // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
-    val sendReport = sendReportFor((state as? PlayerController.State.Error)?.reason, LocalReportedSource.current)
+    val reportedSource by controller.reportedSource.collectAsState()
+    val sendReport = sendReportFor((state as? PlayerController.State.Error)?.reason, reportedSource)
     val focusOn = when {
         channelListVisible -> listFocus
         controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barReturn

@@ -42,7 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
@@ -224,7 +224,7 @@ private fun ProviderForm(
 
         FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup)
         // After the buttons rather than in the error, so it's Down from them and they stay where they are.
-        SendReportAfter(ui.addFailure ?: ui.testError, JourneyTimer.sourceOf(formKind))
+        SendReportAfter(ui.addFailure ?: ui.testError, ReportedSource.of(formKind))
 
         AdvancedFields(details)
 

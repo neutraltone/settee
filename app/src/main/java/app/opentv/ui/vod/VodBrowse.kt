@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
-import app.opentv.core.JourneyTimer
 import app.opentv.core.JourneyTimer.Journey
+import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
@@ -84,6 +84,7 @@ import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -464,7 +465,7 @@ private fun vodEmpty(
             failure.reason,
             onRetry = onRetry,
             onEditProvider = { onEditProvider(failure.sourceId) },
-            sendReport = sendReportFor(failure.reason, JourneyTimer.sourceOf(failure.sourceKind)),
+            sendReport = sendReportFor(failure.reason, ReportedSource.of(failure.sourceKind)),
         )
         else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
     }
@@ -488,7 +489,7 @@ internal sealed interface VodEmpty {
         val reason: ViewerError,
         val onRetry: () -> Unit,
         val onEditProvider: () -> Unit,
-        val sendReport: (() -> Unit)? = null,
+        val sendReport: ReportOffer? = null,
     ) : VodEmpty
 }
 

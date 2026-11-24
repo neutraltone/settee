@@ -53,11 +53,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
-import app.opentv.data.model.SourceKind
 import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
@@ -196,7 +195,7 @@ internal fun SeriesDetailContent(
                 )
             } else {
                 if (shown.selected == null && episodeFetch.noEpisodes) {
-                    NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
+                    NoEpisodes(nav, episodeFetch)
                 } else {
                     EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions)
                 }
@@ -359,14 +358,21 @@ private fun SeasonPills(
  * why when every fetch [failure]d, and [onTryAgain] to ask again.
  */
 @Stable
-class EpisodeFetch(val noEpisodes: Boolean = false, val failure: ViewerError? = null, val onTryAgain: () -> Unit = {})
+class EpisodeFetch(
+    val noEpisodes: Boolean = false,
+    val failure: ViewerError? = null,
+    /** The kind of the show's Source, for Send report on its [failure]. */
+    val source: ReportedSource? = null,
+    val onTryAgain: () -> Unit = {},
+)
 
 /**
  * In the episodes' place when a show has none once they've been asked for: why, with Try again, when
- * every fetch failed ([failure]), or else a plain line, as a provider listing none isn't an error.
+ * every fetch failed ([EpisodeFetch.failure]), or else a plain line, as a provider listing none isn't an error.
  */
 @Composable
-private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -> Unit) {
+private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
+    val failure = fetch.failure
     if (failure == null) {
         Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
@@ -379,17 +385,17 @@ private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -
                 // Up to the hero first: this button goes while it asks, and the Highlight would go with
                 // it. From there it moves on to Play when the episodes come, as on a first opening.
                 nav.backToHero()
-                onTryAgain()
+                fetch.onTryAgain()
             },
         )
     }
-    // Try again inside the error, so Send report comes after it, Down from it. Only an Xtream panel has shows.
+    // Try again inside the error, so Send report comes after it, Down from it.
     ErrorMessage(
         failure.sentence,
         failure.detail,
         textAlign = TextAlign.Start,
         modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
-        sendReport = sendReportFor(failure, JourneyTimer.sourceOf(SourceKind.XTREAM)),
+        sendReport = sendReportFor(failure, fetch.source),
         actions = tryAgain,
     )
 }

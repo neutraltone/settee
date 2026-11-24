@@ -6,7 +6,6 @@
 package app.opentv.core
 
 import android.os.SystemClock
-import app.opentv.data.model.SourceKind
 import java.io.IOException
 import okhttp3.Call
 import okhttp3.EventListener
@@ -52,17 +51,17 @@ class JourneyTimer(
 
     /**
      * A journey that was too slow: Settee's own time [ownMillis] and [networkMillis] waiting, between
-     * [startedAt] and [endedAt] on the timer's clock, for a Source of [source]'s kind ([sourceOf]) or null
-     * when it isn't one Source's.
+     * [startedAt] and [endedAt] on the timer's clock, for a Source of [source]'s kind, or null when it
+     * isn't one Source's. Reported as it is, with no error at all.
      */
     class SlowJourney(
         val journey: Journey,
         val ownMillis: Long,
         val networkMillis: Long,
-        val source: String?,
+        val source: ReportedSource?,
         val startedAt: Long,
         val endedAt: Long,
-    )
+    ) : HandledReport
 
     private val lock = Any()
     private val journeys = Journey.entries
@@ -91,7 +90,7 @@ class JourneyTimer(
      * [journey] has reached its end, for a Source of [source]'s kind. Does nothing unless it's running.
      * Tells [slow] if Settee's own part of it passed the threshold, the first time this process.
      */
-    fun end(journey: Journey, source: String? = null) {
+    fun end(journey: Journey, source: ReportedSource? = null) {
         val slowOne = synchronized(lock) {
             val i = journey.ordinal
             val started = startedAt[i]
@@ -108,7 +107,12 @@ class JourneyTimer(
     }
 
     /** Marks the network waits: one call in flight or more is waiting. Given to every HTTP client. */
-    val network: EventListener = object : EventListener() {
+    val network: EventListener.Factory = EventListener.Factory { listener }
+
+    /** Marks the players' and recordings' calls. */
+    val streaming: EventListener.Factory = EventListener.Factory { listener }
+
+    private val listener = object : EventListener() {
         override fun callStart(call: Call) = synchronized(lock) {
             if (inFlight++ == 0) inFlightSince = now()
         }
@@ -128,11 +132,5 @@ class JourneyTimer(
 
     companion object {
         private const val NOT_RUNNING = Long.MIN_VALUE
-
-        /** What a Source of [kind] is called in a report: `xtream`, `m3u` or `stalker`. */
-        fun sourceOf(kind: SourceKind?): String? = kind?.name?.lowercase()
-
-        /** A Stremio add-on, which is no [SourceKind] but is where a stream can come from. */
-        const val STREMIO = "stremio"
     }
 }

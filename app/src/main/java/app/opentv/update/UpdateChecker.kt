@@ -9,6 +9,7 @@ import app.opentv.core.AppDispatchers
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceFailure
 import app.opentv.core.ServiceFailure.Operation
+import app.opentv.core.ServiceFailure.Service
 import app.opentv.data.remote.GitHubRelease
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.withContext
@@ -74,19 +75,19 @@ class UpdateChecker(
 
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    ServiceFailure.ofStatus(Operation.LATEST_RELEASE, response.code)?.let(reportFailure)
+                    ServiceFailure.ofStatus(Service.UPDATE_CHECK, Operation.LATEST_RELEASE, response.code)?.let(reportFailure)
                     return@withContext Outcome.CouldNotCheck("HTTP ${response.code}")
                 }
                 val body = response.body.string()
                 if (body.isBlank()) {
-                    reportFailure(ServiceFailure.unreadable(Operation.LATEST_RELEASE))
+                    reportFailure(ServiceFailure.unreadable(Service.UPDATE_CHECK, Operation.LATEST_RELEASE))
                     return@withContext Outcome.CouldNotCheck(EMPTY_REPLY)
                 }
 
                 val release = try {
                     json.decodeFromString<GitHubRelease>(body)
                 } catch (unreadable: SerializationException) {
-                    reportFailure(ServiceFailure.unreadable(Operation.LATEST_RELEASE))
+                    reportFailure(ServiceFailure.unreadable(Service.UPDATE_CHECK, Operation.LATEST_RELEASE))
                     throw unreadable
                 }
                 if (release.draft || release.prerelease) return@withContext Outcome.UpToDate

@@ -8,6 +8,7 @@ package app.opentv.data.remote
 import android.util.Log
 import app.opentv.core.ServiceFailure
 import app.opentv.core.ServiceFailure.Operation
+import app.opentv.core.ServiceFailure.Service
 import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.parseReleaseDate
 import java.io.IOException
@@ -98,7 +99,7 @@ class TmdbClient(
     private fun metaOrFailure(title: TmdbTitle): Result<TmdbMeta?> = runCatching {
         val key = credential ?: return@runCatching null
         if (title.query.isBlank() && title.tmdbId == null) return@runCatching null
-        val read = { url: HttpUrl -> fetch(url, key) }
+        val read = { url: HttpUrl, operation: Operation -> fetch(url, key, operation) }
         val id = title.tmdbId ?: searchId(title, read)
         id?.let { details(title.isMovie, it, read) }
     }
@@ -112,14 +113,14 @@ class TmdbClient(
      */
     fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): Result<String?> = runCatching {
         val key = credential ?: return@runCatching null
-        val read = { url: HttpUrl -> fetch(url, key) }
+        val read = { url: HttpUrl, operation: Operation -> fetch(url, key, operation) }
         val asked = TmdbTitle(isMovie, title, year, tmdbId)
         val id = asked.tmdbId ?: searchId(asked, read) ?: return@runCatching null
         val builder = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
         if (!isMovie) builder.addPathSegment("external_ids")
-        val o = read(builder.build())?.jsonObject ?: return@runCatching null
+        val o = read(builder.build(), Operation.DETAILS)?.jsonObject ?: return@runCatching null
         o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
     }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
 
@@ -128,11 +129,11 @@ class TmdbClient(
         val key = credential ?: return null
         return TmdbTitle(isMovie = false, title, year, providersId = null)
             .takeIf { it.query.isNotBlank() }
-            ?.let { asked -> searchId(asked) { get(it, key) } }
+            ?.let { asked -> searchId(asked) { url, operation -> get(url, key, operation) } }
     }
 
     /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
-    private fun searchId(title: TmdbTitle, read: (HttpUrl) -> JsonElement?): String? {
+    private fun searchId(title: TmdbTitle, read: (HttpUrl, Operation) -> JsonElement?): String? {
         val (isMovie, _, year) = title
         fun run(withYear: Boolean): String? {
             val b = TMDB_BASE.newBuilder()
@@ -143,20 +144,20 @@ class TmdbClient(
             if (withYear && year != null) {
                 b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
             }
-            val results = read(b.build())?.jsonObject?.get("results")?.jsonArray ?: return null
+            val results = read(b.build(), Operation.SEARCH)?.jsonObject?.get("results")?.jsonArray ?: return null
             return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
         }
         return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
     }
 
-    private fun details(isMovie: Boolean, id: String, read: (HttpUrl) -> JsonElement?): TmdbMeta? {
+    private fun details(isMovie: Boolean, id: String, read: (HttpUrl, Operation) -> JsonElement?): TmdbMeta? {
         val url = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
             // Recommendations ride on the details request, so suggestions cost no request of their own.
             .addQueryParameter("append_to_response", "credits,recommendations")
             .build()
-        val o = read(url)?.jsonObject ?: return null
+        val o = read(url, Operation.DETAILS)?.jsonObject ?: return null
 
         val poster = o["poster_path"]?.jsonPrimitive?.contentOrNull
         val backdrop = o["backdrop_path"]?.jsonPrimitive?.contentOrNull
@@ -211,22 +212,22 @@ class TmdbClient(
     }
 
     // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
-    private fun get(url: HttpUrl, key: Credential): JsonElement? = runCatching { fetch(url, key) }
+    private fun get(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
+        runCatching { fetch(url, key, operation) }
         .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
         .getOrNull()
 
     /**
-     * The answer to [url]; null for a 404, which is TMDB saying there's nothing, so never reported.
-     * Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a refused key, a
-     * reply it couldn't read).
+     * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing,
+     * so never reported. Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a
+     * refused key, a reply it couldn't read).
      */
-    private fun fetch(url: HttpUrl, key: Credential): JsonElement? =
+    private fun fetch(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
         http.newCall(authorised(url, key)).execute().use { response ->
-            val operation = if ("search" in url.pathSegments) Operation.SEARCH else Operation.DETAILS
             when {
                 response.code == HTTP_NOT_FOUND -> null
                 !response.isSuccessful -> {
-                    ServiceFailure.ofStatus(operation, response.code)?.let(reportFailure)
+                    ServiceFailure.ofStatus(Service.TMDB, operation, response.code)?.let(reportFailure)
                     throw IOException("TMDB answered ${response.code}")
                 }
                 // Every endpoint Settee asks answers an object. Lenient parsing reads a page as a bare
@@ -234,7 +235,7 @@ class TmdbClient(
                 else -> response.body.string()
                     .let { body -> runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject }
                     ?: run {
-                        reportFailure(ServiceFailure.unreadable(operation))
+                        reportFailure(ServiceFailure.unreadable(Service.TMDB, operation))
                         throw IOException("TMDB's reply couldn't be read")
                     }
             }

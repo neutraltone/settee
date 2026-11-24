@@ -30,7 +30,7 @@ fun Message(
     modifier: Modifier = Modifier,
     title: String? = null,
     detail: String = "",
-    sendReport: (() -> Unit)? = null,
+    sendReport: ReportOffer? = null,
     below: @Composable () -> Unit = {},
 ) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

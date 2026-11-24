@@ -35,6 +35,7 @@ class CrashReportsBoundaryTest {
         val ALLOWED = setOf(
             "app/opentv/core/CrashReports.kt",
             "app/opentv/core/CrashScrubbing.kt",
+            "app/opentv/core/HandledEvents.kt",
             "app/opentv/core/HeldCrash.kt",
         )
     }

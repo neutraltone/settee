@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
@@ -46,6 +47,8 @@ fun SeriesDetailScreen(
     var gone by remember(seriesId) { mutableStateOf(false) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
+    // Only for Send report on a failure, which names the kind of the show's Source and nothing more.
+    val sources by viewModel.sources.collectAsState()
 
     LaunchedEffect(seriesId, attempt) {
         viewModel.openShow(seriesId).collect {
@@ -67,7 +70,7 @@ fun SeriesDetailScreen(
         LoadingDetail()
     } else {
         // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
-        val episodes = EpisodeFetch(noEpisodes, failure) {
+        val episodes = EpisodeFetch(noEpisodes, failure, ReportedSource.of(sources.find { it.id == s.sourceId }?.kind)) {
             noEpisodes = false
             failure = null
             attempt++

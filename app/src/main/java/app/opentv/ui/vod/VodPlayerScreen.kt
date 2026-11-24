@@ -72,7 +72,6 @@ import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
-import app.opentv.ui.LocalReportedSource
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
@@ -98,7 +97,6 @@ import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.backOnRelease
 import app.opentv.ui.player.isBack
 import app.opentv.ui.player.trackLabel
-import app.opentv.ui.reportedSourceOf
 import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -136,8 +134,6 @@ fun VodPlayerScreen(
     // The player is built for it, so it waits until the recording's row says whether it is.
     val growing by produceState<Boolean?>(null, mediaKey) { value = graph.playbackSources.isGrowing(mediaKey) }
     val growingRec = growing ?: return
-    // For Send report on a failure: only the kind of provider it came from.
-    val reportedSource by produceState<String?>(null, mediaKey) { value = graph.reportedSourceOf(mediaKey) }
     // The SMB source lets a recording stored on a NAS play and seek in-app; harmless for the
     // http/file URLs of ordinary VOD.
     val controller = remember {
@@ -214,7 +210,7 @@ fun VodPlayerScreen(
     val finished by viewModel.finished.collectAsState()
     LaunchedEffect(finished) { if (finished) onBack() }
 
-    CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles, LocalReportedSource provides reportedSource) {
+    CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles) {
         VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
     }
 }
@@ -264,7 +260,6 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
  * The player's picture, transport bar and Next Episode card, with everything about playback that the
  * remote drives. [VodPlayerScreen] owns the stream, resume, saving progress and moving between
  * episodes; this owns what the viewer sees and presses, and pausing behind another app.
- * [LocalReportedSource] is the kind of provider it plays from, for Send report on a failure.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -303,6 +298,8 @@ fun VodPlayerContent(
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     val title by controller.title.collectAsState()
+    // Only the kind of Source it plays from, for Send report on a failure.
+    val reportedSource by controller.reportedSource.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
     val playingKey by viewModel.current.collectAsState()
     // Whether the card or the question is up, not which second it shows: effects keyed on this
@@ -607,7 +604,7 @@ fun VodPlayerContent(
                 current,
                 onRetry = controller::retry,
                 onBack = onBack,
-                sendReport = sendReportFor(current.reason, LocalReportedSource.current),
+                sendReport = sendReportFor(current.reason, reportedSource),
             )
 
             else -> Unit

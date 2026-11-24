@@ -9,7 +9,6 @@ import android.app.ActivityManager
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.JourneyTimer.Journey
-import app.opentv.data.model.SourceKind
 import com.google.common.truth.Truth.assertThat
 import io.sentry.Sentry
 import io.sentry.exception.ExceptionMechanismException
@@ -59,12 +58,13 @@ class SlowJourneyReportsTest {
     }
 
     /** [journey] taking [millis] of Settee's own time, of which [network] waiting on a call. */
-    private fun run(journey: Journey, millis: Long, network: Long = 0, source: String? = null) {
+    private fun run(journey: Journey, millis: Long, network: Long = 0, source: ReportedSource? = null) {
         timer.start(journey)
         if (network > 0) {
-            timer.network.callStart(CALL)
+            val call = timer.network.create(CALL)
+            call.callStart(CALL)
             clock += network
-            timer.network.callEnd(CALL)
+            call.callEnd(CALL)
         }
         clock += millis
         timer.end(journey, source)
@@ -83,7 +83,7 @@ class SlowJourneyReportsTest {
         freeMemory(123_000_000)
 
         // 6 s threshold: 7.34 s of Settee's own, plus 2.06 s waiting on the network.
-        run(Journey.COLD_START, millis = 7_340, network = 2_060, source = JourneyTimer.sourceOf(SourceKind.XTREAM))
+        run(Journey.COLD_START, millis = 7_340, network = 2_060, source = ReportedSource.XTREAM)
 
         val event = sentEvents().single()
         assertThat(event).contains("SLOW_JOURNEY: cold-start")
@@ -118,7 +118,7 @@ class SlowJourneyReportsTest {
         reports.setOn(true)
         // A Provider taking 9 s to answer, on a client marked as the app's is.
         val http = OkHttpClient.Builder()
-            .eventListener(timer.network)
+            .eventListenerFactory(timer.network)
             .addInterceptor { chain ->
                 clock += 9_000
                 Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
@@ -202,7 +202,7 @@ class SlowJourneyReportsTest {
 
     /** As the app hands [to] a slow journey. */
     private fun reportingTo(to: CrashReports): (JourneyTimer.SlowJourney) -> Unit =
-        { to.report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(it)) }
+        { to.report(it) }
 
     private companion object {
         val CALL: okhttp3.Call = OkHttpClient().newCall(Request.Builder().url("https://example.com/").build())

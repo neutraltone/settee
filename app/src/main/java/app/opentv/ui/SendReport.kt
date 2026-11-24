@@ -6,17 +6,16 @@
 package app.opentv.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import app.opentv.core.CrashReports
+import androidx.compose.ui.res.stringResource
+import app.opentv.R
 import app.opentv.core.ErrorReport
-import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
-import app.opentv.data.model.SourceKind
-import app.opentv.data.repo.MediaKey
-import app.opentv.ui.design.SendReport
+import app.opentv.ui.design.OfferedReport
+import app.opentv.ui.design.ReportOffer
 
 /**
  * Send report for [error], for [ErrorMessage][app.opentv.ui.design.ErrorMessage]'s `sendReport`, or
@@ -26,11 +25,14 @@ import app.opentv.ui.design.SendReport
  * null for one that isn't a Source's, such as an OpenSubtitles sign-in.
  */
 @Composable
-fun sendReportFor(error: ViewerError?, source: String?): (() -> Unit)? {
+fun sendReportFor(error: ViewerError?, source: ReportedSource?): ReportOffer? {
     val crashReports = ServiceLocator.get(LocalContext.current).crashReports
-    return remember(error, source, crashReports) {
+    val note = stringResource(R.string.report_note)
+    val send = stringResource(R.string.report_send)
+    val sent = stringResource(R.string.report_sent)
+    return remember(error, source, crashReports, note, send, sent) {
         error?.takeIf { crashReports.available && ErrorReport.offeredFor(it) }?.let { shown ->
-            { crashReports.report(CrashReports.Handled.VIEWER_REPORT, ErrorReport(shown.detail, source)) }
+            ReportOffer(note, send, sent) { crashReports.report(ErrorReport(shown.detail, source)) }
         }
     }
 }
@@ -40,26 +42,6 @@ fun sendReportFor(error: ViewerError?, source: String?): (() -> Unit)? {
  * error, so it's Down from them and they never move. Nothing where [sendReportFor] offers nothing.
  */
 @Composable
-fun SendReportAfter(failure: ViewerError?, source: String?) {
-    val send = sendReportFor(failure, source) ?: return
-    failure?.let { SendReport(it.sentence, it.detail, send) }
+fun SendReportAfter(failure: ViewerError?, source: ReportedSource?) {
+    sendReportFor(failure, source)?.let { OfferedReport(it) }
 }
-
-/** The kind of provider what a player shows comes from, for Send report on its failure: set by the player. */
-val LocalReportedSource = compositionLocalOf<String?> { null }
-
-/**
- * The kind of Source [key] plays from, for an Error Report: a film or episode is an Xtream panel's
- * (the only kind with them), an add-on's stream Stremio's, a channel or its catch-up its provider's,
- * and a recording, kept on the device or the viewer's NAS, none.
- */
-suspend fun ServiceLocator.Graph.reportedSourceOf(key: MediaKey): String? = when (key) {
-    is MediaKey.Movie, is MediaKey.Episode -> JourneyTimer.sourceOf(SourceKind.XTREAM)
-    is MediaKey.AddonStream -> JourneyTimer.STREMIO
-    is MediaKey.Live -> channelSourceOf(key.channelId)
-    is MediaKey.Catchup -> channelSourceOf(key.channelId)
-    is MediaKey.Recording -> null
-}
-
-private suspend fun ServiceLocator.Graph.channelSourceOf(channelId: Long): String? =
-    database.channels().byId(channelId)?.let { database.sources().byId(it.sourceId) }?.kind.let(JourneyTimer::sourceOf)

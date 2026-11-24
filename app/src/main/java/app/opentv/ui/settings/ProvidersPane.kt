@@ -26,7 +26,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
-import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.core.findActivity
 import app.opentv.data.model.Source
 import app.opentv.ui.SendReportAfter
@@ -96,7 +96,7 @@ internal fun ProvidersPane(
                 )
                 // Under Refresh again, so it's Down from it.
                 Column(Modifier.padding(horizontal = ListRowInset)) {
-                    SendReportAfter(failure, JourneyTimer.sourceOf(source.kind))
+                    SendReportAfter(failure, ReportedSource.of(source.kind))
                 }
             }
         }

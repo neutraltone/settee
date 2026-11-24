@@ -8,6 +8,7 @@ package app.opentv.data.remote
 import app.opentv.core.HttpStatus
 import app.opentv.core.ServiceFailure
 import app.opentv.core.ServiceFailure.Operation
+import app.opentv.core.ServiceFailure.Service
 import app.opentv.data.model.SubtitleKind
 import java.io.IOException
 import java.time.Instant
@@ -216,8 +217,8 @@ class OpenSubtitlesClient(
         val succeeded = status in HTTP_SUCCESS
         if (succeeded && parsed != null) return parsed
         val failure = when {
-            succeeded -> ServiceFailure.unreadable(operation)
-            else -> ServiceFailure.ofStatus(operation, status)
+            succeeded -> ServiceFailure.unreadable(Service.OPENSUBTITLES, operation)
+            else -> ServiceFailure.ofStatus(Service.OPENSUBTITLES, operation, status)
         }
         failure?.let(reportFailure)
         throw failureFor(status, parsed, request, download = operation == Operation.DOWNLOAD)

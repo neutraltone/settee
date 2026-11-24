@@ -550,7 +550,7 @@ class CrashReportsTest {
             background = Runnable::run,
         ).also { it.start(app) }
         reports.setOn(true)
-        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+        reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("Unexpected JSON token")))
         assertThat(synchronized(waiting) { waiting.size }).isEqualTo(1)
 
         reports.setOn(false)
@@ -571,7 +571,7 @@ class CrashReportsTest {
             background = Runnable::run,
         ).also { it.start(app) }
         reports.setOn(true)
-        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+        reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("Unexpected JSON token")))
 
         synchronized(waiting) { waiting.toList() }.forEach(Runnable::run)
 
@@ -582,7 +582,7 @@ class CrashReportsTest {
     fun `a handled error while reports are off is neither sent nor held to ask about`() {
         crashReports()
 
-        reports.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+        reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("Unexpected JSON token")))
 
         assertThat(sentEvents()).isEmpty()
         assertThat(nextLaunch().askAboutHeld.value).isFalse()
@@ -595,7 +595,7 @@ class CrashReportsTest {
         val next = nextLaunch()
         next.answer(CrashReports.Answer.SEND)
 
-        next.report(CrashReports.Handled.XTREAM_PARSE, IllegalStateException("Unexpected JSON token"))
+        next.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("Unexpected JSON token")))
 
         assertThat(sentEvents()).hasSize(1)
         assertThat(sentEvents().single()).doesNotContain("XTREAM_PARSE")

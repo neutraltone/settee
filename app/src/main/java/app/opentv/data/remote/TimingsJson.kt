@@ -7,6 +7,7 @@ package app.opentv.data.remote
 
 import app.opentv.core.ServiceFailure
 import app.opentv.core.ServiceFailure.Operation
+import app.opentv.core.ServiceFailure.Service
 import java.io.IOException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -37,14 +38,14 @@ internal fun OkHttpClient.episodeJson(
         when {
             response.code == HTTP_NOT_FOUND -> null
             !response.isSuccessful -> {
-                ServiceFailure.ofStatus(Operation.TIMINGS, response.code)?.let(reportFailure)
+                ServiceFailure.ofStatus(Service.INTRODB, Operation.TIMINGS, response.code)?.let(reportFailure)
                 throw IOException("$database answered ${response.code}")
             }
             else -> try {
                 Json.parseToJsonElement(response.body.string()).jsonObject
             } catch (unreadable: IllegalArgumentException) {
                 // SerializationException is one: not JSON, or JSON that isn't an object.
-                reportFailure(ServiceFailure.unreadable(Operation.TIMINGS))
+                reportFailure(ServiceFailure.unreadable(Service.INTRODB, Operation.TIMINGS))
                 throw unreadable
             }
         }

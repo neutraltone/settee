@@ -21,6 +21,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -229,6 +230,12 @@ class PlayerController(
     /** What [titled] is called, once [resolve] has said. */
     private val _title = MutableStateFlow("")
     val title: StateFlow<String> = _title.asStateFlow()
+
+    // Only the kind, never which Source: all Send report on a failure may name (ADR 0010).
+    private val _source = MutableStateFlow<ReportedSource?>(null)
+
+    /** The kind of Source the stream on the player comes from, once it's known, for Send report. */
+    val reportedSource: StateFlow<ReportedSource?> = _source.asStateFlow()
     private var titled: MediaKey? = null
     private var loaded: MediaKey? = null
     private val counts = RestartCounts()
@@ -457,7 +464,10 @@ class PlayerController(
             if (debounce) delay(switchDebounceMillis)
 
             // A restart keeps its title while it asks again; a new channel has none until it's known.
-            if (request.key != titled) _title.value = ""
+            if (request.key != titled) {
+                _title.value = ""
+                _source.value = null
+            }
             states.publish(State.Buffering(_title.value))
             val playable = when (val resolved = resolve(request.key)) {
                 is Playable.Ready -> resolved
@@ -476,6 +486,7 @@ class PlayerController(
                 }
             }
             opens.resolved(playable)
+            _source.value = playable.source
             _title.value = playable.title
             titled = request.key
             httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))

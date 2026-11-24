@@ -27,7 +27,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.core.CrashReports
 import app.opentv.core.DailyCap
-import app.opentv.core.JourneyTimer
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.SourceKind
 import app.opentv.player.PlayerController
@@ -224,7 +224,7 @@ class ErrorReportsTest {
                     error,
                     onRetry = {},
                     onBack = {},
-                    sendReport = sendReportFor(error.reason, JourneyTimer.STREMIO),
+                    sendReport = sendReportFor(error.reason, ReportedSource.STREMIO),
                 )
             }
         }

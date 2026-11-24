@@ -9,6 +9,7 @@ import android.util.Log
 import app.opentv.core.AppSettings
 import app.opentv.core.JourneyTimer
 import app.opentv.core.JourneyTimer.Journey
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import java.util.concurrent.ConcurrentHashMap
@@ -228,7 +229,7 @@ class CatalogueRefresh(
             // Written, guide and all: the rescan after is the recordings', not the catalogue's. A
             // refresh of providers of more than one kind isn't any one kind's.
             val kind = enabled.map { it.kind }.distinct().singleOrNull()
-            journeys?.end(Journey.CATALOGUE_REFRESH, JourneyTimer.sourceOf(kind))
+            journeys?.end(Journey.CATALOGUE_REFRESH, ReportedSource.of(kind))
             rescan()
             Outcome.Refreshed(channels, summary, failures).also { outcome = it }
         }

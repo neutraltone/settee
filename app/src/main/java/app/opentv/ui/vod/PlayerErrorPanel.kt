@@ -31,6 +31,7 @@ import app.opentv.R
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
+import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.isBack
@@ -45,7 +46,7 @@ internal fun PlayerErrorPanel(
     error: PlayerController.State.Error,
     onRetry: () -> Unit,
     onBack: () -> Unit,
-    sendReport: (() -> Unit)? = null,
+    sendReport: ReportOffer? = null,
 ) {
     val first = remember { FocusRequester() }
     LaunchedEffect(error) { runCatching { first.requestFocus() } }

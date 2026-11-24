@@ -13,7 +13,6 @@ import io.sentry.RequestDetails
 import io.sentry.Sentry
 import io.sentry.SentryEnvelope
 import io.sentry.SentryEvent
-import io.sentry.SentryLevel
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
@@ -21,8 +20,6 @@ import io.sentry.android.core.cache.AndroidEnvelopeCache
 import io.sentry.hints.AbnormalExit
 import io.sentry.hints.DiskFlushNotification
 import io.sentry.hints.SubmissionResult
-import io.sentry.protocol.Device
-import io.sentry.protocol.Message
 import io.sentry.protocol.SentryId
 import io.sentry.transport.ITransport
 import io.sentry.transport.RateLimiter
@@ -39,7 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Crash Reports (ADR 0009): crashes and freezes sent to Sentry, only from a build with Settee's
  * DSN and only while the viewer has them [on], with nothing in them that could identify the
  * viewer or their Provider ([CrashScrubbing]). Only this and its own helpers in `core/`
- * ([CrashScrubbing], [HeldCrash]) touch Sentry's SDK, and nothing outside `core/` does: screens, view
+ * ([CrashScrubbing], [HeldCrash], [HandledEvents]) touch Sentry's SDK, and nothing outside `core/` does: screens, view
  * models and the app go through this, so a rule changes in one place (CrashReportsBoundaryTest).
  *
  * Sentry is started here, by hand, never by its auto-init content provider (removed in the
@@ -144,11 +141,23 @@ class CrashReports(
     // reports are off, with the screen it gives back.
     @Volatile private var sendingAsked: Asked? = null
 
-    /**
-     * A held crash the viewer said to send, given back its own screen and free memory, or an Error
-     * Report, given the [screen] it was sent from: by its event's id.
-     */
-    private class Asked(val eventId: SentryId?, val crash: HeldCrash?, val screen: String?)
+    /** What's being sent on the viewer's say-so, by its event's id. */
+    private class Asked(val eventId: SentryId?, val what: Outgoing)
+
+    /** What the viewer said to send: one held crash or one Error Report, never both or neither. */
+    private sealed interface Outgoing {
+        fun toEvent(): SentryEvent
+
+        /** A held crash, which carries its own screen and free memory, given back as it goes. */
+        class Held(val crash: HeldCrash) : Outgoing {
+            override fun toEvent() = crash.toEvent()
+        }
+
+        /** An Error Report, from the [screen] it was pressed on, not whichever is open by the time it goes. */
+        class Viewer(val report: ErrorReport, val screen: String?) : Outgoing {
+            override fun toEvent() = HandledEvents.of(report)
+        }
+    }
 
     private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
 
@@ -184,7 +193,7 @@ class CrashReports(
     fun answer(answer: Answer) {
         _askAboutHeld.value = false
         when (answer) {
-            Answer.SEND -> held?.take()?.let { send(crash = it) }
+            Answer.SEND -> held?.take()?.let { send(Outgoing.Held(it)) }
             Answer.DONT_SEND -> if (held?.take() != null) settings.addCrashReportsRefusal()
             // Which sends the held one, as turning them on anywhere does.
             Answer.ALWAYS_SEND -> setOn(true)
@@ -218,7 +227,7 @@ class CrashReports(
             held?.stopWatching()
             if (available) {
                 startSentry()
-                held?.take()?.let { send(crash = it) }
+                held?.take()?.let { send(Outgoing.Held(it)) }
             }
         } else {
             held?.discard()
@@ -238,123 +247,27 @@ class CrashReports(
     }
 
     /**
-     * The handled errors Settee reports (ADRs 0009 and 0010): failures Settee's own code, keys or
-     * requests can cause, and the one failure a viewer chose to send. Closed on purpose: a Provider's
-     * failures (HTTP errors, dead streams, web pages instead of video) and playback errors leave the
-     * device only as a [VIEWER_REPORT] the viewer pressed Send report for. [keepsMessages]: whether the
-     * error's own messages are sent (scrubbed) or only its classes and stack trace. [service]: for one
-     * of Settee's own services, its `service` tag; those are reported as a [ServiceFailure].
-     */
-    enum class Handled(internal val keepsMessages: Boolean, internal val service: String? = null) {
-        /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
-        XTREAM_PARSE(keepsMessages = false),
-
-        /**
-         * Room refusing to open the database: a missing migration or a schema that doesn't match.
-         * Its message names versions and tables, never rows.
-         */
-        DATABASE_MIGRATION(keepsMessages = true),
-
-        /** OpenSubtitles turning down Settee's key or request. */
-        OPENSUBTITLES(keepsMessages = false, service = "opensubtitles"),
-
-        /** TMDB turning down Settee's key or request. */
-        TMDB(keepsMessages = false, service = "tmdb"),
-
-        /** IntroDB or TheIntroDB: the stack trace tells them apart, through the client that asked. */
-        INTRODB(keepsMessages = false, service = "introdb"),
-
-        /** GitHub's latest-release API, which the update check asks. */
-        UPDATE_CHECK(keepsMessages = false, service = "update-check"),
-
-        /**
-         * A journey Settee's own part of which was clearly too slow (ADR 0010), sent as a [TooSlow]
-         * with no error at all: only the journey, its times and the Source's kind.
-         */
-        SLOW_JOURNEY(keepsMessages = false),
-
-        /**
-         * An Error Report: a failure on screen the viewer pressed Send report for, as an [ErrorReport].
-         * Its exception's messages can name the Provider, so only its classes and stack trace go.
-         */
-        VIEWER_REPORT(keepsMessages = false),
-    }
-
-    /**
-     * Reports [error], a handled error of [kind], while Crash Reports are on, through the same
-     * scrubber as a crash. Off, it's dropped, never held for the after-crash question: that's for
-     * crashes the viewer saw, and a handled error was already shown as one.
+     * Reports [report], one of the handled kinds ([HandledReport]), while Crash Reports are on,
+     * through the same scrubber as a crash. Off, it's dropped, never held for the after-crash question:
+     * that's for crashes the viewer saw, and a handled error was already shown as one.
      *
-     * A [Handled.VIEWER_REPORT] is the exception: an [ErrorReport] the viewer pressed Send report for
-     * (ADR 0010), sent whether or not Crash Reports are on and without turning them on, as the
-     * after-crash Send is. Never in a build without a DSN, which never offers it.
+     * An [ErrorReport] is the exception: one the viewer pressed Send report for (ADR 0010), sent whether
+     * or not Crash Reports are on and without turning them on, as the after-crash Send is. Never in a
+     * build without a DSN, which never offers it.
      *
      * Every kind counts towards the install's daily [DailyCap], and once it's reached the rest of
      * the day's are dropped. Crashes and freezes don't come through here, and are never capped.
      */
-    fun report(kind: Handled, error: Throwable) {
-        val service = kind.service
-        val failure = error as? ServiceFailure
+    fun report(report: HandledReport) {
         when {
-            // From the screen it was pressed on, not whichever is open by the time it goes.
             // Over the day's cap it goes no further, but the viewer was still heard: Send report says Sent.
-            kind == Handled.VIEWER_REPORT -> if (available && error is ErrorReport && to.cap.take(settings)) {
-                send(report = error, at = screen)
-            }
+            report is ErrorReport -> if (available && to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
             !reporting -> Unit
             // A journey that froze is the freeze's: that was reported, and says more.
-            error is TooSlow && frozeAt in error.journey.startedAt..error.journey.endedAt -> Unit
+            report is JourneyTimer.SlowJourney && frozeAt in report.startedAt..report.endedAt -> Unit
             // Counted only once it's going: one dropped while reports are off, or as a freeze's, isn't.
             !to.cap.take(settings) -> Unit
-            error is TooSlow -> Sentry.captureEvent(SlowJourneyEvent.of(error.journey))
-            // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
-            // stack that shows which client asked. The request and the reply were never in it.
-            service != null && failure != null -> {
-                val sent = HandledError("${kind.name} ${failure.message}", null)
-                sent.stackTrace = failure.stackTrace
-                Sentry.captureException(sent) { scope ->
-                    scope.setTag(CrashScrubbing.SERVICE_TAG, service)
-                    scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
-                    scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
-                }
-            }
-            else -> Sentry.captureException(HandledError.of(kind, error))
-        }
-    }
-
-    /**
-     * A [journey] [JourneyTimer] found too slow, reported as [Handled.SLOW_JOURNEY]: no error at all,
-     * only the journey, Settee's own time and the network wait (each to the nearest 100 ms) and the
-     * Source's kind, beside the screen and free memory. [JourneyTimer] hands on each at most once a process.
-     */
-    class TooSlow(val journey: JourneyTimer.SlowJourney) : Exception(journey.journey.tag) {
-        // Nothing of where it was made is sent, so there's no stack to fill in.
-        override fun fillInStackTrace(): Throwable = this
-    }
-
-    /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
-    class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause) {
-        internal companion object {
-            /** Causes copied: enough for any real chain, and an end to a looping one. */
-            private const val MAX_CAUSES = 8
-
-            /**
-             * [error] as a [HandledError] named after [kind] and each class in its chain, with the same
-             * stack traces, and the original messages only where [Handled.keepsMessages] says they're safe.
-             */
-            fun of(kind: Handled, error: Throwable): HandledError {
-                fun copy(from: Throwable, depth: Int): HandledError {
-                    val type = from.javaClass.name
-                    val message = if (kind.keepsMessages) "$type: ${from.message}" else type
-                    val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
-                    return HandledError(message, cause).apply { stackTrace = from.stackTrace }
-                }
-                val copied = copy(error, 0)
-                return HandledError("${kind.name}: ${copied.message}", copied.cause).apply {
-                    stackTrace =
-                        error.stackTrace
-                }
-            }
+            else -> Sentry.captureEvent(HandledEvents.of(report))
         }
     }
 
@@ -382,16 +295,14 @@ class CrashReports(
                 if (event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }) frozeAt = freezes.elapsed()
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
-                val asked = sendingAsked?.takeIf { it.eventId == event.eventId }
+                val asked = sendingAsked?.takeIf { it.eventId == event.eventId }?.what
                 when {
-                    asked != null -> {
-                        val crash = asked.crash
-                        CrashScrubbing.event(event, settings.crashReportsInstallId, crash?.at?.screen ?: asked.screen)
-                            .also { crash?.restoreAt(it) }
-                    }
+                    asked is Outgoing.Held -> CrashScrubbing.event(event, settings.crashReportsInstallId, asked.crash.at.screen)
+                        .also { asked.crash.restoreAt(it) }
+                    asked is Outgoing.Viewer -> CrashScrubbing.event(event, settings.crashReportsInstallId, asked.screen)
                     !on.value || fromBefore -> null
                     else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
-                        .also { SlowJourneyEvent.withFreeMemory(it, context) }
+                        .also { HandledEvents.withFreeMemory(it, context) }
                 }
             }
             to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it, to.queue)) }
@@ -399,11 +310,10 @@ class CrashReports(
         started = true
     }
 
-    // Off the main thread: starting Sentry and waiting for the report to go both take a while. A held
-    // [crash], or an Error Report sent from the screen [at].
-    private fun send(crash: HeldCrash? = null, report: ErrorReport? = null, at: String? = null) = background.execute {
-        val event = crash?.toEvent() ?: report?.let(::eventOf) ?: return@execute
-        sendingAsked = Asked(event.eventId, crash, at)
+    // Off the main thread: starting Sentry and waiting for the report to go both take a while.
+    private fun send(what: Outgoing) = background.execute {
+        val event = what.toEvent()
+        sendingAsked = Asked(event.eventId, what)
         startSentry()
         Sentry.captureEvent(event)
         if (!on.value) {
@@ -483,24 +393,6 @@ class CrashReports(
     }
 }
 
-/**
- * An Error Report as it goes: its kind and detail line as tags the scrubber lets through (scrubbing
- * the detail), with the cause's classes and stack trace where there's a cause, and a message naming
- * the kind where there isn't.
- */
-private fun eventOf(report: ErrorReport): SentryEvent {
-    val kind = CrashReports.Handled.VIEWER_REPORT
-    val event = report.cause?.let { SentryEvent(CrashReports.HandledError.of(kind, it)) } ?: SentryEvent().apply {
-        message = io.sentry.protocol.Message().apply { formatted = "${kind.name}: ${report.kind}" }
-    }
-    return event.apply {
-        level = SentryLevel.ERROR
-        setTag(CrashScrubbing.ERROR_KIND_TAG, report.kind)
-        setTag(CrashScrubbing.ERROR_DETAIL_TAG, report.detail)
-        report.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it) }
-    }
-}
-
 /** Errors and freezes only (ADR 0009): everything else Sentry can collect or send, off. */
 private fun SentryAndroidOptions.errorsAndFreezesOnly() {
     // No tracing, profiling, replay, screenshots, view hierarchy, breadcrumbs of any kind, sessions or
@@ -540,32 +432,4 @@ private fun SentryAndroidOptions.errorsAndFreezesOnly() {
     beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
         CrashScrubbing.breadcrumb(breadcrumb)
     }
-}
-
-/** What a Slow Journey is sent as (ADR 0010): a message event of tags, with no stack. */
-private object SlowJourneyEvent {
-    private const val TO_THE_NEAREST = 100
-
-    fun of(slow: JourneyTimer.SlowJourney) = SentryEvent().apply {
-        val journey = slow.journey.tag
-        // The journey alone, so Sentry groups each journey's reports as one issue.
-        message = Message().apply { formatted = "${CrashReports.Handled.SLOW_JOURNEY.name}: $journey" }
-        level = SentryLevel.WARNING
-        setTag(CrashScrubbing.JOURNEY_TAG, journey)
-        setTag(CrashScrubbing.OWN_TIME_TAG, rounded(slow.ownMillis))
-        setTag(CrashScrubbing.NETWORK_WAIT_TAG, rounded(slow.networkMillis))
-        slow.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it) }
-    }
-
-    /**
-     * A Slow Journey's free memory, read as it's sent: Sentry only reads it itself for a crash, since
-     * collecting the rest of what comes with it is off ([errorsAndFreezesOnly]).
-     */
-    fun withFreeMemory(event: SentryEvent, context: Context?) {
-        if (context == null || event.getTag(CrashScrubbing.JOURNEY_TAG) == null) return
-        val device = event.contexts.device ?: Device().also(event.contexts::setDevice)
-        device.freeMemory = HeldCrash.At.now(context, screen = null).freeMemory
-    }
-
-    private fun rounded(millis: Long) = ((millis + TO_THE_NEAREST / 2) / TO_THE_NEAREST * TO_THE_NEAREST).toString()
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,10 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import app.opentv.R
 
 /** The detail line's test tag, so tests can find it apart from the sentence. */
 const val ERROR_DETAIL_TAG = "error_detail"
@@ -44,7 +43,7 @@ fun ErrorMessage(
     textAlign: TextAlign = TextAlign.Center,
     /** For a small space such as the Live Preview tile; the detail line always keeps to one line. */
     maxLines: Int = Int.MAX_VALUE,
-    sendReport: (() -> Unit)? = null,
+    sendReport: ReportOffer? = null,
     actions: (@Composable () -> Unit)? = null,
 ) {
     val horizontal = if (textAlign == TextAlign.Center) Alignment.CenterHorizontally else Alignment.Start
@@ -65,27 +64,35 @@ fun ErrorMessage(
             Spacer(Modifier.height(ACTIONS_GAP))
             it()
         }
-        sendReport?.let { SendReport(sentence, detail, it, textAlign) }
+        sendReport?.let { OfferedReport(it, textAlign) }
     }
 }
 
 /**
- * The note saying what's sent, and Send report, which says Sent once it's been pressed for the error
- * [sentence] and [detail] describe. Drawn by [ErrorMessage]; on its own only where the error's main
- * action isn't the error's, such as a form whose buttons sit under the error: there it goes after
- * them, so it's Down from them and they never move.
+ * Send report as an error offers it: the [note] saying what's sent, the button's [sendLabel], and
+ * [sentLabel] once it's been pressed, which calls [onSend]. The words come from the feature that
+ * offers it: what a report holds isn't the design system's to say.
+ */
+@Immutable
+class ReportOffer(val note: String, val sendLabel: String, val sentLabel: String, val onSend: () -> Unit)
+
+/**
+ * The [offer]'s note, and its button, which says Sent once pressed for as long as this [offer] is
+ * shown. Drawn by [ErrorMessage]; on its own only where the error's main action isn't the error's,
+ * such as a form whose buttons sit under the error: there it goes after them, so it's Down from them
+ * and they never move.
  */
 @Composable
-fun SendReport(sentence: String, detail: String, send: () -> Unit, textAlign: TextAlign = TextAlign.Start) {
-    var sent by remember(sentence, detail) { mutableStateOf(false) }
+fun OfferedReport(offer: ReportOffer, textAlign: TextAlign = TextAlign.Start) {
+    var sent by remember(offer) { mutableStateOf(false) }
     Spacer(Modifier.height(ACTIONS_GAP))
-    Text(stringResource(R.string.report_note), SetteeType.Body, color = SetteeColors.QuietText, textAlign = textAlign)
+    Text(offer.note, SetteeType.Body, color = SetteeColors.QuietText, textAlign = textAlign)
     ActionButton(
-        stringResource(if (sent) R.string.report_sent else R.string.report_send),
+        if (sent) offer.sentLabel else offer.sendLabel,
         onClick = {
             if (!sent) {
                 sent = true
-                send()
+                offer.onSend()
             }
         },
     )

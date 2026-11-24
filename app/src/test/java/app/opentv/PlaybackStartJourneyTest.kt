@@ -9,7 +9,7 @@ import android.content.Context
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.JourneyTimer
-import app.opentv.data.model.SourceKind
+import app.opentv.core.ReportedSource
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.player.PlayerController
@@ -37,7 +37,7 @@ class PlaybackStartJourneyTest {
         players.journeys = JourneyTimer(slow = { slow += it })
         val controller = players.controller(resolve = { key ->
             delay(millis)
-            Playable.Ready(key, "https://example.com/1", "", "Channel", isLive = true, sourceKind = SourceKind.STALKER)
+            Playable.Ready(key, "https://example.com/1", "", "Channel", isLive = true, source = ReportedSource.STALKER)
         })
         controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
         players.until { controller.state.value is PlayerController.State.Playing }
@@ -52,7 +52,7 @@ class PlaybackStartJourneyTest {
         val journey = slow.single()
         assertThat(journey.journey).isEqualTo(JourneyTimer.Journey.PLAYBACK_START)
         assertThat(journey.ownMillis).isAtLeast(6_000L)
-        assertThat(journey.source).isEqualTo("stalker")
+        assertThat(journey.source).isEqualTo(ReportedSource.STALKER)
     }
 
     @Test
