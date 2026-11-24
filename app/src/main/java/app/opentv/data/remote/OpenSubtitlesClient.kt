@@ -77,9 +77,10 @@ sealed class OpenSubtitlesFailure(message: String, cause: Throwable? = null) : I
 
     /**
      * OpenSubtitles turned down Settee's own key, before it looked at any account. Retrying never helps
-     * and the viewer can't fix it: only a Settee with a key OpenSubtitles accepts can.
+     * and the viewer can't fix it: only a Settee with a key OpenSubtitles accepts can. [status] is
+     * 403 with OpenSubtitles' own words, or a 401 to a request that carried only the key.
      */
-    class KeyRejected : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
+    class KeyRejected(val status: Int = 403) : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
 }
 
 /**
@@ -234,17 +235,24 @@ class OpenSubtitlesClient(
             )
         }
         failure?.let(reportFailure)
-        throw failureFor(status, parsed, request, download = operation == Operation.DOWNLOAD)
+        throw failureFor(status, parsed, request, operation)
     }
 
     /** What an answer of [status] means; a success that isn't JSON is OpenSubtitles' trouble too. */
-    private fun failureFor(status: Int, answer: JsonObject?, request: Request, download: Boolean) = when {
-        status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.TokenRejected()
+    private fun failureFor(status: Int, answer: JsonObject?, request: Request, operation: Operation) = when {
+        // As for the report above: a 401 is the viewer's only when their password or token went with
+        // it. A search never sends a token, so telling that viewer they were signed out would send
+        // them to sign in, which can't help when it's Settee's key OpenSubtitles turned down.
+        // signIn turns its own TokenRejected into SignInRejected.
+        status == HTTP_UNAUTHORISED &&
+            (operation == Operation.SIGN_IN || request.header("Authorization") != null) ->
+            OpenSubtitlesFailure.TokenRejected()
+        status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.KeyRejected(status)
         // Told by its message too: Cloudflare answers 403 with a challenge page, which is passing trouble.
         // The same contains-match as the release check, tools/keys/check_keys.py: change both together.
         status == HTTP_FORBIDDEN && answer?.string("message")?.contains(KEY_REFUSED) == true ->
             OpenSubtitlesFailure.KeyRejected()
-        status == HTTP_NOT_ACCEPTABLE && download -> OpenSubtitlesFailure.DownloadLimit(
+        status == HTTP_NOT_ACCEPTABLE && operation == Operation.DOWNLOAD -> OpenSubtitlesFailure.DownloadLimit(
             signedIn = request.header("Authorization") != null,
             resetsAt = resetTime(answer),
         )

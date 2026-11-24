@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Tämä televisio ei voi toistaa %1$s-laatua</string>
     <string name="vod_cant_play_device">Tämä laite ei voi toistaa %1$s-laatua</string>
+    <string name="player_stepped_down_tv">Tämä televisio ei voi toistaa %1$s-laatua. Toistetaan sen sijaan %2$s-laatua.</string>
+    <string name="player_stepped_down_device">Tämä laite ei voi toistaa %1$s-laatua. Toistetaan sen sijaan %2$s-laatua.</string>
+    <string name="player_stepped_down_lower_tv">Tämä televisio ei voi toistaa %1$s-laatua. Toistetaan sen sijaan heikompaa laatua.</string>
+    <string name="player_stepped_down_lower_device">Tämä laite ei voi toistaa %1$s-laatua. Toistetaan sen sijaan heikompaa laatua.</string>
+    <string name="player_stepped_down_unnamed_tv">Tämä televisio ei voi toistaa tätä laatua. Toistetaan sen sijaan toista.</string>
+    <string name="player_stepped_down_unnamed_device">Tämä laite ei voi toistaa tätä laatua. Toistetaan sen sijaan toista.</string>
     <string name="vod_language_title">Täällä vain kielellä %1$s</string>
     <string name="vod_language_body_tv">Tämä televisio ei voi toistaa versiota omalla kielelläsi.</string>
     <string name="vod_language_body_device">Tämä laite ei voi toistaa versiota omalla kielelläsi.</string>

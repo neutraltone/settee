@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Den här tv:n kan inte spela upp %1$s</string>
     <string name="vod_cant_play_device">Den här enheten kan inte spela upp %1$s</string>
+    <string name="player_stepped_down_tv">Den här tv:n kan inte spela upp %1$s. Spelar upp %2$s i stället.</string>
+    <string name="player_stepped_down_device">Den här enheten kan inte spela upp %1$s. Spelar upp %2$s i stället.</string>
+    <string name="player_stepped_down_lower_tv">Den här tv:n kan inte spela upp %1$s. Spelar upp en lägre kvalitet i stället.</string>
+    <string name="player_stepped_down_lower_device">Den här enheten kan inte spela upp %1$s. Spelar upp en lägre kvalitet i stället.</string>
+    <string name="player_stepped_down_unnamed_tv">Den här tv:n kan inte spela upp den kvaliteten. Spelar upp en annan i stället.</string>
+    <string name="player_stepped_down_unnamed_device">Den här enheten kan inte spela upp den kvaliteten. Spelar upp en annan i stället.</string>
     <string name="vod_language_title">Bara på %1$s här</string>
     <string name="vod_language_body_tv">Den här tv:n kan inte spela upp en version på ditt språk.</string>
     <string name="vod_language_body_device">Den här enheten kan inte spela upp en version på ditt språk.</string>
