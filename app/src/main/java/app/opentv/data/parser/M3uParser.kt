@@ -153,14 +153,32 @@ object M3uParser {
     }
 
     /**
-     * The display name is whatever follows the last comma on the #EXTINF line. Falling back
-     * to `tvg-name` matters because a fair number of playlists emit `#EXTINF:-1 ...,` with
+     * The display name is everything after the first comma outside the quoted attributes, as
+     * VLC and Kodi read it: the last comma would cut "News, Weather & Sport" to its tail, and
+     * the first comma on the line can sit inside `group-title="News, Sport"`. Falling back to
+     * `tvg-name` matters because a fair number of playlists emit `#EXTINF:-1 ...,` with
      * nothing after the comma.
      */
     private fun displayNameOf(line: String, attributes: Map<String, String>): String? {
-        val afterComma = line.substringAfterLast(',', missingDelimiterValue = "").trim()
+        val separator = nameSeparatorOf(line)
+        val afterComma = if (separator < 0) "" else line.substring(separator + 1).trim()
         return afterComma.takeIf { it.isNotBlank() }
             ?: attributes["tvg-name"]?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * The index of the first comma outside double quotes. A line whose quotes don't balance
+     * has none by that reading, so it falls back to the last comma rather than lose the name.
+     */
+    private fun nameSeparatorOf(line: String): Int {
+        var quoted = false
+        for (i in line.indices) {
+            when (line[i]) {
+                '"' -> quoted = !quoted
+                ',' -> if (!quoted) return i
+            }
+        }
+        return line.lastIndexOf(',')
     }
 
     private fun parseAttributes(line: String): Map<String, String> = ATTRIBUTE_REGEX.findAll(line).associate { match ->
