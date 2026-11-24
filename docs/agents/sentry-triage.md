@@ -12,8 +12,8 @@ file is the source**: change it here, in a PR, then paste the new prompt into th
 
 ## Owner setup
 
-1. **Label.** Create the `sentry` label once: `gh label create sentry --description "Filed from a Sentry crash report"`.
-   The routine never creates labels; it stops if `sentry` is missing.
+1. **Label.** The `sentry` label already exists on `neutraltone/settee`. The routine never creates
+   labels; it stops if `sentry` is missing.
 2. **Sentry token.** Use the read-only personal token made for #571 (`project:read`, `event:read`,
    `org:read`, kept in the owner's password manager). Put it in the routine's cloud environment as
    `SENTRY_AUTH_TOKEN`. Never as a repo secret, an Actions variable or a committed file.
@@ -103,11 +103,15 @@ Settee keeps only an allow-list of fields before a report leaves the device:
   for that release rather than guessing.
 - **Freezes (ANRs)** arrive as exceptions of type `ApplicationNotResponding`, or with a mechanism of
   `ANR` or `AppExitInfo`.
+- **Held reports**: a crash or freeze from while reports were off, sent later because the viewer said
+  Send, Always send or turned reports on. Its release, `screen`, free memory and versions are from when
+  it happened, but it arrives later, so its first-seen time can trail the release it names. A held
+  freeze from Android's exit history (Android 11 and later) has no `screen` and no free memory.
 - **Handled errors**: a short allow-list of Settee's own failures (for example an Xtream reply that
-  wouldn't parse, `XTREAM_PARSE`, or a Room migration that failed, `DATABASE_MIGRATION`) arrives as a
-  handled event whose title starts with the kind. They are Settee bugs like crashes and follow the
-  same rules. Provider failures (HTTP errors, dead streams, web pages) are never reported, so don't
-  look for them.
+  arrived whole but wouldn't parse, `XTREAM_PARSE`, or a Room migration that failed,
+  `DATABASE_MIGRATION`) arrives as a handled event whose title starts with the kind. They are Settee
+  bugs like crashes and follow the same rules. Provider failures (HTTP errors, dead streams, web pages,
+  replies cut off part way) are never reported, so don't look for them.
 
 ## Sentry API
 

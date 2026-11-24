@@ -44,14 +44,18 @@ timed, after a week. Turn off Settings → Display → Skip intros and credits a
 
 When Settee crashes or stops responding, it can send a report to Sentry so the bug can be found and
 fixed. So can two errors Settee shows rather than crashing, because they usually mean a bug in Settee: a
-provider's list that Settee couldn't read, and Settee's own database failing to open after an update.
-For the first, the report says where in Settee's code reading failed, never what the provider sent.
+provider's list that arrived whole but that Settee couldn't read, and Settee's own database failing to
+open after an update. For the first, the report says where in Settee's code reading failed, never what
+the provider sent. A list that arrives cut off is your provider's problem, and isn't reported.
 
 Crash reports are **off until you turn them on**: on the last step of setting Settee up, in
 Settings → Privacy, or by answering Send or Always send when Settee asks about a crash the next time
 it opens. Until you answer, that crash is kept only on this device, with any web addresses and
-MAC addresses in it already cut out, and Don't send deletes it. Say Don't send twice and it stops asking. Settings → Privacy turns them off again at any
-time, and turning them off throws away any report still waiting to go. The choice belongs to each
+MAC addresses in it already cut out, and Don't send deletes it. Say Don't send twice and it stops asking.
+Turning reports on in Settings or during setup sends a crash that's being kept, as Always send would.
+Settings → Privacy turns them off again at any time, and turning them off throws away any report still
+waiting to go, and any crash being kept. A freeze or crash from while reports were off is never sent
+later just because they're turned on, other than the one kept crash. The choice belongs to each
 device: it isn't synced and doesn't depend on who's watching.
 
 A report contains only:
@@ -68,6 +72,9 @@ A report contains only:
   their path and anything shaped like a MAC address hidden
 - an id for the exact build, the same in every copy of a release, so the stack trace can be matched
   to Settee's code
+
+For a crash kept until you answer, the screen, the free memory and the versions are the ones from
+when it happened, not from when the report is sent.
 
 A report never contains your provider's address, username, password or MAC, the names of your
 providers, profiles or channels, or what you were watching. Settee removes everything not on the list
