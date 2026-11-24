@@ -29,7 +29,9 @@ fun CrashQuestion(crashReports: CrashReports) {
     if (!ask) return
     SidePanel(onBack = crashReports::askLater) {
         PanelTitle(stringResource(R.string.crash_question_title))
+        // What a report holds is the Privacy pane's own sentence, so the two can't promise different things.
         PanelBody(stringResource(R.string.crash_question_body))
+        PanelBody(stringResource(R.string.settings_privacy_crash_reports_note))
         PanelRow(stringResource(R.string.crash_question_send), onClick = {
             crashReports.answer(CrashReports.Answer.SEND)
         })

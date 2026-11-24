@@ -5,9 +5,12 @@
  */
 package app.opentv.core
 
+import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.pm.PackageInfoCompat
 import io.sentry.SentryEvent
 import io.sentry.SentryLevel
 import io.sentry.protocol.Mechanism
@@ -34,8 +37,57 @@ internal data class HeldCrash(
     val release: String,
     /** Outermost first, then each cause. */
     val exceptions: List<Thrown>,
+    /** What else a report says that can have changed by the time it's sent. */
+    val at: At = At(),
 ) {
     data class Thrown(val type: String, val message: String?, val frames: List<StackTraceElement>)
+
+    /**
+     * The allow-listed details (docs/PRIVACY.md) that belong to the moment of the crash, not to the
+     * launch that sends it: the screen's route name, free memory, the Android version and Settee's
+     * build. Null where it isn't known, as for a freeze read back from Android's exit history.
+     */
+    data class At(
+        val screen: String? = null,
+        val freeMemory: Long? = null,
+        val osVersion: String? = null,
+        val osBuild: String? = null,
+        val appBuild: String? = null,
+    ) {
+        companion object {
+            /** Now, as Sentry would read each detail, with [screen] open. */
+            fun now(context: Context, screen: String?) = At(
+                screen = screen,
+                freeMemory = runCatching {
+                    val manager = context.getSystemService(ActivityManager::class.java)
+                    ActivityManager.MemoryInfo().also { manager?.getMemoryInfo(it) }.availMem
+                }.getOrNull(),
+                osVersion = Build.VERSION.RELEASE,
+                osBuild = Build.DISPLAY,
+                appBuild = runCatching {
+                    PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(context.packageName, 0))
+                        .toString()
+                }.getOrNull(),
+            )
+        }
+    }
+
+    /**
+     * Puts back, on [event] as it's about to be sent, the details from when this happened in place of
+     * the sending launch's. Free memory then isn't known, so it goes rather than say today's.
+     */
+    fun restoreAt(event: SentryEvent) {
+        val contexts = event.contexts
+        contexts.device?.freeMemory = at.freeMemory
+        contexts.operatingSystem?.let { os ->
+            at.osVersion?.let { os.version = it }
+            at.osBuild?.let { os.build = it }
+        }
+        contexts.app?.let { app ->
+            app.appVersion = release
+            at.appBuild?.let { app.appBuild = it }
+        }
+    }
 
     /** As Sentry would have built it at the time: an unhandled crash, or a freeze as its ANR. */
     fun toEvent(): SentryEvent = SentryEvent(Date(timeMillis)).apply {
@@ -70,6 +122,15 @@ internal data class HeldCrash(
         .put("time", timeMillis)
         .put("release", release)
         .put(
+            "at",
+            JSONObject()
+                .put("screen", at.screen)
+                .put("freeMemory", at.freeMemory)
+                .put("osVersion", at.osVersion)
+                .put("osBuild", at.osBuild)
+                .put("appBuild", at.appBuild),
+        )
+        .put(
             "exceptions",
             JSONArray(
                 exceptions.map { thrown ->
@@ -100,21 +161,21 @@ internal data class HeldCrash(
         private const val MOST_FRAMES = 250
         private const val MOST_CAUSES = 10
 
-        /** [error], as the app crashed with it. */
-        fun crash(error: Throwable, release: String, now: Long): HeldCrash {
+        /** [error], as the app crashed with it [at] [now]. */
+        fun crash(error: Throwable, release: String, now: Long, at: At): HeldCrash {
             val chain = generateSequence(error) { it.cause.takeIf { cause -> cause !== it } }
                 .take(MOST_CAUSES)
                 .map { thrown ->
                     Thrown(thrown.javaClass.name, thrown.message?.let(CrashScrubbing::scrub), thrown.stackTrace.top())
                 }
-            return HeldCrash(freeze = false, timeMillis = now, release = release, exceptions = chain.toList())
+            return HeldCrash(freeze = false, timeMillis = now, release = release, exceptions = chain.toList(), at = at)
         }
 
         /**
          * The main thread stuck at [mainStack] for [afterMillis], or for as long as it took Android to
          * end Settee when that's null, named as Sentry names an ANR.
          */
-        fun freeze(mainStack: List<StackTraceElement>, afterMillis: Long?, release: String, now: Long) = HeldCrash(
+        fun freeze(mainStack: List<StackTraceElement>, afterMillis: Long?, release: String, now: Long, at: At) = HeldCrash(
             freeze = true,
             timeMillis = now,
             release = release,
@@ -125,16 +186,26 @@ internal data class HeldCrash(
                     mainStack.take(MOST_FRAMES),
                 ),
             ),
+            at = at,
         )
 
         private fun Array<StackTraceElement>.top() = take(MOST_FRAMES)
 
         fun fromJson(json: String): HeldCrash = JSONObject(json).let { held ->
             val exceptions = held.getJSONArray("exceptions")
+            val at = held.optJSONObject("at")
+            fun JSONObject.text(name: String) = optString(name).takeIf { has(name) }
             HeldCrash(
                 freeze = held.getBoolean("freeze"),
                 timeMillis = held.getLong("time"),
                 release = held.getString("release"),
+                at = At(
+                    screen = at?.text("screen"),
+                    freeMemory = at?.takeIf { it.has("freeMemory") }?.optLong("freeMemory"),
+                    osVersion = at?.text("osVersion"),
+                    osBuild = at?.text("osBuild"),
+                    appBuild = at?.text("appBuild"),
+                ),
                 exceptions = (0 until exceptions.length()).map { i ->
                     val thrown = exceptions.getJSONObject(i)
                     val frames = thrown.getJSONArray("frames")
@@ -169,6 +240,7 @@ internal class HeldCrashes(
     private val context: Context,
     private val release: String,
     private val freezes: CrashReports.Freezes,
+    private val screen: () -> String?,
     private val shouldHold: () -> Boolean,
 ) {
     private var handler: HoldingHandler? = null
@@ -188,7 +260,9 @@ internal class HeldCrashes(
     fun start(watchFreezes: Boolean) {
         if (handler == null) {
             handler = HoldingHandler(Thread.getDefaultUncaughtExceptionHandler()) { error ->
-                if (shouldHold()) hold(HeldCrash.crash(error, release, System.currentTimeMillis()))
+                if (shouldHold()) {
+                    hold(HeldCrash.crash(error, release, System.currentTimeMillis(), HeldCrash.At.now(context, screen())))
+                }
             }.also(Thread::setDefaultUncaughtExceptionHandler)
         }
         if (!watchFreezes || PastFreezes.kept || watchWanted) return
@@ -202,7 +276,8 @@ internal class HeldCrashes(
         val main = Looper.getMainLooper().thread
         return FreezeWatch(freezes.afterMillis, { freezes.notResponding(context) }) {
             if (shouldHold()) {
-                hold(HeldCrash.freeze(main.stackTrace.toList(), freezes.afterMillis, release, System.currentTimeMillis()))
+                val at = HeldCrash.At.now(context, screen())
+                hold(HeldCrash.freeze(main.stackTrace.toList(), freezes.afterMillis, release, System.currentTimeMillis(), at))
                 freezes.held()
             }
         }
@@ -218,7 +293,9 @@ internal class HeldCrashes(
             val freeze = PastFreezes.newest(context, lookedBackTo)
             val heldAt = runCatching { HeldCrash.fromJson(file.readText()).timeMillis }.getOrNull()
             if (freeze != null && (heldAt == null || heldAt < freeze.timeMillis)) {
-                hold(HeldCrash.freeze(freeze.mainStack, afterMillis = null, release, freeze.timeMillis))
+                // Android doesn't say which screen was open, or what was free, or which build it was:
+                // the release is this one's, which an update in between would make wrong.
+                hold(HeldCrash.freeze(freeze.mainStack, afterMillis = null, release, freeze.timeMillis, HeldCrash.At()))
                 freezes.held()
             }
         }

@@ -84,6 +84,12 @@ class CrashReportsTest {
         Sentry.getCurrentScopes().options.executorService.submit {}.get(10, java.util.concurrent.TimeUnit.SECONDS)
     }
 
+    /** What Android says is free, as Sentry reads it for a report's free memory. */
+    private fun freeMemory(bytes: Long) {
+        shadowOf(app.getSystemService(ActivityManager::class.java))
+            .setMemoryInfo(ActivityManager.MemoryInfo().apply { availMem = bytes })
+    }
+
     private fun freezeWatching() = Thread.getAllStackTraces().keys.any { it.name == "Settee freeze watch" && it.isAlive }
 
     /** Android ending Settee for not responding at [atMillis], keeping the main thread's stack (Android 11+). */
@@ -400,12 +406,53 @@ class CrashReportsTest {
         crash()
         nextLaunch()
 
-        reports.setOn(true)
         reports.setOn(false)
 
         assertThat(nextLaunch().askAboutHeld.value).isFalse()
         reports.answer(CrashReports.Answer.SEND)
         assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `turning reports on in Settings sends the crash held while they were off, as Always send would`() {
+        crashReports()
+        crash(IllegalStateException("Settee broke"))
+
+        nextLaunch().setOn(true)
+
+        assertThat(sentEvents()).hasSize(1)
+        assertThat(sentEvents().single()).contains("Settee broke")
+        assertThat(reports.askAboutHeld.value).isFalse()
+        assertThat(nextLaunch().askAboutHeld.value).isFalse()
+        assertThat(sentEvents()).hasSize(1)
+    }
+
+    @Test
+    fun `a held crash is sent with the screen and free memory from when it happened, not from when it's sent`() {
+        crashReports()
+        reports.screenOpened("guide")
+        freeMemory(111_000_000)
+        crash()
+
+        nextLaunch().screenOpened("main")
+        freeMemory(222_000_000)
+        reports.answer(CrashReports.Answer.SEND)
+
+        val event = sentEvents().single()
+        assertThat(event).contains("\"tags\":{\"screen\":\"guide\"}")
+        assertThat(event).contains("\"free_memory\":111000000")
+        assertThat(event).doesNotContain("222000000")
+    }
+
+    @Test
+    fun `a crash held before any screen opened is sent without one`() {
+        crashReports()
+        crash()
+
+        nextLaunch().screenOpened("main")
+        reports.answer(CrashReports.Answer.SEND)
+
+        assertThat(sentEvents().single()).doesNotContain("\"screen\"")
     }
 
     @Test

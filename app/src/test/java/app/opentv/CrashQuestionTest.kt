@@ -85,6 +85,8 @@ class CrashQuestionTest {
         show(launchAfterCrash())
 
         compose.onNodeWithText("Send a crash report?").assertIsInSidePanel()
+        compose.onNodeWithText("Settee crashed or froze last time.").assertExists()
+        // The Privacy pane's own sentence about what a report holds.
         compose.onNodeWithText("Never your provider", substring = true).assertExists()
         compose.onNodeWithText("Send").assertIsFocused()
         compose.onNodeWithText("Don't send").assertExists()

@@ -18,6 +18,7 @@ import io.sentry.android.core.cache.AndroidEnvelopeCache
 import io.sentry.hints.AbnormalExit
 import io.sentry.hints.DiskFlushNotification
 import io.sentry.hints.SubmissionResult
+import io.sentry.protocol.SentryId
 import io.sentry.transport.ITransport
 import io.sentry.transport.RateLimiter
 import io.sentry.util.HintUtils
@@ -122,8 +123,9 @@ class CrashReports(
 
     private var held: HeldCrashes? = null
 
-    // The held crash being sent while reports are off: the one event the before-send hook lets through.
-    @Volatile private var sendingHeld: io.sentry.protocol.SentryId? = null
+    // The held crash being sent, by its event's id: the one event the before-send hook lets through
+    // while reports are off, and the one it gives back its own screen and free memory.
+    @Volatile private var sendingHeld: Pair<SentryId?, HeldCrash>? = null
 
     private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
 
@@ -134,7 +136,9 @@ class CrashReports(
     fun start(context: Context) {
         val app = context.applicationContext
         this.context = app
-        val held = HeldCrashes(File(app.noBackupFilesDir, HELD_FILE), app, release, freezes) { !on.value && mayHold }
+        val held = HeldCrashes(File(app.noBackupFilesDir, HELD_FILE), app, release, freezes, { screen }) {
+            !on.value && mayHold
+        }
         this.held = held
         // Freezes only while off: while on, Sentry watches for them.
         if (mayHold) held.start(watchFreezes = !on.value)
@@ -153,14 +157,11 @@ class CrashReports(
     /** The viewer's [answer] to [askAboutHeld]: the held report sent, thrown away, or sent with reports on. */
     fun answer(answer: Answer) {
         _askAboutHeld.value = false
-        val crash = held?.take() ?: return
         when (answer) {
-            Answer.SEND -> send(crash)
-            Answer.DONT_SEND -> settings.addCrashReportsRefusal()
-            Answer.ALWAYS_SEND -> {
-                setOn(true)
-                send(crash)
-            }
+            Answer.SEND -> held?.take()?.let(::send)
+            Answer.DONT_SEND -> if (held?.take() != null) settings.addCrashReportsRefusal()
+            // Which sends the held one, as turning them on anywhere does.
+            Answer.ALWAYS_SEND -> setOn(true)
         }
     }
 
@@ -180,18 +181,21 @@ class CrashReports(
 
     /**
      * Turns Crash Reports on or off for this device. On makes the install id, if it's the first time,
-     * and starts Sentry. Off stops it and throws away anything still waiting to go.
+     * starts Sentry, and sends a crash held while they were off: saying yes covers it, as Always send
+     * does. Off stops Sentry and throws away anything held or still waiting to go.
      */
     fun setOn(on: Boolean) {
         if (on) settings.makeCrashReportsInstallId()
         settings.setCrashReportsOn(on)
-        // Nobody said to send what was held: Always send takes it before turning reports on.
-        held?.discard()
         _askAboutHeld.value = false
         if (on) {
             held?.stopWatching()
-            if (available) startSentry()
+            if (available) {
+                startSentry()
+                held?.take()?.let(::send)
+            }
         } else {
+            held?.discard()
             stopSentry()
             // A freeze Android recorded while they were on isn't one to hold.
             settings.crashReportsLookedBackTo = System.currentTimeMillis()
@@ -280,10 +284,12 @@ class CrashReports(
                 // before reports were turned on happened while the viewer hadn't said yes.
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
-                if (event.eventId != sendingHeld && (!on.value || fromBefore)) {
-                    null
-                } else {
-                    CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+                val held = sendingHeld?.takeIf { it.first == event.eventId }?.second
+                when {
+                    held != null -> CrashScrubbing.event(event, settings.crashReportsInstallId, held.at.screen)
+                        .also(held::restoreAt)
+                    !on.value || fromBefore -> null
+                    else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
                 }
             }
             to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it, to.queue)) }
@@ -294,7 +300,7 @@ class CrashReports(
     // Off the main thread: starting Sentry and waiting for the report to go both take a while.
     private fun send(crash: HeldCrash) = background.execute {
         val event = crash.toEvent()
-        sendingHeld = event.eventId
+        sendingHeld = event.eventId to crash
         startSentry()
         Sentry.captureEvent(event)
         if (!on.value) {
