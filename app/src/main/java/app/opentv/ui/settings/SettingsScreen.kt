@@ -280,8 +280,6 @@ private fun shownSections(openSubtitles: OpenSubtitles?, crashReports: CrashRepo
     }
 }
 
-// One branch per section, each a single call: splitting the when up would only hide that.
-@Suppress("CyclomaticComplexMethod")
 @Composable
 private fun Pane(
     section: SettingsSection,
@@ -296,22 +294,28 @@ private fun Pane(
     openSubtitles: OpenSubtitles?,
     crashReports: CrashReports,
 ) {
-    when (section) {
-        SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
-        SettingsSection.Guide -> GuidePane()
-        SettingsSection.Channels -> ChannelsPane(onOpenChannels)
-        SettingsSection.Display -> DisplayPane(onOpenHomeRows)
-        SettingsSection.Recording -> RecordingPane()
-        SettingsSection.Parental -> ParentalPane(onOpenLockedCategories)
-        SettingsSection.Devices -> DevicesPane()
-        SettingsSection.Addons -> AddonsPane()
-        SettingsSection.OpenSubtitles -> openSubtitles?.let { OpenSubtitlesPane(it) }
-        SettingsSection.Manager -> ManagerPane()
-        SettingsSection.Privacy -> PrivacyPane(crashReports)
-        SettingsSection.Diagnostics -> DiagnosticsPane(onOpenDiagnostics)
-        SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
-    }
+    // Each section's pane, looked up rather than branched to: a section without one fails
+    // SettingsSectionsScrollTest, which opens them all.
+    val panes = mapOf(
+        SettingsSection.Providers to pane { ProvidersPane(onAddProvider, onEditProvider) },
+        SettingsSection.Guide to pane { GuidePane() },
+        SettingsSection.Channels to pane { ChannelsPane(onOpenChannels) },
+        SettingsSection.Display to pane { DisplayPane(onOpenHomeRows) },
+        SettingsSection.Recording to pane { RecordingPane() },
+        SettingsSection.Parental to pane { ParentalPane(onOpenLockedCategories) },
+        SettingsSection.Devices to pane { DevicesPane() },
+        SettingsSection.Addons to pane { AddonsPane() },
+        SettingsSection.OpenSubtitles to pane { openSubtitles?.let { OpenSubtitlesPane(it) } },
+        SettingsSection.Manager to pane { ManagerPane() },
+        SettingsSection.Privacy to pane { PrivacyPane(crashReports) },
+        SettingsSection.Diagnostics to pane { DiagnosticsPane(onOpenDiagnostics) },
+        SettingsSection.About to pane { AboutPane(onOpenFontLicences, checkForUpdate) },
+    )
+    panes.getValue(section)()
 }
+
+/** [content], typed as a composable, so a map can hold it. */
+private fun pane(content: @Composable () -> Unit): @Composable () -> Unit = content
 
 @Composable
 private fun SectionRow(
