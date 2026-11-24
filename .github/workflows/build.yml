@@ -206,6 +206,10 @@ jobs:
       - name: Signer check tests
         run: python3 -m unittest discover -s tools/signing
 
+      # The release workflow trusts it to stop a release only when a service turns a key down.
+      - name: Built-in key check tests
+        run: python3 -m unittest discover -s tools/keys
+
       # The mark's drawables and SVGs are generated, and a hand edit to one copy would drift.
       - name: Launcher artwork tests
         run: python3 -m unittest discover -s tools/launcher-art

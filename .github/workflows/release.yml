@@ -59,6 +59,33 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
+      # Without these the release would quietly ship without OpenSubtitles, TMDB or crash reports. The
+      # build itself still allows them blank (this Mac, forks, PR CI) and refuses one in the wrong
+      # format (buildSrc/BuiltInKeys.kt), so only a release checks they are set (#628).
+      - name: Built-in keys are set
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          missing=0
+          for name in OPENSUBTITLES_API_KEY TMDB_API_KEY SENTRY_DSN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The ${name} secret is blank. Set it — see docs/RELEASING.md."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      # A key in the right format can still be the wrong one, or turned down: v1.5.0 shipped a GitHub
+      # token as its OpenSubtitles key. Fails only on each service's own invalid-key answer; a service
+      # that is down or behind a challenge page is a warning, never a blocked release.
+      - name: Built-in keys work
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: python3 tools/keys/check_keys.py
+
       # The tagged commit is on main, where Build's "Test and assemble" runs the whole suite on it. A
       # second run here could only re-roll a flaky test, and that blocked v1.4.0, which Build had
       # passed, three times. So Build's verdict is used, waiting for it if it is still running, and the
@@ -97,11 +124,9 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Settee's one OpenSubtitles key; without it the release simply has no OpenSubtitles.
+          # Settee's one OpenSubtitles key, its TMDB key and its Sentry DSN, checked above.
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-          # Settee's one TMDB key; without it the release simply never asks TMDB.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          # Settee's Sentry DSN; without it the release has no crash reports and never offers them.
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           # Uploads this release's R8 mapping to Sentry, under the id baked into the APK that the
           # release's crash reports carry, so their stack traces show real names (#577). Without

@@ -134,6 +134,31 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
    install it over the first (through the in-app updater or `adb install -r settee.apk`). It
    must install without asking you to uninstall, and keep your sources.
 
+## Built-in keys
+
+A release carries three keys of Settee's own, from Actions secrets: `OPENSUBTITLES_API_KEY`,
+`TMDB_API_KEY` and `SENTRY_DSN` (#628). v1.5.0 shipped a GitHub token as its OpenSubtitles key, so
+each is checked three ways, and none of the checks ever prints a key:
+
+- **Format, in the build** (`buildSrc/src/main/kotlin/BuiltInKeys.kt`, for every build): a key that
+  is set but in the wrong format stops the build, naming the secret and the format it should have.
+  OpenSubtitles: exactly 32 letters and digits. TMDB: a v3 API Key (32 hex characters) or a v4 Read
+  Access Token (three dot-separated parts starting `eyJ`). Sentry: `https://<key>@<host>/<project id>`,
+  as the project's Client Keys page shows it. A blank key still builds, leaving that feature out:
+  this Mac, forks and PR CI have none.
+- **Set, in `release.yml`**: a blank one of the three fails the release before anything is built,
+  as a missing keystore does.
+- **Working, in `release.yml`** (`tools/keys/check_keys.py`): asks TMDB (`/3/configuration`) and
+  OpenSubtitles (`/login` with placeholder credentials, which is never cached) whether the key
+  works. The release fails only on the service's own answer that the key is invalid: TMDB's 401
+  with `status_code` 7, OpenSubtitles' 403 "You cannot consume this service". Anything else (a
+  timeout, a 5xx, a 429, a Cloudflare challenge page) is a warning on the run and the release goes
+  on: a service being down never blocks a release. The DSN isn't asked about (sending to it would
+  file an event), and the Sentry auth token needs no check: the mapping upload uses it.
+
+To replace a key, `gh secret set OPENSUBTITLES_API_KEY --repo neutraltone/settee` (it prompts, so
+the key stays out of shell history), then run Release again for the tag.
+
 ## Crash report stack traces
 
 R8 renames Settee's classes in a release, so a crash report's stack trace is unreadable without

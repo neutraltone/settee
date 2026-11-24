@@ -22,25 +22,30 @@ val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
 }
 
-/** A built-in key: [env] in CI, else [property] in local.properties, else blank. */
-fun builtInKey(env: String, property: String): String =
-    providers.environmentVariable(env).orNull ?: localProperties.getProperty(property) ?: ""
+/**
+ * A built-in key: its secret's environment variable in CI, else [property] in local.properties, else
+ * blank. One that's set but in the wrong format stops the build (checkedBuiltInKey, buildSrc), rather
+ * than ship looking plausible as v1.5.0's OpenSubtitles key did (#628).
+ */
+fun builtInKey(key: BuiltInKey, property: String): String = checkedBuiltInKey(
+    key,
+    providers.environmentVariable(key.secret).orNull ?: localProperties.getProperty(property) ?: "",
+)
 
 /*
  * Settee's own OpenSubtitles key (one per app: OpenSubtitles bans apps that make viewers bring their
  * own). From the OPENSUBTITLES_API_KEY secret in CI, or opensubtitles.apiKey in local.properties,
  * which git ignores. Never committed. Blank leaves OpenSubtitles out of the app entirely.
  */
-val openSubtitlesApiKey: String = builtInKey("OPENSUBTITLES_API_KEY", "opensubtitles.apiKey")
+val openSubtitlesApiKey: String = builtInKey(BuiltInKey.OPENSUBTITLES, "opensubtitles.apiKey")
 
 /*
  * Settee's own TMDB key: viewers no longer bring their own. From the TMDB_API_KEY secret in CI, or
  * tmdb.apiKey in local.properties, which git ignores. Never committed. Either of TMDB's forms works,
- * the v3 API Key or the v4 Read Access Token (a JWT, hence the dots, dashes and underscores kept
- * below). Blank leaves TMDB unasked. It can't be kept secret in an APK, and needn't be: TMDB rate-limits
- * by IP address.
+ * the v3 API Key or the v4 Read Access Token (a JWT). Blank leaves TMDB unasked. It can't be kept
+ * secret in an APK, and needn't be: TMDB rate-limits by IP address.
  */
-val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
+val tmdbApiKey: String = builtInKey(BuiltInKey.TMDB, "tmdb.apiKey")
 
 /*
  * Settee's Sentry DSN, for crash reports a viewer has turned on (ADR 0009). From the SENTRY_DSN secret
@@ -49,7 +54,7 @@ val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
  * reporting doesn't exist in that build. A DSN can always be pulled out of an APK; it can only send,
  * and Sentry's own filters limit misuse.
  */
-val sentryDsn: String = builtInKey("SENTRY_DSN", "sentry.dsn")
+val sentryDsn: String = builtInKey(BuiltInKey.SENTRY_DSN, "sentry.dsn")
 
 /*
  * Lets the release build upload its R8 mapping to Sentry, so a crash report's stack trace reads as
@@ -102,20 +107,9 @@ android {
         versionCode = versionCodeOf(appVersionName)
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField(
-            "String",
-            "OPENSUBTITLES_API_KEY",
-            "\"${openSubtitlesApiKey.filter {
-                it.isLetterOrDigit()
-            }}\"",
-        )
-        buildConfigField(
-            "String",
-            "TMDB_API_KEY",
-            "\"${tmdbApiKey.filter {
-                it.isLetterOrDigit() || it in ".-_"
-            }}\"",
-        )
+        // Safe in a Java string as they are: builtInKey only lets through letters, digits and . - _
+        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"$openSubtitlesApiKey\"")
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
         // Blank here, so debug builds never report; the release build type sets the real one.
         buildConfigField("String", "SENTRY_DSN", "\"\"")
     }
@@ -141,12 +135,8 @@ android {
             // could never replace the release install anyway, and on a device it needs telling
             // apart from both that and the debug build. The badge is in src/local (sourceSets).
             if (isLocalRelease) applicationIdSuffix = ".pr"
-            // A DSN is a URL: anything that isn't one is dropped rather than break BuildConfig.
-            buildConfigField(
-                "String",
-                "SENTRY_DSN",
-                "\"${sentryDsn.filter { it.isLetterOrDigit() || it in ":/@.-_" }}\"",
-            )
+            // builtInKey has already refused anything but https://<key>@<host>/<project id>.
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
