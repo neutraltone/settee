@@ -195,7 +195,7 @@ fun MainScreen(
                     onAddProvider = onAddSource,
                     onOpenSettings = onOpenSettings,
                 )
-                Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
+                Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording, onNothingToShow = onNothingToShow)
             }
         }
     }
