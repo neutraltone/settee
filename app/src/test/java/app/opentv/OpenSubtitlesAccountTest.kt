@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.repo.OpenSubtitlesAccount
@@ -64,7 +65,7 @@ class OpenSubtitlesAccountTest {
     }
 
     @Test
-    fun `a Keystore that won't seal the password is a failed sign-in that keeps nothing, not a crash`() = runTest {
+    fun `a Keystore that won't seal the password is a failed sign-in that keeps nothing and says this TV couldn't save it`() = runTest {
         val broken = object : Sealer {
             override fun seal(plain: String): String = throw java.security.KeyStoreException("no key")
 
@@ -72,8 +73,16 @@ class OpenSubtitlesAccountTest {
         }
         val unsealed = OpenSubtitlesAccount(settings, OpenSubtitlesClient(site.http, "k", "0.5.0"), broken, { now })
 
-        assertThat(unsealed.signIn("viewer", "secret").isFailure).isTrue()
+        val failure = unsealed.signIn("viewer", "secret").exceptionOrNull()
+
+        assertThat(failure).isNotNull()
         assertThat(unsealed.signedInAs.value).isNull()
+        // This TV's fault, not the network's: retrying the same sign-in won't reach a different answer.
+        val error = ErrorWording(context, onTelevision = true).ofOpenSubtitles(failure!!)
+        assertThat(error.sentence).isEqualTo(
+            "OpenSubtitles accepted the sign-in, but this TV couldn't save it. Restart this TV, then sign in again.",
+        )
+        assertThat(error.detail).isEqualTo("SignInNotSaved · KeyStore")
     }
 
     @Test
