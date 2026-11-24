@@ -235,8 +235,7 @@ class CrashReports(
      */
     fun report(kind: Handled, error: Throwable) {
         if (!available || !on.value || !Sentry.isEnabled()) return
-        val hint = Hint().apply { set(HANDLED_HINT, kind) }
-        Sentry.captureException(HandledError.of(kind, error), hint)
+        Sentry.captureException(HandledError.of(kind, error))
     }
 
     /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
@@ -327,9 +326,6 @@ class CrashReports(
     }
 
     private companion object {
-        /** The hint a handled error's event carries, naming its [Handled] kind. */
-        const val HANDLED_HINT = "settee.handled"
-
         const val HELD_FILE = "crash-reports/held.json"
         const val MOST_REFUSALS = 2
         const val FREEZE_MILLIS = 5_000L

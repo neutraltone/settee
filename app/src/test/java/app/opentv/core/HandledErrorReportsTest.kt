@@ -82,7 +82,8 @@ class HandledErrorReportsTest {
     @Test
     fun `an Xtream reply Settee can't parse is reported while crash reports are on`() {
         reports.setOn(true)
-        val panel = FakePanel("" to """{"user_info": {"auth": 1, "password": "p"""")
+        // Whole, but not JSON Settee can read: a comma missing.
+        val panel = FakePanel("" to """{"user_info": {"auth": 1 "password": "p"}}""")
 
         signIn(panel)
 
@@ -94,7 +95,7 @@ class HandledErrorReportsTest {
     @Test
     fun `the reply itself never leaves the device, since a panel's reply can hold the login`() {
         reports.setOn(true)
-        val panel = FakePanel("" to """{"user_info": {"username": "u", "password": "secretword", "auth": 1""")
+        val panel = FakePanel("" to """{"user_info": {"username": "u", "password": "secretword" "auth": 1}}""")
 
         signIn(panel)
 
@@ -105,9 +106,9 @@ class HandledErrorReportsTest {
     }
 
     @Test
-    fun `a movie list that breaks off partway is reported`() {
+    fun `a movie list Settee can't read is reported`() {
         reports.setOn(true)
-        val panel = FakePanel("get_vod_streams" to """[{"stream_id": 1, "name": "A film"}, {"stream_id": 2, "name": """)
+        val panel = FakePanel("get_vod_streams" to """[{"stream_id": 1, "name": "A film"} {"stream_id": 2, "name": "B"}]""")
 
         assertThrows(XtreamApi.XtreamException::class.java) {
             runBlocking { xtream(panel).movies(PANEL_SOURCE).use { list -> list.forEachBatch { } } }
@@ -119,8 +120,30 @@ class HandledErrorReportsTest {
     }
 
     @Test
+    fun `a movie list that breaks off partway is the provider's, and isn't reported`() {
+        reports.setOn(true)
+        val panel = FakePanel("get_vod_streams" to """[{"stream_id": 1, "name": "A film"}, {"stream_id": 2, "name": """)
+
+        assertThrows(XtreamApi.XtreamException::class.java) {
+            runBlocking { xtream(panel).movies(PANEL_SOURCE).use { list -> list.forEachBatch { } } }
+        }
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
+    fun `a sign-in reply that breaks off partway is the provider's, and isn't reported`() {
+        reports.setOn(true)
+
+        signIn(FakePanel("" to """{"user_info": {"auth": 1, "password": "p"""))
+        signIn(FakePanel("" to """{"user_info": {"auth": 1, "message": "a } in a string"""))
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
     fun `with crash reports off, a parse failure is dropped`() {
-        signIn(FakePanel("" to """{"user_info": """))
+        signIn(FakePanel("" to """{"user_info": {"auth": 1 "password": "p"}}"""))
 
         assertThat(sentEvents()).isEmpty()
     }
