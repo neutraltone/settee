@@ -41,6 +41,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -222,11 +223,14 @@ fun SettingsScreen(
                 )
             }
         }
+        // One scroll per section (#441): a single one carried a long section's offset into the
+        // next, which opened scrolled past its title with nothing above its first row to bring it back.
+        val paneScroll = key(memory.section) { rememberScrollState() }
         Column(
             Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(paneScroll)
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .onFocusChanged {
                     inPane = it.hasFocus
