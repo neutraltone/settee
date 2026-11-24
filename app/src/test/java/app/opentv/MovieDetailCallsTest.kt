@@ -7,6 +7,8 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,5 +39,26 @@ class MovieDetailCallsTest {
         test.catalog.movieDetail(id)
 
         assertThat(test.panel.asked).doesNotContain("get_vod_info:3")
+    }
+
+    @Test
+    fun `a film left while its panel is slow asks TMDB nothing`() = testing {
+        test.panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
+        test.panel.replies["get_vod_info"] = """{"info": {"plot": "A driver."}}"""
+        test.panel.replies["/3/search/movie"] = """{"results": [{"id": 64690}]}"""
+        test.syncVod()
+        test.panel.asked.clear()
+        val id = test.db.movies().all().single().id
+        val catalog = test.catalogWithTmdb()
+        val hold = test.panel.hold("get_vod_info:3")
+
+        val opening = launch(Dispatchers.Default) { catalog.movieDetail(id) }
+        during(hold) {
+            opening.cancel()
+            hold.release()
+        }
+        opening.join()
+
+        assertThat(test.panel.asked.filter { it.startsWith("/3/") }).isEmpty()
     }
 }

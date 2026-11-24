@@ -149,7 +149,9 @@ object VodTitleCleaner {
         if (ChannelNameNormalizer.qualityRankOfToken(token) != null) return true
         if (ChannelNameNormalizer.isStreamMarker(token)) return true
         val upper = token.uppercase()
-        if (upper in LANG_CODES) return true
+        // Upper case in the source, as for generic codes below: `It`, `No`, `In` and `Id` start real
+        // titles (`It: Welcome to Derry`), while providers write the tag itself in capitals.
+        if (token == upper && upper in LANG_CODES) return true
         if (upper in SERVICE_CODES) return true
         // A generic short capital code (POR, SWE, GER…) we don't list: trust it only where a real
         // title could not plausibly sit — inside brackets, or immediately before a pipe.
