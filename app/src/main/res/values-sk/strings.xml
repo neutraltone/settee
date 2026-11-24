@@ -144,6 +144,12 @@
     <string name="sync_nas_done">Synchronizovaných %1$d položiek z %2$d zariadení.</string>
     <string name="sync_nas_uploaded">Toto zariadenie bolo uložené na NAS. Zatiaľ sa tu nesynchronizovalo žiadne iné zariadenie.</string>
     <string name="sync_nas_failed">Nepodarilo sa pripojiť k vášmu NAS. Skontrolujte, či je zapnutý a či sú údaje v Nastaveniach nahrávania správne.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nepodarilo sa prečítať, čo %1$d iné zariadenie uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na ňom aktualizujte Settee.</item>
+        <item quantity="few">Nepodarilo sa prečítať, čo %1$d iné zariadenia uložili na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+        <item quantity="many">Nepodarilo sa prečítať, čo %1$d iného zariadenia uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+        <item quantity="other">Nepodarilo sa prečítať, čo %1$d iných zariadení uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+    </plurals>
     <string name="about_update_available">K dispozícii je aktualizácia: %1$s — pokyny na inštaláciu nájdete vo výzve.</string>
     <string name="about_up_to_date">Používate najnovšiu verziu.</string>
     <string name="about_checking">Kontroluje sa…</string>

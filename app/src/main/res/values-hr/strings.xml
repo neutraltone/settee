@@ -144,6 +144,11 @@
     <string name="sync_nas_done">Sinkronizirano %1$d stavki s %2$d uređaja.</string>
     <string name="sync_nas_uploaded">Ovaj uređaj spremljen je na NAS. Nijedan drugi uređaj još se nije sinkronizirao ovdje.</string>
     <string name="sync_nas_failed">Nije moguće doći do NAS-a. Provjerite je li uključen i jesu li podaci u postavkama snimanja točni.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nije moguće pročitati ono što je %1$d drugi uređaj spremio na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njemu ažurirajte Settee.</item>
+        <item quantity="few">Nije moguće pročitati ono što su %1$d druga uređaja spremila na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+        <item quantity="other">Nije moguće pročitati ono što je %1$d drugih uređaja spremilo na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+    </plurals>
     <string name="about_update_available">Dostupno ažuriranje: %1$s — pogledajte upit za instalaciju.</string>
     <string name="about_up_to_date">Koristite najnoviju verziju.</string>
     <string name="about_checking">Provjera…</string>

@@ -144,6 +144,9 @@
     <string name="sync_nas_done">%1$d item disinkronkan dari %2$d perangkat.</string>
     <string name="sync_nas_uploaded">Perangkat ini disimpan ke NAS. Belum ada perangkat lain yang tersinkron ke sini.</string>
     <string name="sync_nas_failed">Tidak dapat menjangkau NAS Anda. Periksa apakah NAS menyala dan detail di pengaturan Rekaman sudah benar.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Tidak dapat membaca data yang disimpan %1$d perangkat lain di NAS Anda. Sinkronkan lagi sebentar lagi, atau perbarui Settee di perangkat tersebut.</item>
+    </plurals>
     <string name="about_update_available">Pembaruan tersedia: %1$s — lihat perintah untuk memasang.</string>
     <string name="about_up_to_date">Anda menggunakan versi terbaru.</string>
     <string name="about_checking">Memeriksa…</string>

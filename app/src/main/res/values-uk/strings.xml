@@ -144,6 +144,12 @@
     <string name="sync_nas_done">Синхронізовано об\'єктів: %1$d із пристроїв: %2$d.</string>
     <string name="sync_nas_uploaded">Цей пристрій збережено на NAS. Жоден інший пристрій ще не синхронізувався сюди.</string>
     <string name="sync_nas_failed">Не вдалося з\'єднатися з вашим NAS. Перевірте, що він увімкнений, а дані в налаштуваннях запису правильні.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Не вдалося прочитати те, що %1$d інший пристрій зберіг на NAS. Синхронізуйте ще раз трохи згодом або оновіть на ньому Settee.</item>
+        <item quantity="few">Не вдалося прочитати те, що %1$d інші пристрої зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+        <item quantity="many">Не вдалося прочитати те, що %1$d інших пристроїв зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+        <item quantity="other">Не вдалося прочитати те, що %1$d іншого пристрою зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+    </plurals>
     <string name="about_update_available">Доступне оновлення: %1$s — див. підказку для встановлення.</string>
     <string name="about_up_to_date">У вас найновіша версія.</string>
     <string name="about_checking">Перевірка…</string>

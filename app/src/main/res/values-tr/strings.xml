@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%2$d cihazdan %1$d öge senkronize edildi.</string>
     <string name="sync_nas_uploaded">Bu cihaz NAS\'a kaydedildi. Henüz başka bir cihaz burada senkronize olmadı.</string>
     <string name="sync_nas_failed">NAS\'ınıza ulaşılamadı. Açık olduğundan ve Kayıt ayarlarındaki bilgilerin doğru olduğundan emin olun.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d başka cihazın NAS\'ınıza kaydettikleri okunamadı. Birazdan yeniden eşitleyin veya o cihazda Settee\'yi güncelleyin.</item>
+        <item quantity="other">%1$d başka cihazın NAS\'ınıza kaydettikleri okunamadı. Birazdan yeniden eşitleyin veya o cihazlarda Settee\'yi güncelleyin.</item>
+    </plurals>
     <string name="about_update_available">Güncelleme mevcut: %1$s — yüklemek için istemi görün.</string>
     <string name="about_up_to_date">En son sürümü kullanıyorsunuz.</string>
     <string name="about_checking">Kontrol ediliyor…</string>

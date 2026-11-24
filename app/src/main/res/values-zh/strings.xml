@@ -144,6 +144,9 @@
     <string name="sync_nas_done">已从 %2$d 台设备同步 %1$d 项。</string>
     <string name="sync_nas_uploaded">已将本设备的数据保存到 NAS。目前还没有其他设备同步到这里。</string>
     <string name="sync_nas_failed">无法连接到你的 NAS。请确认它已开机，并检查“录制”设置中的信息是否正确。</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">无法读取其他 %1$d 台设备保存在 NAS 上的内容。请稍后再同步，或在这些设备上更新 Settee。</item>
+    </plurals>
     <string name="about_update_available">有可用更新：%1$s——请查看安装提示。</string>
     <string name="about_up_to_date">你使用的已是最新版本。</string>
     <string name="about_checking">检查中…</string>

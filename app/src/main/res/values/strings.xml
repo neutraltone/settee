@@ -369,6 +369,10 @@
     <string name="sync_nas_done">Synced %1$d item(s) from %2$d device(s).</string>
     <string name="sync_nas_uploaded">Saved this device to the NAS. No other devices have synced here yet.</string>
     <string name="sync_nas_failed">Couldn\'t reach your NAS. Check it\'s on and the details in Recording settings are right.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Couldn\'t read what another device saved on your NAS. Sync again in a moment, or update Settee on it.</item>
+        <item quantity="other">Couldn\'t read what %1$d other devices saved on your NAS. Sync again in a moment, or update Settee on them.</item>
+    </plurals>
 
     <!-- ============================ About ============================ -->
     <string name="about_based_on">Based on OpenTV</string>

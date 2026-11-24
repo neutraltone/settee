@@ -69,13 +69,20 @@ class NasSync(private val graph: ServiceLocator.Graph, private val files: NasFil
             val peerFiles = files.list(config, syncFolderPath(config))
                 .filter { it.endsWith(".json", ignoreCase = true) && it != ownFile }
 
-            val bundles = peerFiles.mapNotNull { name ->
-                val text = runCatching { files.readText(config, locatorFor(config, name)) }
-                    .getOrNull() ?: return@mapNotNull null
-                runCatching { engine.decode(text) }.getOrNull()
+            // A file that won't read or decode is still skipped, but counted: dropped silently, a lone
+            // other device read as "no other devices have synced here yet" (#485).
+            val reads = peerFiles.map { name ->
+                runCatching { engine.decode(files.readText(config, locatorFor(config, name))) }
             }
+            val bundles = reads.mapNotNull { it.getOrNull() }
+            val unreadable = reads.mapNotNull { it.exceptionOrNull() }
             // Together, so a series several peers name is fetched once.
-            Result.Success(engine.apply(*bundles.toTypedArray()).total, bundles.size)
+            Result.Success(
+                merged = engine.apply(*bundles.toTypedArray()).total,
+                peers = bundles.size,
+                unreadable = unreadable.size,
+                unreadableCause = unreadable.firstOrNull(),
+            )
         }.getOrElse { Result.Failed(it) }
     }
 

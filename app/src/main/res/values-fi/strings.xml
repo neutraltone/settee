@@ -144,6 +144,10 @@
     <string name="sync_nas_done">Synkronoitu %1$d kohdetta %2$d laitteelta.</string>
     <string name="sync_nas_uploaded">Tämä laite tallennettu NAS-laitteeseen. Yksikään muu laite ei ole vielä synkronoinut tänne.</string>
     <string name="sync_nas_failed">NAS-laitetta ei tavoitettu. Tarkista, että se on päällä ja että tallennusasetusten tiedot ovat oikein.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d muun laitteen NAS-laitteelle tallentamia tietoja ei voitu lukea. Synkronoi uudelleen hetken päästä tai päivitä Settee siihen.</item>
+        <item quantity="other">%1$d muun laitteen NAS-laitteelle tallentamia tietoja ei voitu lukea. Synkronoi uudelleen hetken päästä tai päivitä Settee niihin.</item>
+    </plurals>
     <string name="about_update_available">Päivitys saatavilla: %1$s — katso asennuskehote.</string>
     <string name="about_up_to_date">Sinulla on uusin versio.</string>
     <string name="about_checking">Tarkistetaan…</string>

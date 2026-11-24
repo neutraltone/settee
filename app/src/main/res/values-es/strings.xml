@@ -144,6 +144,11 @@
     <string name="sync_nas_done">Se sincronizaron %1$d elementos de %2$d dispositivos.</string>
     <string name="sync_nas_uploaded">Este dispositivo se guardó en el NAS. Todavía ningún otro dispositivo se ha sincronizado aquí.</string>
     <string name="sync_nas_failed">No se pudo conectar con tu NAS. Comprueba que esté encendido y que los datos en Ajustes de grabación sean correctos.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">No se pudo leer lo que %1$d otro dispositivo guardó en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en él.</item>
+        <item quantity="many">No se pudo leer lo que %1$d otros dispositivos guardaron en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en ellos.</item>
+        <item quantity="other">No se pudo leer lo que %1$d otros dispositivos guardaron en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en ellos.</item>
+    </plurals>
     <string name="about_update_available">Actualización disponible: %1$s — consulta el aviso para instalarla.</string>
     <string name="about_up_to_date">Tienes la versión más reciente.</string>
     <string name="about_checking">Comprobando…</string>

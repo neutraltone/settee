@@ -6,6 +6,7 @@
 package app.opentv.core
 
 import android.content.Context
+import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import app.opentv.R
 import app.opentv.data.parser.NotAGuideException
@@ -41,6 +42,9 @@ interface HttpStatus {
     val status: Int?
 }
 
+// The one place failures outside playback are worded: each function is a kind of failure, so it
+// grows with them rather than splitting the sentences across classes.
+@Suppress("TooManyFunctions")
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
     /** What Test connection says when it passes, in the same language as its failures. */
     val tests = TestOutcomeWording { resources }
@@ -128,6 +132,10 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
     /** A failure the app found itself, with no exception behind it. */
     fun of(@StringRes sentence: Int, code: String? = null): ViewerError =
         ViewerError(resources.getString(sentence), ViewerError.detailOf(code))
+
+    /** A failure the app found itself, about [count] things, worded with [sentence]'s plural for [count]. */
+    fun ofCount(@PluralsRes sentence: Int, count: Int, code: String? = null): ViewerError =
+        ViewerError(resources.getQuantityString(sentence, count, count), ViewerError.detailOf(code))
 
     /** A provider answering [status], with [fallback] for a status that says nothing a viewer could act on. */
     fun ofHttpStatus(status: Int, @StringRes fallback: Int): ViewerError = ViewerError(
