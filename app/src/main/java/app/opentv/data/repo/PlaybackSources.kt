@@ -105,7 +105,7 @@ sealed interface Playable {
         val title: String,
         val isLive: Boolean,
         val recordedOn: RecordedOn? = null,
-        /** The kind of Source it comes from, for a Slow Journey's report; null for an add-on's or a finished recording's. */
+        /** Its Source's kind, for a Slow Journey's report; null for an add-on's or a finished recording's. */
         val sourceKind: SourceKind? = null,
     ) : Playable
 

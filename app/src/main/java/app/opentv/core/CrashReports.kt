@@ -55,8 +55,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * [to] says where reports go: Settee's Sentry project, or a test's [Outbox] in place of Sentry's own
  * transport, so a test can see each envelope exactly as it would leave the device. [freezes] and
- * [background] are the same kind of seam: what counts as a freeze, and where sending a held crash runs,
- * and [elapsed] is the clock [JourneyTimer] times journeys on, to tell whether one froze.
+ * [background] are the same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
 // The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place.
 class CrashReports(
@@ -66,7 +65,6 @@ class CrashReports(
     private val environment: String,
     private val freezes: Freezes = Freezes(),
     private val background: Executor = Executors.newSingleThreadExecutor(),
-    private val elapsed: () -> Long = SystemClock::elapsedRealtime,
 ) {
     /**
      * Where reports go: the project [dsn] names, which is blank in a build without Settee's key (so
@@ -84,11 +82,14 @@ class CrashReports(
     /**
      * What counts as a freeze while reports are off: the main thread stuck for [afterMillis] (as
      * Sentry's own default) and Android agreeing it's [notResponding]. [held] runs once one is held.
+     * While they're on, Sentry catches freezes, and each is noted on [elapsed]'s clock.
      */
     class Freezes(
         val afterMillis: Long = FREEZE_MILLIS,
         val notResponding: (Context) -> Boolean = FreezeWatch::androidSaysNotResponding,
         val held: () -> Unit = {},
+        /** The clock [JourneyTimer] times journeys on, to tell whether one froze. */
+        val elapsed: () -> Long = SystemClock::elapsedRealtime,
     )
 
     /** The viewer's answers to the question after a crash. */
@@ -222,12 +223,14 @@ class CrashReports(
     }
 
     /**
-     * The handled errors Settee reports (ADR 0009): only failures Settee's own code can cause. Closed
-     * on purpose: a Provider's failures (HTTP errors, dead streams, web pages instead of video) and
-     * playback errors have no kind here, so they can't leave the device. [keepsMessages]: whether the
-     * error's own messages are sent (scrubbed) or only its classes and stack trace.
+     * The handled errors Settee reports (ADRs 0009 and 0010): only failures Settee's own code, keys or
+     * requests can cause. Closed on purpose: a Provider's failures (HTTP errors, dead streams, web
+     * pages instead of video) and playback errors have no kind here, so they can't leave the device by
+     * themselves. [keepsMessages]: whether the error's own messages are sent (scrubbed) or only its
+     * classes and stack trace. [service]: for one of Settee's own services, its `service` tag; those
+     * are reported as a [ServiceFailure].
      */
-    enum class Handled(internal val keepsMessages: Boolean) {
+    enum class Handled(internal val keepsMessages: Boolean, internal val service: String? = null) {
         /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
         XTREAM_PARSE(keepsMessages = false),
 
@@ -237,8 +240,20 @@ class CrashReports(
          */
         DATABASE_MIGRATION(keepsMessages = true),
 
+        /** OpenSubtitles turning down Settee's key or request. */
+        OPENSUBTITLES(keepsMessages = false, service = "opensubtitles"),
+
+        /** TMDB turning down Settee's key or request. */
+        TMDB(keepsMessages = false, service = "tmdb"),
+
+        /** IntroDB or TheIntroDB: the stack trace tells them apart, through the client that asked. */
+        INTRODB(keepsMessages = false, service = "introdb"),
+
+        /** GitHub's latest-release API, which the update check asks. */
+        UPDATE_CHECK(keepsMessages = false, service = "update-check"),
+
         /**
-         * A journey Settee's own part of which was clearly too slow (ADR 0010), sent by [slowJourney]
+         * A journey Settee's own part of which was clearly too slow (ADR 0010), sent as a [TooSlow]
          * with no error at all: only the journey, its times and the Source's kind.
          */
         SLOW_JOURNEY(keepsMessages = false),
@@ -251,44 +266,37 @@ class CrashReports(
      */
     fun report(kind: Handled, error: Throwable) {
         if (!available || !on.value || !Sentry.isEnabled()) return
-        Sentry.captureException(HandledError.of(kind, error))
+        if (error is TooSlow) {
+            // A journey that froze is the freeze's: that was reported, and says more.
+            val slow = error.journey
+            if (frozeAt !in slow.startedAt..slow.endedAt) Sentry.captureEvent(SlowJourneyEvent.of(slow))
+            return
+        }
+        val service = kind.service
+        val failure = error as? ServiceFailure
+        if (service == null || failure == null) {
+            Sentry.captureException(HandledError.of(kind, error))
+            return
+        }
+        // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
+        // stack that shows which client asked. The request and the reply were never in it.
+        val sent = HandledError("${kind.name} ${failure.message}", null).apply { stackTrace = failure.stackTrace }
+        Sentry.captureException(sent) { scope ->
+            scope.setTag(CrashScrubbing.SERVICE_TAG, service)
+            scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
+            scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
+        }
     }
 
     /**
-     * Reports [slow], a journey [JourneyTimer] found too slow, while Crash Reports are on: its name, Settee's
-     * own time and the network wait (each to the nearest 100 ms), and the Source's kind, beside the screen
-     * and free memory every report carries. Not if the app froze during it: the freeze is reported, and
-     * says more. [JourneyTimer] sends each journey at most once a process.
+     * A [journey] [JourneyTimer] found too slow, reported as [Handled.SLOW_JOURNEY]: no error at all,
+     * only the journey, Settee's own time and the network wait (each to the nearest 100 ms) and the
+     * Source's kind, beside the screen and free memory. [JourneyTimer] hands on each at most once a process.
      */
-    fun slowJourney(slow: JourneyTimer.SlowJourney) {
-        if (!available || !on.value || !Sentry.isEnabled()) return
-        if (frozeAt in slow.startedAt..slow.endedAt) return
-        val journey = slow.journey.tag
-        Sentry.captureEvent(
-            SentryEvent().apply {
-                // The journey alone, so Sentry groups each journey's reports as one issue.
-                message = Message().apply { formatted = "${Handled.SLOW_JOURNEY.name}: $journey" }
-                level = SentryLevel.WARNING
-                setTag(CrashScrubbing.JOURNEY_TAG, journey)
-                setTag(CrashScrubbing.OWN_TIME_TAG, toTheNearest100(slow.ownMillis).toString())
-                setTag(CrashScrubbing.NETWORK_WAIT_TAG, toTheNearest100(slow.networkMillis).toString())
-                slow.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it) }
-            },
-        )
+    class TooSlow(val journey: JourneyTimer.SlowJourney) : Exception(journey.journey.tag) {
+        // Nothing of where it was made is sent, so there's no stack to fill in.
+        override fun fillInStackTrace(): Throwable = this
     }
-
-    /**
-     * A Slow Journey's free memory, read as it's sent: Sentry only reads it itself for a crash, since
-     * collecting the rest of what comes with it is off ([errorsAndFreezesOnly]).
-     */
-    private fun withFreeMemory(event: SentryEvent) {
-        val context = context ?: return
-        if (event.getTag(CrashScrubbing.JOURNEY_TAG) == null) return
-        val device = event.contexts.device ?: Device().also(event.contexts::setDevice)
-        device.freeMemory = HeldCrash.At.now(context, screen).freeMemory
-    }
-
-    private fun toTheNearest100(millis: Long) = (millis + 50) / 100 * 100
 
     /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
     class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause) {
@@ -337,7 +345,7 @@ class CrashReports(
                 // or anything else is dropped, never held, since only the crash handler and the
                 // freeze watch hold. A freeze or crash Sentry finds in Android's exit history from
                 // before reports were turned on happened while the viewer hadn't said yes.
-                if (event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }) frozeAt = elapsed()
+                if (event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }) frozeAt = freezes.elapsed()
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
                 val held = sendingHeld?.takeIf { it.first == event.eventId }?.second
@@ -345,7 +353,8 @@ class CrashReports(
                     held != null -> CrashScrubbing.event(event, settings.crashReportsInstallId, held.at.screen)
                         .also(held::restoreAt)
                     !on.value || fromBefore -> null
-                    else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen).also(::withFreeMemory)
+                    else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+                        .also { SlowJourneyEvent.withFreeMemory(it, context) }
                 }
             }
             to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it, to.queue)) }
@@ -475,4 +484,32 @@ private fun SentryAndroidOptions.errorsAndFreezesOnly() {
     beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
         CrashScrubbing.breadcrumb(breadcrumb)
     }
+}
+
+/** What a Slow Journey is sent as (ADR 0010): a message event of tags, with no stack. */
+private object SlowJourneyEvent {
+    private const val TO_THE_NEAREST = 100
+
+    fun of(slow: JourneyTimer.SlowJourney) = SentryEvent().apply {
+        val journey = slow.journey.tag
+        // The journey alone, so Sentry groups each journey's reports as one issue.
+        message = Message().apply { formatted = "${CrashReports.Handled.SLOW_JOURNEY.name}: $journey" }
+        level = SentryLevel.WARNING
+        setTag(CrashScrubbing.JOURNEY_TAG, journey)
+        setTag(CrashScrubbing.OWN_TIME_TAG, rounded(slow.ownMillis))
+        setTag(CrashScrubbing.NETWORK_WAIT_TAG, rounded(slow.networkMillis))
+        slow.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it) }
+    }
+
+    /**
+     * A Slow Journey's free memory, read as it's sent: Sentry only reads it itself for a crash, since
+     * collecting the rest of what comes with it is off ([errorsAndFreezesOnly]).
+     */
+    fun withFreeMemory(event: SentryEvent, context: Context?) {
+        if (context == null || event.getTag(CrashScrubbing.JOURNEY_TAG) == null) return
+        val device = event.contexts.device ?: Device().also(event.contexts::setDevice)
+        device.freeMemory = HeldCrash.At.now(context, screen = null).freeMemory
+    }
+
+    private fun rounded(millis: Long) = ((millis + TO_THE_NEAREST / 2) / TO_THE_NEAREST * TO_THE_NEAREST).toString()
 }

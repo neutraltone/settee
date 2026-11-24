@@ -82,13 +82,7 @@ internal fun <T> ScreenFrameScope.ForYou(
     // the others) is shown at the top, rather than the list holding on to the row that was first.
     var atTheTop by remember { mutableStateOf(true) }
     val rowKeys = rowKeys(resume, rows, resumeLoading)
-    val firstRowDrawn by rememberUpdatedState(onFirstRowDrawn)
-    if (rowKeys.withCards.isNotEmpty()) {
-        LaunchedEffect(Unit) {
-            withFrameNanos {}
-            firstRowDrawn()
-        }
-    }
+    WhenDrawn(rowKeys.withCards.isNotEmpty(), onFirstRowDrawn)
     LaunchedEffect(rowKeys.all.firstOrNull()) { if (atTheTop) column.scrollToItem(0) }
 
     // The highlighted cover's row goes to the top ([RowToTheTop]): a cover sits its row's title and
@@ -204,6 +198,20 @@ internal fun <T> ScreenFrameScope.ForYou(
                 }
             }
         }
+    }
+}
+
+/**
+ * Calls [onDrawn] on the frame after [drawn] turns true, each time it does: when a journey that ends
+ * with something on screen has really drawn it (ADR 0010's Slow Journeys).
+ */
+@Composable
+internal fun WhenDrawn(drawn: Boolean, onDrawn: () -> Unit) {
+    val latest by rememberUpdatedState(onDrawn)
+    if (!drawn) return
+    LaunchedEffect(Unit) {
+        withFrameNanos {}
+        latest()
     }
 }
 

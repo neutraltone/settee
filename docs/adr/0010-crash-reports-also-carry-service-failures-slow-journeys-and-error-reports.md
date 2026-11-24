@@ -2,7 +2,7 @@
 
 ADR 0009 let Settee send Crash Reports, and kept them to crashes, freezes and two handled errors only Settee's own code can cause. It said Provider failures and slowness are never reported. But most of what spoils a viewer's evening doesn't crash anything: OpenSubtitles turns down Settee's sign-in with a 403, Movies takes twenty seconds to open on the stick, films won't load and the screen shows an error. The owner heard about these only if a viewer mentioned them, with nothing to go on (#629). So Crash Reports now carry three more kinds, each sent through `CrashReports` and its allow-list scrubber like the rest:
 
-- **Settee's own service failures.** OpenSubtitles, TMDB, IntroDB/TheIntroDB and the GitHub update check run on Settee's keys and accounts, so a failure caused by Settee's request is Settee's bug. Each is a handled kind (`OPENSUBTITLES`, `TMDB`, `INTRODB`, `UPDATE_CHECK`) and its event names only the service, the operation (`sign-in`, `search`, `download`, `details`, `timings`, `latest-release`) and the HTTP status or failure class (`http-403`, `unreadable-reply`), nothing from the request or the reply. Sent only while crash reports are on.
+- **Settee's own service failures.** OpenSubtitles, TMDB, IntroDB/TheIntroDB and the GitHub update check run on Settee's keys and accounts, so a failure caused by Settee's request is Settee's bug. Each is a handled kind (`OPENSUBTITLES`, `TMDB`, `INTRODB`, `UPDATE_CHECK`) and its event names only the service, the operation (`sign-in`, `account`, `search`, `download`, `details`, `timings`, `latest-release`) and the HTTP status or failure class (`http-403`, `unreadable-reply`), nothing from the request or the reply. Sent only while crash reports are on.
 - **Slow Journeys.** A few journeys are timed in Settee's own code, and one event is sent only when Settee's own part of a journey was clearly too slow. Nothing is sent when things are fine. Sent only while crash reports are on.
 - **Error Reports.** Error messages that could be Settee's fault offer **Send report**. Pressing it sends that one failure, whether or not crash reports are on, and doesn't change the viewer's choice, just as Send does after a crash.
 
@@ -10,7 +10,7 @@ ADR 0009 let Settee send Crash Reports, and kept them to crashes, freezes and tw
 
 Only the ones that point at Settee's key, request or parsing:
 
-- **Reported:** 400, 403, 404 and 410 from a service's API endpoint, and a reply Settee couldn't read.
+- **Reported:** 400, 403, 404 and 410 from a service's API endpoint, and a reply Settee couldn't read. A 404 that is the API's way of saying it has nothing, as TMDB answers for a title it doesn't know and IntroDB and TheIntroDB for an episode no one has timed, is an answer, not a failure, and isn't reported.
 - **Never reported:** no network, a timeout, a DNS failure, any 5xx, 429 or a quota reply (the service's or the viewer's connection, not Settee's bug), and 401 at OpenSubtitles sign-in (the viewer's own password).
 
 What the viewer sees doesn't change: these are reported beside the error Settee already shows, never instead of it.

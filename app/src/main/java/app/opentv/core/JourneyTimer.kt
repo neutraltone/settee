@@ -35,19 +35,19 @@ class JourneyTimer(
      */
     enum class Journey(val tag: String, val thresholdMillis: Long) {
         /** Process start to Home's first row drawn with its cards (stick median 2.2 s). */
-        COLD_START("cold-start", 6_000),
+        COLD_START("cold-start", thresholdMillis = 6_000),
 
         /** Movies selected to its first row drawn. Provisional: no median measured from selecting the tab. */
-        OPEN_MOVIES("open-movies", 5_000),
+        OPEN_MOVIES("open-movies", thresholdMillis = 5_000),
 
         /** Shows selected to its first row drawn. Provisional, as for Movies. */
-        OPEN_SHOWS("open-shows", 5_000),
+        OPEN_SHOWS("open-shows", thresholdMillis = 5_000),
 
         /** A refresh of every provider started to its catalogue written. Provisional: none measured. */
-        CATALOGUE_REFRESH("catalogue-refresh", 60_000),
+        CATALOGUE_REFRESH("catalogue-refresh", thresholdMillis = 60_000),
 
         /** Asked to play to the first frame drawn. Provisional: none measured. */
-        PLAYBACK_START("playback-start", 4_000),
+        PLAYBACK_START("playback-start", thresholdMillis = 4_000),
     }
 
     /**
@@ -73,7 +73,7 @@ class JourneyTimer(
     private var inFlightSince = 0L
     private var waitedBefore = 0L
 
-    /** Starts timing [journey], [at] a time on this timer's clock (now unless it began earlier); again if it's running. */
+    /** Starts timing [journey], again if it's running, [at] a time on this timer's clock: now, unless earlier. */
     fun start(journey: Journey, at: Long = now()) = synchronized(lock) {
         startedAt[journey.ordinal] = at
         waitedAtStart[journey.ordinal] = waited(now())

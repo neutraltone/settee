@@ -22,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -70,6 +69,7 @@ import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
+import app.opentv.ui.vod.WhenDrawn
 import app.opentv.ui.vod.rememberCoverBadge
 import app.opentv.ui.vod.rememberRowState
 import app.opentv.ui.vod.takesFocus
@@ -197,13 +197,7 @@ internal fun HomeContent(
             )
         }
     val shelves = all.shown
-    val firstRowDrawn by rememberUpdatedState(onFirstRowDrawn)
-    if (shelves.isEmpty() || shelves.any { it is HomeShelf.Row }) {
-        LaunchedEffect(Unit) {
-            withFrameNanos {}
-            firstRowDrawn()
-        }
-    }
+    WhenDrawn(shelves.isEmpty() || shelves.any { it is HomeShelf.Row }, onFirstRowDrawn)
     ScreenFrame {
         // Above the rows rather than one of them, so the rows' list still hands its first card the
         // opening Highlight; Up from the top row reaches the banner's button.

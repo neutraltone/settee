@@ -47,9 +47,9 @@ class SlowJourneyReportsTest {
         ),
         release = "1.4.0",
         environment = "test",
-        elapsed = { clock },
+        CrashReports.Freezes(elapsed = { clock }),
     ).also { it.start(app) }
-    private val timer = JourneyTimer(now = { clock }, slow = reports::slowJourney)
+    private val timer = JourneyTimer(now = { clock }, slow = reports::reportSlow)
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
 
@@ -188,10 +188,10 @@ class SlowJourneyReportsTest {
 
     @Test
     fun `a build without a DSN sends none`() {
-        val blank = CrashReports(settings, CrashReports.Destination(""), "1.4.0", "test", elapsed = { clock })
+        val blank = CrashReports(settings, CrashReports.Destination(""), "1.4.0", "test")
         blank.setOn(true)
 
-        JourneyTimer(now = { clock }, slow = blank::slowJourney).run {
+        JourneyTimer(now = { clock }, slow = blank::reportSlow).run {
             start(Journey.COLD_START)
             clock += 30_000
             end(Journey.COLD_START)
@@ -199,6 +199,10 @@ class SlowJourneyReportsTest {
 
         assertThat(sentEvents()).isEmpty()
     }
+
+    /** As the app hands [CrashReports] a slow journey. */
+    private fun CrashReports.reportSlow(slow: JourneyTimer.SlowJourney) =
+        report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(slow))
 
     private companion object {
         val CALL: okhttp3.Call = OkHttpClient().newCall(Request.Builder().url("https://example.com/").build())
