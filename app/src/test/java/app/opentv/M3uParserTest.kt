@@ -29,8 +29,8 @@ class M3uParserTest {
         val result = M3uParser.parse(playlist, sourceId = 7)
 
         assertThat(result.channels).hasSize(2)
-        assertThat(result.declaredEpgUrl)
-            .isEqualTo("http://example.com/xmltv.php?username=u&password=p")
+        assertThat(result.declaredEpgUrls)
+            .containsExactly("http://example.com/xmltv.php?username=u&password=p")
 
         val first = result.channels.first()
         assertThat(first.name).isEqualTo("BBC One HD")
@@ -301,5 +301,62 @@ class M3uParserTest {
 
         assertThat(result.channels).isEmpty()
         assertThat(result.skippedEntries).isEqualTo(0)
+    }
+
+    @Test
+    fun `a playlist starting with a byte-order mark keeps its guide and every channel`() {
+        val playlist = "\uFEFF" + """
+            #EXTM3U url-tvg="http://example.com/guide.xml"
+            #EXTINF:-1 tvg-id="news",News
+            http://example.com/news.m3u8
+        """.trimIndent()
+
+        val result = M3uParser.parse(playlist, sourceId = 1)
+
+        assertThat(result.declaredEpgUrls).containsExactly("http://example.com/guide.xml")
+        assertThat(result.skippedEntries).isEqualTo(0)
+        assertThat(result.channels.map { it.name }).containsExactly("News")
+    }
+
+    @Test
+    fun `a header listing several guides gives each of them, in order`() {
+        val playlist = """
+            #EXTM3U url-tvg="http://example.com/one.xml.gz, http://example.org/two.xml,http://example.net/three.xml"
+            #EXTINF:-1,News
+            http://example.com/news.m3u8
+        """.trimIndent()
+
+        val result = M3uParser.parse(playlist, sourceId = 1)
+
+        assertThat(result.declaredEpgUrls).containsExactly(
+            "http://example.com/one.xml.gz",
+            "http://example.org/two.xml",
+            "http://example.net/three.xml",
+        ).inOrder()
+    }
+
+    @Test
+    fun `x-tvg-url lists several guides the same way`() {
+        val playlist = """
+            #EXTM3U x-tvg-url="http://example.com/one.xml,http://example.org/two.xml,"
+        """.trimIndent()
+
+        assertThat(M3uParser.parse(playlist, sourceId = 1).declaredEpgUrls)
+            .containsExactly("http://example.com/one.xml", "http://example.org/two.xml").inOrder()
+    }
+
+    @Test
+    fun `a comma inside one guide's address doesn't split it`() {
+        val playlist = """
+            #EXTM3U url-tvg="http://example.com/xmltv.php?channels=1,2,3"
+        """.trimIndent()
+
+        assertThat(M3uParser.parse(playlist, sourceId = 1).declaredEpgUrls)
+            .containsExactly("http://example.com/xmltv.php?channels=1,2,3")
+    }
+
+    @Test
+    fun `a playlist with no guide declares none`() {
+        assertThat(M3uParser.parse("#EXTM3U\n", sourceId = 1).declaredEpgUrls).isEmpty()
     }
 }
