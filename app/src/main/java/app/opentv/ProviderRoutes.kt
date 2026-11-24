@@ -36,11 +36,16 @@ fun NavController.openEditProvider(sourceId: Long) = navigate(Routes.editSource(
 
 /**
  * The screens for adding and editing providers. Kept apart from the rest of the graph so
- * a test can build them with the real screens and check where each Add leads.
+ * a test can build them with the real screens and check where each Add leads. [onAdded] is told
+ * once an added provider is in, just before the page or Setup leaves: Settings uses it to open on
+ * its sections rather than on the Add row it was left on (#442).
  */
-fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel) {
+fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel, onAdded: () -> Unit = {}) {
     composable(Routes.ADD_SOURCE) { entry ->
-        LeavesOnceSaved(sources, nav, entry, isMine = { it.added }) { leaveAddPage() }
+        LeavesOnceSaved(sources, nav, entry, isMine = { it.added }) {
+            onAdded()
+            leaveAddPage()
+        }
         AddSourceScreen(
             viewModel = sources,
             onFinished = { nav.ifStillOn(entry) { leaveAddPage() } },
@@ -74,10 +79,15 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
         }
         // Back to the form, which says why the login failed.
         LaunchedEffect(current.loginFailed) { if (current.loginFailed) nav.popBackStack() }
+        // Setup leaving is when the provider is in.
+        val finish = { tab: Tab ->
+            onAdded()
+            nav.leaveSetup(tab)
+        }
         SetupScreen(
             setup = current,
-            onWatchLive = if (liveTv) ({ nav.leaveSetup(Tab.LIVE) }) else null,
-            onFinish = { nav.leaveSetup(Tab.HOME) },
+            onWatchLive = if (liveTv) ({ finish(Tab.LIVE) }) else null,
+            onFinish = { finish(Tab.HOME) },
         )
     }
 
