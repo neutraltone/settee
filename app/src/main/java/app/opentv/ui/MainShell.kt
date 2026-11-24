@@ -107,7 +107,6 @@ internal fun MainShell(
     modifier: Modifier = Modifier,
     content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
 ) {
-    BackHandler { if (current == Tab.HOME) onExit() else onSelect(Tab.HOME) }
     val slide = rememberRailSlide()
     val railFocused = slide.focused
     val currentItem = remember { FocusRequester() }
@@ -126,6 +125,16 @@ internal fun MainShell(
     }
     val entry = remember { RailEntry() }
     EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
+    // From the rail, Back goes to Home the way picking Home in the rail does: switching the tab
+    // alone left the Highlight on the old tab's item, and Home won't take it while the rail has it.
+    BackHandler {
+        if (current == Tab.HOME) {
+            onExit()
+        } else {
+            if (railFocused) entry.pick(Tab.HOME, current)
+            onSelect(Tab.HOME)
+        }
+    }
     val travel = RAIL_OPEN - RAIL_CLOSED
     Box(
         modifier
