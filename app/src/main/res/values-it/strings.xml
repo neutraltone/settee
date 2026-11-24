@@ -308,6 +308,12 @@
     <string name="manager_failed_device">Impossibile avviare la gestione canali su questo dispositivo. Riprova tra un momento.</string>
     <string name="manager_timed_out">La gestione canali si è chiusa dopo un po\' che non veniva usata. Riaprila quando ti serve.</string>
     <string name="manager_too_many_codes">La gestione canali si è chiusa dopo troppi codici sbagliati. Riaprila per ricominciare.</string>
+    <string name="manager_page_unreachable">Impossibile raggiungere il televisore. Controlla che la gestione canali sia ancora aperta sul televisore e di essere sulla stessa Wi-Fi, poi ricarica questa pagina.</string>
+    <string name="manager_page_closed">Il televisore ha chiuso la gestione canali. Riaprila sul televisore, poi ricarica questa pagina.</string>
+    <string name="manager_page_not_saved">Il televisore non ha salvato questa modifica. Riprova.</string>
+    <string name="manager_page_not_loaded">Il televisore non è riuscito a inviare questo elenco. Ricarica questa pagina per riprovare.</string>
+    <string name="manager_page_nas_required">Aggiungi l\'indirizzo e la cartella condivisa del tuo NAS, poi salva di nuovo.</string>
+    <string name="manager_page_provider_required">Compila tutti i dati che servono a questo tipo di fornitore, poi riprova.</string>
     <string name="pairing_no_network_tv">Questo televisore non è connesso a una rete, quindi il tuo telefono non può raggiungerlo. Connettilo, poi riprova.</string>
     <string name="pairing_no_network_device">Questo dispositivo non è connesso a una rete, quindi il tuo telefono non può raggiungerlo. Connettilo, poi riprova.</string>
     <string name="pairing_failed_tv">Impossibile avviare l\'associazione su questo televisore. Riprova tra un momento.</string>

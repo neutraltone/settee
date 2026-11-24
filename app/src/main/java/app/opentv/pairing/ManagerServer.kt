@@ -76,6 +76,9 @@ class ManagerServer(
      */
     private val wording get() = catalog.wording
 
+    /** One of the app's strings, in its language, for the page to say. */
+    private fun sentence(id: Int): String = wording.of(id).sentence
+
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
         val url: String,
@@ -166,7 +169,13 @@ class ManagerServer(
                 // screen closes never runs the block, and the socket would be left open.
                 scope.launch(Dispatchers.IO) {
                     runCatching { handle(client) }
-                        .onFailure { Log.w(TAG, "Manager request failed", it) }
+                        .onFailure {
+                            Log.w(TAG, "Manager request failed", it)
+                            // Answered rather than dropped: a closed connection is what a closed
+                            // manager looks like to the page, which would send the viewer to check
+                            // the wifi. Every route writes its answer last, so nothing went out yet.
+                            runCatching { client.getOutputStream().write(SERVER_ERROR) }
+                        }
                 }.invokeOnCompletion { runCatching { client.close() } }
             }
         }
@@ -218,7 +227,10 @@ class ManagerServer(
         val address = address ?: return
         val check = address.check(method, path, query["t"])
         if (check is PhoneAddress.Check.Refused) {
-            output.write(check.response())
+            // A long token that isn't this session's comes from a page this manager didn't serve, one
+            // left open from before the TV closed it, so it gets 403 for the page to say so.
+            val stale = query["t"] != null
+            output.write(if (stale) FORBIDDEN else check.response())
             return
         }
         val token = address.token
@@ -242,7 +254,7 @@ class ManagerServer(
             reorderTurn != null -> handleReorder(output, body, reorderTurn)
 
             check == PhoneAddress.Check.Typed || (method == "GET" && path == "/") ->
-                output.write(PairingHttp.httpResponse("200 OK", "text/html", ManagerPage.page(token)))
+                output.write(PairingHttp.httpResponse("200 OK", "text/html", ManagerPage.page(token, ::sentence)))
 
             method == "GET" && path == "/meta" ->
                 output.write(PairingHttp.httpResponse("200 OK", "application/json", metaJson()))
@@ -416,7 +428,7 @@ class ManagerServer(
             writeJson(
                 output,
                 AddResultDto.serializer(),
-                AddResultDto(ok = false, error = "Fill in the required fields for this provider type."),
+                AddResultDto(ok = false, error = sentence(R.string.manager_page_provider_required)),
             )
             return
         }
@@ -444,7 +456,7 @@ class ManagerServer(
             writeJson(
                 output,
                 TestResultDto.serializer(),
-                TestResultDto(ok = false, error = "Fill in the required fields for this provider type."),
+                TestResultDto(ok = false, error = sentence(R.string.manager_page_provider_required)),
             )
             return
         }
@@ -501,6 +513,9 @@ class ManagerServer(
         // Generous next to pairing's 16 KB: a /reorder body carries every channel id in a
         // category, which can be a few thousand on a big provider.
         const val MAX_BODY_BYTES = 256 * 1024
+
+        val FORBIDDEN = PairingHttp.httpResponse("403 Forbidden", "text/plain", "Forbidden.")
+        val SERVER_ERROR = PairingHttp.httpResponse("500 Internal Server Error", "text/plain", "Not saved.")
     }
 }
 

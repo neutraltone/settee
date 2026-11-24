@@ -309,6 +309,12 @@
     <string name="manager_failed_device">Nie udało się uruchomić menedżera kanałów na tym urządzeniu. Spróbuj ponownie za chwilę.</string>
     <string name="manager_timed_out">Menedżer kanałów zamknął się po dłuższym czasie bezczynności. Otwórz go ponownie, gdy będzie potrzebny.</string>
     <string name="manager_too_many_codes">Menedżer kanałów zamknął się po zbyt wielu błędnych kodach. Otwórz go ponownie, aby zacząć od nowa.</string>
+    <string name="manager_page_unreachable">Nie można połączyć się z telewizorem. Sprawdź, czy menedżer kanałów jest na nim nadal otwarty i czy jesteś w tej samej sieci Wi-Fi, a potem odśwież tę stronę.</string>
+    <string name="manager_page_closed">Telewizor zamknął menedżera kanałów. Otwórz go ponownie na telewizorze, a potem odśwież tę stronę.</string>
+    <string name="manager_page_not_saved">Telewizor nie zapisał tej zmiany. Spróbuj ponownie.</string>
+    <string name="manager_page_not_loaded">Telewizor nie mógł wysłać tej listy. Odśwież stronę, aby spróbować ponownie.</string>
+    <string name="manager_page_nas_required">Dodaj adres i folder udostępniony swojego NAS-a, a potem zapisz ponownie.</string>
+    <string name="manager_page_provider_required">Uzupełnij wszystkie dane, których wymaga ten rodzaj dostawcy, i spróbuj ponownie.</string>
     <string name="pairing_no_network_tv">Ten telewizor nie jest połączony z siecią, więc telefon nie może się z nim połączyć. Połącz go, a potem spróbuj ponownie.</string>
     <string name="pairing_no_network_device">To urządzenie nie jest połączone z siecią, więc telefon nie może się z nim połączyć. Połącz je, a potem spróbuj ponownie.</string>
     <string name="pairing_failed_tv">Nie udało się rozpocząć parowania na tym telewizorze. Spróbuj ponownie za chwilę.</string>

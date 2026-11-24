@@ -306,6 +306,12 @@
     <string name="manager_failed_device">この端末でチャンネル管理を開始できませんでした。少し待ってからもう一度お試しください。</string>
     <string name="manager_timed_out">しばらく使われなかったため、チャンネル管理を閉じました。必要なときにもう一度開いてください。</string>
     <string name="manager_too_many_codes">間違ったコードが多すぎたため、チャンネル管理を閉じました。もう一度開いて、最初からやり直してください。</string>
+    <string name="manager_page_unreachable">テレビに接続できませんでした。テレビでチャンネル管理が開いたままか、同じWi-Fiにつながっているかを確認してから、このページを再読み込みしてください。</string>
+    <string name="manager_page_closed">テレビがチャンネル管理を閉じました。テレビでもう一度開いてから、このページを再読み込みしてください。</string>
+    <string name="manager_page_not_saved">テレビはこの変更を保存しませんでした。もう一度お試しください。</string>
+    <string name="manager_page_not_loaded">テレビがこの一覧を送れませんでした。このページを再読み込みして、もう一度お試しください。</string>
+    <string name="manager_page_nas_required">NASのアドレスと共有フォルダを入力してから、もう一度保存してください。</string>
+    <string name="manager_page_provider_required">この種類のプロバイダーに必要な項目をすべて入力してから、もう一度お試しください。</string>
     <string name="pairing_no_network_tv">このテレビはネットワークに接続されていないため、スマホからアクセスできません。接続してから、もう一度お試しください。</string>
     <string name="pairing_no_network_device">この端末はネットワークに接続されていないため、スマホからアクセスできません。接続してから、もう一度お試しください。</string>
     <string name="pairing_failed_tv">このテレビでペアリングを開始できませんでした。少し待ってからもう一度お試しください。</string>

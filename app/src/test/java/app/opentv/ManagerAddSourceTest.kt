@@ -57,7 +57,8 @@ class ManagerAddSourceTest {
     private fun sendProvider(
         path: String,
         username: String = "u",
-        body: String = """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}""",
+        body: String =
+            """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}""",
     ): String {
         server.start()
         val session = (server.state.value as? ManagerServer.State.Listening)?.session

@@ -306,6 +306,12 @@
     <string name="manager_failed_device">Gagal memulai pengelola saluran di perangkat ini. Coba lagi sebentar lagi.</string>
     <string name="manager_timed_out">Pengelola saluran ditutup setelah lama tidak dipakai. Buka lagi saat Anda membutuhkannya.</string>
     <string name="manager_too_many_codes">Pengelola saluran ditutup karena terlalu banyak kode yang salah. Buka lagi untuk memulai dari awal.</string>
+    <string name="manager_page_unreachable">Tidak dapat menjangkau TV. Pastikan pengelola saluran masih terbuka di TV dan Anda berada di Wi-Fi yang sama, lalu muat ulang halaman ini.</string>
+    <string name="manager_page_closed">TV menutup pengelola saluran. Buka lagi di TV, lalu muat ulang halaman ini.</string>
+    <string name="manager_page_not_saved">TV tidak menyimpan perubahan itu. Coba lagi.</string>
+    <string name="manager_page_not_loaded">TV tidak dapat mengirim daftar ini. Muat ulang halaman ini untuk mencoba lagi.</string>
+    <string name="manager_page_nas_required">Tambahkan alamat dan folder bersama NAS Anda, lalu simpan lagi.</string>
+    <string name="manager_page_provider_required">Isi semua detail yang dibutuhkan jenis penyedia ini, lalu coba lagi.</string>
     <string name="pairing_no_network_tv">TV ini tidak terhubung ke jaringan, jadi ponsel Anda tidak dapat menjangkaunya. Hubungkan, lalu coba lagi.</string>
     <string name="pairing_no_network_device">Perangkat ini tidak terhubung ke jaringan, jadi ponsel Anda tidak dapat menjangkaunya. Hubungkan, lalu coba lagi.</string>
     <string name="pairing_failed_tv">Gagal memulai pemasangan di TV ini. Coba lagi sebentar lagi.</string>
