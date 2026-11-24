@@ -494,6 +494,36 @@ class MovieDetailContentTest {
     }
 
     @Test
+    fun `there's no Quality pill when this TV can't play two of the Versions`() {
+        showWith(
+            PageVersions(
+                choices = listOf(
+                    choice(1, VersionTraits(qualityRank = 400, qualityLabel = "4K"), playable = false),
+                    choice(2, VersionTraits(qualityRank = 400, qualityLabel = "4K", language = "de"), playable = false),
+                ),
+                cantPlay = "4K",
+            ),
+        )
+
+        compose.onNodeWithText("Quality").assertDoesNotExist()
+        captureScreen("film_page_no_quality_button")
+    }
+
+    @Test
+    fun `there's no Quality pill when only one of the Versions plays on this TV`() {
+        showWith(
+            PageVersions(
+                choices = listOf(
+                    choice(1, VersionTraits(qualityRank = 400, qualityLabel = "4K"), playable = false),
+                    choice(3, VersionTraits(), playing = true),
+                ),
+            ),
+        )
+
+        compose.onNodeWithText("Quality").assertDoesNotExist()
+    }
+
+    @Test
     fun `Play is off and says why when nothing of the film plays here`() {
         showWith(PageVersions(cantPlay = "4K"))
 
