@@ -54,10 +54,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.JourneyTimer
-import app.opentv.data.model.SourceKind
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus

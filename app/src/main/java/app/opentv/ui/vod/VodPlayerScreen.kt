@@ -67,7 +67,6 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import app.opentv.R
-import app.opentv.core.JourneyTimer
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey

@@ -12,11 +12,11 @@ import androidx.compose.ui.platform.LocalContext
 import app.opentv.core.CrashReports
 import app.opentv.core.ErrorReport
 import app.opentv.core.JourneyTimer
-import app.opentv.data.model.SourceKind
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
-import app.opentv.ui.design.SendReport
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.design.SendReport
 
 /**
  * Send report for [error], for [ErrorMessage][app.opentv.ui.design.ErrorMessage]'s `sendReport`, or

@@ -19,8 +19,7 @@ package app.opentv.core
  * An exception only so it goes through [CrashReports.report] as a [CrashReports.Handled.VIEWER_REPORT]:
  * its own message and stack trace are never sent, only the cause's classes and stack trace.
  */
-class ErrorReport(val detail: String, val source: String?, cause: Throwable? = null) :
-    Exception(MESSAGE, cause) {
+class ErrorReport(val detail: String, val source: String?, cause: Throwable? = null) : Exception(MESSAGE, cause) {
     val kind: String = detail.substringBefore(SEPARATOR).trim().ifBlank { UNKNOWN }
 
     companion object {

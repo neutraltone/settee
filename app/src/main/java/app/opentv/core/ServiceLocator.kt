@@ -56,10 +56,10 @@ import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
 import app.opentv.update.UpdateChecker
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.job
