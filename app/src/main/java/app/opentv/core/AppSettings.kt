@@ -661,6 +661,21 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { putInt(KEY_CRASH_REFUSALS, crashReportsRefusals + 1) }
     }
 
+    /**
+     * How many reports that aren't crashes or freezes went to Sentry on [day], a UTC day number:
+     * none for any day but the one last counted, so the count starts again each day ([DailyCap]).
+     * The device's own, like [crashReportsOn].
+     */
+    fun crashReportsCappedOn(day: Long): Int =
+        if (prefs.getLong(KEY_CRASH_CAP_DAY, -1L) == day) prefs.getInt(KEY_CRASH_CAP_COUNT, 0) else 0
+
+    fun setCrashReportsCappedOn(day: Long, count: Int) {
+        prefs.edit {
+            putLong(KEY_CRASH_CAP_DAY, day)
+            putInt(KEY_CRASH_CAP_COUNT, count)
+        }
+    }
+
     // ---- Stremio add-ons ---------------------------------------------------------------------
 
     /**
@@ -751,6 +766,8 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_CRASH_REFUSALS = "crash_reports_refusals"
         private const val KEY_CRASH_ON_SINCE = "crash_reports_on_since"
         private const val KEY_CRASH_LOOKED_BACK = "crash_reports_looked_back_to"
+        private const val KEY_CRASH_CAP_DAY = "crash_reports_cap_day"
+        private const val KEY_CRASH_CAP_COUNT = "crash_reports_cap_count"
         private const val KEY_PAD_START = "rec_pad_start_min"
         private const val KEY_PAD_END = "rec_pad_end_min"
         private const val KEY_REC_AUTOSWITCH = "rec_auto_switch"

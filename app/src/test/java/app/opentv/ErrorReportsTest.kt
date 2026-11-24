@@ -26,6 +26,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.core.CrashReports
+import app.opentv.core.DailyCap
 import app.opentv.core.JourneyTimer
 import app.opentv.core.ViewerError
 import app.opentv.data.model.SourceKind
@@ -77,6 +78,7 @@ class ErrorReportsTest {
         crashReportsTo = CrashReports.Destination(
             "https://k@sentry.example.org/1",
             CrashReports.Outbox { envelope -> synchronized(sent) { sent += envelope } },
+            cap = DailyCap(now = { MONDAY_NOON }),
         ),
     )
 
@@ -312,7 +314,24 @@ class ErrorReportsTest {
         assertNone(sendReport)
     }
 
+    @Test
+    fun `over the day's cap, Send report still says Sent, though nothing more goes`() {
+        // Twenty reports that weren't crashes already sent today.
+        graph.settings.setCrashReportsCappedOn(MONDAY, DailyCap.MOST_A_DAY)
+        setLive(ProviderFailure(1, "Acme TV", ViewerError("Couldn't load channels.", "HTTP 500"), SourceKind.M3U))
+
+        compose.onNode(hasText(sendReport) and hasClickAction()).performClick()
+
+        awaitText(sentLabel)
+        assertNone(sendReport)
+        awaitSent(0)
+    }
+
     private companion object {
         const val RAIL_HANDOVER_MILLIS = 500L
+
+        /** Monday 23 November 2026, 12:00 UTC, and that day's UTC day number. */
+        const val MONDAY_NOON = 1_795_435_200_000L
+        const val MONDAY = 20_780L
     }
 }

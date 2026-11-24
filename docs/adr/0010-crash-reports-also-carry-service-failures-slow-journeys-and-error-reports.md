@@ -45,7 +45,7 @@ The event carries what the viewer saw: the error's kind (its `ErrorWording` or `
 
 ## The daily cap
 
-Each install sends at most **20 non-crash events a day**: service failures, Slow Journeys and Error Reports together, counted in `AppSettings`. Crashes and freezes aren't capped by Settee; Sentry's rate limit on the key still applies to everything, and is checked against the new volume (#571). The cap is what keeps one struggling stick, or a viewer pressing Send report on every error, from using up the free plan and burying everyone else's crashes.
+Each install sends at most **20 non-crash events a day**: service failures, Slow Journeys and Error Reports together, with ADR 0009's two handled errors (an Xtream reply Settee couldn't parse, a database migration) counted among them, since they go through the same `CrashReports.report`. The cap is `DailyCap.MOST_A_DAY`, counted in `AppSettings` by UTC day, so a restart doesn't start the day again and every device's day is the same length. An event counts only once it's going: one dropped because crash reports are off, or a slow journey reported as the freeze it was, doesn't use up the day. Past the cap the rest of the day's are dropped, never held to send later. An Error Report over the cap still shows Sent: the viewer did what they could, and telling them a report was refused because of other reports would only puzzle them. Crashes and freezes aren't capped by Settee; Sentry's rate limit on the key still applies to everything, and is checked against the new volume (#571). The cap is what keeps one struggling stick, or a viewer pressing Send report on every error, from using up the free plan and burying everyone else's crashes.
 
 ## What still never leaves the device
 

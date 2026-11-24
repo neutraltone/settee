@@ -70,9 +70,15 @@ class CrashReports(
      * Where reports go: the project [dsn] names, which is blank in a build without Settee's key (so
      * none go at all), and, for a test, an [outbox] that takes the place of Sentry's own transport.
      * [queue] is where each envelope waits its turn to go to the outbox, as Sentry's own transport
-     * queues them: a test can hold it, to turn reports off while one waits.
+     * queues them: a test can hold it, to turn reports off while one waits. [cap] is how many
+     * reports that aren't crashes or freezes the project takes from this install a day (ADR 0010).
      */
-    class Destination(val dsn: String, val outbox: Outbox? = null, val queue: Executor = Executor(Runnable::run))
+    class Destination(
+        val dsn: String,
+        val outbox: Outbox? = null,
+        val queue: Executor = Executor(Runnable::run),
+        val cap: DailyCap = DailyCap(),
+    )
 
     /** Where envelopes go instead of Sentry: each one serialized, as it would be sent. */
     fun interface Outbox {
@@ -145,6 +151,9 @@ class CrashReports(
     private class Asked(val eventId: SentryId?, val crash: HeldCrash?, val screen: String?)
 
     private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
+
+    // Whether a handled error goes now: a build that has reports, the viewer's yes, and Sentry started.
+    private val reporting: Boolean get() = available && on.value && Sentry.isEnabled()
 
     /**
      * Called once, from `OpenTvApp.onCreate`: starts Sentry if the build and the viewer allow it, or
@@ -279,17 +288,25 @@ class CrashReports(
      * A [Handled.VIEWER_REPORT] is the exception: an [ErrorReport] the viewer pressed Send report for
      * (ADR 0010), sent whether or not Crash Reports are on and without turning them on, as the
      * after-crash Send is. Never in a build without a DSN, which never offers it.
+     *
+     * Every kind counts towards the install's daily [DailyCap], and once it's reached the rest of
+     * the day's are dropped. Crashes and freezes don't come through here, and are never capped.
      */
     fun report(kind: Handled, error: Throwable) {
         val service = kind.service
         val failure = error as? ServiceFailure
         when {
             // From the screen it was pressed on, not whichever is open by the time it goes.
-            kind == Handled.VIEWER_REPORT -> if (available && error is ErrorReport) send(report = error, at = screen)
-            !available || !on.value || !Sentry.isEnabled() -> Unit
+            // Over the day's cap it goes no further, but the viewer was still heard: Send report says Sent.
+            kind == Handled.VIEWER_REPORT -> if (available && error is ErrorReport && to.cap.take(settings)) {
+                send(report = error, at = screen)
+            }
+            !reporting -> Unit
             // A journey that froze is the freeze's: that was reported, and says more.
-            error is TooSlow -> error.journey.takeIf { frozeAt !in it.startedAt..it.endedAt }
-                ?.let { Sentry.captureEvent(SlowJourneyEvent.of(it)) }
+            error is TooSlow && frozeAt in error.journey.startedAt..error.journey.endedAt -> Unit
+            // Counted only once it's going: one dropped while reports are off, or as a freeze's, isn't.
+            !to.cap.take(settings) -> Unit
+            error is TooSlow -> Sentry.captureEvent(SlowJourneyEvent.of(error.journey))
             // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
             // stack that shows which client asked. The request and the reply were never in it.
             service != null && failure != null -> {

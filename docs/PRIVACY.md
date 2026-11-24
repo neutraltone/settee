@@ -132,9 +132,11 @@ Stremio), the stack trace if there is one, and the version and device details li
 random id only if crash reports have been turned on on this device. It never contains your
 provider's address, name, username, password or MAC, the channel or title, or the stream's address.
 
-Settee sends at most 20 of these three kinds of report a day from one device, all together, so one
-device having a bad evening can't crowd out everyone else's. Crashes and freezes don't count towards
-that.
+Settee sends at most 20 reports a day from one device that aren't crashes or freezes: these three
+kinds and the two errors Settee shows rather than crashing, all together, so one device having a bad
+evening can't crowd out everyone else's. The count starts again each day (by UTC, not your midnight).
+Past it, the rest of that day's are dropped, never kept to send later, and Send report still shows
+Sent. Crashes and freezes don't count towards that, and are never held back by it.
 
 ## Cleartext HTTP
 
