@@ -157,8 +157,10 @@ internal class RowHighlight(private val listState: LazyListState, private val ke
 
     private suspend fun restoreTo(key: Any, keepScroll: Boolean): Boolean {
         val index = indexOf[key] ?: return false
+        // `highlighted` isn't cleared first: Compose may already have moved focus onto this row by
+        // itself when the old one left (a series link going with its bookings), and asking for focus
+        // a row already has reports nothing, so the row would be judged unable to take it (#445).
         restoringTo = key
-        highlighted = null
         val item = itemIndex(index)
         if (!keepScroll || listState.layoutInfo.visibleItemsInfo.none { it.index == item }) {
             listState.scrollToItem(item)
