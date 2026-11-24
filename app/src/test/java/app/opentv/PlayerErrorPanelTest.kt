@@ -53,9 +53,9 @@ class PlayerErrorPanelTest {
 
     private val compose = createComposeRule()
 
-    // Offers Send report under the panel's buttons, as a release build does.
+    // Offers Report at the end of the panel's buttons, as a release build does.
     @get:Rule
-    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
+    val testGraph = TestGraph(compose, crashReportsTo = reportsOffered())
 
     private val app = testGraph.app
     private val players = TestPlayers(app)

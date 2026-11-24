@@ -936,7 +936,7 @@ sealed interface AddonStreams {
 
 /**
  * A Movies or Shows download that failed: which provider, so Provider setup can open it, why, and
- * its kind, for Send report.
+ * its kind, for its Error Report.
  */
 data class VodLoadFailure(val sourceId: Long, val reason: ViewerError, val sourceKind: SourceKind? = null)
 
@@ -1745,7 +1745,7 @@ data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
 /**
  * A provider's saved refresh failure, with its [name] for the screen to say whose it is, and its
- * [kind] for Send report, which never sends the name.
+ * [kind] for its Error Report, which never sends the name.
  */
 data class ProviderFailure(val sourceId: Long, val name: String, val error: ViewerError, val kind: SourceKind? = null)
 

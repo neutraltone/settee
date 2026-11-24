@@ -457,7 +457,7 @@ class TestGraph(
 fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
 
 /**
- * Crash Reports for a screen test that shows Send report (ADR 0010): a build with a DSN, as a release
+ * Crash Reports for a screen test whose errors are reported (ADR 0010): a build with a DSN, as a release
  * is, whose reports go nowhere. Crash reports stay off, so nothing else of them starts.
  */
-fun sendReportOffered() = CrashReports.Destination("https://k@sentry.example.org/1", CrashReports.Outbox {})
+fun reportsOffered() = CrashReports.Destination("https://k@sentry.example.org/1", CrashReports.Outbox {})

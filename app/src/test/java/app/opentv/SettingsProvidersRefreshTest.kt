@@ -72,7 +72,7 @@ class SettingsProvidersRefreshTest {
         compose,
         name = "settings-providers-refresh-test",
         http = http,
-        crashReportsTo = sendReportOffered(),
+        crashReportsTo = reportsOffered(),
     )
 
     @get:Rule(order = 1)

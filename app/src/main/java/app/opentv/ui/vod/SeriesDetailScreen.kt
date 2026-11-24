@@ -47,7 +47,7 @@ fun SeriesDetailScreen(
     var gone by remember(seriesId) { mutableStateOf(false) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
-    // Only for Send report on a failure, which names the kind of the show's Source and nothing more.
+    // Only for a failure's Error Report, which names the kind of the show's Source and nothing more.
     val sources by viewModel.sources.collectAsState()
 
     LaunchedEffect(seriesId, attempt) {

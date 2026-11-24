@@ -59,9 +59,9 @@ class AddSourceScreenTest {
     @get:Rule(order = 0)
     val panelGraph = TestGraph(name = "add-source-again-test", http = panel.http, swapIn = false)
 
-    // The app's graph, which screens read Send report's offer from: offered, as a release build does.
+    // The app's graph, which screens read whether errors are reported from: they are, as in a release build.
     @get:Rule(order = 1)
-    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
+    val testGraph = TestGraph(compose, crashReportsTo = reportsOffered())
 
     @get:Rule
     val secrets = FixedServerSecrets()

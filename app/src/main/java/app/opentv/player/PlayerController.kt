@@ -231,10 +231,10 @@ class PlayerController(
     private val _title = MutableStateFlow("")
     val title: StateFlow<String> = _title.asStateFlow()
 
-    // Only the kind, never which Source: all Send report on a failure may name (ADR 0010).
+    // Only the kind, never which Source: all a failure's Error Report may name (ADR 0010).
     private val _reportedSource = MutableStateFlow<ReportedSource?>(null)
 
-    /** The kind of Source the stream on the player comes from, once it's known, for Send report. */
+    /** The kind of Source the stream on the player comes from, once it's known, for a failure's Error Report. */
     val reportedSource: StateFlow<ReportedSource?> = _reportedSource.asStateFlow()
     private var titled: MediaKey? = null
     private var loaded: MediaKey? = null

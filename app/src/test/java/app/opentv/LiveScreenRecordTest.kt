@@ -63,9 +63,9 @@ class LiveScreenRecordTest {
 
     private val compose = createComposeRule()
 
-    // A build that offers Send report on an error that could be Settee's, as a release does.
+    // A build that reports an error that could be Settee's, as a release does.
     @get:Rule
-    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
+    val testGraph = TestGraph(compose, crashReportsTo = reportsOffered())
 
     @get:Rule
     val artwork = PlaceholderArtwork()

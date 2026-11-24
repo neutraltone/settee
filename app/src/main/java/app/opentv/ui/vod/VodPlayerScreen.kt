@@ -297,7 +297,7 @@ fun VodPlayerContent(
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     val title by controller.title.collectAsState()
-    // Only the kind of Source it plays from, for Send report on a failure.
+    // Only the kind of Source it plays from, for a failure's Error Report.
     val reportedSource by controller.reportedSource.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
     val playingKey by viewModel.current.collectAsState()

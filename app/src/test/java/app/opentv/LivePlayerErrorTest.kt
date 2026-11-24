@@ -52,9 +52,9 @@ class LivePlayerErrorTest {
 
     private val compose = createComposeRule()
 
-    // Offers Send report under Try again, as a release build does.
+    // Offers Report beside Try again, as a release build does.
     @get:Rule
-    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
+    val testGraph = TestGraph(compose, crashReportsTo = reportsOffered())
 
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val players = TestPlayers(context)

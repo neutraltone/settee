@@ -37,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -362,7 +363,7 @@ private fun SeasonPills(
 class EpisodeFetch(
     val noEpisodes: Boolean = false,
     val failure: ViewerError? = null,
-    /** The kind of the show's Source, for Send report on its [failure]. */
+    /** The kind of the show's Source, for its [failure]'s Error Report. */
     val source: ReportedSource? = null,
     val onTryAgain: () -> Unit = {},
 )
@@ -381,7 +382,8 @@ private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
     val report = rememberErrorReport(failure, fetch.source)
     val tryAgainFocus = remember { FocusRequester() }
     val buttons = @Composable {
-        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
+        // Centred: Try again's icon makes it a little taller than Report.
+        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP), verticalAlignment = Alignment.CenterVertically) {
             PillButton(
                 label = stringResource(R.string.common_try_again),
                 icon = Icons.Filled.Refresh,

@@ -63,7 +63,7 @@ class OpenSubtitlesSettingsTest {
     }
 
     @get:Rule
-    val testGraph = TestGraph(compose, name = SETTINGS, http = site.http, crashReportsTo = sendReportOffered())
+    val testGraph = TestGraph(compose, name = SETTINGS, http = site.http, crashReportsTo = reportsOffered())
 
     private val app = testGraph.app
     private val graph = testGraph.graph
