@@ -55,12 +55,11 @@ object M3uParser {
         // #EXTVLCOPT / #EXTHTTP lines that apply to the next URL.
         var index = 0
 
-        var first = true
         reader.forEachLine { rawLine ->
             // A byte-order mark isn't whitespace to trim(), so a playlist saved with one had its
-            // header read as a channel's URL, losing the guide it declares.
-            val line = (if (first) rawLine.removePrefix(BYTE_ORDER_MARK) else rawLine).trim()
-            first = false
+            // header read as a channel's URL, losing the guide it declares. Only the first line can
+            // carry one, and on any other it would mean nothing, so every line goes without a test.
+            val line = rawLine.removePrefix(BYTE_ORDER_MARK).trim()
             when {
                 line.isEmpty() -> Unit
 
