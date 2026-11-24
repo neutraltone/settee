@@ -45,6 +45,9 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -111,7 +114,24 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
     fun providerAdded() {
         openedRow = null
     }
+
+    companion object {
+        /** The section and opened row by name, so the row takes the Highlight back in the new activity. */
+        val Saver: Saver<SettingsMemory, Any> = listSaver(
+            save = { listOf(it.section.name, it.openedRow.orEmpty()) },
+            restore = { saved ->
+                SettingsMemory(SettingsSection.valueOf(saved[0])).apply { openedRow = saved[1].ifEmpty { null } }
+            },
+        )
+    }
 }
+
+/**
+ * The app's [SettingsMemory], kept in saved state: changing the language makes the activity again,
+ * and a plain remember came back on Providers instead of the section the viewer was on (#443).
+ */
+@Composable
+fun rememberSettingsMemory(): SettingsMemory = rememberSaveable(saver = SettingsMemory.Saver) { SettingsMemory() }
 
 /**
  * Where the Highlight goes when Compose starts again from the top of Settings: into the pane if it
@@ -225,7 +245,10 @@ fun SettingsScreen(
                 SectionRow(
                     section = section,
                     isCurrent = section == memory.section,
-                    onHighlighted = { memory.section = section },
+                    // Not while a row is waiting to take the Highlight back: Android making the
+                    // activity again (a language change) gives the window focus, and Compose puts it
+                    // on the first section, which would open Providers before the row could (#443).
+                    onHighlighted = { if (memory.openedRow == null) memory.section = section },
                     onClick = { runCatching { pane.requestFocus() } },
                     modifier = (if (section == memory.section) Modifier.focusRequester(current) else Modifier)
                         .focusProperties { right = pane },
