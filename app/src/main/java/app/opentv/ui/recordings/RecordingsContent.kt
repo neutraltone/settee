@@ -224,7 +224,7 @@ private class RowReturn(private val last: MutableState<String?>) {
 private fun rowItems(sections: List<RecordingsSection>): List<Int> = buildList {
     var item = 0
     sections.forEach { section ->
-        item++ // its heading
+        item++
         section.rows.forEach { _ -> add(item++) }
     }
 }

@@ -15,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
@@ -92,15 +94,15 @@ internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
         switch = previewSound,
     )
     // Not a screen of its own, but a language change makes the activity again: the row takes the
-    // Highlight back the same way, once changeLanguage has named it. Only its modifier is used, as its
-    // open would name it for a panel closed with nothing chosen too.
-    val languageRow = screenRow(LANGUAGE_ROW) {}
+    // Highlight back the same way, once changeLanguage has named it, not on opening its panel, which
+    // can close with nothing chosen.
+    val languageRow = rememberReturningRow(LANGUAGE_ROW)
     ListRow(
         stringResource(R.string.settings_row_language),
         onClick = { choosing = Choice.Language },
         value = OpenTvLanguages.firstOrNull { it.first == language }?.second
             ?: stringResource(R.string.settings_language_system),
-        modifier = languageRow.modifier,
+        modifier = Modifier.focusRequester(languageRow),
     )
     ListRow(stringResource(R.string.nav_live_tv), onClick = {
         settings.setLiveEnabled(!liveEnabled)

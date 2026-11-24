@@ -31,14 +31,26 @@ internal class ScreenRow(val modifier: Modifier, val requester: FocusRequester, 
 @Composable
 internal fun screenRow(key: String, open: () -> Unit): ScreenRow {
     val memory = LocalSettingsMemory.current
+    val requester = rememberReturningRow(key)
+    return ScreenRow(Modifier.focusRequester(requester), requester) {
+        memory?.openedRow = key
+        open()
+    }
+}
+
+/**
+ * The returning half of [screenRow], for a row that names itself some other way (Language, named
+ * once a language is chosen): the row keyed [key] wears the requester, and takes the Highlight back
+ * when Settings is built again with it named.
+ */
+@Composable
+internal fun rememberReturningRow(key: String): FocusRequester {
+    val memory = LocalSettingsMemory.current
     val requester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (memory?.openedRow != key) return@LaunchedEffect
         withFrameNanos {}
         if (runCatching { requester.requestFocus() }.getOrNull() == true) memory.openedRow = null
     }
-    return ScreenRow(Modifier.focusRequester(requester), requester) {
-        memory?.openedRow = key
-        open()
-    }
+    return requester
 }

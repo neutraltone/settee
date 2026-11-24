@@ -115,6 +115,16 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
         openedRow = null
     }
 
+    /**
+     * The Highlight is on [section]'s name, so it's the open one. Not while a row is waiting to take
+     * the Highlight back: Android making the activity again (a language change) gives the window
+     * focus, and Compose puts it on the first section, which would open Providers before the row
+     * could (#443).
+     */
+    internal fun highlightSection(section: SettingsSection) {
+        if (openedRow == null) this.section = section
+    }
+
     companion object {
         /** The section and opened row by name, so the row takes the Highlight back in the new activity. */
         val Saver: Saver<SettingsMemory, Any> = listSaver(
@@ -245,10 +255,7 @@ fun SettingsScreen(
                 SectionRow(
                     section = section,
                     isCurrent = section == memory.section,
-                    // Not while a row is waiting to take the Highlight back: Android making the
-                    // activity again (a language change) gives the window focus, and Compose puts it
-                    // on the first section, which would open Providers before the row could (#443).
-                    onHighlighted = { if (memory.openedRow == null) memory.section = section },
+                    onHighlighted = { memory.highlightSection(section) },
                     onClick = { runCatching { pane.requestFocus() } },
                     modifier = (if (section == memory.section) Modifier.focusRequester(current) else Modifier)
                         .focusProperties { right = pane },
