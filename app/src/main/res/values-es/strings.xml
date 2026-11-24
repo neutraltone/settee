@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">No se puede conectar con OpenSubtitles. Comprueba que esta tele esté conectada y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_unreachable_device">No se puede conectar con OpenSubtitles. Comprueba que este dispositivo esté conectado y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles tiene problemas. Son cosa suya, así que inténtalo más tarde.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles no está aceptando Settee ahora mismo. Tu cuenta está bien: Settee necesita una actualización.</string>
     <string name="error_opensubtitles_limit_anonymous">Ya has usado los 5 subtítulos gratis de hoy. Inicia sesión en OpenSubtitles en Ajustes para conseguir más.</string>
     <string name="error_opensubtitles_limit_account">Ya has usado las descargas de OpenSubtitles de hoy. Más a partir de las %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Ya has usado las descargas de OpenSubtitles de hoy. Más mañana.</string>

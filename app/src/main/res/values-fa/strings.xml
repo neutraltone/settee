@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این تلویزیون به اینترنت وصل باشد و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_unreachable_device">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این دستگاه به اینترنت وصل باشد و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles دچار مشکل شده است. مشکل از سمت آن‌هاست، پس بعداً دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles در حال حاضر Settee را نمی‌پذیرد. حساب شما مشکلی ندارد: Settee باید به‌روزرسانی شود.</string>
     <string name="error_opensubtitles_limit_anonymous">۵ زیرنویس رایگان امروز تمام شد. برای دریافت بیشتر، در تنظیمات وارد OpenSubtitles شوید.</string>
     <string name="error_opensubtitles_limit_account">دانلودهای امروز OpenSubtitles تمام شد. دانلود بیشتر از %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">دانلودهای امروز OpenSubtitles تمام شد. دانلود بیشتر فردا.</string>

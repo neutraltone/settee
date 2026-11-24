@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_unreachable_device">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_trouble">Το OpenSubtitles αντιμετωπίζει προβλήματα από τη δική του πλευρά, οπότε δοκιμάστε αργότερα.</string>
+    <string name="error_opensubtitles_key_rejected">Το OpenSubtitles δεν δέχεται το Settee αυτή τη στιγμή. Ο λογαριασμός σας είναι εντάξει: το Settee χρειάζεται ενημέρωση.</string>
     <string name="error_opensubtitles_limit_anonymous">Οι 5 δωρεάν υπότιτλοι της ημέρας εξαντλήθηκαν. Συνδεθείτε στο OpenSubtitles από τις Ρυθμίσεις για περισσότερους.</string>
     <string name="error_opensubtitles_limit_account">Οι σημερινές λήψεις από το OpenSubtitles εξαντλήθηκαν. Περισσότερες από τις %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Οι σημερινές λήψεις από το OpenSubtitles εξαντλήθηκαν. Περισσότερες αύριο.</string>
