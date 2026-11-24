@@ -31,6 +31,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.personKey
 import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
+import app.opentv.data.parser.GuideAddresses
 import app.opentv.data.parser.M3uParser
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.remote.StalkerApi
@@ -1045,9 +1046,11 @@ class CatalogRepository(
         // more is a group the playlist dropped, or the films and shows an earlier version stored.
         categoryDao.deleteEmptyLive(source.id)
 
-        // If the playlist declared its own guide URL and the user did not set one, adopt it.
-        if (source.epgUrl.isNullOrBlank() && !parsed.declaredEpgUrl.isNullOrBlank()) {
-            sourceDao.update(source.copy(epgUrl = parsed.declaredEpgUrl))
+        // If the playlist declared its own guides and the user did not set one, adopt them, all of
+        // them in the one address (see GuideAddresses), so one that's gone doesn't cost the guide.
+        val declared = GuideAddresses.join(parsed.declaredEpgUrls)
+        if (source.epgUrl.isNullOrBlank() && declared != null) {
+            sourceDao.update(source.copy(epgUrl = declared))
         }
 
         sourceDao.markCatalogSynced(source.id, nowUtcMillis)

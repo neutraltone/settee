@@ -14,6 +14,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.providerDirector
+import app.opentv.data.parser.GuideAddresses
 import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
@@ -305,11 +306,20 @@ class XtreamApi(
     }
 
     /**
-     * The provider's guide, with its size where the server gives one (Setup's bar moves on it). The
-     * caller must close it.
+     * Where [source]'s guide is: each address its guide address lists (a playlist can declare several)
+     * that parses, in order, or else the panel's own `xmltv.php` when none does.
      */
-    suspend fun openEpg(source: Source): ResponseBody = withContext(dispatchers.io) {
-        val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
+    fun epgAddresses(source: Source): List<HttpUrl> = GuideAddresses.split(source.epgUrl)
+        .mapNotNull { it.toHttpUrlOrNull() }
+        .ifEmpty { listOf(xmltvUrl(source)) }
+
+    /**
+     * The provider's guide at [url], one of [epgAddresses], with its size where the server gives one
+     * (Setup's bar moves on it). The caller must close it.
+     */
+    suspend fun openEpg(source: Source, url: HttpUrl = epgAddresses(source).first()): ResponseBody = withContext(
+        dispatchers.io,
+    ) {
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
             response.close()

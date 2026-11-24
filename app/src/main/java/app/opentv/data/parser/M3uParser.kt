@@ -23,6 +23,7 @@ object M3uParser {
 
     private val ATTRIBUTE_REGEX = Regex("""([\w-]+)="([^"]*)"""")
     private const val SCHEME_SEPARATOR = "://"
+    private const val BYTE_ORDER_MARK = "\uFEFF"
 
     /** What can end a URL's host: its path, query or fragment. */
     private const val HOST_ENDS = "/?#"
@@ -31,8 +32,8 @@ object M3uParser {
 
     data class Result(
         val channels: List<Channel>,
-        /** Value of `url-tvg`/`x-tvg-url` on the #EXTM3U header, if the playlist declares one. */
-        val declaredEpgUrl: String?,
+        /** The guides `url-tvg`/`x-tvg-url` on the #EXTM3U header lists, in order; empty when it lists none. */
+        val declaredEpgUrls: List<String>,
         /** Malformed entries. Films and episodes are left out of the channels but not counted here. */
         val skippedEntries: Int,
     )
@@ -44,7 +45,7 @@ object M3uParser {
     fun parse(reader: BufferedReader, sourceId: Long): Result {
         val channels = ArrayList<Channel>()
         val seenStreamIds = HashSet<String>()
-        var declaredEpgUrl: String? = null
+        var declaredEpgUrls = emptyList<String>()
         var skipped = 0
 
         var pendingName: String? = null
@@ -53,16 +54,19 @@ object M3uParser {
         // #EXTVLCOPT / #EXTHTTP lines that apply to the next URL.
         var index = 0
 
+        var first = true
         reader.forEachLine { rawLine ->
-            val line = rawLine.trim()
+            // A byte-order mark isn't whitespace to trim(), so a playlist saved with one had its
+            // header read as a channel's URL, losing the guide it declares.
+            val line = (if (first) rawLine.removePrefix(BYTE_ORDER_MARK) else rawLine).trim()
+            first = false
             when {
                 line.isEmpty() -> Unit
 
                 line.startsWith("#EXTM3U", ignoreCase = true) -> {
                     val attributes = parseAttributes(line)
-                    declaredEpgUrl = attributes["url-tvg"]
-                        ?: attributes["x-tvg-url"]
-                        ?: declaredEpgUrl
+                    val listed = attributes["url-tvg"] ?: attributes["x-tvg-url"]
+                    if (listed != null) declaredEpgUrls = GuideAddresses.split(listed)
                 }
 
                 line.startsWith("#EXTINF", ignoreCase = true) -> {
@@ -102,7 +106,7 @@ object M3uParser {
             }
         }
 
-        return Result(channels, declaredEpgUrl, skipped)
+        return Result(channels, declaredEpgUrls, skipped)
     }
 
     @Suppress("LongParameterList") // One entry's parts, as parse has gathered them.

@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -415,21 +416,91 @@ class EpgRepository(
         return removed
     }
 
+    /**
+     * Downloads [feed] from each of its addresses in turn: a playlist can list several guides, and one
+     * that's gone mustn't cost the others theirs (#505). A success when any of them gave programmes,
+     * though only an address read whole says what replaces the rest; otherwise the first one's failure.
+     */
     private suspend fun syncFeed(
         feed: EpgFeed,
         nowUtcMillis: Long,
         read: (Float) -> Unit,
         counted: () -> Unit,
     ): FeedResult {
+        val addresses = try {
+            addressesOf(feed)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return FeedResult.Failed(wording.ofGuide(e, fromProvider = feed.providerSourceId != null))
+        }
+        val writtenUpToId = refreshDao.highestId()
+        val spans = HashMap<String, GuideSpan>()
+        var programmes = 0
+        var channels = 0
+        var anyRead = false
+        var firstFailure: FeedResult.Failed? = null
+        for ((index, address) in addresses.withIndex()) {
+            val result = readGuide(
+                feed,
+                address,
+                nowUtcMillis,
+                read = { share -> read((index + share) / addresses.size) },
+                counted = counted,
+            )
+            when (result) {
+                is GuideRead.Whole -> {
+                    anyRead = true
+                    programmes += result.programmes
+                    channels += result.channels
+                    for ((channel, span) in result.spans) {
+                        spans.getOrPut(channel) { GuideSpan(span.fromUtcMillis, span.untilUtcMillis) }
+                            .widen(span.fromUtcMillis, span.untilUtcMillis)
+                    }
+                }
+                is GuideRead.Failed -> {
+                    if (firstFailure == null) firstFailure = FeedResult.Failed(result.reason)
+                    if (addresses.size > 1) {
+                        Log.w(TAG, "Feed '${feed.name}': guide ${index + 1} failed: ${result.reason.detail}")
+                    }
+                }
+            }
+        }
+        if (!anyRead) return checkNotNull(firstFailure)
+        return try {
+            // Only now the downloads are whole: an address cut off part way never got to say what
+            // replaces the rest, so its spans aren't here and it loses none of it.
+            refreshDao.deleteSuperseded(feed.id, writtenUpToId, spans)
+            FeedResult.Success(programmes, channels)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Feed '${feed.name}': couldn't clear what its download replaced", e)
+            FeedResult.Failed(wording.ofGuide(e, fromProvider = feed.providerSourceId != null))
+        }
+    }
+
+    private sealed interface GuideRead {
+        class Whole(val programmes: Int, val channels: Int, val spans: Map<String, GuideSpan>) : GuideRead
+        class Failed(val reason: ViewerError) : GuideRead
+    }
+
+    /** Reads one of [feed]'s guides, from [address], into the database. */
+    private suspend fun readGuide(
+        feed: EpgFeed,
+        address: GuideAddress,
+        nowUtcMillis: Long,
+        read: (Float) -> Unit,
+        counted: () -> Unit,
+    ): GuideRead {
         val batch = ArrayList<Programme>(BATCH_SIZE)
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
         // One per channel, not per programme: a week of a national guide is hundreds of thousands.
         val spans = HashMap<String, GuideSpan>()
 
-        try {
-            val writtenUpToId = refreshDao.highestId()
-            openFeedStream(feed, read).use { stream ->
+        return try {
+            openFeedStream(address, read).use { stream ->
                 val stats = XmltvParser.parse(
                     input = stream,
                     feedId = feed.id,
@@ -465,12 +536,10 @@ class EpgRepository(
                 saveAliases(aliases)
 
                 if (written == 0 && stats.programmeCount == 0) {
-                    return FeedResult.Failed(wording.of(R.string.error_guide_empty, "NoProgrammes"))
+                    GuideRead.Failed(wording.of(R.string.error_guide_empty, "NoProgrammes"))
+                } else {
+                    GuideRead.Whole(written, stats.channelCount, spans)
                 }
-                // Only now the download is whole: a feed cut off part way never got to say what
-                // replaces the rest, so it mustn't lose any of it.
-                refreshDao.deleteSuperseded(feed.id, writtenUpToId, spans)
-                return FeedResult.Success(written, stats.channelCount)
             }
         } catch (e: CancellationException) {
             throw e
@@ -488,7 +557,7 @@ class EpgRepository(
                 // is the one to report, and the rest of the feeds still get their turn.
                 Log.w(TAG, "Feed '${feed.name}': couldn't save the channels read before it failed", ignored)
             }
-            return FeedResult.Failed(wording.ofGuide(e, fromProvider = feed.providerSourceId != null))
+            GuideRead.Failed(wording.ofGuide(e, fromProvider = feed.providerSourceId != null))
         }
     }
 
@@ -496,23 +565,39 @@ class EpgRepository(
         aliases.chunked(BATCH_SIZE).forEach { aliasDao.upsertAll(it) }
     }
 
+    /** One place a feed's guide downloads from: the provider's (with its login and User-Agent), or a plain address. */
+    private sealed interface GuideAddress {
+        class Provider(val source: Source, val url: HttpUrl) : GuideAddress
+        class Plain(val url: String) : GuideAddress
+    }
+
     /**
-     * Opens a feed as a decompressed XML stream.
+     * Where [feed] downloads from. A provider's guide can be several addresses, as its playlist
+     * listed them; a guide the viewer added is the one address they typed.
+     */
+    private suspend fun addressesOf(feed: EpgFeed): List<GuideAddress> = when {
+        feed.providerSourceId != null -> {
+            val source: Source = sourceDao.byId(feed.providerSourceId)
+                ?: throw IllegalStateException("Provider for this guide no longer exists.")
+            api.epgAddresses(source).map { GuideAddress.Provider(source, it) }
+        }
+        feed.url != null -> listOf(GuideAddress.Plain(feed.url))
+        else -> throw IllegalStateException("Feed has no URL and no provider.")
+    }
+
+    /**
+     * Opens a guide as a decompressed XML stream.
      *
      * Several of the free guide sources publish `.gz` files (a national guide compresses
      * roughly 10:1), and providers occasionally gzip xmltv.php without saying so. Sniffing
      * the first two bytes for the gzip magic number handles both, regardless of what the
      * URL or the headers claim.
      */
-    private suspend fun openFeedStream(feed: EpgFeed, read: (Float) -> Unit): InputStream {
-        val body: ResponseBody = when {
-            feed.providerSourceId != null -> {
-                val source: Source = sourceDao.byId(feed.providerSourceId)
-                    ?: throw IllegalStateException("Provider for this guide no longer exists.")
-                api.openEpg(source)
-            }
-            feed.url != null -> {
-                val url = feed.url.toHttpUrlOrNull() ?: throw GuideAddressException()
+    private suspend fun openFeedStream(address: GuideAddress, read: (Float) -> Unit): InputStream {
+        val body: ResponseBody = when (address) {
+            is GuideAddress.Provider -> api.openEpg(address.source, address.url)
+            is GuideAddress.Plain -> {
+                val url = address.url.toHttpUrlOrNull() ?: throw GuideAddressException()
                 val response = http.newCall(Request.Builder().url(url).build()).execute()
                 if (!response.isSuccessful) {
                     response.close()
@@ -520,7 +605,6 @@ class EpgRepository(
                 }
                 response.body
             }
-            else -> throw IllegalStateException("Feed has no URL and no provider.")
         }
         // Counted before decompressing: the size the server gives is of what it sends.
         val raw = body.contentLength().let { size ->
