@@ -14,6 +14,7 @@ import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
 import app.opentv.core.ViewerError
+import app.opentv.core.ViewerTime
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -75,6 +76,7 @@ import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
+import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.TimeSource
@@ -511,18 +513,15 @@ class ChannelsViewModel @JvmOverloads constructor(
      * from midnight rather than going back over the morning. One flow, so the two never disagree.
      */
     private val guideWindow: StateFlow<Pair<Long, Long>> =
-        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset, ::guideWindowOf)
+        combine(nowTick, _guideDayOffset, graph.zone, ::guideWindowOf)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                guideWindowOf(now().let { it - it % HALF_HOUR_MILLIS }, 0),
+                guideWindowOf(now(), 0, graph.zone.value),
             )
 
-    private fun guideWindowOf(halfHour: Long, day: Int): Pair<Long, Long> {
-        val midnight = startOfLocalDay(halfHour)
-        val start = if (day <= 0) halfHour else midnight + day * DAY_MILLIS
-        return start to midnight + (day.coerceAtLeast(0) + 1) * DAY_MILLIS
-    }
+    private fun guideWindowOf(now: Long, day: Int, zone: ZoneId): Pair<Long, Long> =
+        ViewerTime.guideWindow(now, day, zone).let { it.startUtcMillis to it.endUtcMillis }
 
     /** The guide's left edge, where programme cells are measured from. */
     val windowStartMillis: StateFlow<Long> = guideWindow.map { it.first }
@@ -531,16 +530,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     /** Where the guide's day ends: today's at midnight, where tomorrow's starts. */
     val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
-
-    private fun startOfLocalDay(millis: Long): Long {
-        val cal = java.util.Calendar.getInstance()
-        cal.timeInMillis = millis
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        cal.set(java.util.Calendar.MINUTE, 0)
-        cal.set(java.util.Calendar.SECOND, 0)
-        cal.set(java.util.Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
@@ -797,8 +786,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     companion object {
         /** How many days ahead the guide goes: up to a week out, matching typical XMLTV depth. */
         const val GUIDE_MAX_DAYS = 6
-        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        private const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }
 }
 

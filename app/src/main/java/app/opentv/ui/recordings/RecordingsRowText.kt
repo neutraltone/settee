@@ -14,9 +14,8 @@ import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import app.opentv.ui.clockTime
+import app.opentv.ui.dayLabel
 import java.util.concurrent.TimeUnit
 
 // What a row on the Recordings screen says: its title, the quiet line under it, and why it stopped.
@@ -129,10 +128,9 @@ internal val RecordingsRow.recording: Recording?
         else -> null
     }
 
-// Built once, as GuideGrid's clock is: every visible row formats a time each time it's drawn.
-private val whenFormat = SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault())
-
-private fun formatWhen(utcMillis: Long): String = if (utcMillis <= 0) "" else whenFormat.format(Date(utcMillis))
+@Composable
+private fun formatWhen(utcMillis: Long): String =
+    if (utcMillis <= 0) "" else "${dayLabel(utcMillis)}, ${clockTime(utcMillis)}"
 
 private fun formatLength(millis: Long): String {
     if (millis <= 0) return ""

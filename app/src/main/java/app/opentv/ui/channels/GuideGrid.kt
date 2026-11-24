@@ -60,6 +60,7 @@ import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.SetteeColors
@@ -71,9 +72,6 @@ import app.opentv.ui.options.RowHighlight
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -309,7 +307,7 @@ private fun TimeHeader(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        clockFormat.format(Date(windowStartMillis + i * HALF_HOUR_MS)),
+                        clockTime(windowStartMillis + i * HALF_HOUR_MS),
                         SetteeType.Body,
                         color = SetteeColors.QuietText,
                     )
@@ -646,8 +644,3 @@ internal val CELL_PADDING = 10.dp
 internal val RULE = 1.dp
 private val STRONG_RULE = 2.dp
 internal val HALF_HOUR_WIDTH: Dp = (30 * MINUTE_DP).dp
-
-private val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-/** UTC in the database, device zone on screen. Converted here and nowhere else. */
-internal fun formatTime(utcMillis: Long): String = clockFormat.format(Date(utcMillis))

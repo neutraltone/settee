@@ -65,6 +65,7 @@ import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.ProviderFailure
 import app.opentv.ui.ReportButton
+import app.opentv.ui.dayLabel
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -78,9 +79,6 @@ import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.rememberErrorReport
 import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.vod.rememberSidebarSlide
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.delay
 
 /**
@@ -285,9 +283,7 @@ fun LiveScreen(
                     val dayLabel = when (guideDayOffset) {
                         0 -> stringResource(R.string.guide_today)
                         1 -> stringResource(R.string.guide_tomorrow)
-                        else -> remember(windowStart) {
-                            SimpleDateFormat("EEE d MMM", Locale.getDefault()).format(Date(windowStart))
-                        }
+                        else -> dayLabel(windowStart)
                     }
                     GuideGrid(
                         rows = rows,

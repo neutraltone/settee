@@ -27,6 +27,7 @@ import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
 import java.time.Duration
+import java.time.ZoneId
 import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.CountDownLatch
@@ -43,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -93,6 +95,7 @@ class TestGraph(
     private val virtualTime: Boolean = false,
     private val http: OkHttpClient? = null,
     private val clock: (() -> Long)? = null,
+    private val zone: StateFlow<ZoneId>? = null,
     private val decoders: DecoderList? = null,
     private val swapIn: Boolean = true,
     private val statements: ((String) -> Unit)? = null,
@@ -134,6 +137,7 @@ class TestGraph(
             http = http,
             settingsFile = name,
             clock = clock ?: System::currentTimeMillis,
+            zone = zone,
             dispatchers = AppDispatchers(io, default),
             decoders = decoders ?: DeviceDecoders(),
             openRecordingFile = openRecordingFile,

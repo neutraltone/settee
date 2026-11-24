@@ -37,6 +37,7 @@ import app.opentv.data.repo.recordable
 import app.opentv.data.repo.toRecord
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
@@ -186,7 +187,7 @@ private fun ColumnScope.Heading(programme: GuideProgramme, channel: Channel) {
     Text(programme.title, SetteeType.Section, maxLines = 2)
     Text(channel.shownName, SetteeType.Body, maxLines = 1)
     Text(
-        "${formatTime(programme.startUtcMillis)}–${formatTime(programme.endUtcMillis)}",
+        "${clockTime(programme.startUtcMillis)}–${clockTime(programme.endUtcMillis)}",
         SetteeType.Body,
         color = SetteeColors.QuietText,
     )
