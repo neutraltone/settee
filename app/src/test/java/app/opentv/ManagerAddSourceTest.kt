@@ -54,16 +54,17 @@ class ManagerAddSourceTest {
 
     private fun addProvider(username: String = "u"): String = sendProvider("/source", username)
 
-    private fun sendProvider(path: String, username: String = "u"): String {
+    private fun sendProvider(
+        path: String,
+        username: String = "u",
+        body: String = """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}""",
+    ): String {
         server.start()
         val session = (server.state.value as? ManagerServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         val add = Request.Builder()
             .url(session!!.url.replace("/?", "$path?"))
-            .post(
-                """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}"""
-                    .toRequestBody("application/json".toMediaType()),
-            )
+            .post(body.toRequestBody("application/json".toMediaType()))
             .build()
         return OkHttpClient().newCall(add).execute().use { it.body.string() }
     }
@@ -100,6 +101,18 @@ class ManagerAddSourceTest {
         assertThat(reply).contains("\"ok\":true")
         assertThat(reply).contains("Your login works. Signed in as u. Watch on 2 screens at a time.")
         assertThat(reply).doesNotContain("Loading channels")
+    }
+
+    @Test
+    fun `a provider sent from a phone without the details its kind needs says so in the app's words`() {
+        val missingLogin = """{"kind":"xtream","name":"Test","url":"http://example.com"}"""
+
+        val tested = sendProvider("/source/test", body = missingLogin)
+        val added = sendProvider("/source", body = missingLogin)
+
+        val sentence = context.getString(R.string.manager_page_provider_required)
+        assertThat(tested).contains(sentence)
+        assertThat(added).contains(sentence)
     }
 
     @Test
