@@ -8,6 +8,8 @@ package app.opentv
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -48,8 +50,11 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class LivePlayerErrorTest {
 
+    private val compose = createComposeRule()
+
+    // Offers Send report under Try again, as a release build does.
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
 
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val players = TestPlayers(context)
@@ -210,13 +215,34 @@ class LivePlayerErrorTest {
     }
 
     @Test
-    fun `up and down still change channel`() {
+    fun `up and the channel keys still change channel, with Send report under Try again`() {
         show(deadChannel())
 
-        press(Key.DirectionDown)
-        press(Key.ChannelUp)
+        press(Key.ChannelDown)
+        press(Key.DirectionUp)
 
         assertThat(zapped).containsExactly(1, -1).inOrder()
+    }
+
+    @Test
+    fun `Send report is Down from Try again, OK on it sends without trying again, and Down from it zaps`() {
+        show(deadChannel())
+        compose.onNodeWithText("Try again").assertIsFocused()
+        val before = tries
+
+        press(Key.DirectionDown)
+        compose.onNode(hasText(context.getString(R.string.report_send)) and hasClickAction()).assertIsFocused()
+        captureScreen("live_player_error_send_report")
+        press(Key.DirectionCenter)
+        compose.onNode(hasText(context.getString(R.string.report_sent)) and hasClickAction()).assertIsFocused()
+        assertThat(tries).isEqualTo(before)
+        assertThat(zapped).isEmpty()
+
+        press(Key.DirectionUp)
+        compose.onNodeWithText("Try again").assertIsFocused()
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        assertThat(zapped).containsExactly(1)
     }
 
     @Test

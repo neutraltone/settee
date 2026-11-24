@@ -9,6 +9,7 @@ import androidx.compose.ui.input.key.Key
 import app.opentv.ui.player.LiveKey
 import app.opentv.ui.player.LiveScreen
 import app.opentv.ui.player.OK_KEYS
+import app.opentv.ui.player.ReportPlace
 import app.opentv.ui.player.liveKey
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -43,6 +44,26 @@ class LiveKeysTest {
         assertThat(liveKey(Key.ChannelUp, retryableError)).isEqualTo(LiveKey.Zap(-1))
         assertThat(liveKey(Key.DirectionDown, retryableError)).isEqualTo(LiveKey.Zap(1))
         assertThat(liveKey(Key.ChannelDown, retryableError)).isEqualTo(LiveKey.Zap(1))
+    }
+
+    @Test
+    fun `with Send report under Try again, Down reaches it, and Up and the channel keys still zap`() {
+        val offered = retryableError.copy(report = ReportPlace.UNDER_TRY_AGAIN)
+
+        assertThat(liveKey(Key.DirectionDown, offered)).isEqualTo(LiveKey.ToFocused)
+        assertThat(liveKey(Key.DirectionUp, offered)).isEqualTo(LiveKey.Zap(-1))
+        assertThat(liveKey(Key.ChannelDown, offered)).isEqualTo(LiveKey.Zap(1))
+        for (ok in OK_KEYS) assertThat(liveKey(ok, offered)).isEqualTo(LiveKey.Retry)
+    }
+
+    @Test
+    fun `on Send report, OK presses it, Up goes back to Try again, and Down zaps on`() {
+        val onReport = retryableError.copy(report = ReportPlace.HIGHLIGHTED)
+
+        for (ok in OK_KEYS) assertThat(liveKey(ok, onReport)).isEqualTo(LiveKey.ToFocused)
+        assertThat(liveKey(Key.DirectionUp, onReport)).isEqualTo(LiveKey.ToFocused)
+        assertThat(liveKey(Key.DirectionDown, onReport)).isEqualTo(LiveKey.Zap(1))
+        assertThat(liveKey(Key.ChannelUp, onReport)).isEqualTo(LiveKey.Zap(-1))
     }
 
     @Test

@@ -14,7 +14,20 @@ internal data class LiveScreen(
     val controlsVisible: Boolean,
     /** A failure trying again could fix, so Try again is on screen. */
     val retryableError: Boolean,
+    /** Where Send report is, when the error offers it under Try again (ADR 0010). */
+    val report: ReportPlace = ReportPlace.NONE,
 )
+
+/** Send report under a live channel's Try again, as far as where a key goes. */
+internal enum class ReportPlace {
+    NONE,
+
+    /** Offered, with the Highlight on Try again above it: Down goes down to it. */
+    UNDER_TRY_AGAIN,
+
+    /** The Highlight is on it: OK presses it and Up goes back to Try again. */
+    HIGHLIGHTED,
+}
 
 /** What a key press does in the live player. */
 internal sealed interface LiveKey {
@@ -49,12 +62,18 @@ internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
         // With the controls up, the d-pad moves around them: Down reaches Subtitles and the pills, and
         // Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
         screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.ToFocused
-        else -> overPicture(key, screen.retryableError)
+        else -> overPicture(key, screen.retryableError, screen.report)
     }
 }
 
-/** With nothing over the picture, or Try again alone. */
-private fun overPicture(key: Key, retryableError: Boolean): LiveKey = when {
+/**
+ * With nothing over the picture, or Try again (and Send report under it, where [report] says). Send
+ * report is reached with Down, as on every error that offers it, so only Up, and Down from Send report
+ * itself, change channel there: the channel keys always do.
+ */
+private fun overPicture(key: Key, retryableError: Boolean, report: ReportPlace): LiveKey = when {
+    report == ReportPlace.UNDER_TRY_AGAIN && key == Key.DirectionDown -> LiveKey.ToFocused
+    report == ReportPlace.HIGHLIGHTED && (key == Key.DirectionUp || key in OK_KEYS) -> LiveKey.ToFocused
     // This remote has no CH+/CH- keys, so up and down are the channel changer, a dead channel's too:
     // zapping away is how the viewer leaves it.
     key == Key.DirectionUp || key == Key.ChannelUp -> LiveKey.Zap(-1)
