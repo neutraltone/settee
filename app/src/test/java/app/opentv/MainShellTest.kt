@@ -365,6 +365,50 @@ class MainShellTest {
     }
 
     @Test
+    fun `on Recordings, Right from the rail goes back to the row the highlight left`() {
+        // Ids 11 to 20, so no title is a substring of another's.
+        val recordings = (11L..20L).map { recording(it) }
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = Tab.RECORDINGS,
+                onSelect = {},
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            ) { _, _, onNothingToShow ->
+                RecordingsContent(
+                    sections = recordingsSections(recordings, emptyList(), emptyList(), NOW),
+                    profileNames = emptyMap(),
+                    onPlay = {},
+                    onRetry = {},
+                    onChoose = { _, _ -> },
+                    onEmptied = onNothingToShow,
+                    now = { NOW },
+                )
+            }
+        }
+        fun row(id: Int) = compose.onNode(hasText("Recording $id", substring = true) and hasClickAction())
+        row(11).requestFocus()
+        compose.waitForIdle()
+
+        press(Key.DirectionLeft)
+        railItem("Recordings").assertIsFocused()
+        press(Key.DirectionRight)
+        row(11).assertIsFocused()
+
+        press(Key.DirectionDown, times = 6)
+        row(17).assertIsFocused()
+        press(Key.DirectionLeft)
+        railItem("Recordings").assertIsFocused()
+        press(Key.DirectionRight)
+        row(17).assertIsFocused()
+    }
+
+    @Test
     fun `OK on another tab opens it and moves the highlight onto its first title`() {
         setShellWithTitles()
         press(Key.DirectionLeft)
