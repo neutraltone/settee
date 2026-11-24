@@ -65,7 +65,7 @@ class OpenSubtitlesAccountTest {
     }
 
     @Test
-    fun `a Keystore that won't seal the password is a failed sign-in that keeps nothing and says this TV couldn't save it`() = runTest {
+    fun `a Keystore that won't seal the password keeps nothing and says this TV couldn't save it`() = runTest {
         val broken = object : Sealer {
             override fun seal(plain: String): String = throw java.security.KeyStoreException("no key")
 

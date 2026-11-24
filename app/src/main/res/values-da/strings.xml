@@ -353,6 +353,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles godtog ikke det brugernavn eller den adgangskode. Tjek dem, og prøv igen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles har logget dette tv ud. Log ind igen under Indstillinger.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enhed ud. Log ind igen under Indstillinger.</string>
+    <string name="error_opensubtitles_not_saved_tv">Der er ikke plads på dette tv til at gemme de undertekster. Frigør noget plads, og prøv igen.</string>
+    <string name="error_opensubtitles_not_saved_device">Der er ikke plads på denne enhed til at gemme de undertekster. Frigør noget plads, og prøv igen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles godkendte login, men dette tv kunne ikke gemme det. Genstart dette tv, og log ind igen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles godkendte login, men denne enhed kunne ikke gemme det. Genstart denne enhed, og log ind igen.</string>
     <string name="error_not_a_guide">Den adresse er ikke en programguide. Tjek, at det er det rigtige link, eller log ind på dit Wi-Fi, hvis det beder om det.</string>
     <string name="settings_guide_bad_address">Det er ikke en webadresse. Tjek, at den er skrevet, som guidens link viser den, fx example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee kunne ikke læse sin database, så disse tal mangler.</string>

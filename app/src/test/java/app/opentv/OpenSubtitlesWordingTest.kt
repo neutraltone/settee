@@ -116,4 +116,26 @@ class OpenSubtitlesWordingTest {
 
         assertThat(error.sentence).isEqualTo("OpenSubtitles signed this TV out. Sign in again in Settings.")
     }
+
+    @Test
+    fun `a subtitle this TV couldn't keep is about this TV's storage, not reaching OpenSubtitles`() {
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(java.io.IOException("No space left")))
+
+        assertThat(error.sentence).isEqualTo(
+            "There's no room on this TV to keep that subtitle. Free up some space, then try again.",
+        )
+        assertThat(error.detail).isEqualTo("NotSaved · IO")
+    }
+
+    @Test
+    fun `a sign-in this TV couldn't save says so, not that OpenSubtitles can't be reached`() {
+        val error = wording.ofOpenSubtitles(
+            OpenSubtitlesFailure.SignInNotSaved(java.security.KeyStoreException("no key")),
+        )
+
+        assertThat(error.sentence).isEqualTo(
+            "OpenSubtitles accepted the sign-in, but this TV couldn't save it. Restart this TV, then sign in again.",
+        )
+        assertThat(error.detail).isEqualTo("SignInNotSaved · KeyStore")
+    }
 }

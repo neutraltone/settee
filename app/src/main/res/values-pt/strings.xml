@@ -353,6 +353,10 @@
     <string name="error_opensubtitles_sign_in">O OpenSubtitles não aceitou esse nome de usuário ou senha. Verifique e tente novamente.</string>
     <string name="error_opensubtitles_token_tv">O OpenSubtitles desconectou esta TV. Entre novamente nas Configurações.</string>
     <string name="error_opensubtitles_token_device">O OpenSubtitles desconectou este dispositivo. Entre novamente nas Configurações.</string>
+    <string name="error_opensubtitles_not_saved_tv">Não há espaço nesta TV para guardar essas legendas. Libere espaço e tente novamente.</string>
+    <string name="error_opensubtitles_not_saved_device">Não há espaço neste dispositivo para guardar essas legendas. Libere espaço e tente novamente.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">O OpenSubtitles aceitou o login, mas esta TV não conseguiu salvá-lo. Reinicie esta TV e entre novamente.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">O OpenSubtitles aceitou o login, mas este dispositivo não conseguiu salvá-lo. Reinicie este dispositivo e entre novamente.</string>
     <string name="error_not_a_guide">Esse endereço não é um guia. Verifique se é a ligação certa, ou inicie sessão no Wi-Fi se este o pedir.</string>
     <string name="settings_guide_bad_address">Isso não é um endereço web. Verifique se está escrito como a ligação do guia o mostra, por exemplo example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">O Settee não conseguiu ler a sua base de dados, por isso estes números estão em falta.</string>

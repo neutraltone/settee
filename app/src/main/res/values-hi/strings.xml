@@ -353,6 +353,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ने यह यूज़रनेम या पासवर्ड स्वीकार नहीं किया। इन्हें जाँचें और फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ने इस टीवी को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
+    <string name="error_opensubtitles_not_saved_tv">इस टीवी पर ये सबटाइटल रखने की जगह नहीं है। कुछ जगह खाली करें, फिर से कोशिश करें।</string>
+    <string name="error_opensubtitles_not_saved_device">इस डिवाइस पर ये सबटाइटल रखने की जगह नहीं है। कुछ जगह खाली करें, फिर से कोशिश करें।</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ने साइन इन स्वीकार कर लिया, पर यह टीवी उसे सेव नहीं कर पाया। इस टीवी को रीस्टार्ट करें, फिर से साइन इन करें।</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ने साइन इन स्वीकार कर लिया, पर यह डिवाइस उसे सेव नहीं कर पाया। इस डिवाइस को रीस्टार्ट करें, फिर से साइन इन करें।</string>
     <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
     <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
     <string name="diagnostics_database_failed">Settee अपना डेटाबेस नहीं पढ़ सका, इसलिए ये आंकड़े उपलब्ध नहीं हैं।</string>
