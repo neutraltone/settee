@@ -273,6 +273,9 @@
     <string name="error_catalogue">Nie udało się wczytać kanałów dostawcy. Spróbuj ponownie za chwilę.</string>
     <string name="error_movies_list">Lista filmów od dostawcy nie dotarła. Spróbuj ponownie za chwilę.</string>
     <string name="error_shows_list">Lista seriali od dostawcy nie dotarła. Spróbuj ponownie za chwilę.</string>
+    <string name="setup_failed_guide">Przewodnik TV się nie wczytał. Settee spróbuje ponownie przy następnym odświeżeniu.</string>
+    <string name="setup_failed_movies">Filmy się nie wczytały. Settee spróbuje ponownie przy następnym odświeżeniu lub gdy otworzysz Filmy.</string>
+    <string name="setup_failed_shows">Seriale się nie wczytały. Settee spróbuje ponownie przy następnym odświeżeniu lub gdy otworzysz Seriale.</string>
     <string name="vod_movies_load_failed">Nie udało się wczytać filmów</string>
     <string name="vod_shows_load_failed">Nie udało się wczytać seriali</string>
     <string name="error_channel_list_memory_tv">Lista kanałów dostawcy wymaga więcej pamięci, niż ma ten telewizor.</string>

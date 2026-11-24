@@ -272,6 +272,9 @@
     <string name="error_catalogue">Nije moguće učitati kanale vašeg pružatelja usluge. Pokušajte ponovno za trenutak.</string>
     <string name="error_movies_list">Popis filmova vašeg pružatelja usluge nije stigao. Pokušajte ponovno za trenutak.</string>
     <string name="error_shows_list">Popis serija vašeg pružatelja usluge nije stigao. Pokušajte ponovno za trenutak.</string>
+    <string name="setup_failed_guide">TV vodič se nije učitao. Settee će pokušati ponovno pri sljedećem osvježavanju.</string>
+    <string name="setup_failed_movies">Filmovi se nisu učitali. Settee će pokušati ponovno pri sljedećem osvježavanju ili kad otvorite Filmove.</string>
+    <string name="setup_failed_shows">Serije se nisu učitale. Settee će pokušati ponovno pri sljedećem osvježavanju ili kad otvorite Serije.</string>
     <string name="vod_movies_load_failed">Nije moguće učitati filmove</string>
     <string name="vod_shows_load_failed">Nije moguće učitati serije</string>
     <string name="error_channel_list_memory_tv">Popis kanala vašeg pružatelja usluge treba više memorije nego što ovaj TV ima.</string>

@@ -17,7 +17,7 @@ import app.opentv.data.model.Series
  * it, so the tab still says why rather than that the provider sent nothing.
  */
 fun vodFailed(error: Throwable, wording: ErrorWording, settings: AppSettings): VodFetch {
-    fun failed(on: Boolean, @StringRes fallback: Int) = ListFetch(0, wording.ofProvider(error, fallback)).takeIf { on }
+    fun failed(on: Boolean, @StringRes fallback: Int) = ListFetch.of(0, error, wording, fallback).takeIf { on }
     return VodFetch.of(
         failed(settings.moviesEnabled.value, R.string.error_movies_list),
         failed(settings.seriesEnabled.value, R.string.error_shows_list),
@@ -55,6 +55,26 @@ data class VodFetch(
  * shows, the ones updated since they were last saved. A list that didn't come back has the
  * [failure] in words.
  */
-data class ListFetch(val count: Int, val failure: ViewerError? = null, val updated: List<Series> = emptyList()) {
+data class ListFetch(
+    val count: Int,
+    val failure: ViewerError? = null,
+    val updated: List<Series> = emptyList(),
+    /**
+     * What [failure] was worded from, for Setup, which words it again with its own sentence: a tab's
+     * "try again in a moment" is wrong there, where Settee tries again by itself.
+     */
+    val cause: Throwable? = null,
+) {
     val complete: Boolean get() = failure == null
+
+    companion object {
+        /** [count] titles, or a list that failed with [cause], worded with [fallback] for a tab. */
+        fun of(
+            count: Int,
+            cause: Throwable?,
+            wording: ErrorWording,
+            @StringRes fallback: Int,
+            updated: List<Series> = emptyList(),
+        ) = ListFetch(count, cause?.let { wording.ofProvider(it, fallback) }, updated, cause)
+    }
 }

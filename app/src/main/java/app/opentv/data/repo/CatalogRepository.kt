@@ -944,7 +944,7 @@ class CatalogRepository(
                 if (saved.count > 0) viewerLibrary.retired.movies(source.id, saved.stamp)
             }
             if (count > 0) fillGenresInBackground(source)
-            ListFetch(count, (list ?: categories)?.let { wording.ofProvider(it, R.string.error_movies_list) })
+            ListFetch.of(count, list ?: categories, wording, R.string.error_movies_list)
         }
 
     /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
@@ -959,11 +959,7 @@ class CatalogRepository(
                 }
             }
             if (saved.count > 0) fillGenresInBackground(source)
-            ListFetch(
-                saved.count,
-                (list ?: categories)?.let { wording.ofProvider(it, R.string.error_shows_list) },
-                saved.moved,
-            )
+            ListFetch.of(saved.count, list ?: categories, wording, R.string.error_shows_list, saved.moved)
         }
 
     /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */

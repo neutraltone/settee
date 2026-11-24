@@ -271,6 +271,9 @@
     <string name="error_catalogue">Kunne ikke laste kanalene fra leverandøren din. Prøv igjen om litt.</string>
     <string name="error_movies_list">Filmlisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
     <string name="error_shows_list">Serielisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
+    <string name="setup_failed_guide">TV-guiden ble ikke lastet inn. Settee prøver igjen ved neste oppdatering.</string>
+    <string name="setup_failed_movies">Filmer ble ikke lastet inn. Settee prøver igjen ved neste oppdatering, eller når du åpner Filmer.</string>
+    <string name="setup_failed_shows">Serier ble ikke lastet inn. Settee prøver igjen ved neste oppdatering, eller når du åpner Serier.</string>
     <string name="vod_movies_load_failed">Kunne ikke laste filmene dine</string>
     <string name="vod_shows_load_failed">Kunne ikke laste seriene dine</string>
     <string name="error_channel_list_memory_tv">Leverandørens kanalliste trenger mer minne enn denne TV-en har.</string>

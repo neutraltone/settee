@@ -273,6 +273,9 @@
     <string name="error_catalogue">Kanály poskytovatele se nepodařilo načíst. Zkuste to za chvíli znovu.</string>
     <string name="error_movies_list">Seznam filmů od poskytovatele nedorazil. Zkuste to za chvíli znovu.</string>
     <string name="error_shows_list">Seznam seriálů od poskytovatele nedorazil. Zkuste to za chvíli znovu.</string>
+    <string name="setup_failed_guide">TV průvodce se nenačetl. Settee to zkusí znovu při další aktualizaci.</string>
+    <string name="setup_failed_movies">Filmy se nenačetly. Settee to zkusí znovu při další aktualizaci nebo když otevřete Filmy.</string>
+    <string name="setup_failed_shows">Seriály se nenačetly. Settee to zkusí znovu při další aktualizaci nebo když otevřete Seriály.</string>
     <string name="vod_movies_load_failed">Filmy se nepodařilo načíst</string>
     <string name="vod_shows_load_failed">Seriály se nepodařilo načíst</string>
     <string name="error_channel_list_memory_tv">Seznam kanálů vašeho poskytovatele potřebuje víc paměti, než má tato televize.</string>

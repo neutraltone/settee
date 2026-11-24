@@ -271,6 +271,9 @@
     <string name="error_catalogue">Δεν ήταν δυνατή η φόρτωση των καναλιών του παρόχου σας. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_movies_list">Η λίστα ταινιών του παρόχου σας δεν έφτασε. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_shows_list">Η λίστα σειρών του παρόχου σας δεν έφτασε. Δοκιμάστε ξανά σε λίγο.</string>
+    <string name="setup_failed_guide">Ο οδηγός TV δεν φορτώθηκε. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση.</string>
+    <string name="setup_failed_movies">Οι ταινίες δεν φορτώθηκαν. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση ή όταν ανοίξετε τις Ταινίες.</string>
+    <string name="setup_failed_shows">Οι σειρές δεν φορτώθηκαν. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση ή όταν ανοίξετε τις Σειρές.</string>
     <string name="vod_movies_load_failed">Δεν ήταν δυνατή η φόρτωση των ταινιών σας</string>
     <string name="vod_shows_load_failed">Δεν ήταν δυνατή η φόρτωση των σειρών σας</string>
     <string name="error_channel_list_memory_tv">Η λίστα καναλιών του παρόχου σας χρειάζεται περισσότερη μνήμη από όση έχει αυτή η τηλεόραση.</string>

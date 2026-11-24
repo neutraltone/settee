@@ -271,6 +271,9 @@
     <string name="error_catalogue">Kunne ikke indlæse din udbyders kanaler. Prøv igen om lidt.</string>
     <string name="error_movies_list">Din udbyders liste over film kom ikke igennem. Prøv igen om lidt.</string>
     <string name="error_shows_list">Din udbyders liste over serier kom ikke igennem. Prøv igen om lidt.</string>
+    <string name="setup_failed_guide">Tv-guiden blev ikke indlæst. Settee prøver igen ved næste opdatering.</string>
+    <string name="setup_failed_movies">Film blev ikke indlæst. Settee prøver igen ved næste opdatering, eller når du åbner Film.</string>
+    <string name="setup_failed_shows">Serier blev ikke indlæst. Settee prøver igen ved næste opdatering, eller når du åbner Serier.</string>
     <string name="vod_movies_load_failed">Dine film kunne ikke indlæses</string>
     <string name="vod_shows_load_failed">Dine serier kunne ikke indlæses</string>
     <string name="error_channel_list_memory_tv">Din udbyders kanalliste kræver mere hukommelse, end dette tv har.</string>

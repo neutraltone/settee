@@ -271,6 +271,9 @@
     <string name="error_catalogue">Kan de zenders van je provider niet laden. Probeer het zo opnieuw.</string>
     <string name="error_movies_list">De filmlijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
     <string name="error_shows_list">De serielijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
+    <string name="setup_failed_guide">De tv-gids is niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing.</string>
+    <string name="setup_failed_movies">Films zijn niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing, of wanneer je Films opent.</string>
+    <string name="setup_failed_shows">Series zijn niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing, of wanneer je Series opent.</string>
     <string name="vod_movies_load_failed">Kan je films niet laden</string>
     <string name="vod_shows_load_failed">Kan je series niet laden</string>
     <string name="error_channel_list_memory_tv">De zenderlijst van je provider heeft meer geheugen nodig dan deze tv heeft.</string>

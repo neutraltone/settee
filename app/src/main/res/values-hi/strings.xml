@@ -271,6 +271,9 @@
     <string name="error_catalogue">आपके प्रदाता के चैनल लोड नहीं हो सके। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_movies_list">आपके प्रदाता की फ़िल्मों की सूची नहीं पहुँची। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_shows_list">आपके प्रदाता के शोज़ की सूची नहीं पहुँची। थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="setup_failed_guide">टीवी गाइड लोड नहीं हुई। Settee अगली बार रीफ़्रेश होने पर फिर कोशिश करेगा।</string>
+    <string name="setup_failed_movies">फ़िल्में लोड नहीं हुईं। Settee अगली बार रीफ़्रेश होने पर, या जब आप फ़िल्में खोलेंगे, फिर कोशिश करेगा।</string>
+    <string name="setup_failed_shows">शोज़ लोड नहीं हुए। Settee अगली बार रीफ़्रेश होने पर, या जब आप शोज़ खोलेंगे, फिर कोशिश करेगा।</string>
     <string name="vod_movies_load_failed">आपकी फ़िल्में लोड नहीं हो सकीं</string>
     <string name="vod_shows_load_failed">आपके शोज़ लोड नहीं हो सके</string>
     <string name="error_channel_list_memory_tv">आपके प्रदाता की चैनल सूची को इस टीवी में मौजूद मेमोरी से ज़्यादा मेमोरी चाहिए।</string>

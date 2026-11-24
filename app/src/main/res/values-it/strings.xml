@@ -272,6 +272,9 @@
     <string name="error_catalogue">Impossibile caricare i canali del tuo provider. Riprova tra un momento.</string>
     <string name="error_movies_list">L\'elenco dei film del tuo provider non è arrivato. Riprova tra un momento.</string>
     <string name="error_shows_list">L\'elenco delle serie del tuo provider non è arrivato. Riprova tra un momento.</string>
+    <string name="setup_failed_guide">La guida TV non si è caricata. Settee riproverà al prossimo aggiornamento.</string>
+    <string name="setup_failed_movies">I film non si sono caricati. Settee riproverà al prossimo aggiornamento o quando apri Film.</string>
+    <string name="setup_failed_shows">Le serie non si sono caricate. Settee riproverà al prossimo aggiornamento o quando apri Serie.</string>
     <string name="vod_movies_load_failed">Impossibile caricare i tuoi film</string>
     <string name="vod_shows_load_failed">Impossibile caricare le tue serie</string>
     <string name="error_channel_list_memory_tv">L\'elenco dei canali del tuo provider richiede più memoria di quella che ha questo televisore.</string>

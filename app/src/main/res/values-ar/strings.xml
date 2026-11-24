@@ -275,6 +275,9 @@
     <string name="error_catalogue">تعذر تحميل قنوات مزوّدك. أعد المحاولة بعد قليل.</string>
     <string name="error_movies_list">لم تصل قائمة أفلام مزوّدك. أعد المحاولة بعد قليل.</string>
     <string name="error_shows_list">لم تصل قائمة مسلسلات مزوّدك. أعد المحاولة بعد قليل.</string>
+    <string name="setup_failed_guide">لم يتم تحميل دليل البرامج. سيحاول Settee مرة أخرى عند التحديث التالي.</string>
+    <string name="setup_failed_movies">لم يتم تحميل الأفلام. سيحاول Settee مرة أخرى عند التحديث التالي، أو عند فتح الأفلام.</string>
+    <string name="setup_failed_shows">لم يتم تحميل المسلسلات. سيحاول Settee مرة أخرى عند التحديث التالي، أو عند فتح المسلسلات.</string>
     <string name="vod_movies_load_failed">تعذر تحميل أفلامك</string>
     <string name="vod_shows_load_failed">تعذر تحميل مسلسلاتك</string>
     <string name="error_channel_list_memory_tv">تحتاج قائمة قنوات مزوّدك إلى ذاكرة أكبر مما يتوفر في هذا التلفاز.</string>

@@ -272,6 +272,9 @@
     <string name="error_catalogue">Impossible de charger les chaînes de votre fournisseur. Réessayez dans un instant.</string>
     <string name="error_movies_list">La liste des films de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
     <string name="error_shows_list">La liste des séries de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
+    <string name="setup_failed_guide">Le guide TV ne s\'est pas chargé. Settee réessaiera lors de la prochaine actualisation.</string>
+    <string name="setup_failed_movies">Les films ne se sont pas chargés. Settee réessaiera lors de la prochaine actualisation, ou quand vous ouvrirez Films.</string>
+    <string name="setup_failed_shows">Les séries ne se sont pas chargées. Settee réessaiera lors de la prochaine actualisation, ou quand vous ouvrirez Séries.</string>
     <string name="vod_movies_load_failed">Impossible de charger vos films</string>
     <string name="vod_shows_load_failed">Impossible de charger vos séries</string>
     <string name="error_channel_list_memory_tv">La liste de chaînes de votre fournisseur demande plus de mémoire que cette télévision n\'en a.</string>

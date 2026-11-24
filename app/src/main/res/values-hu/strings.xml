@@ -271,6 +271,9 @@
     <string name="error_catalogue">Nem sikerült betölteni a szolgáltató csatornáit. Próbálja újra egy kicsit később.</string>
     <string name="error_movies_list">Nem érkezett meg a szolgáltató filmlistája. Próbálja újra egy kicsit később.</string>
     <string name="error_shows_list">Nem érkezett meg a szolgáltató sorozatlistája. Próbálja újra egy kicsit később.</string>
+    <string name="setup_failed_guide">A műsorújság nem töltődött be. A Settee a következő frissítéskor újra megpróbálja.</string>
+    <string name="setup_failed_movies">A filmek nem töltődtek be. A Settee a következő frissítéskor újra megpróbálja, vagy amikor megnyitja a Filmeket.</string>
+    <string name="setup_failed_shows">A sorozatok nem töltődtek be. A Settee a következő frissítéskor újra megpróbálja, vagy amikor megnyitja a Sorozatokat.</string>
     <string name="vod_movies_load_failed">Nem sikerült betölteni a filmeket</string>
     <string name="vod_shows_load_failed">Nem sikerült betölteni a sorozatokat</string>
     <string name="error_channel_list_memory_tv">A szolgáltató csatornalistájához több memória kell, mint amennyi ebben a TV-ben van.</string>

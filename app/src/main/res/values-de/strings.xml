@@ -271,6 +271,9 @@
     <string name="error_catalogue">Die Sender deines Anbieters konnten nicht geladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_movies_list">Die Filmliste deines Anbieters ist nicht angekommen. Versuch es gleich noch einmal.</string>
     <string name="error_shows_list">Die Serienliste deines Anbieters ist nicht angekommen. Versuch es gleich noch einmal.</string>
+    <string name="setup_failed_guide">Der TV-Guide wurde nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal.</string>
+    <string name="setup_failed_movies">Filme wurden nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal oder wenn du Filme öffnest.</string>
+    <string name="setup_failed_shows">Serien wurden nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal oder wenn du Serien öffnest.</string>
     <string name="vod_movies_load_failed">Deine Filme konnten nicht geladen werden</string>
     <string name="vod_shows_load_failed">Deine Serien konnten nicht geladen werden</string>
     <string name="error_channel_list_memory_tv">Die Senderliste deines Anbieters braucht mehr Speicher, als dieser Fernseher hat.</string>

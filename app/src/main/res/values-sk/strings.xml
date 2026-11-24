@@ -273,6 +273,9 @@
     <string name="error_catalogue">Kanály poskytovateľa sa nepodarilo načítať. Skúste to o chvíľu znova.</string>
     <string name="error_movies_list">Zoznam filmov od poskytovateľa neprišiel. Skúste to o chvíľu znova.</string>
     <string name="error_shows_list">Zoznam seriálov od poskytovateľa neprišiel. Skúste to o chvíľu znova.</string>
+    <string name="setup_failed_guide">TV program sa nenačítal. Settee to skúsi znova pri ďalšej aktualizácii.</string>
+    <string name="setup_failed_movies">Filmy sa nenačítali. Settee to skúsi znova pri ďalšej aktualizácii alebo keď otvoríte Filmy.</string>
+    <string name="setup_failed_shows">Seriály sa nenačítali. Settee to skúsi znova pri ďalšej aktualizácii alebo keď otvoríte Seriály.</string>
     <string name="vod_movies_load_failed">Filmy sa nepodarilo načítať</string>
     <string name="vod_shows_load_failed">Seriály sa nepodarilo načítať</string>
     <string name="error_channel_list_memory_tv">Zoznam kanálov poskytovateľa potrebuje viac pamäte, než má tento televízor.</string>

@@ -272,6 +272,9 @@
     <string name="error_catalogue">Não foi possível carregar os canais do seu fornecedor. Tente novamente daqui a pouco.</string>
     <string name="error_movies_list">A lista de filmes do seu fornecedor não chegou. Tente novamente daqui a pouco.</string>
     <string name="error_shows_list">A lista de séries do seu fornecedor não chegou. Tente novamente daqui a pouco.</string>
+    <string name="setup_failed_guide">O guia de TV não carregou. O Settee vai tentar novamente na próxima atualização.</string>
+    <string name="setup_failed_movies">Os filmes não carregaram. O Settee vai tentar novamente na próxima atualização ou quando abrir Filmes.</string>
+    <string name="setup_failed_shows">As séries não carregaram. O Settee vai tentar novamente na próxima atualização ou quando abrir Séries.</string>
     <string name="vod_movies_load_failed">Não foi possível carregar os seus filmes</string>
     <string name="vod_shows_load_failed">Não foi possível carregar as suas séries</string>
     <string name="error_channel_list_memory_tv">A lista de canais do seu fornecedor precisa de mais memória do que esta televisão tem.</string>

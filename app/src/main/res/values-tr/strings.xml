@@ -271,6 +271,9 @@
     <string name="error_catalogue">Sağlayıcınızın kanalları yüklenemedi. Birazdan tekrar deneyin.</string>
     <string name="error_movies_list">Sağlayıcınızın film listesi gelmedi. Birazdan tekrar deneyin.</string>
     <string name="error_shows_list">Sağlayıcınızın dizi listesi gelmedi. Birazdan tekrar deneyin.</string>
+    <string name="setup_failed_guide">TV rehberi yüklenmedi. Settee bir sonraki yenilemede tekrar deneyecek.</string>
+    <string name="setup_failed_movies">Filmler yüklenmedi. Settee bir sonraki yenilemede veya Filmler\'i açtığınızda tekrar deneyecek.</string>
+    <string name="setup_failed_shows">Diziler yüklenmedi. Settee bir sonraki yenilemede veya Diziler\'i açtığınızda tekrar deneyecek.</string>
     <string name="vod_movies_load_failed">Filmleriniz yüklenemedi</string>
     <string name="vod_shows_load_failed">Dizileriniz yüklenemedi</string>
     <string name="error_channel_list_memory_tv">Sağlayıcınızın kanal listesi, bu TV\'de olandan daha fazla bellek gerektiriyor.</string>

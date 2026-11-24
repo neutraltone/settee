@@ -226,7 +226,8 @@ class SetupScreenTest {
 
     @Test
     fun `a list that didn't load says why, with the detail line`() {
-        val timedOut = ViewerError("Your provider stopped responding. It may be busy, so try again in a moment.", "SocketTimeout")
+        val timedOut =
+            ViewerError("Your provider stopped responding. It may be busy, so try again in a moment.", "SocketTimeout")
         val setup = finished(SetupStep.MOVIES).let { setup ->
             setup.copy(done = setup.done.map { if (it.step == SetupStep.MOVIES) it.copy(failure = timedOut) else it })
         }

@@ -271,6 +271,9 @@
     <string name="error_catalogue">Каналите на доставчика ви не можаха да се заредят. Опитайте отново след малко.</string>
     <string name="error_movies_list">Списъкът с филми от доставчика ви не пристигна. Опитайте отново след малко.</string>
     <string name="error_shows_list">Списъкът със сериали от доставчика ви не пристигна. Опитайте отново след малко.</string>
+    <string name="setup_failed_guide">Програмата не се зареди. Settee ще опита отново при следващото обновяване.</string>
+    <string name="setup_failed_movies">Филмите не се заредиха. Settee ще опита отново при следващото обновяване или когато отворите Филми.</string>
+    <string name="setup_failed_shows">Сериалите не се заредиха. Settee ще опита отново при следващото обновяване или когато отворите Сериали.</string>
     <string name="vod_movies_load_failed">Филмите не можаха да се заредят</string>
     <string name="vod_shows_load_failed">Сериалите не можаха да се заредят</string>
     <string name="error_channel_list_memory_tv">Списъкът с канали на доставчика ви се нуждае от повече памет, отколкото има този телевизор.</string>

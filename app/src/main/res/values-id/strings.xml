@@ -270,6 +270,9 @@
     <string name="error_catalogue">Gagal memuat saluran penyedia Anda. Coba lagi sebentar lagi.</string>
     <string name="error_movies_list">Daftar film dari penyedia Anda tidak sampai. Coba lagi sebentar lagi.</string>
     <string name="error_shows_list">Daftar acara TV dari penyedia Anda tidak sampai. Coba lagi sebentar lagi.</string>
+    <string name="setup_failed_guide">Panduan TV tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya.</string>
+    <string name="setup_failed_movies">Film tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya, atau saat Anda membuka Film.</string>
+    <string name="setup_failed_shows">Acara TV tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya, atau saat Anda membuka Acara TV.</string>
     <string name="vod_movies_load_failed">Gagal memuat film Anda</string>
     <string name="vod_shows_load_failed">Gagal memuat acara TV Anda</string>
     <string name="error_channel_list_memory_tv">Daftar saluran penyedia Anda membutuhkan lebih banyak memori daripada yang dimiliki TV ini.</string>

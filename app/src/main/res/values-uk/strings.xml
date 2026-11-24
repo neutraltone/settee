@@ -273,6 +273,9 @@
     <string name="error_catalogue">Не вдалося завантажити канали провайдера. Спробуйте ще раз трохи згодом.</string>
     <string name="error_movies_list">Список фільмів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
     <string name="error_shows_list">Список серіалів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
+    <string name="setup_failed_guide">Програма передач не завантажилася. Settee спробує ще раз під час наступного оновлення.</string>
+    <string name="setup_failed_movies">Фільми не завантажилися. Settee спробує ще раз під час наступного оновлення або коли ви відкриєте Фільми.</string>
+    <string name="setup_failed_shows">Серіали не завантажилися. Settee спробує ще раз під час наступного оновлення або коли ви відкриєте Серіали.</string>
     <string name="vod_movies_load_failed">Не вдалося завантажити ваші фільми</string>
     <string name="vod_shows_load_failed">Не вдалося завантажити ваші серіали</string>
     <string name="error_channel_list_memory_tv">Списку каналів провайдера потрібно більше пам\'яті, ніж є в цього телевізора.</string>

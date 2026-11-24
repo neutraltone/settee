@@ -273,6 +273,9 @@
     <string name="error_catalogue">Не удалось загрузить каналы провайдера. Повторите попытку чуть позже.</string>
     <string name="error_movies_list">Список фильмов от провайдера не пришёл. Повторите попытку чуть позже.</string>
     <string name="error_shows_list">Список сериалов от провайдера не пришёл. Повторите попытку чуть позже.</string>
+    <string name="setup_failed_guide">Телегид не загрузился. Settee попробует снова при следующем обновлении.</string>
+    <string name="setup_failed_movies">Фильмы не загрузились. Settee попробует снова при следующем обновлении или когда вы откроете Фильмы.</string>
+    <string name="setup_failed_shows">Сериалы не загрузились. Settee попробует снова при следующем обновлении или когда вы откроете Сериалы.</string>
     <string name="vod_movies_load_failed">Не удалось загрузить фильмы</string>
     <string name="vod_shows_load_failed">Не удалось загрузить сериалы</string>
     <string name="error_channel_list_memory_tv">Списку каналов провайдера нужно больше памяти, чем есть у этого телевизора.</string>

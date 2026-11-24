@@ -270,6 +270,9 @@
     <string name="error_catalogue">Không thể tải các kênh của nhà cung cấp. Thử lại sau giây lát.</string>
     <string name="error_movies_list">Danh sách phim của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
     <string name="error_shows_list">Danh sách phim bộ của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
+    <string name="setup_failed_guide">Lịch phát sóng chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo.</string>
+    <string name="setup_failed_movies">Phim chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo, hoặc khi bạn mở Phim.</string>
+    <string name="setup_failed_shows">Phim bộ chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo, hoặc khi bạn mở Phim bộ.</string>
     <string name="vod_movies_load_failed">Không thể tải phim của bạn</string>
     <string name="vod_shows_load_failed">Không thể tải phim bộ của bạn</string>
     <string name="error_channel_list_memory_tv">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn TV này có.</string>

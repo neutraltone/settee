@@ -270,6 +270,9 @@
     <string name="error_catalogue">无法加载你的提供商的频道。请稍后重试。</string>
     <string name="error_movies_list">未收到你的提供商的电影列表。请稍后重试。</string>
     <string name="error_shows_list">未收到你的提供商的剧集列表。请稍后重试。</string>
+    <string name="setup_failed_guide">节目单未能加载。Settee 会在下次刷新时重试。</string>
+    <string name="setup_failed_movies">电影未能加载。Settee 会在下次刷新时或你打开“电影”时重试。</string>
+    <string name="setup_failed_shows">剧集未能加载。Settee 会在下次刷新时或你打开“剧集”时重试。</string>
     <string name="vod_movies_load_failed">无法加载你的电影</string>
     <string name="vod_shows_load_failed">无法加载你的剧集</string>
     <string name="error_channel_list_memory_tv">你的提供商的频道列表所需的内存超出了这台电视的内存。</string>

@@ -270,6 +270,9 @@
     <string name="error_catalogue">プロバイダーのチャンネルを読み込めませんでした。少し待ってからもう一度お試しください。</string>
     <string name="error_movies_list">プロバイダーの映画リストを受け取れませんでした。少し待ってからもう一度お試しください。</string>
     <string name="error_shows_list">プロバイダーのTV番組リストを受け取れませんでした。少し待ってからもう一度お試しください。</string>
+    <string name="setup_failed_guide">番組表を読み込めませんでした。Settee は次の更新時にもう一度試します。</string>
+    <string name="setup_failed_movies">映画を読み込めませんでした。Settee は次の更新時か、映画を開いたときにもう一度試します。</string>
+    <string name="setup_failed_shows">TV番組を読み込めませんでした。Settee は次の更新時か、TV番組を開いたときにもう一度試します。</string>
     <string name="vod_movies_load_failed">映画を読み込めませんでした</string>
     <string name="vod_shows_load_failed">TV番組を読み込めませんでした</string>
     <string name="error_channel_list_memory_tv">プロバイダーのチャンネルリストには、このテレビのメモリでは足りません。</string>

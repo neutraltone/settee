@@ -249,6 +249,25 @@ instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeou
 | Shows' list or categories failed with nothing more specific | `error_shows_list` | Your provider's list of shows didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
 | The list downloaded with nothing in it (a plain line, not an error, and no Try again) | `vod_no_movies_provider` / `vod_no_shows_provider` | Your provider hasn't sent any movies yet. | none | Provider's: none in the account |
 
+## Setup
+
+Setup's finished screen names each step that didn't load, the guide, movies or shows, with
+`ErrorMessage` under the summary (#477). A login that fails never gets there: the provider form says
+why, as in [Provider connection](#provider-connection). Each step carries its failure on
+`CatalogueRefresh.StepDone.failure`. Movies and shows Setup fetched itself, and a guide pass that
+threw, are worded by `ErrorWording.ofProvider` with the step's own sentence as the fallback, so a
+timeout, a rejected login, a 429 or a 5xx read as in Provider connection, and anything else says
+Settee will try again. A guide whose every feed failed shows the first feed's failure, worded as in
+[Guides](#guides). Movies and shows another download was already fetching show that download's
+failure, as in [Movies and Shows lists](#movies-and-shows-lists).
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| The guide failed with nothing more specific (a pass that threw) | `setup_failed_guide` | The TV guide didn't load. Settee will try again on the next refresh. | exception type, or none | Unknown |
+| Movies failed with nothing more specific (a reply that won't parse, any other HTTP status) | `setup_failed_movies` | Movies didn't load. Settee will try again on the next refresh, or when you open Movies. | exception type, or HTTP status | Provider's |
+| Shows failed with nothing more specific | `setup_failed_shows` | Shows didn't load. Settee will try again on the next refresh, or when you open Shows. | exception type, or HTTP status | Provider's |
+| A movie or show list too big for memory (`OutOfMemoryError` while saving it) | `error_channel_list_memory_tv` / `_device` | Your provider's channel list needs more memory than this TV has. | OutOfMemory | This hardware: list too big |
+
 ## Guides
 
 A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in Guide settings, never

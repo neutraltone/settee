@@ -270,6 +270,9 @@
     <string name="error_catalogue">공급자의 채널을 불러오지 못했습니다. 잠시 후 다시 시도하세요.</string>
     <string name="error_movies_list">공급자의 영화 목록을 받지 못했습니다. 잠시 후 다시 시도하세요.</string>
     <string name="error_shows_list">공급자의 시리즈 목록을 받지 못했습니다. 잠시 후 다시 시도하세요.</string>
+    <string name="setup_failed_guide">편성표를 불러오지 못했습니다. Settee가 다음 새로고침 때 다시 시도합니다.</string>
+    <string name="setup_failed_movies">영화를 불러오지 못했습니다. Settee가 다음 새로고침 때나 영화를 열 때 다시 시도합니다.</string>
+    <string name="setup_failed_shows">시리즈를 불러오지 못했습니다. Settee가 다음 새로고침 때나 시리즈를 열 때 다시 시도합니다.</string>
     <string name="vod_movies_load_failed">영화를 불러오지 못했습니다</string>
     <string name="vod_shows_load_failed">시리즈를 불러오지 못했습니다</string>
     <string name="error_channel_list_memory_tv">공급자의 채널 목록에는 이 TV의 메모리보다 더 많은 메모리가 필요합니다.</string>

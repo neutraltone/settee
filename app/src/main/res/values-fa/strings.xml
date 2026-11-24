@@ -271,6 +271,9 @@
     <string name="error_catalogue">بارگذاری کانال‌های ارائه‌دهنده شما ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_movies_list">فهرست فیلم‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_shows_list">فهرست سریال‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
+    <string name="setup_failed_guide">راهنمای تلویزیون بارگیری نشد. Settee در به‌روزرسانی بعدی دوباره تلاش می‌کند.</string>
+    <string name="setup_failed_movies">فیلم‌ها بارگیری نشدند. Settee در به‌روزرسانی بعدی یا وقتی فیلم‌ها را باز کنید دوباره تلاش می‌کند.</string>
+    <string name="setup_failed_shows">سریال‌ها بارگیری نشدند. Settee در به‌روزرسانی بعدی یا وقتی سریال‌ها را باز کنید دوباره تلاش می‌کند.</string>
     <string name="vod_movies_load_failed">بارگذاری فیلم‌ها ممکن نشد</string>
     <string name="vod_shows_load_failed">بارگذاری سریال‌ها ممکن نشد</string>
     <string name="error_channel_list_memory_tv">فهرست کانال‌های ارائه‌دهنده شما به حافظه‌ای بیش از آنچه این تلویزیون دارد نیاز دارد.</string>

@@ -270,6 +270,9 @@
     <string name="error_catalogue">โหลดช่องจากผู้ให้บริการของคุณไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_movies_list">ไม่ได้รับรายการภาพยนตร์จากผู้ให้บริการของคุณ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_shows_list">ไม่ได้รับรายการซีรีส์จากผู้ให้บริการของคุณ ลองอีกครั้งในอีกสักครู่</string>
+    <string name="setup_failed_guide">โหลดผังรายการทีวีไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป</string>
+    <string name="setup_failed_movies">โหลดภาพยนตร์ไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป หรือเมื่อคุณเปิดภาพยนตร์</string>
+    <string name="setup_failed_shows">โหลดซีรีส์ไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป หรือเมื่อคุณเปิดซีรีส์</string>
     <string name="vod_movies_load_failed">โหลดภาพยนตร์ของคุณไม่สำเร็จ</string>
     <string name="vod_shows_load_failed">โหลดซีรีส์ของคุณไม่สำเร็จ</string>
     <string name="error_channel_list_memory_tv">รายการช่องของผู้ให้บริการต้องใช้หน่วยความจำมากกว่าที่ทีวีเครื่องนี้มี</string>
