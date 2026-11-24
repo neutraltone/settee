@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.CatalogueRefresh
@@ -202,6 +203,50 @@ class SetupRefreshTest {
         val setup = refresh.state.value.setup!!
         assertThat(setup.finished).isTrue()
         assertThat(setup.failed).containsExactly(SetupStep.MOVIES, SetupStep.SHOWS).inOrder()
+    }
+
+    @Test
+    fun `movies that time out say the provider stopped responding, with the timeout on the detail line`() = testing {
+        panel.replies["get_vod_streams"] = "!timeout"
+
+        setUp()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        assertThat(movies.failure).isEqualTo(
+            ViewerError(testGraph.app.getString(R.string.error_timed_out), "SocketTimeout"),
+        )
+    }
+
+    @Test
+    fun `shows that fail for no reason a viewer could act on keep setup's own sentence, with the cause`() = testing {
+        panel.replies["get_series"] = "!"
+
+        setUp()
+
+        val shows = refresh.state.value.setup!!.done.single { it.step == SetupStep.SHOWS }
+        assertThat(shows.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.setup_failed_shows), "IO"))
+    }
+
+    @Test
+    fun `movies too big for memory say it's about this device, not the provider`() = testing {
+        panel.replies["get_vod_streams"] = "!oom"
+
+        setUp()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        assertThat(movies.failure).isEqualTo(
+            ViewerError(testGraph.app.getString(R.string.error_channel_list_memory_device), "OutOfMemory"),
+        )
+    }
+
+    @Test
+    fun `a guide that won't download says why`() = testing {
+        panel.replies["xmltv.php"] = "!503"
+
+        setUp()
+
+        val guide = refresh.state.value.setup!!.done.single { it.step == SetupStep.GUIDE }
+        assertThat(guide.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.error_http_5xx), "HTTP 503"))
     }
 
     @Test

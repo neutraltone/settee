@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CatalogueRefresh.Setup
 import app.opentv.data.repo.SetupStep
@@ -221,5 +222,22 @@ class SetupScreenTest {
             "1,204 channels and 6,400 movies. Film details will keep filling in while you watch.",
         ).assertIsDisplayed()
         captureScreen("setup_finished_with_failures")
+    }
+
+    @Test
+    fun `a list that didn't load says why, with the detail line`() {
+        val timedOut = ViewerError("Your provider stopped responding. It may be busy, so try again in a moment.", "SocketTimeout")
+        val setup = finished(SetupStep.MOVIES).let { setup ->
+            setup.copy(done = setup.done.map { if (it.step == SetupStep.MOVIES) it.copy(failure = timedOut) else it })
+        }
+
+        setScreen(setup)
+
+        compose.onNodeWithText(timedOut.sentence).assertIsDisplayed()
+        compose.onNodeWithText("SocketTimeout").assertIsDisplayed()
+        compose.onNodeWithText(
+            "Movies didn't load. Settee will try again on the next refresh, or when you open Movies.",
+        ).assertDoesNotExist()
+        captureScreen("setup_finished_movies_failed")
     }
 }

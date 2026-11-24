@@ -173,8 +173,17 @@ class CatalogueRefresh(
         val failed: List<SetupStep> get() = done.filter { it.failed }.map { it.step }
     }
 
-    /** A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it failed. */
-    data class StepDone(val step: SetupStep, val count: Int, val of: Int? = null, val failed: Boolean = false)
+    /**
+     * A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it
+     * failed, with why where it's known.
+     */
+    data class StepDone(
+        val step: SetupStep,
+        val count: Int,
+        val of: Int? = null,
+        val failed: Boolean = false,
+        val failure: ViewerError? = null,
+    )
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
