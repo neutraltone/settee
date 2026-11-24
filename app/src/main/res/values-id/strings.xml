@@ -329,10 +329,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">TV ini tidak bisa memutar %1$s</string>
     <string name="vod_cant_play_device">Perangkat ini tidak bisa memutar %1$s</string>
+    <string name="player_no_sound_tv">TV ini tidak dapat memutar format audio ini (%1$s). Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturannya mungkin membantu.</string>
+    <string name="player_no_sound_device">Perangkat ini tidak dapat memutar format audio ini (%1$s). Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturan perangkat ini mungkin membantu.</string>
     <string name="player_stepped_down_tv">TV ini tidak bisa memutar %1$s. Memutar %2$s sebagai gantinya.</string>
     <string name="player_stepped_down_device">Perangkat ini tidak bisa memutar %1$s. Memutar %2$s sebagai gantinya.</string>
     <string name="player_stepped_down_lower_tv">TV ini tidak bisa memutar %1$s. Memutar kualitas yang lebih rendah sebagai gantinya.</string>
     <string name="player_stepped_down_lower_device">Perangkat ini tidak bisa memutar %1$s. Memutar kualitas yang lebih rendah sebagai gantinya.</string>
+    <string name="player_stepped_down_for_sound_tv">TV ini tidak dapat memutar format audio ini (%1$s). Memutar versi lain sebagai gantinya. Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturannya mungkin membantu.</string>
+    <string name="player_stepped_down_for_sound_device">Perangkat ini tidak dapat memutar format audio ini (%1$s). Memutar versi lain sebagai gantinya. Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturan perangkat ini mungkin membantu.</string>
     <string name="player_stepped_down_unnamed_tv">TV ini tidak bisa memutar kualitas itu. Memutar kualitas lain sebagai gantinya.</string>
     <string name="player_stepped_down_unnamed_device">Perangkat ini tidak bisa memutar kualitas itu. Memutar kualitas lain sebagai gantinya.</string>
     <string name="vod_language_title">Di sini hanya dalam bahasa %1$s</string>

@@ -329,10 +329,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Този телевизор не може да пусне %1$s</string>
     <string name="vod_cant_play_device">Това устройство не може да пусне %1$s</string>
+    <string name="player_no_sound_tv">Този телевизор не може да възпроизведе този аудиоформат (%1$s). Ако телевизорът или саундбарът ви го поддържа, включването на съраунд звук в настройките му може да помогне.</string>
+    <string name="player_no_sound_device">Това устройство не може да възпроизведе този аудиоформат (%1$s). Ако телевизорът или саундбарът ви го поддържа, включването на съраунд звук в настройките на това устройство може да помогне.</string>
     <string name="player_stepped_down_tv">Този телевизор не може да пусне %1$s. Пуска се %2$s.</string>
     <string name="player_stepped_down_device">Това устройство не може да пусне %1$s. Пуска се %2$s.</string>
     <string name="player_stepped_down_lower_tv">Този телевизор не може да пусне %1$s. Пуска се по-ниско качество.</string>
     <string name="player_stepped_down_lower_device">Това устройство не може да пусне %1$s. Пуска се по-ниско качество.</string>
+    <string name="player_stepped_down_for_sound_tv">Този телевизор не може да възпроизведе този аудиоформат (%1$s). Пуска се друга версия. Ако телевизорът или саундбарът ви го поддържа, включването на съраунд звук в настройките му може да помогне.</string>
+    <string name="player_stepped_down_for_sound_device">Това устройство не може да възпроизведе този аудиоформат (%1$s). Пуска се друга версия. Ако телевизорът или саундбарът ви го поддържа, включването на съраунд звук в настройките на това устройство може да помогне.</string>
     <string name="player_stepped_down_unnamed_tv">Този телевизор не може да пусне това качество. Пуска се друго.</string>
     <string name="player_stepped_down_unnamed_device">Това устройство не може да пусне това качество. Пуска се друго.</string>
     <string name="vod_language_title">Тук има само на %1$s</string>

@@ -103,8 +103,8 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | HTTP 429 | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | code · HTTP 429 · format | Provider's rate limit |
 | HTTP 451 | `error_http_451` | Your provider can't show this where you are. | code · HTTP 451 · format | Provider's: blocked in this region |
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | code · HTTP 5xx · format | Provider's server |
-| `UnknownHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
-| `SocketTimeoutException`, `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
+| `UnknownHostException`, `ConnectException`, `NoRouteToHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
+| `InterruptedIOException` (`SocketTimeoutException` among them), `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
 | `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, `ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED`, `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` (not raised today: the player checks no content type) | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: an expired account or blocked channel answering 200 with an HTML page, which won't parse as a TS container or HLS manifest; or a captive page |
 | `ERROR_CODE_PARSING_CONTAINER_MALFORMED`, `ERROR_CODE_PARSING_MANIFEST_MALFORMED` | `error_damaged` | This video is damaged and won't play. That's at your provider's end, so try something else. | code · format | Provider's: broken stream |
 | `ERROR_CODE_BEHIND_LIVE_WINDOW` | `error_behind_live` | This channel fell too far behind live. Try again to catch up. | code · format | Neither: a slow connection or a short live window |
@@ -157,6 +157,23 @@ aren't `ErrorMessage`s and have no detail line.
 |---|---|---|---|
 | None of the title's Versions plays here (only 4K ones on a 1080p Stick) | `vod_cant_play_tv` / `_device` | This TV can't play 4K | This hardware: Play is off |
 | Only Versions in another language play here | `vod_language_title`, `vod_language_body_tv` / `_device` | Only in German here. This TV can't play a version in your language. | This hardware, or the provider's shelves: Play asks first |
+
+### Notices over the picture
+
+`StreamGuard` says these over the picture in both players when playback hit a limit of this hardware
+but carries on, so they aren't `ErrorMessage`s: no detail line, nothing to press, and gone after 5 s
+(`StreamGuard.NOTICE_MILLIS`), or sooner when an error takes their place or the viewer moves on. With no
+other Quality to move to, the video failures end in the error rows above instead (`error_too_big_tv`,
+`error_no_first_frame_tv`). Each Quality's name is the provider's or Settee's label
+for it, as the Quality picker shows it.
+
+| Trigger | String key | Sentence | Whose end, likely cause |
+|---|---|---|---|
+| A Quality this hardware can't play (`DecoderList` refuses its video, or no first frame comes) moves down to the next (`StreamGuard.steppedDown`); or a film or episode starts on a lower Version because this hardware can't play the one asked for (`VodQualities`) | `player_stepped_down_tv` / `_device` | This TV can't play 4K. Playing 1080p instead. | This hardware |
+| As above, the Quality moved to has no name | `player_stepped_down_lower_tv` / `_device` | This TV can't play 4K. Playing a lower quality instead. | This hardware |
+| As above, the Quality moved from has no name | `player_stepped_down_unnamed_tv` / `_device` | This TV can't play that quality. Playing another instead. | This hardware |
+| No audio track this hardware can play, while the player has sound on (not the muted previews), on a film or episode with a lower Quality to move to (`PlayerController.Request.stepsForSound`; a channel keeps its picture instead) | `player_stepped_down_for_sound_tv` / `_device` | This TV can't play this audio format (E-AC-3), so another version is playing. If your TV or soundbar supports it, turning on surround sound in its settings may help. | This hardware, or surround sound off on the TV or soundbar |
+| As above, on a channel or with no lower Quality: the picture plays on without sound, said once per stream | `player_no_sound_tv` / `_device` | This TV can't play this audio format (E-AC-3). If your TV or soundbar supports it, turning on surround sound in its settings may help. | This hardware, or surround sound off on the TV or soundbar |
 
 ## Film and show pages
 

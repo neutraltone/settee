@@ -329,10 +329,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Ten telewizor nie może odtworzyć %1$s</string>
     <string name="vod_cant_play_device">To urządzenie nie może odtworzyć %1$s</string>
+    <string name="player_no_sound_tv">Ten telewizor nie obsługuje tego formatu audio (%1$s). Jeśli Twój telewizor lub soundbar to obsługuje, może pomóc włączenie dźwięku przestrzennego w jego ustawieniach.</string>
+    <string name="player_no_sound_device">To urządzenie nie obsługuje tego formatu audio (%1$s). Jeśli Twój telewizor lub soundbar to obsługuje, może pomóc włączenie dźwięku przestrzennego w ustawieniach tego urządzenia.</string>
     <string name="player_stepped_down_tv">Ten telewizor nie może odtworzyć %1$s. Zamiast tego odtwarzana jest jakość %2$s.</string>
     <string name="player_stepped_down_device">To urządzenie nie może odtworzyć %1$s. Zamiast tego odtwarzana jest jakość %2$s.</string>
     <string name="player_stepped_down_lower_tv">Ten telewizor nie może odtworzyć %1$s. Zamiast tego odtwarzana jest niższa jakość.</string>
     <string name="player_stepped_down_lower_device">To urządzenie nie może odtworzyć %1$s. Zamiast tego odtwarzana jest niższa jakość.</string>
+    <string name="player_stepped_down_for_sound_tv">Ten telewizor nie obsługuje tego formatu audio (%1$s). Zamiast tego odtwarzana jest inna wersja. Jeśli Twój telewizor lub soundbar to obsługuje, może pomóc włączenie dźwięku przestrzennego w jego ustawieniach.</string>
+    <string name="player_stepped_down_for_sound_device">To urządzenie nie obsługuje tego formatu audio (%1$s). Zamiast tego odtwarzana jest inna wersja. Jeśli Twój telewizor lub soundbar to obsługuje, może pomóc włączenie dźwięku przestrzennego w ustawieniach tego urządzenia.</string>
     <string name="player_stepped_down_unnamed_tv">Ten telewizor nie może odtworzyć tej jakości. Zamiast tego odtwarzana jest inna.</string>
     <string name="player_stepped_down_unnamed_device">To urządzenie nie może odtworzyć tej jakości. Zamiast tego odtwarzana jest inna.</string>
     <string name="vod_language_title">Tutaj tylko w języku: %1$s</string>

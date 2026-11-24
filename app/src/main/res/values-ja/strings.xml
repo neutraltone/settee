@@ -329,10 +329,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">このテレビでは%1$sを再生できません</string>
     <string name="vod_cant_play_device">このデバイスでは%1$sを再生できません</string>
+    <string name="player_no_sound_tv">このテレビではこの音声形式を再生できません（%1$s）。テレビやサウンドバーが対応していれば、その設定でサラウンドをオンにすると改善する場合があります。</string>
+    <string name="player_no_sound_device">この端末ではこの音声形式を再生できません（%1$s）。テレビやサウンドバーが対応していれば、この端末の設定でサラウンドをオンにすると改善する場合があります。</string>
     <string name="player_stepped_down_tv">このテレビでは%1$sを再生できません。代わりに%2$sで再生しています。</string>
     <string name="player_stepped_down_device">このデバイスでは%1$sを再生できません。代わりに%2$sで再生しています。</string>
     <string name="player_stepped_down_lower_tv">このテレビでは%1$sを再生できません。代わりに低い画質で再生しています。</string>
     <string name="player_stepped_down_lower_device">このデバイスでは%1$sを再生できません。代わりに低い画質で再生しています。</string>
+    <string name="player_stepped_down_for_sound_tv">このテレビではこの音声形式を再生できません（%1$s）。代わりに別のバージョンを再生しています。テレビやサウンドバーが対応していれば、その設定でサラウンドをオンにすると改善する場合があります。</string>
+    <string name="player_stepped_down_for_sound_device">この端末ではこの音声形式を再生できません（%1$s）。代わりに別のバージョンを再生しています。テレビやサウンドバーが対応していれば、この端末の設定でサラウンドをオンにすると改善する場合があります。</string>
     <string name="player_stepped_down_unnamed_tv">このテレビではその画質を再生できません。代わりに別の画質で再生しています。</string>
     <string name="player_stepped_down_unnamed_device">このデバイスではその画質を再生できません。代わりに別の画質で再生しています。</string>
     <string name="vod_language_title">ここでは%1$sのみ</string>
