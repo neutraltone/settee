@@ -2,6 +2,20 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.5.0](https://github.com/neutraltone/settee/compare/v1.4.0...v1.5.0) (2026-11-24)
+
+
+### Features
+
+* **#570:** crash reports, off until you turn them on, help get Settee's bugs fixed ([#621](https://github.com/neutraltone/settee/issues/621)) ([197d395](https://github.com/neutraltone/settee/commit/197d395362a6867c097fd10538996f9580d018b7))
+
+
+### Bug fixes
+
+* **#473:** a recording that stops by itself says why and keeps what it caught, and a booking warns when it may not fit ([#610](https://github.com/neutraltone/settee/issues/610)) ([8fd1e40](https://github.com/neutraltone/settee/commit/8fd1e40f15c478741ed954fa6b656a959c4b4afe))
+* **#474:** a recording cut off when Settee closed says why, instead of just "Interrupted" ([#607](https://github.com/neutraltone/settee/issues/607)) ([bddac01](https://github.com/neutraltone/settee/commit/bddac010aaff2f48d93ef5cc620ffd20c832ebf4))
+* **#475:** a recording that won't play says to check the NAS or the USB drive, or that its file has gone ([#608](https://github.com/neutraltone/settee/issues/608)) ([b0aa7fd](https://github.com/neutraltone/settee/commit/b0aa7fd119da23a26f550b974f342bfdf5d90904))
+
 ## [1.4.0](https://github.com/neutraltone/settee/compare/v1.3.1...v1.4.0) (2026-11-21)
 
 
