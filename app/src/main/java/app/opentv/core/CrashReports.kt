@@ -212,12 +212,14 @@ class CrashReports(
     }
 
     /**
-     * The handled errors Settee reports (ADR 0009): only failures Settee's own code can cause. Closed
-     * on purpose: a Provider's failures (HTTP errors, dead streams, web pages instead of video) and
-     * playback errors have no kind here, so they can't leave the device. [keepsMessages]: whether the
-     * error's own messages are sent (scrubbed) or only its classes and stack trace.
+     * The handled errors Settee reports (ADRs 0009 and 0010): only failures Settee's own code, keys or
+     * requests can cause. Closed on purpose: a Provider's failures (HTTP errors, dead streams, web
+     * pages instead of video) and playback errors have no kind here, so they can't leave the device by
+     * themselves. [keepsMessages]: whether the error's own messages are sent (scrubbed) or only its
+     * classes and stack trace. [service]: for one of Settee's own services, its `service` tag; those
+     * are reported as a [ServiceFailure], never an exception of the client's.
      */
-    enum class Handled(internal val keepsMessages: Boolean) {
+    enum class Handled(internal val keepsMessages: Boolean, internal val service: String? = null) {
         /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
         XTREAM_PARSE(keepsMessages = false),
 
@@ -226,6 +228,18 @@ class CrashReports(
          * Its message names versions and tables, never rows.
          */
         DATABASE_MIGRATION(keepsMessages = true),
+
+        /** OpenSubtitles turning down Settee's key or request. */
+        OPENSUBTITLES(keepsMessages = false, service = "opensubtitles"),
+
+        /** TMDB turning down Settee's key or request. */
+        TMDB(keepsMessages = false, service = "tmdb"),
+
+        /** IntroDB or TheIntroDB: the stack trace tells them apart, through the client that asked. */
+        INTRODB(keepsMessages = false, service = "introdb"),
+
+        /** GitHub's latest-release API, which the update check asks. */
+        UPDATE_CHECK(keepsMessages = false, service = "update-check"),
     }
 
     /**
@@ -236,6 +250,22 @@ class CrashReports(
     fun report(kind: Handled, error: Throwable) {
         if (!available || !on.value || !Sentry.isEnabled()) return
         Sentry.captureException(HandledError.of(kind, error))
+    }
+
+    /**
+     * Reports [failure], one of Settee's own services ([kind]) turning down its request, while Crash
+     * Reports are on (ADR 0010). Sent as `KIND operation status` with the three as tags and the stack
+     * that got here, and nothing else: the request and the reply stay on the device.
+     */
+    fun report(kind: Handled, failure: ServiceFailure) {
+        val service = kind.service ?: return
+        if (!available || !on.value || !Sentry.isEnabled()) return
+        val error = HandledError("${kind.name} ${failure.operation.tag} ${failure.status}", null)
+        Sentry.captureException(error) { scope ->
+            scope.setTag(CrashScrubbing.SERVICE_TAG, service)
+            scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
+            scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
+        }
     }
 
     /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */

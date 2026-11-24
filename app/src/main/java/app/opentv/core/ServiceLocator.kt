@@ -316,7 +316,12 @@ object ServiceLocator {
                 OpenSubtitles(
                     account = OpenSubtitlesAccount(
                         settings,
-                        OpenSubtitlesClient(httpClient, key, BuildConfig.VERSION_NAME),
+                        OpenSubtitlesClient(
+                            httpClient,
+                            key,
+                            BuildConfig.VERSION_NAME,
+                            reportFailure = reportsFailuresOf(CrashReports.Handled.OPENSUBTITLES),
+                        ),
                         KeystoreSealer(),
                         clock,
                         dispatchers,
@@ -331,6 +336,10 @@ object ServiceLocator {
                 )
             }
         }
+
+        /** How one of Settee's own services, [kind], reports turning down Settee's request (ADR 0010). */
+        private fun reportsFailuresOf(kind: CrashReports.Handled): (ServiceFailure) -> Unit =
+            { crashReports.report(kind, it) }
 
         /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
         val crashReports: CrashReports by lazy {

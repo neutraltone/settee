@@ -6,6 +6,8 @@
 package app.opentv.data.remote
 
 import app.opentv.core.HttpStatus
+import app.opentv.core.ServiceFailure
+import app.opentv.core.ServiceFailure.Operation
 import app.opentv.data.model.SubtitleKind
 import java.io.IOException
 import java.time.Instant
@@ -94,6 +96,8 @@ class OpenSubtitlesClient(
         ignoreUnknownKeys = true
         isLenient = true
     },
+    /** Hears OpenSubtitles turning down Settee's own request, for a Crash Report (ADR 0010). */
+    private val reportFailure: (ServiceFailure) -> Unit = {},
 ) {
     private val userAgent = "Settee v$appVersion"
 
@@ -135,7 +139,7 @@ class OpenSubtitlesClient(
                 }
             }
         }.build()
-        (call(request(url).get().build())["data"] as? JsonArray).orEmpty().mapNotNull(::result)
+        (call(request(url).get().build(), Operation.SEARCH)["data"] as? JsonArray).orEmpty().mapNotNull(::result)
     }
 
     /**
@@ -146,7 +150,7 @@ class OpenSubtitlesClient(
     fun download(fileId: Long, token: String?): Result<SubtitleFile> = runCatching {
         val payload = buildJsonObject { put("file_id", fileId) }.toString()
         val url = base.newBuilder().addPathSegment("download").build()
-        val answer = call(request(url, token).post(payload.toRequestBody(JSON_TYPE)).build(), download = true)
+        val answer = call(request(url, token).post(payload.toRequestBody(JSON_TYPE)).build(), Operation.DOWNLOAD)
         val link = answer.string("link") ?: throw OpenSubtitlesFailure.Unreachable(null)
         SubtitleFile(fetchFile(link), answer.string("file_name"), answer.int("remaining"))
     }
@@ -171,7 +175,7 @@ class OpenSubtitlesClient(
         }.toString()
         val url = DEFAULT_BASE.newBuilder().addPathSegment("login").build()
         val answer = try {
-            call(request(url).post(payload.toRequestBody(JSON_TYPE)).build())
+            call(request(url).post(payload.toRequestBody(JSON_TYPE)).build(), Operation.SIGN_IN)
         } catch (refused: OpenSubtitlesFailure.TokenRejected) {
             throw OpenSubtitlesFailure.SignInRejected(refused)
         }
@@ -184,7 +188,7 @@ class OpenSubtitlesClient(
     /** The signed-in account's downloads left today. */
     fun account(token: String): Result<OpenSubtitlesSession> = runCatching {
         val url = base.newBuilder().addPathSegments("infos/user").build()
-        val data = call(request(url, token).get().build())["data"] as? JsonObject
+        val data = call(request(url, token).get().build(), Operation.ACCOUNT)["data"] as? JsonObject
         OpenSubtitlesSession(token, data?.int("remaining_downloads"), data?.int("allowed_downloads"))
     }
 
@@ -197,9 +201,10 @@ class OpenSubtitlesClient(
 
     /**
      * Sends [request] and returns its JSON object, turning every way it can fail into an
-     * [OpenSubtitlesFailure]. Only a [download]'s 406 is the daily limit.
+     * [OpenSubtitlesFailure]. Only a download's 406 is the daily limit. A failure that's Settee's
+     * own, such as a 403 or a reply that isn't JSON, is also reported as [operation]'s.
      */
-    private fun call(request: Request, download: Boolean = false): JsonObject {
+    private fun call(request: Request, operation: Operation): JsonObject {
         val response = try {
             http.newCall(request).execute()
         } catch (e: IOException) {
@@ -207,7 +212,10 @@ class OpenSubtitlesClient(
         }
         return response.use {
             val parsed = runCatching { json.parseToJsonElement(it.body.string()) }.getOrNull() as? JsonObject
-            if (it.isSuccessful && parsed != null) parsed else throw failureFor(it.code, parsed, request, download)
+            if (it.isSuccessful && parsed != null) return@use parsed
+            val failure = if (it.isSuccessful) ServiceFailure.unreadable(operation) else ServiceFailure.ofStatus(operation, it.code)
+            failure?.let(reportFailure)
+            throw failureFor(it.code, parsed, request, download = operation == Operation.DOWNLOAD)
         }
     }
 
