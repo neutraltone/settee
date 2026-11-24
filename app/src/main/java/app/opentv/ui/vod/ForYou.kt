@@ -40,9 +40,9 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.ui.ContinueWatchingShelf
 import app.opentv.ui.OnShellReturn
 import app.opentv.ui.PickRow
-import app.opentv.ui.WhenDrawn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.RowPick
+import app.opentv.ui.WhenDrawn
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeSpace

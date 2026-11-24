@@ -12,19 +12,19 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -63,8 +63,8 @@ class LiveScreenRecordTest {
 
     private val compose = createComposeRule()
 
-    @get:Rule
     // A build that offers Send report on an error that could be Settee's, as a release does.
+    @get:Rule
     val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
 
     @get:Rule
@@ -133,7 +133,7 @@ class LiveScreenRecordTest {
     }
 
     @Test
-    fun `a guide that failed in a way that could be Settee's keeps the Highlight on Try again, with Send report Down`() {
+    fun `a guide failing in a way that could be Settee's keeps Try again lit, with Send report Down`() {
         compose.setTvContent {
             MainShell(
                 tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),

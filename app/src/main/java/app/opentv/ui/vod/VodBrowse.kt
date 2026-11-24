@@ -73,6 +73,7 @@ import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
 import app.opentv.ui.design.Message
+import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
@@ -84,7 +85,6 @@ import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch

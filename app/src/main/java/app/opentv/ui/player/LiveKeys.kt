@@ -62,18 +62,23 @@ internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
         // With the controls up, the d-pad moves around them: Down reaches Subtitles and the pills, and
         // Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
         screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.ToFocused
-        else -> overPicture(key, screen.retryableError, screen.report)
+        else -> aroundReport(key, screen.report) ?: overPicture(key, screen.retryableError)
     }
 }
 
 /**
- * With nothing over the picture, or Try again (and Send report under it, where [report] says). Send
- * report is reached with Down, as on every error that offers it, so only Up, and Down from Send report
- * itself, change channel there: the channel keys always do.
+ * The keys Send report under Try again takes (where [report] says), or null for the rest. It's reached
+ * with Down, as on every error that offers it, so only Up, and Down from Send report itself, change
+ * channel there: the channel keys always do.
  */
-private fun overPicture(key: Key, retryableError: Boolean, report: ReportPlace): LiveKey = when {
+private fun aroundReport(key: Key, report: ReportPlace): LiveKey? = when {
     report == ReportPlace.UNDER_TRY_AGAIN && key == Key.DirectionDown -> LiveKey.ToFocused
     report == ReportPlace.HIGHLIGHTED && (key == Key.DirectionUp || key in OK_KEYS) -> LiveKey.ToFocused
+    else -> null
+}
+
+/** With nothing over the picture, or Try again alone. */
+private fun overPicture(key: Key, retryableError: Boolean): LiveKey = when {
     // This remote has no CH+/CH- keys, so up and down are the channel changer, a dead channel's too:
     // zapping away is how the viewer leaves it.
     key == Key.DirectionUp || key == Key.ChannelUp -> LiveKey.Zap(-1)

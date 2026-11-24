@@ -62,10 +62,10 @@ class DailyCapReportsTest {
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
 
-    private fun parseFailure() = reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("bad JSON")))
+    private fun parseFailure() =
+        reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("bad JSON")))
 
-    private fun errorReport() =
-        reports.report(ErrorReport("HTTP 503", ReportedSource.STREMIO))
+    private fun errorReport() = reports.report(ErrorReport("HTTP 503", ReportedSource.STREMIO))
 
     /** The app crashing: whatever handler is installed hears of it, as the JVM would tell it. */
     private fun crash(error: Throwable = IllegalStateException("Settee broke")) {

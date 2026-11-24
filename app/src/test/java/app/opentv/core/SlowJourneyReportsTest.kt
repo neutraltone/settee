@@ -11,10 +11,10 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.JourneyTimer.Journey
 import com.google.common.truth.Truth.assertThat
 import io.sentry.Sentry
-import io.sentry.hints.AbnormalExit
-import io.sentry.util.HintUtils
 import io.sentry.exception.ExceptionMechanismException
+import io.sentry.hints.AbnormalExit
 import io.sentry.protocol.Mechanism
+import io.sentry.util.HintUtils
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
@@ -270,8 +270,7 @@ class SlowJourneyReportsTest {
     }
 
     /** As the app hands [to] a slow journey. */
-    private fun reportingTo(to: CrashReports): (JourneyTimer.SlowJourney) -> Unit =
-        { to.report(it) }
+    private fun reportingTo(to: CrashReports): (JourneyTimer.SlowJourney) -> Unit = { to.report(it) }
 
     private companion object {
         val CALL: okhttp3.Call = OkHttpClient().newCall(Request.Builder().url("https://example.com/").build())

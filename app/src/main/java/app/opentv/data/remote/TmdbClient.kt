@@ -214,8 +214,8 @@ class TmdbClient(
     // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
     private fun get(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
         runCatching { fetch(url, key, operation) }
-        .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
-        .getOrNull()
+            .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+            .getOrNull()
 
     /**
      * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing.

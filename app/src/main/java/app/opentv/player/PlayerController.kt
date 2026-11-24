@@ -232,10 +232,10 @@ class PlayerController(
     val title: StateFlow<String> = _title.asStateFlow()
 
     // Only the kind, never which Source: all Send report on a failure may name (ADR 0010).
-    private val _source = MutableStateFlow<ReportedSource?>(null)
+    private val _reportedSource = MutableStateFlow<ReportedSource?>(null)
 
     /** The kind of Source the stream on the player comes from, once it's known, for Send report. */
-    val reportedSource: StateFlow<ReportedSource?> = _source.asStateFlow()
+    val reportedSource: StateFlow<ReportedSource?> = _reportedSource.asStateFlow()
     private var titled: MediaKey? = null
     private var loaded: MediaKey? = null
     private val counts = RestartCounts()
@@ -466,7 +466,7 @@ class PlayerController(
             // A restart keeps its title while it asks again; a new channel has none until it's known.
             if (request.key != titled) {
                 _title.value = ""
-                _source.value = null
+                _reportedSource.value = null
             }
             states.publish(State.Buffering(_title.value))
             val playable = when (val resolved = resolve(request.key)) {
@@ -486,7 +486,7 @@ class PlayerController(
                 }
             }
             opens.resolved(playable)
-            _source.value = playable.source
+            _reportedSource.value = playable.source
             _title.value = playable.title
             titled = request.key
             httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))

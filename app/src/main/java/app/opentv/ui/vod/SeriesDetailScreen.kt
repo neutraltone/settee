@@ -70,7 +70,8 @@ fun SeriesDetailScreen(
         LoadingDetail()
     } else {
         // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
-        val episodes = EpisodeFetch(noEpisodes, failure, ReportedSource.of(sources.find { it.id == s.sourceId }?.kind)) {
+        val source = ReportedSource.of(sources.find { it.id == s.sourceId }?.kind)
+        val episodes = EpisodeFetch(noEpisodes, failure, source) {
             noEpisodes = false
             failure = null
             attempt++

@@ -24,9 +24,9 @@ import okhttp3.Request
 
 /**
  * [url]'s JSON answer from the database called [database]; null for a 404, its way of saying it doesn't
- * have the episode, so never reported: a wrong address answers 404 too, and nothing tells the two apart. Throws when it didn't answer, or answered with a page in front
- * of the API (a rate limit, a challenge), which isn't JSON; [reportFailure] hears the failures that
- * are Settee's own (ADR 0010).
+ * have the episode, so never reported: a wrong address answers 404 too, and nothing tells the two
+ * apart. Throws when it didn't answer, or answered with a page in front of the API (a rate limit, a
+ * challenge), which isn't JSON; [reportFailure] hears the failures that are Settee's own (ADR 0010).
  */
 internal fun OkHttpClient.episodeJson(
     url: HttpUrl,

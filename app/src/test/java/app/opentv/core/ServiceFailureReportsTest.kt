@@ -232,11 +232,9 @@ class ServiceFailureReportsTest {
         assertThat(sentEvents()).isEmpty()
     }
 
-    private fun introDb(reply: String) =
-        IntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
+    private fun introDb(reply: String) = IntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
 
-    private fun theIntroDb(reply: String) =
-        TheIntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
+    private fun theIntroDb(reply: String) = TheIntroDbClient(FakeJsonHttp { reply }.http) { reports.report(it) }
 
     @Test
     fun `a 403 from IntroDB or TheIntroDB arrives as a timings failure, without the show`() {

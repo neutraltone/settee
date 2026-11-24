@@ -294,20 +294,16 @@ class CrashReports(
                 // handler and the freeze watch hold. A freeze or crash Sentry finds in Android's exit
                 // history from before reports were turned on happened while the viewer hadn't said yes.
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
-                // A freeze caught as it happens is one a journey still running could be slow for. Only
-                // before Android 11 does Sentry catch them so; from 11 on it reads them from the exit
-                // history at the next launch, and those only ever killed the process: the journey they
-                // froze never ended to be reported, and this launch's journeys weren't theirs.
-                val frozeNow = exitedAt == null && event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }
-                if (frozeNow) frozeAt = freezes.elapsed()
+                if (event.isFreezeAsItHappened(exitedAt)) frozeAt = freezes.elapsed()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
                 val asked = sendingAsked?.takeIf { it.eventId == event.eventId }?.what
+                val id = settings.crashReportsInstallId
                 when {
-                    asked is Outgoing.Held -> CrashScrubbing.event(event, settings.crashReportsInstallId, asked.crash.at.screen)
+                    asked is Outgoing.Held -> CrashScrubbing.event(event, id, asked.crash.at.screen)
                         .also { asked.crash.restoreAt(it) }
-                    asked is Outgoing.Viewer -> CrashScrubbing.event(event, settings.crashReportsInstallId, asked.screen)
+                    asked is Outgoing.Viewer -> CrashScrubbing.event(event, id, asked.screen)
                     !on.value || fromBefore -> null
-                    else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+                    else -> CrashScrubbing.event(event, id, screen)
                         .also { HandledEvents.withFreeMemory(it, context) }
                 }
             }
@@ -350,9 +346,6 @@ class CrashReports(
         const val MOST_REFUSALS = 2
         const val FREEZE_MILLIS = 5_000L
         const val FLUSH_MILLIS = 15_000L
-
-        /** How Sentry marks a freeze it caught while the app was running. */
-        const val ANR_MECHANISM = "ANR"
 
         /** Files in Sentry's cache that only say which of Android's exit records it has looked at. */
         val SENTRY_MARKERS = setOf(
@@ -398,6 +391,19 @@ class CrashReports(
         override fun close() = Unit
     }
 }
+
+/** How Sentry marks a freeze. */
+private const val ANR_MECHANISM = "ANR"
+
+/**
+ * Whether this is a freeze Sentry caught as it happened, rather than one it read from Android's exit
+ * history ([exitedAt] set): only those can be a journey still running's. Only before Android 11 does
+ * Sentry catch them so; from 11 on it reads them from the exit history at the next launch, and that
+ * only holds freezes that killed the process: the journey one froze never ended to be reported, and
+ * this launch's journeys weren't its.
+ */
+private fun SentryEvent.isFreezeAsItHappened(exitedAt: Long?) =
+    exitedAt == null && exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }
 
 /** Errors and freezes only (ADR 0009): everything else Sentry can collect or send, off. */
 private fun SentryAndroidOptions.errorsAndFreezesOnly() {

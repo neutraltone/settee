@@ -8,8 +8,8 @@ package app.opentv.data.repo
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.core.ReportedSource
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Recording

@@ -75,7 +75,11 @@ class UpdateChecker(
 
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    ServiceFailure.ofStatus(Service.UPDATE_CHECK, Operation.LATEST_RELEASE, response.code)?.let(reportFailure)
+                    ServiceFailure.ofStatus(
+                        Service.UPDATE_CHECK,
+                        Operation.LATEST_RELEASE,
+                        response.code,
+                    )?.let(reportFailure)
                     return@withContext Outcome.CouldNotCheck("HTTP ${response.code}")
                 }
                 val body = response.body.string()
