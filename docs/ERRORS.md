@@ -21,34 +21,46 @@ a television (`isRunningOnTelevision`), "this device" on phones and tablets.
 Who builds them: `PlaybackErrors` for playback, `ErrorWording` (`core/`) for everything else, through
 `ServiceLocator.errorWording`. Change a mapping here and in the code together.
 
-## Send report
+## Error Reports
 
-An error that could be Settee's fault offers **Send report** under its buttons (ADR 0010), with a line
-above it saying what's sent. Pressing it sends that one failure as an Error Report, whether or not crash
-reports are on, and doesn't turn them on; it then says Sent for as long as that error is shown. It's
-offered only in a build with Settee's Sentry key. The error's own main action (Try again, or a form's
-buttons) keeps the Highlight it starts with, and Send report is Down from it.
+An error that could be Settee's fault is reported (ADR 0010). It's never reported in a build without
+Settee's Sentry key.
 
-Offered on:
+- **Crash and error reports on:** Settee sends it as it's shown, once per failure on each screen while
+  the app stays open, and the detail line ends " · " and `report_sent_to_settee` ("Sent to Settee").
+  Nothing to press.
+- **Crash and error reports off:** `report_button` (Report) is the last button in the error's own row,
+  after Try again, Provider setup or Back, so the main action keeps the Highlight it starts with and
+  Report is Right along the row. Where the error's own action is a list row (a provider's Refresh again
+  in Settings › Providers, OpenSubtitles' sign-in row), Report is the next thing Down from it. OK opens
+  the Side Panel `report_question_title` (Send a report?), with `report_question_body` saying what's
+  sent and `report_question_always_note`, then `report_question_send` (where the Highlight starts),
+  `report_question_dont_send` and `report_question_always_send`, which turns crash and error reports on
+  and sends it. Back, like Don't send, sends nothing. Once it's sent, Report goes, the Highlight goes
+  back to the error's main action, and the detail line says Sent to Settee, over the day's cap too.
+
+Reported on:
 
 - Movies' and Shows' lists that failed to download, and Live TV's channels that failed to load
   ([Movies and Shows lists](#movies-and-shows-lists), [Provider connection](#provider-connection));
 - a provider's refresh failure in Settings › Providers;
 - a show's episodes that failed to load ([Show page episodes](#show-page-episodes));
-- playback: a film, episode or catch-up that stopped, and a live channel that failed with Try again
-  ([Playback](#playback)). A live channel without Try again doesn't offer it: the Highlight stays on
-  the full-screen catcher, where Up and Down change channel;
-- Test connection and Save and load on a provider's form;
+- playback: a film, episode or catch-up that stopped, and a live channel that failed
+  ([Playback](#playback)). A live channel without Try again shows no Report, since the Highlight stays
+  on the full-screen catcher, where Up and Down change channel, but is still sent while reports are
+  on. With Try again, Report is Right of it; Up, Down and the channel keys still change channel;
+- Test connection and Save and load on a provider's form, Report after Save and load;
 - OpenSubtitles' sign-in ([OpenSubtitles](#opensubtitles)).
 
-Never on a failure that's certainly the viewer's own, read from the detail line's codes
+Never a failure that's certainly the viewer's own, read from the detail line's codes
 (`ErrorReport.offeredFor`): no internet or an address that can't be found (`UnknownHost`, `Connect`,
 `NoRouteToHost`), and a login or address the viewer gave that was turned down (`LoginRejected`,
 `AccountInactive`, `BadAddress`, `SignInRejected`, `HTTP 401`). Nor on an error with no detail line,
 which has nothing to send.
 
 The report carries the error's kind (the detail line's first code), the detail line itself after
-scrubbing, the screen, the kind of provider (Xtream, M3U, Stalker or Stremio), and the app and device
+scrubbing, the screen, the kind of provider (Xtream, M3U, Stalker or Stremio), who sent it (Settee or
+the viewer), and the app and device
 fields every crash report has; never the sentence, the provider's address, name or login, the channel
 or title, or a stream's address. docs/PRIVACY.md has the full list.
 

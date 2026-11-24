@@ -103,8 +103,8 @@ Settee keeps only an allow-list of fields before a report leaves the device:
   Stick. Both count; say in the issue when a crash has only been seen in `pr`.
 - `user.id`: a random install id per device. Sentry's **user count is the number of distinct
   devices** (installs). An Error Report carries it only if crash reports have been turned on on that
-  device, so Error Reports from installs that never turned them on have no id and aren't counted
-  in the user count.
+  device, so Error Reports a viewer sent from an install that never turned them on have no id and
+  aren't counted in the user count. Every `sent-by: settee` one has it.
 - Tags, and no others (the scrubber drops every tag not on its list, `TAGS_KEPT` in
   `app/src/main/java/app/opentv/core/CrashScrubbing.kt`):
   - `screen`: the navigation route that was open (`main` covers every tab). Nameable.
@@ -120,7 +120,8 @@ Settee keeps only an allow-list of fields before a report leaves the device:
     code or docs/ERRORS.md, otherwise describe it in your own words; and `error-detail`, the whole
     detail line after scrubbing. **`error-detail` is never nameable**: read it to understand the
     failure, and say in your own words at most which HTTP statuses and stream formats it shows, as
-    counts.
+    counts. `sent-by`: `settee` when Settee sent it on its own as the error was shown (crash reports
+    on), `viewer` when the viewer chose Send or Always send. Nameable.
   - `source-kind`, on Slow Journeys and Error Reports: `xtream`, `m3u`, `stalker` or `stremio`, the
     kind of Source, never which one. Nameable.
 - Device model, Android version, free memory, and the stack trace. Settee's own frames are in
@@ -162,11 +163,13 @@ Settee keeps only an allow-list of fields before a report leaves the device:
     freeze is reported instead). Sentry groups them by that message, so each journey is one Sentry
     issue. The journeys, their start and end and their thresholds are `JourneyTimer.Journey` in
     `app/src/main/java/app/opentv/core/JourneyTimer.kt` and the table in ADR 0010.
-  - **Error Reports**: `VIEWER_REPORT`. A viewer pressed Send report on an error Settee showed, for
-    that one failure, whether or not crash reports were on. A message event titled
-    `VIEWER_REPORT: <error kind>` with no stack trace (a failure reaches the screen as a sentence and
-    a detail line, with no exception left to send), carrying the `error-kind`, `error-detail` and
-    usually `source-kind` tags. This is the only way a Provider
+  - **Error Reports**: `ERROR_REPORT`. An error Settee showed that could be its fault: sent by
+    Settee as it was shown while crash reports were on, once per failure per screen per launch
+    (`sent-by: settee`), or chosen by the viewer from the error's Report while they were off
+    (`sent-by: viewer`). Settee's own are far more numerous, since they need no press. A message
+    event titled `ERROR_REPORT: <error kind>` with no stack trace (a failure reaches the screen as a
+    sentence and a detail line, with no exception left to send), carrying the `error-kind`,
+    `error-detail`, `sent-by` and usually `source-kind` tags. This is the only way a Provider
     failure (HTTP errors, dead streams, web pages, replies cut off part way) ever reaches Sentry, so
     many are the Provider's trouble, not Settee's. Sentry groups them by title, so each error kind is
     usually one Sentry issue, but still group by the `error-kind` tag, not by Sentry issue.
@@ -243,8 +246,8 @@ Fetch its details and tag breakdowns, and tell its kind from its title, confirme
 - **Crashes, freezes, `XTREAM_PARSE`, `DATABASE_MIGRATION` and service failures** (`OPENSUBTITLES`,
   `TMDB`, `INTRODB`, `UPDATE_CHECK`): the three sections below, as they are.
 - **Slow Journeys** (`SLOW_JOURNEY: <journey>`): **Slow Journeys** below, instead.
-- **Error Reports** (`VIEWER_REPORT`): **Error Reports** below, instead. These are grouped by error
-  kind first; never handle a `VIEWER_REPORT` Sentry issue on its own.
+- **Error Reports** (`ERROR_REPORT`): **Error Reports** below, instead. These are grouped by error
+  kind first; never handle an `ERROR_REPORT` Sentry issue on its own.
 
 All kinds share the cap of 3 new issues a run. Rank all candidates together: ANRs first, then
 crashes, handled errors and service failures, then Slow Journeys, then Error Report groups, and
@@ -304,15 +307,18 @@ closed in). A few events in a newer release from one install are expected; do no
 
 ### Error Reports
 
-Error Reports are leads, not issues: each is one viewer's say-so about one failure, often their
-Provider's. Group them, and file only what several installs report.
+Error Reports are leads, not issues: each is one error one viewer saw, often their Provider's, sent
+by Settee or by the viewer. Group them, and file only what several installs report. Most are
+`sent-by: settee` and arrive whether or not anyone thought the error worth sending, so a kind with
+many events is not by itself a sign of a bug: count installs, not events. A `sent-by: viewer` one is
+a viewer going out of their way, and worth mentioning in the summary even for one install.
 
 1. List the project's issues seen in the last 30 days (the recent-issues request with
-   `lastSeen:-30d` and `statsPeriod=30d`) and keep those whose title starts `VIEWER_REPORT`.
+   `lastSeen:-30d` and `statsPeriod=30d`) and keep those whose title starts `ERROR_REPORT`.
 2. List each one's events from the last 30 days, and group every event by its `error-kind` tag
    across all those Sentry issues.
-3. For each error kind with at least one event in the last 36 hours, count its events, its releases,
-   and its **installs**: the distinct `user.id`s, with all events that have no `user.id` counted
+3. For each error kind with at least one event in the last 36 hours, count its events (split by
+   `sent-by`), its releases, and its **installs**: the distinct `user.id`s, with all events that have no `user.id` counted
    together as one more install (they could all be one viewer).
 
 **No matching GitHub issue.** An error kind is a candidate only if **at least 3 installs** reported
@@ -388,12 +394,12 @@ The same title rule, labels and sections, with these differences:
   what changed in it between releases if it got slower; say if the events suggest a short-of-memory
   stick rather than Settee's code. Add `<!-- sentry-journey: <journey> -->` under the
   `sentry-issue-id` marker.
-- **Error Report groups.** Title it for the failure viewers report, for example `Several viewers
-  report films stopping with a bad HTTP status`. In **What broke**, the error kind, what the viewer
-  saw (the sentence `ErrorWording` or `PlaybackErrors` shows for it, in your own words), and that
-  these are reports viewers chose to send. In **Where**, the code that builds that error (Error
-  Reports have no stack). In **How often**, events and installs (saying how many
-  events had no install id), releases, the `source-kind` and `screen` breakdowns, devices and
+- **Error Report groups.** Title it for the failure viewers see, for example `Several viewers
+  see films stopping with a bad HTTP status`. In **What broke**, the error kind, what the viewer
+  saw (the sentence `ErrorWording` or `PlaybackErrors` shows for it, in your own words), and how many
+  Settee sent on its own and how many viewers chose to send (`sent-by`). In **Where**, the code that
+  builds that error (Error Reports have no stack). In **How often**, events and installs (saying how many
+  events had no install id), releases, the `sent-by`, `source-kind` and `screen` breakdowns, devices and
   Android versions. In **Draft diagnosis**, whether this looks like Settee's bug or the Providers'
   own trouble, and why; never quote `error-detail`. Instead of one `Sentry issue:` line, list every
   Sentry issue in the group, each with its `sentry-issue-id` marker, then

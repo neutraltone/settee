@@ -200,8 +200,8 @@ One of a few things Settee times (opening the app, opening Movies or Shows, a Ca
 _Avoid_: Performance trace, timing, metrics
 
 **Error Report**:
-What a viewer sends to Sentry by pressing Send report on an error that could be Settee's fault: that one error's kind and detail line, the screen and the Provider's kind, never its address, name or login. It's sent whether or not Crash Reports are on, and doesn't turn them on.
-_Avoid_: Feedback, bug report, Crash Report (that one Settee sends by itself)
+One error that could be Settee's fault, as the viewer saw it, sent to Sentry: its kind and detail line, the screen, the Provider's kind and who sent it, never the Provider's address, name or login. With Crash Reports on, Settee sends it as the error is shown, once per failure, and the detail line ends "Sent to Settee". With them off, the error's Report asks whether to send it: Send sends that one and leaves them off, Always send turns them on.
+_Avoid_: Feedback, bug report, Crash Report (that one is a crash or freeze)
 
 **Privacy**:
 The Settings section where a viewer turns Crash Reports on or off for this device, and sees what one contains.
