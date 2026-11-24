@@ -60,6 +60,16 @@ class OpenSubtitlesWordingTest {
     }
 
     @Test
+    fun `Settee's key turned down with a 401 says so, with that status on the detail line`() {
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.KeyRejected(status = 401))
+
+        assertThat(error.sentence).isEqualTo(
+            "OpenSubtitles isn't accepting Settee right now. Your account is fine: this needs an update to Settee.",
+        )
+        assertThat(error.detail).isEqualTo("KeyRejected · HTTP 401")
+    }
+
+    @Test
     fun `the daily limit when not signed in suggests signing in`() {
         val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.DownloadLimit(signedIn = false, resetsAt = null))
 
