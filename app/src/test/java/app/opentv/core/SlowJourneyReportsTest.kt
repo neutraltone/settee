@@ -49,7 +49,7 @@ class SlowJourneyReportsTest {
         environment = "test",
         CrashReports.Freezes(elapsed = { clock }),
     ).also { it.start(app) }
-    private val timer = JourneyTimer(now = { clock }, slow = reports::reportSlow)
+    private val timer = JourneyTimer(now = { clock }, slow = reportingTo(reports))
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
 
@@ -191,7 +191,7 @@ class SlowJourneyReportsTest {
         val blank = CrashReports(settings, CrashReports.Destination(""), "1.4.0", "test")
         blank.setOn(true)
 
-        JourneyTimer(now = { clock }, slow = blank::reportSlow).run {
+        JourneyTimer(now = { clock }, slow = reportingTo(blank)).run {
             start(Journey.COLD_START)
             clock += 30_000
             end(Journey.COLD_START)
@@ -200,9 +200,9 @@ class SlowJourneyReportsTest {
         assertThat(sentEvents()).isEmpty()
     }
 
-    /** As the app hands [CrashReports] a slow journey. */
-    private fun CrashReports.reportSlow(slow: JourneyTimer.SlowJourney) =
-        report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(slow))
+    /** As the app hands [to] a slow journey. */
+    private fun reportingTo(to: CrashReports): (JourneyTimer.SlowJourney) -> Unit =
+        { to.report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(it)) }
 
     private companion object {
         val CALL: okhttp3.Call = OkHttpClient().newCall(Request.Builder().url("https://example.com/").build())
