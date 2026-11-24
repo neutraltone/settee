@@ -459,7 +459,7 @@ class CatalogRepository(
         val info = if (!movie.isEnriched && source?.kind == SourceKind.XTREAM) {
             // Not swallowing a cancel: a page left, or a highlight moved on, while the panel was slow
             // would otherwise go on to a TMDB look-up whose answer nobody waits for.
-            runCatching { api.movieInfo(source, movie.streamId) }.getOrNullUnlessCancelled()
+            runCatching { api.movieInfo(source, movie.streamId) }.rethrowCancel().getOrNull()
         } else {
             null
         }
@@ -800,7 +800,7 @@ class CatalogRepository(
         if (storeEpisodes && reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
         reply.info
     }
-        .onFailure { if (it is CancellationException) throw it }
+        .rethrowCancel()
         // The exception's kind only: some clients put the request's address, with the account's
         // login in it, in the message, and the browse backdrop can fail here on every highlight.
         .onFailure { Log.w(TAG, "Series info failed for series $seriesId: ${it.javaClass.simpleName}") }
@@ -855,7 +855,7 @@ class CatalogRepository(
     suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(dispatchers.io) {
         if (!source.kind.carriesMoviesAndShows) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
-            .onFailure { if (it is CancellationException) throw it }
+            .rethrowCancel()
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
             .getOrElse { vodFailed(it, wording, settings) }
     }
@@ -975,7 +975,7 @@ class CatalogRepository(
 
     /** Why [fetch] failed, or null if it worked; anything but cancelling counts as a list that didn't come back. */
     private suspend fun fetchList(fetch: suspend () -> Unit): Throwable? = runCatching { fetch() }
-        .onFailure { if (it is CancellationException) throw it }
+        .rethrowCancel()
         .onFailure { Log.w(TAG, "A movie or show list failed", it) }
         .exceptionOrNull()
 
@@ -1207,8 +1207,7 @@ private const val RECENTLY_ADDED = 20
 private const val MORE_LIKE_THIS_LIMIT = 20
 
 /**
- * [Result.getOrNull], except a cancel is thrown on, so the caller stops rather than going on as if
- * the call had just failed. Out here, not in the class, as detekt counts the class's size.
+ * This result, unless it failed by being cancelled: that's thrown on, so the caller stops rather than
+ * going on as if the call had just failed. Out here, not in the class, as detekt counts the class's size.
  */
-private fun <T> Result<T>.getOrNullUnlessCancelled(): T? =
-    onFailure { if (it is CancellationException) throw it }.getOrNull()
+private fun <T> Result<T>.rethrowCancel(): Result<T> = onFailure { if (it is CancellationException) throw it }
