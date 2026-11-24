@@ -9,6 +9,7 @@ import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.annotation.RequiresApi
 
 /**
@@ -20,6 +21,7 @@ import androidx.annotation.RequiresApi
 internal object PastFreezes {
 
     /** Whether this Android keeps the history, so nothing need watch for freezes as they happen. */
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.R)
     val kept: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     /** A freeze: when Android ended Settee for it, and where the main thread was stuck. */
