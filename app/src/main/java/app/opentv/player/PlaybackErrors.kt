@@ -188,17 +188,27 @@ object PlaybackErrors {
         }
     }
 
-    /** Why [app.opentv.data.repo.PlaybackSources] had nothing to play. */
-    fun describe(context: Context, failure: Playable.Failure): ViewerError = ViewerError(
+    /**
+     * Why [app.opentv.data.repo.PlaybackSources] had nothing to play. [cause] is [Playable.Failed]'s:
+     * a portal that couldn't be reached is worded as the network failure it was, as a stream's is.
+     */
+    fun describe(
+        context: Context,
+        failure: Playable.Failure,
+        onTelevision: Boolean,
+        cause: Throwable? = null,
+    ): ViewerError = ViewerError(
         context.getString(
             when (failure) {
                 Playable.Failure.LINK_REFUSED -> R.string.playback_link_refused
+                Playable.Failure.UNREACHABLE -> ErrorWording.networkSentenceOf(cause, onTelevision)
+                    ?: hardware(onTelevision, R.string.error_cant_reach_tv, R.string.error_cant_reach_device)
                 Playable.Failure.NO_CATCHUP -> R.string.playback_no_catchup
                 Playable.Failure.GONE -> R.string.error_gone
                 Playable.Failure.BAD_ADDRESS -> R.string.error_bad_address
             },
         ),
-        ErrorWording.codeName(failure.name),
+        cause?.let(ErrorWording::codeOf) ?: ErrorWording.codeName(failure.name),
     )
 
     fun describeHttpStatus(context: Context, code: Int): String = when (code) {

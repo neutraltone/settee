@@ -66,17 +66,16 @@ class StalkerConnectionTest {
     }
 
     @Test
-    fun `a channel list that fails after the handshake is server trouble, not an account with no channels`() =
-        testing {
-            test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
-            test.panel.replies["get_all_channels"] = "!503"
+    fun `a channel list that fails after the handshake is server trouble, not an account with no channels`() = testing {
+        test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
+        test.panel.replies["get_all_channels"] = "!503"
 
-            val reason = failedSync()
+        val reason = failedSync()
 
-            assertThat(reason.sentence)
-                .isEqualTo("Your provider is having problems. That's at their end, so try again later.")
-            assertThat(reason.detail).isEqualTo("HTTP 503")
-        }
+        assertThat(reason.sentence)
+            .isEqualTo("Your provider is having problems. That's at their end, so try again later.")
+        assertThat(reason.detail).isEqualTo("HTTP 503")
+    }
 
     @Test
     fun `a portal that answers without a token is still a refused MAC`() = testing {

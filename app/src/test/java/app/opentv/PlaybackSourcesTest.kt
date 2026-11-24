@@ -111,7 +111,8 @@ class PlaybackSourcesTest {
         assertThat(playable.failure).isEqualTo(Playable.Failure.UNREACHABLE)
         assertThat(playable.title).isEqualTo("BBC One")
         val shown = PlaybackErrors.describe(context, playable.failure, onTelevision = true, playable.cause)
-        assertThat(shown.sentence).isEqualTo("Can't reach your provider. Check this TV is online and the address is right.")
+        val cantReach = "Can't reach your provider. Check this TV is online and the address is right."
+        assertThat(shown.sentence).isEqualTo(cantReach)
         assertThat(shown.detail).isEqualTo("UnknownHost")
     }
 

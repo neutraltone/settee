@@ -13,6 +13,7 @@ import app.opentv.R
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
+import app.opentv.isRunningOnTelevision
 import app.opentv.player.PlaybackErrors
 
 /** Hands [key]'s stream to another installed player, saying so if it can't be played or there's none. */
@@ -20,7 +21,7 @@ internal suspend fun openInExternalPlayer(context: Context, sources: PlaybackSou
     val playable = sources.forWatching(key)
     if (playable is Playable.Failed) {
         // A toast can't hold the shared ErrorMessage, so the detail line goes on its own line under the sentence.
-        val reason = PlaybackErrors.describe(context, playable.failure)
+        val reason = PlaybackErrors.describe(context, playable.failure, isRunningOnTelevision(context), playable.cause)
         Toast.makeText(context, "${reason.sentence}\n${reason.detail}".trim(), Toast.LENGTH_LONG).show()
         return
     }

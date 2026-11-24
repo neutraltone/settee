@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
 import app.opentv.data.repo.Playable
+import app.opentv.isRunningOnTelevision
 import app.opentv.player.PlaybackErrors
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.Message
@@ -27,7 +28,8 @@ import app.opentv.ui.design.ScreenFrame
 @Composable
 internal fun GoneDetail(onBack: () -> Unit) {
     val context = LocalContext.current
-    val gone = remember(context) { PlaybackErrors.describe(context, Playable.Failure.GONE) }
+    val gone =
+        remember(context) { PlaybackErrors.describe(context, Playable.Failure.GONE, isRunningOnTelevision(context)) }
     val back = remember { FocusRequester() }
     ScreenFrame {
         Message(

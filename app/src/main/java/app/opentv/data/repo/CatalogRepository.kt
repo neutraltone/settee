@@ -833,7 +833,7 @@ class CatalogRepository(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Catalogue sync failed for source ${source.id}", e)
+            Log.w(TAG, "Catalogue sync failed for source ${source.id}: ${kindsOf(e)}")
             SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
         } catch (e: OutOfMemoryError) {
             // A list too big for the heap. The half-built list went with the frames that threw, so
@@ -1204,6 +1204,16 @@ class CatalogRepository(
 
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
+
+/**
+ * [error]'s kind and its causes', for a log: a network failure's message can carry the provider's
+ * host, and some clients put the request's address, with the account's login in it, there too.
+ */
+private fun kindsOf(error: Throwable): String =
+    generateSequence(error) { it.cause }.take(MAX_LOGGED_CAUSES).joinToString(" < ") { it.javaClass.simpleName }
+
+/** Far more than any client wraps a failure, and stops a cause that loops back on itself. */
+private const val MAX_LOGGED_CAUSES = 5
 private const val MORE_LIKE_THIS_LIMIT = 20
 
 /**
