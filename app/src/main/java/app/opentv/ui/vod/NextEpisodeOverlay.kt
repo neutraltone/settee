@@ -6,6 +6,8 @@
 package app.opentv.ui.vod
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -46,6 +50,7 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeMotion
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -182,7 +187,23 @@ private fun NextEpisodeCardView(
 private fun StillWatchingPrompt(onContinue: () -> Unit, onStop: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    Box(Modifier.fillMaxSize().background(Dim), contentAlignment = Alignment.Center) {
+    // Whoever this is for is likely half-asleep, and the room going dark in one frame is the harshest
+    // way to ask. Keyed to the prompt arriving, not to the stream being let go, which changes it in place.
+    val fade = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { fade.animateTo(1f, tween(STILL_WATCHING_FADE_MILLIS, easing = SetteeMotion.Arrive)) }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                alpha = fade.value
+                // Each draw faded on its own, not the whole screen drawn offscreen and faded: that would
+                // be a full-screen buffer on a Stick. The words sit on the dim, so mid-fade they're a
+                // touch see-through against it, which nobody sees in 300 ms.
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            }
+            .background(Dim),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = 560.dp)) {
             Text(stringResource(R.string.player_still_watching), SetteeType.ScreenTitle)
             Spacer(Modifier.height(28.dp))
@@ -216,6 +237,7 @@ private val CARD_WIDTH = 340.dp
 /** The Next Episode card, for tests to measure. */
 internal const val NEXT_EPISODE_CARD_TAG = "next_episode_card"
 
+private const val STILL_WATCHING_FADE_MILLIS = 300
 private const val COUNTDOWN_SECONDS = 15f
 
 // A plain dim over the picture: LOOK.md rules out blur.

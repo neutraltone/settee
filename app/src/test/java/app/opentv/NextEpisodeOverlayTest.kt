@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -57,7 +58,8 @@ class NextEpisodeOverlayTest {
     private val app = testGraph.app
     private val graph = testGraph.graph
     private val playback = FakePlayback()
-    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph) } }
+    private var now = 0L
+    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph, clock = { now }) } }
     private var stopped = false
 
     @After
@@ -331,6 +333,66 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Are you still watching?").assertExists()
         compose.onNodeWithText("Keep watching").assertIsFocused()
         captureScreen("vod_player_still_watching")
+    }
+
+    /** "Are you still watching?" one frame after it's asked, with the clock held there. */
+    private fun stillWatchingArriving() {
+        showPlayer()
+        runUnattended(3)
+        compose.mainClock.autoAdvance = false
+        runUnattended(1)
+        compose.mainClock.advanceTimeByFrame()
+    }
+
+    /** How bright the question's words are drawn: its brightest pixel's brightest channel. */
+    private fun questionBrightness(): Int {
+        val image = compose.onNodeWithText("Are you still watching?").captureToImage()
+        val pixels = IntArray(image.width * image.height).also { image.readPixels(it) }
+        return pixels.maxOf { maxOf(it shr 16 and 0xFF, it shr 8 and 0xFF, it and 0xFF) }
+    }
+
+    @Test
+    fun `the question fades up rather than cutting in, and not again when the stream is let go`() {
+        stillWatchingArriving()
+        val firstFrame = questionBrightness()
+        compose.mainClock.advanceTimeBy(50)
+        val midway = questionBrightness()
+        compose.mainClock.advanceTimeBy(1_000)
+        val settled = questionBrightness()
+
+        assertThat(firstFrame).isLessThan(midway)
+        assertThat(midway).isLessThan(settled)
+
+        // Five minutes on, the provider connection is let go, which changes the prompt in place.
+        now += 5 * 60_000
+        runBlocking { vm.poll() }
+        compose.mainClock.advanceTimeByFrame()
+        assertThat(playback.stopped).isTrue()
+        assertThat(questionBrightness()).isEqualTo(settled)
+    }
+
+    @Test
+    fun `OK while the question is still fading up plays the Next Episode`() {
+        stillWatchingArriving()
+
+        compose.onNodeWithText("Keep watching").assertIsFocused()
+        press(Key.DirectionCenter)
+        // The press has landed mid-fade; the clock runs again only so the episode can start.
+        compose.mainClock.autoAdvance = true
+
+        waitForEpisode(15)
+        compose.onNodeWithText("Are you still watching?").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Stop while the question is still fading up leaves the player at once`() {
+        stillWatchingArriving()
+
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Stop").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertThat(stopped).isTrue()
     }
 
     @Test
