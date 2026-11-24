@@ -144,6 +144,9 @@
     <string name="sync_nas_done">Đã đồng bộ %1$d mục từ %2$d thiết bị.</string>
     <string name="sync_nas_uploaded">Đã lưu thiết bị này vào NAS. Chưa có thiết bị nào khác đồng bộ ở đây.</string>
     <string name="sync_nas_failed">Không thể kết nối tới NAS của bạn. Kiểm tra xem nó đã bật chưa và thông tin trong Cài đặt ghi hình có đúng không.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Không đọc được dữ liệu mà %1$d thiết bị khác đã lưu trên NAS của bạn. Hãy đồng bộ lại sau giây lát hoặc cập nhật Settee trên thiết bị đó.</item>
+    </plurals>
     <string name="about_update_available">Có bản cập nhật: %1$s — xem hướng dẫn để cài đặt.</string>
     <string name="about_up_to_date">Bạn đang dùng phiên bản mới nhất.</string>
     <string name="about_checking">Đang kiểm tra…</string>

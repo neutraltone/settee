@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%2$d डिवाइस से %1$d आइटम सिंक किए गए।</string>
     <string name="sync_nas_uploaded">इस डिवाइस को NAS पर सेव किया गया। अभी तक किसी अन्य डिवाइस ने यहां सिंक नहीं किया है।</string>
     <string name="sync_nas_failed">आपके NAS तक नहीं पहुंचा जा सका। जांचें कि वह चालू है और रिकॉर्डिंग सेटिंग्स में विवरण सही हैं।</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d दूसरे डिवाइस ने आपके NAS पर जो सेव किया, उसे पढ़ा नहीं जा सका। थोड़ी देर में फिर से सिंक करें, या उस पर Settee अपडेट करें।</item>
+        <item quantity="other">%1$d दूसरे डिवाइस ने आपके NAS पर जो सेव किया, उसे पढ़ा नहीं जा सका। थोड़ी देर में फिर से सिंक करें, या उन पर Settee अपडेट करें।</item>
+    </plurals>
     <string name="about_update_available">अपडेट उपलब्ध है: %1$s — इंस्टॉल करने के लिए प्रॉम्प्ट देखें।</string>
     <string name="about_up_to_date">आप नवीनतम वर्शन पर हैं।</string>
     <string name="about_checking">जांच हो रही है…</string>

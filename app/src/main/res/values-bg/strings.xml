@@ -144,6 +144,10 @@
     <string name="sync_nas_done">Синхронизирани %1$d елемента от %2$d устройства.</string>
     <string name="sync_nas_uploaded">Това устройство е запазено на NAS. Все още никое друго устройство не се е синхронизирало тук.</string>
     <string name="sync_nas_failed">Вашият NAS не можа да бъде достигнат. Проверете дали е включен и дали данните в Настройки за запис са правилни.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Записаното от %1$d друго устройство във вашия NAS не можа да бъде прочетено. Синхронизирайте отново след малко или обновете Settee на него.</item>
+        <item quantity="other">Записаното от %1$d други устройства във вашия NAS не можа да бъде прочетено. Синхронизирайте отново след малко или обновете Settee на тях.</item>
+    </plurals>
     <string name="about_update_available">Налична актуализация: %1$s — вижте подканата за инсталиране.</string>
     <string name="about_up_to_date">Използвате най-новата версия.</string>
     <string name="about_checking">Проверка…</string>

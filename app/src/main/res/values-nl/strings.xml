@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%1$d item(en) gesynchroniseerd van %2$d apparaat/apparaten.</string>
     <string name="sync_nas_uploaded">Dit apparaat is opgeslagen op de NAS. Er zijn nog geen andere apparaten hiermee gesynchroniseerd.</string>
     <string name="sync_nas_failed">Kan je NAS niet bereiken. Controleer of deze aanstaat en of de gegevens in Opname-instellingen kloppen.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Kan niet lezen wat %1$d ander apparaat op je NAS heeft opgeslagen. Synchroniseer zo opnieuw, of werk Settee daarop bij.</item>
+        <item quantity="other">Kan niet lezen wat %1$d andere apparaten op je NAS hebben opgeslagen. Synchroniseer zo opnieuw, of werk Settee daarop bij.</item>
+    </plurals>
     <string name="about_update_available">Update beschikbaar: %1$s — zie de melding om te installeren.</string>
     <string name="about_up_to_date">Je hebt de nieuwste versie.</string>
     <string name="about_checking">Controleren…</string>

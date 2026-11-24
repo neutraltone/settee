@@ -144,6 +144,10 @@
     <string name="sync_nas_done">Synkroniserte %1$d element(er) fra %2$d enhet(er).</string>
     <string name="sync_nas_uploaded">Lagret denne enheten til NAS-en. Ingen andre enheter har synkronisert hit ennå.</string>
     <string name="sync_nas_failed">Fikk ikke kontakt med NAS-en din. Sjekk at den er på, og at detaljene i opptaksinnstillingene stemmer.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Kunne ikke lese det %1$d annen enhet har lagret på NAS-en din. Synkroniser igjen om litt, eller oppdater Settee på den.</item>
+        <item quantity="other">Kunne ikke lese det %1$d andre enheter har lagret på NAS-en din. Synkroniser igjen om litt, eller oppdater Settee på dem.</item>
+    </plurals>
     <string name="about_update_available">Oppdatering tilgjengelig: %1$s — se forespørselen for å installere.</string>
     <string name="about_up_to_date">Du har den nyeste versjonen.</string>
     <string name="about_checking">Sjekker…</string>

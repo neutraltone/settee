@@ -38,7 +38,10 @@ class LastNasSync(
     /** Keeps how [result] went, and gives its failure as the viewer sees it, or null when it worked. */
     fun record(result: NasSync.Result): ViewerError? {
         val failure = when (result) {
-            is NasSync.Result.Success -> null
+            is NasSync.Result.Success -> result.unreadableCause?.let { cause ->
+                // Not a success to the viewer: with no word, an unread lone device read as none (#485).
+                wording.ofCount(R.plurals.sync_nas_unreadable, result.unreadable, ErrorWording.codeOf(cause))
+            }
             NasSync.Result.NotConfigured -> wording.of(R.string.sync_nas_needs_setup)
             is NasSync.Result.Failed -> wording.of(result.cause, R.string.sync_nas_failed)
         }

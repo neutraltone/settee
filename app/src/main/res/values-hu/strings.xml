@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%1$d elem szinkronizálva %2$d eszközről.</string>
     <string name="sync_nas_uploaded">Ez az eszköz mentve a NAS-ra. Még egyetlen másik eszköz sem szinkronizált ide.</string>
     <string name="sync_nas_failed">Nem sikerült elérni a NAS-t. Ellenőrizze, hogy be van-e kapcsolva, és hogy a Felvétel beállításaiban megadott adatok helyesek-e.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nem sikerült beolvasni, amit %1$d másik eszköz mentett a NAS-ra. Szinkronizáljon újra egy kis idő múlva, vagy frissítse rajta a Settee-t.</item>
+        <item quantity="other">Nem sikerült beolvasni, amit %1$d másik eszköz mentett a NAS-ra. Szinkronizáljon újra egy kis idő múlva, vagy frissítse rajtuk a Settee-t.</item>
+    </plurals>
     <string name="about_update_available">Elérhető frissítés: %1$s — a telepítéshez lásd a felugró ablakot.</string>
     <string name="about_up_to_date">A legújabb verziót használja.</string>
     <string name="about_checking">Ellenőrzés…</string>

@@ -144,6 +144,11 @@
     <string name="sync_nas_done">%1$d elemente sincronizate de la %2$d dispozitive.</string>
     <string name="sync_nas_uploaded">Acest dispozitiv a fost salvat pe NAS. Niciun alt dispozitiv nu s-a sincronizat încă aici.</string>
     <string name="sync_nas_failed">Nu s-a putut ajunge la NAS. Verifică dacă este pornit și dacă detaliile din Setări înregistrare sunt corecte.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nu s-a putut citi ce a salvat pe NAS %1$d alt dispozitiv. Sincronizează din nou peste puțin timp sau actualizează Settee pe el.</item>
+        <item quantity="few">Nu s-a putut citi ce au salvat pe NAS %1$d alte dispozitive. Sincronizează din nou peste puțin timp sau actualizează Settee pe ele.</item>
+        <item quantity="other">Nu s-a putut citi ce au salvat pe NAS %1$d de alte dispozitive. Sincronizează din nou peste puțin timp sau actualizează Settee pe ele.</item>
+    </plurals>
     <string name="about_update_available">Actualizare disponibilă: %1$s — vezi solicitarea pentru instalare.</string>
     <string name="about_up_to_date">Ai cea mai recentă versiune.</string>
     <string name="about_checking">Se verifică…</string>

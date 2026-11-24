@@ -144,6 +144,14 @@
     <string name="sync_nas_done">تمت مزامنة %1$d عنصر من %2$d جهاز.</string>
     <string name="sync_nas_uploaded">تم حفظ هذا الجهاز على وحدة NAS. لم تتم مزامنة أي جهاز آخر هنا بعد.</string>
     <string name="sync_nas_failed">تعذر الوصول إلى وحدة NAS. تأكد من أنها قيد التشغيل وأن التفاصيل في إعدادات التسجيل صحيحة.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="zero">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="one">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="two">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="few">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="many">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="other">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+    </plurals>
     <string name="about_update_available">يتوفر تحديث: %1$s — راجع الرسالة لتثبيته.</string>
     <string name="about_up_to_date">أنت تستخدم أحدث إصدار.</string>
     <string name="about_checking">جارٍ التحقق…</string>

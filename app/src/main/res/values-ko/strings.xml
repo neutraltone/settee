@@ -144,6 +144,9 @@
     <string name="sync_nas_done">%2$d개 기기에서 %1$d개 항목을 동기화했습니다.</string>
     <string name="sync_nas_uploaded">이 기기의 데이터를 NAS에 저장했습니다. 아직 다른 기기가 동기화하지 않았습니다.</string>
     <string name="sync_nas_failed">NAS에 연결하지 못했습니다. 전원이 켜져 있는지, 녹화 설정의 정보가 올바른지 확인하세요.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">다른 기기 %1$d대가 NAS에 저장한 내용을 읽을 수 없습니다. 잠시 후 다시 동기화하거나 해당 기기에서 Settee를 업데이트하세요.</item>
+    </plurals>
     <string name="about_update_available">업데이트 가능: %1$s - 설치 안내를 확인하세요.</string>
     <string name="about_up_to_date">최신 버전을 사용 중입니다.</string>
     <string name="about_checking">확인 중…</string>
