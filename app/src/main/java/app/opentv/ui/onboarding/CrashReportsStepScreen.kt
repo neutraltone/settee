@@ -10,12 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.CrashReports
-import app.opentv.core.ServiceLocator
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 
@@ -38,7 +37,7 @@ fun CrashReportsStepScreen(crashReports: CrashReports, onDone: () -> Unit, onBac
                 stringResource(R.string.crash_reports_step_later),
                 SetteeType.Body,
                 color = SetteeColors.QuietText,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = SetteeSpace.RowGap),
             )
         },
         actions = {
@@ -58,8 +57,3 @@ fun CrashReportsStepScreen(crashReports: CrashReports, onDone: () -> Unit, onBac
     )
 }
 
-/**
- * Whether Setup offers the Crash Reports step: a build with Settee's Sentry DSN, on a device that
- * hasn't already turned them on.
- */
-fun ServiceLocator.Graph.offersCrashReports(): Boolean = crashReports.let { it.available && !it.on.value }

@@ -22,7 +22,6 @@ import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.onboarding.CrashReportsStepScreen
 import app.opentv.ui.onboarding.OpenSubtitlesStepScreen
-import app.opentv.ui.onboarding.offersCrashReports
 import app.opentv.ui.onboarding.offersOpenSubtitles
 import app.opentv.ui.setup.SetupScreen
 
@@ -143,7 +142,7 @@ private fun firstStep(sources: SourcesViewModel): String =
 
 /** Where Setup goes after OpenSubtitles' step: Crash Reports' step when there is one, then Setup. */
 private fun afterOpenSubtitles(sources: SourcesViewModel): String =
-    if (sources.graph.offersCrashReports()) Routes.CRASH_REPORTS_STEP else Routes.SETUP
+    if (sources.graph.crashReports.offersSetupStep) Routes.CRASH_REPORTS_STEP else Routes.SETUP
 
 /**
  * Back from one of Setup's steps: to the form the provider was saved from, still filled in, which is
