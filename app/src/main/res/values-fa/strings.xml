@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%1$d مورد از %2$d دستگاه همگام‌سازی شد.</string>
     <string name="sync_nas_uploaded">این دستگاه در NAS ذخیره شد. هنوز هیچ دستگاه دیگری اینجا همگام‌سازی نکرده است.</string>
     <string name="sync_nas_failed">اتصال به NAS شما ممکن نشد. بررسی کنید روشن باشد و اطلاعات آن در تنظیمات ضبط درست باشد.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">خواندن آنچه %1$d دستگاه دیگر در NAS شما ذخیره کرده ممکن نشد. کمی بعد دوباره همگام‌سازی کنید یا Settee را روی آن به‌روز کنید.</item>
+        <item quantity="other">خواندن آنچه %1$d دستگاه دیگر در NAS شما ذخیره کرده‌اند ممکن نشد. کمی بعد دوباره همگام‌سازی کنید یا Settee را روی آن‌ها به‌روز کنید.</item>
+    </plurals>
     <string name="about_update_available">به‌روزرسانی موجود است: %1$s — برای نصب، پیام مربوطه را ببینید.</string>
     <string name="about_up_to_date">شما از جدیدترین نسخه استفاده می‌کنید.</string>
     <string name="about_checking">در حال بررسی…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles این نام کاربری یا گذرواژه را نپذیرفت. آن‌ها را بررسی کنید و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles این تلویزیون را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles این دستگاه را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
+    <string name="error_opensubtitles_not_saved_tv">در این تلویزیون جایی برای نگه داشتن این زیرنویس نیست. کمی فضا آزاد کنید و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_not_saved_device">در این دستگاه جایی برای نگه داشتن این زیرنویس نیست. کمی فضا آزاد کنید و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ورود را پذیرفت، اما این تلویزیون نتوانست آن را ذخیره کند. این تلویزیون را دوباره راه‌اندازی کنید و دوباره وارد شوید.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ورود را پذیرفت، اما این دستگاه نتوانست آن را ذخیره کند. این دستگاه را دوباره راه‌اندازی کنید و دوباره وارد شوید.</string>
     <string name="error_not_a_guide">این نشانی راهنمای برنامه نیست. بررسی کنید که پیوند درست باشد، یا اگر Wi-Fi درخواست ورود کرد، وارد شوید.</string>
     <string name="settings_guide_bad_address">این یک نشانی وب نیست. بررسی کنید که همان‌طور که پیوند راهنما نشان می‌دهد نوشته شده باشد، مثلاً example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee نتوانست پایگاه داده‌اش را بخواند، پس این اعداد در دسترس نیستند.</string>

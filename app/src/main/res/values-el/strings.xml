@@ -144,6 +144,10 @@
     <string name="sync_nas_done">Συγχρονίστηκαν %1$d στοιχείο/α από %2$d συσκευή/ές.</string>
     <string name="sync_nas_uploaded">Αυτή η συσκευή αποθηκεύτηκε στο NAS. Καμία άλλη συσκευή δεν έχει συγχρονιστεί εδώ ακόμη.</string>
     <string name="sync_nas_failed">Δεν ήταν δυνατή η πρόσβαση στο NAS σας. Ελέγξτε ότι είναι ενεργό και ότι τα στοιχεία στις Ρυθμίσεις εγγραφής είναι σωστά.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Δεν ήταν δυνατή η ανάγνωση όσων αποθήκευσε στο NAS σας %1$d άλλη συσκευή. Συγχρονίστε ξανά σε λίγο ή ενημερώστε το Settee σε αυτήν.</item>
+        <item quantity="other">Δεν ήταν δυνατή η ανάγνωση όσων αποθήκευσαν στο NAS σας %1$d άλλες συσκευές. Συγχρονίστε ξανά σε λίγο ή ενημερώστε το Settee σε αυτές.</item>
+    </plurals>
     <string name="about_update_available">Διαθέσιμη ενημέρωση: %1$s — δείτε την προτροπή για εγκατάσταση.</string>
     <string name="about_up_to_date">Χρησιμοποιείτε την πιο πρόσφατη έκδοση.</string>
     <string name="about_checking">Έλεγχος…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">Το OpenSubtitles δεν δέχτηκε αυτό το όνομα χρήστη ή τον κωδικό. Ελέγξτε τα και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_token_tv">Το OpenSubtitles αποσύνδεσε αυτή την τηλεόραση. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
     <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
+    <string name="error_opensubtitles_not_saved_tv">Δεν υπάρχει χώρος σε αυτή την τηλεόραση για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_not_saved_device">Δεν υπάρχει χώρος σε αυτή τη συσκευή για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η τηλεόραση δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή την τηλεόραση και συνδεθείτε ξανά.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η συσκευή δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή τη συσκευή και συνδεθείτε ξανά.</string>
     <string name="error_not_a_guide">Αυτή η διεύθυνση δεν είναι οδηγός προγράμματος. Ελέγξτε ότι είναι ο σωστός σύνδεσμος ή συνδεθείτε στο Wi-Fi, αν σας το ζητά.</string>
     <string name="settings_guide_bad_address">Αυτή δεν είναι διεύθυνση ιστού. Ελέγξτε ότι είναι γραμμένη όπως τη δείχνει ο σύνδεσμος του οδηγού, π.χ. example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Το Settee δεν μπόρεσε να διαβάσει τη βάση δεδομένων του, γι\' αυτό λείπουν αυτοί οι αριθμοί.</string>

@@ -144,6 +144,11 @@
     <string name="sync_nas_done">%1$d élément(s) synchronisé(s) depuis %2$d appareil(s).</string>
     <string name="sync_nas_uploaded">Cet appareil a été enregistré sur le NAS. Aucun autre appareil ne s\'est encore synchronisé ici.</string>
     <string name="sync_nas_failed">Impossible de joindre votre NAS. Vérifiez qu\'il est allumé et que les informations dans les paramètres d\'enregistrement sont correctes.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Impossible de lire ce que %1$d autre appareil a enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur cet appareil.</item>
+        <item quantity="many">Impossible de lire ce que %1$d autres appareils ont enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur ces appareils.</item>
+        <item quantity="other">Impossible de lire ce que %1$d autres appareils ont enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur ces appareils.</item>
+    </plurals>
     <string name="about_update_available">Mise à jour disponible : %1$s — consultez l\'invite pour l\'installer.</string>
     <string name="about_up_to_date">Vous utilisez la dernière version.</string>
     <string name="about_checking">Vérification…</string>
@@ -359,6 +364,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles n\'a pas accepté ce nom d\'utilisateur ou ce mot de passe. Vérifiez-les et réessayez.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a déconnecté ce téléviseur. Reconnectez-vous dans les Réglages.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a déconnecté cet appareil. Reconnectez-vous dans les Réglages.</string>
+    <string name="error_opensubtitles_not_saved_tv">Il n\'y a plus de place sur ce téléviseur pour garder ces sous-titres. Libérez de l\'espace, puis réessayez.</string>
+    <string name="error_opensubtitles_not_saved_device">Il n\'y a plus de place sur cet appareil pour garder ces sous-titres. Libérez de l\'espace, puis réessayez.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles a accepté la connexion, mais ce téléviseur n\'a pas pu l\'enregistrer. Redémarrez ce téléviseur, puis reconnectez-vous.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles a accepté la connexion, mais cet appareil n\'a pas pu l\'enregistrer. Redémarrez cet appareil, puis reconnectez-vous.</string>
     <string name="error_not_a_guide">Cette adresse n\'est pas un guide. Vérifiez que c\'est le bon lien, ou connectez-vous à votre Wi-Fi s\'il le demande.</string>
     <string name="settings_guide_bad_address">Ce n\'est pas une adresse web. Vérifiez qu\'elle est saisie comme l\'indique le lien du guide, par exemple example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee n\'a pas pu lire sa base de données, ces chiffres sont donc absents.</string>

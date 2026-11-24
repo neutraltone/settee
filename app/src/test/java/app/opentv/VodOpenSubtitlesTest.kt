@@ -245,6 +245,30 @@ class VodOpenSubtitlesTest {
     }
 
     @Test
+    fun `a subtitle there's no room to keep says so, not that OpenSubtitles can't be reached`() {
+        // Where the subtitles are kept is taken by a file, so the download can't be written, as on a full TV.
+        java.io.File(app.filesDir, "subtitles").apply { deleteRecursively() }.writeText("")
+        showFilm()
+        until { subtitles.subject.value != null }
+        openSubtitleList()
+        compose.onNode(entryRow).performClick()
+        until { compose.onAllNodes(hasText("English")).fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNodeWithText("English").performClick()
+
+        until {
+            compose.onAllNodes(hasTestTag(ERROR_DETAIL_TAG), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // The graph's wording is a phone's in these tests, so "this device".
+        compose.onNode(
+            hasText("There's no room on this device to keep that subtitle. Free up some space, then try again."),
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
+        compose.onNode(hasText("NotSaved · FileNotFound"), useUnmergedTree = true).assertIsDisplayed()
+        captureScreen("opensubtitles_results_not_saved")
+    }
+
+    @Test
     fun `a picked result shows over the film where it was, and is offered the next time with no new download`() {
         showFilm()
         until { subtitles.subject.value != null }

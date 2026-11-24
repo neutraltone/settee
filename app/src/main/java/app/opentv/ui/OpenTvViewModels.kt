@@ -68,6 +68,7 @@ import app.opentv.data.repo.versionsOf
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
+import app.opentv.sync.LastNasSync
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
@@ -2325,7 +2326,19 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private val _nasState = MutableStateFlow<NasState>(NasState.Idle)
-    val nasState: StateFlow<NasState> = _nasState.asStateFlow()
+
+    /**
+     * Until Sync now is pressed, the last sync's failure if it failed, the launch's included (#484):
+     * otherwise the row's reassuring note stayed up while nothing had synced for weeks.
+     */
+    val nasState: StateFlow<NasState> = combine(_nasState, graph.lastNasSync.outcome) { pressed, last ->
+        nasStateOf(pressed, last)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, nasStateOf(_nasState.value, graph.lastNasSync.outcome.value))
+
+    private fun nasStateOf(pressed: NasState, last: LastNasSync.Outcome?): NasState {
+        val failure = last?.failure
+        return if (pressed == NasState.Idle && failure != null) NasState.Failed(failure) else pressed
+    }
 
     fun setNasAutoSync(enabled: Boolean) = graph.settings.setNasAutoSync(enabled)
 
@@ -2334,17 +2347,13 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _nasState.value = NasState.Syncing
             val ctx = getApplication<Application>()
-            _nasState.value = when (val result = nas.sync()) {
-                is NasSync.Result.Success ->
-                    if (result.peers == 0) {
-                        NasState.Done(ctx.getString(R.string.sync_nas_uploaded))
-                    } else {
-                        NasState.Done(ctx.getString(R.string.sync_nas_done, result.merged, result.peers))
-                    }
-                is NasSync.Result.NotConfigured ->
-                    NasState.Failed(ViewerError(ctx.getString(R.string.sync_nas_needs_setup)))
-                is NasSync.Result.Failed ->
-                    NasState.Failed(graph.errorWording.of(result.cause, R.string.sync_nas_failed))
+            val result = nas.sync()
+            val failure = graph.lastNasSync.record(result)
+            _nasState.value = when {
+                failure != null -> NasState.Failed(failure)
+                result is NasSync.Result.Success && result.peers > 0 ->
+                    NasState.Done(ctx.getString(R.string.sync_nas_done, result.merged, result.peers))
+                else -> NasState.Done(ctx.getString(R.string.sync_nas_uploaded))
             }
         }
     }

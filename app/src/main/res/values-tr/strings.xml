@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%2$d cihazdan %1$d öge senkronize edildi.</string>
     <string name="sync_nas_uploaded">Bu cihaz NAS\'a kaydedildi. Henüz başka bir cihaz burada senkronize olmadı.</string>
     <string name="sync_nas_failed">NAS\'ınıza ulaşılamadı. Açık olduğundan ve Kayıt ayarlarındaki bilgilerin doğru olduğundan emin olun.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d başka cihazın NAS\'ınıza kaydettikleri okunamadı. Birazdan yeniden eşitleyin veya o cihazda Settee\'yi güncelleyin.</item>
+        <item quantity="other">%1$d başka cihazın NAS\'ınıza kaydettikleri okunamadı. Birazdan yeniden eşitleyin veya o cihazlarda Settee\'yi güncelleyin.</item>
+    </plurals>
     <string name="about_update_available">Güncelleme mevcut: %1$s — yüklemek için istemi görün.</string>
     <string name="about_up_to_date">En son sürümü kullanıyorsunuz.</string>
     <string name="about_checking">Kontrol ediliyor…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles bu kullanıcı adını veya şifreyi kabul etmedi. Kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles bu televizyonun oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
+    <string name="error_opensubtitles_not_saved_tv">Bu televizyonda o altyazıyı saklayacak yer yok. Biraz yer açıp tekrar deneyin.</string>
+    <string name="error_opensubtitles_not_saved_device">Bu cihazda o altyazıyı saklayacak yer yok. Biraz yer açıp tekrar deneyin.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles girişi kabul etti ama bu televizyon girişi kaydedemedi. Bu televizyonu yeniden başlatıp tekrar giriş yapın.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles girişi kabul etti ama bu cihaz girişi kaydedemedi. Bu cihazı yeniden başlatıp tekrar giriş yapın.</string>
     <string name="error_not_a_guide">Bu adres bir rehber değil. Doğru bağlantı olduğunu kontrol edin veya Wi-Fi isterse oturum açın.</string>
     <string name="settings_guide_bad_address">Bu bir web adresi değil. Rehberin bağlantısında göründüğü gibi yazıldığını kontrol edin, örneğin example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee veritabanını okuyamadı, bu yüzden bu sayılar eksik.</string>

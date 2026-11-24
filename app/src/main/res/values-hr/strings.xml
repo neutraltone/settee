@@ -144,6 +144,11 @@
     <string name="sync_nas_done">Sinkronizirano %1$d stavki s %2$d uređaja.</string>
     <string name="sync_nas_uploaded">Ovaj uređaj spremljen je na NAS. Nijedan drugi uređaj još se nije sinkronizirao ovdje.</string>
     <string name="sync_nas_failed">Nije moguće doći do NAS-a. Provjerite je li uključen i jesu li podaci u postavkama snimanja točni.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nije moguće pročitati ono što je %1$d drugi uređaj spremio na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njemu ažurirajte Settee.</item>
+        <item quantity="few">Nije moguće pročitati ono što su %1$d druga uređaja spremila na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+        <item quantity="other">Nije moguće pročitati ono što je %1$d drugih uređaja spremilo na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+    </plurals>
     <string name="about_update_available">Dostupno ažuriranje: %1$s — pogledajte upit za instalaciju.</string>
     <string name="about_up_to_date">Koristite najnoviju verziju.</string>
     <string name="about_checking">Provjera…</string>
@@ -359,6 +364,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nije prihvatio to korisničko ime ili lozinku. Provjerite ih i pokušajte ponovno.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles je odjavio ovaj televizor. Ponovno se prijavite u Postavkama.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
+    <string name="error_opensubtitles_not_saved_tv">Na ovom televizoru nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_not_saved_device">Na ovom uređaju nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles je prihvatio prijavu, ali je ovaj televizor nije mogao spremiti. Ponovno pokrenite ovaj televizor pa se ponovno prijavite.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles je prihvatio prijavu, ali je ovaj uređaj nije mogao spremiti. Ponovno pokrenite ovaj uređaj pa se ponovno prijavite.</string>
     <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>
     <string name="settings_guide_bad_address">To nije web-adresa. Provjerite je li upisana onako kako je prikazuje poveznica vodiča, npr. example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nije mogao pročitati svoju bazu podataka, pa ovi brojevi nedostaju.</string>

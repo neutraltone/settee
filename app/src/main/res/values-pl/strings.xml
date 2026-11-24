@@ -144,6 +144,12 @@
     <string name="sync_nas_done">Zsynchronizowano %1$d element(ów) z %2$d urządzenia(ń).</string>
     <string name="sync_nas_uploaded">Zapisano to urządzenie na NAS. Żadne inne urządzenie jeszcze się tu nie zsynchronizowało.</string>
     <string name="sync_nas_failed">Nie udało się połączyć z NAS. Sprawdź, czy jest włączony i czy dane w ustawieniach nagrywania są poprawne.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nie udało się odczytać tego, co %1$d inne urządzenie zapisało na NAS. Zsynchronizuj ponownie za chwilę albo zaktualizuj na nim Settee.</item>
+        <item quantity="few">Nie udało się odczytać tego, co %1$d inne urządzenia zapisały na NAS. Zsynchronizuj ponownie za chwilę albo zaktualizuj na nich Settee.</item>
+        <item quantity="many">Nie udało się odczytać tego, co %1$d innych urządzeń zapisało na NAS. Zsynchronizuj ponownie za chwilę albo zaktualizuj na nich Settee.</item>
+        <item quantity="other">Nie udało się odczytać tego, co %1$d innego urządzenia zapisało na NAS. Zsynchronizuj ponownie za chwilę albo zaktualizuj na nich Settee.</item>
+    </plurals>
     <string name="about_update_available">Dostępna aktualizacja: %1$s — zobacz komunikat, aby zainstalować.</string>
     <string name="about_up_to_date">Masz najnowszą wersję.</string>
     <string name="about_checking">Sprawdzanie…</string>
@@ -359,6 +365,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nie przyjął tej nazwy użytkownika lub hasła. Sprawdź je i spróbuj ponownie.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles wylogował ten telewizor. Zaloguj się ponownie w Ustawieniach.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles wylogował to urządzenie. Zaloguj się ponownie w Ustawieniach.</string>
+    <string name="error_opensubtitles_not_saved_tv">Na tym telewizorze nie ma miejsca na zapisanie tych napisów. Zwolnij trochę miejsca i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_not_saved_device">Na tym urządzeniu nie ma miejsca na zapisanie tych napisów. Zwolnij trochę miejsca i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles przyjął logowanie, ale ten telewizor nie mógł go zapisać. Uruchom ponownie ten telewizor i zaloguj się jeszcze raz.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles przyjął logowanie, ale to urządzenie nie mogło go zapisać. Uruchom ponownie to urządzenie i zaloguj się jeszcze raz.</string>
     <string name="error_not_a_guide">Ten adres nie jest przewodnikiem. Sprawdź, czy to właściwy link, albo zaloguj się do Wi-Fi, jeśli o to prosi.</string>
     <string name="settings_guide_bad_address">To nie jest adres internetowy. Sprawdź, czy jest wpisany tak, jak pokazuje go link przewodnika, np. example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nie mógł odczytać swojej bazy danych, więc brakuje tych liczb.</string>

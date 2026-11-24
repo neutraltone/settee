@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%1$d Element(e) von %2$d Gerät(en) synchronisiert.</string>
     <string name="sync_nas_uploaded">Dieses Gerät wurde auf dem NAS gespeichert. Bisher hat sich noch kein anderes Gerät hier synchronisiert.</string>
     <string name="sync_nas_failed">Dein NAS konnte nicht erreicht werden. Überprüfe, ob es eingeschaltet ist und die Angaben in den Aufnahme-Einstellungen stimmen.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Was %1$d anderes Gerät auf deinem NAS gespeichert hat, konnte nicht gelesen werden. Synchronisiere gleich noch einmal oder aktualisiere Settee darauf.</item>
+        <item quantity="other">Was %1$d andere Geräte auf deinem NAS gespeichert haben, konnte nicht gelesen werden. Synchronisiere gleich noch einmal oder aktualisiere Settee darauf.</item>
+    </plurals>
     <string name="about_update_available">Update verfügbar: %1$s — siehe Hinweis zur Installation.</string>
     <string name="about_up_to_date">Du hast die neueste Version.</string>
     <string name="about_checking">Wird geprüft…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles hat diesen Benutzernamen oder dieses Passwort nicht akzeptiert. Prüfe beides und versuche es erneut.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles hat diesen Fernseher abgemeldet. Melde dich in den Einstellungen erneut an.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles hat dieses Gerät abgemeldet. Melde dich in den Einstellungen erneut an.</string>
+    <string name="error_opensubtitles_not_saved_tv">Auf diesem Fernseher ist kein Platz, um diese Untertitel zu speichern. Gib Speicher frei und versuche es erneut.</string>
+    <string name="error_opensubtitles_not_saved_device">Auf diesem Gerät ist kein Platz, um diese Untertitel zu speichern. Gib Speicher frei und versuche es erneut.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles hat die Anmeldung angenommen, aber dieser Fernseher konnte sie nicht speichern. Starte diesen Fernseher neu und melde dich erneut an.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles hat die Anmeldung angenommen, aber dieses Gerät konnte sie nicht speichern. Starte dieses Gerät neu und melde dich erneut an.</string>
     <string name="error_not_a_guide">Diese Adresse ist kein Programmführer. Überprüfe, ob es der richtige Link ist, oder melde dich im WLAN an, falls es danach fragt.</string>
     <string name="settings_guide_bad_address">Das ist keine Webadresse. Überprüfe, ob sie so eingegeben ist, wie der Link des Programmführers sie zeigt, etwa example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee konnte seine Datenbank nicht lesen, deshalb fehlen diese Zahlen.</string>

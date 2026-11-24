@@ -144,6 +144,9 @@
     <string name="sync_nas_done">%1$d item disinkronkan dari %2$d perangkat.</string>
     <string name="sync_nas_uploaded">Perangkat ini disimpan ke NAS. Belum ada perangkat lain yang tersinkron ke sini.</string>
     <string name="sync_nas_failed">Tidak dapat menjangkau NAS Anda. Periksa apakah NAS menyala dan detail di pengaturan Rekaman sudah benar.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Tidak dapat membaca data yang disimpan %1$d perangkat lain di NAS Anda. Sinkronkan lagi sebentar lagi, atau perbarui Settee di perangkat tersebut.</item>
+    </plurals>
     <string name="about_update_available">Pembaruan tersedia: %1$s — lihat perintah untuk memasang.</string>
     <string name="about_up_to_date">Anda menggunakan versi terbaru.</string>
     <string name="about_checking">Memeriksa…</string>
@@ -359,6 +362,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles tidak menerima nama pengguna atau sandi itu. Periksa lalu coba lagi.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles mengeluarkan TV ini dari akun. Masuk lagi di Setelan.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
+    <string name="error_opensubtitles_not_saved_tv">Tidak ada ruang di TV ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
+    <string name="error_opensubtitles_not_saved_device">Tidak ada ruang di perangkat ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles menerima proses masuk, tetapi TV ini tidak dapat menyimpannya. Mulai ulang TV ini, lalu masuk lagi.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles menerima proses masuk, tetapi perangkat ini tidak dapat menyimpannya. Mulai ulang perangkat ini, lalu masuk lagi.</string>
     <string name="error_not_a_guide">Alamat itu bukan panduan acara. Periksa apakah tautannya benar, atau masuk ke Wi-Fi Anda jika diminta.</string>
     <string name="settings_guide_bad_address">Itu bukan alamat web. Periksa apakah sudah diketik seperti yang ditunjukkan tautan panduan, misalnya example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee tidak dapat membaca databasenya, jadi angka ini tidak tersedia.</string>

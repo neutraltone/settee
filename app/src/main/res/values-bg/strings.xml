@@ -144,6 +144,10 @@
     <string name="sync_nas_done">Синхронизирани %1$d елемента от %2$d устройства.</string>
     <string name="sync_nas_uploaded">Това устройство е запазено на NAS. Все още никое друго устройство не се е синхронизирало тук.</string>
     <string name="sync_nas_failed">Вашият NAS не можа да бъде достигнат. Проверете дали е включен и дали данните в Настройки за запис са правилни.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Записаното от %1$d друго устройство във вашия NAS не можа да бъде прочетено. Синхронизирайте отново след малко или обновете Settee на него.</item>
+        <item quantity="other">Записаното от %1$d други устройства във вашия NAS не можа да бъде прочетено. Синхронизирайте отново след малко или обновете Settee на тях.</item>
+    </plurals>
     <string name="about_update_available">Налична актуализация: %1$s — вижте подканата за инсталиране.</string>
     <string name="about_up_to_date">Използвате най-новата версия.</string>
     <string name="about_checking">Проверка…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прие това потребителско име или парола. Проверете ги и опитайте отново.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles излезе от профила на този телевизор. Влезте отново от Настройки.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles излезе от профила на това устройство. Влезте отново от Настройки.</string>
+    <string name="error_opensubtitles_not_saved_tv">На този телевизор няма място за тези субтитри. Освободете място и опитайте отново.</string>
+    <string name="error_opensubtitles_not_saved_device">На това устройство няма място за тези субтитри. Освободете място и опитайте отново.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles прие влизането, но този телевизор не успя да го запази. Рестартирайте този телевизор и влезте отново.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles прие влизането, но това устройство не успя да го запази. Рестартирайте това устройство и влезте отново.</string>
     <string name="error_not_a_guide">Този адрес не е програма. Проверете дали връзката е правилна или влезте в Wi-Fi мрежата, ако ви поиска.</string>
     <string name="settings_guide_bad_address">Това не е уеб адрес. Проверете дали е въведен както в връзката на програмата, например example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee не можа да прочете базата си данни, затова тези числа липсват.</string>

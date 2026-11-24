@@ -144,6 +144,12 @@
     <string name="sync_nas_done">Синхронизировано элементов: %1$d, с устройств: %2$d.</string>
     <string name="sync_nas_uploaded">Это устройство сохранено на NAS. Другие устройства пока не синхронизировались.</string>
     <string name="sync_nas_failed">Не удалось подключиться к NAS. Убедитесь, что он включён, а данные в настройках записи указаны верно.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Не удалось прочитать то, что %1$d другое устройство сохранило на NAS. Синхронизируйте ещё раз чуть позже или обновите на нём Settee.</item>
+        <item quantity="few">Не удалось прочитать то, что %1$d других устройства сохранили на NAS. Синхронизируйте ещё раз чуть позже или обновите на них Settee.</item>
+        <item quantity="many">Не удалось прочитать то, что %1$d других устройств сохранили на NAS. Синхронизируйте ещё раз чуть позже или обновите на них Settee.</item>
+        <item quantity="other">Не удалось прочитать то, что %1$d другого устройства сохранили на NAS. Синхронизируйте ещё раз чуть позже или обновите на них Settee.</item>
+    </plurals>
     <string name="about_update_available">Доступно обновление: %1$s — см. запрос на установку.</string>
     <string name="about_up_to_date">У вас установлена последняя версия.</string>
     <string name="about_checking">Проверка…</string>
@@ -359,6 +365,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не принял это имя пользователя или пароль. Проверьте их и попробуйте снова.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles вышел из аккаунта на этом телевизоре. Войдите снова в Настройках.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles вышел из аккаунта на этом устройстве. Войдите снова в Настройках.</string>
+    <string name="error_opensubtitles_not_saved_tv">На этом телевизоре нет места, чтобы сохранить эти субтитры. Освободите место и попробуйте снова.</string>
+    <string name="error_opensubtitles_not_saved_device">На этом устройстве нет места, чтобы сохранить эти субтитры. Освободите место и попробуйте снова.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles принял вход, но этот телевизор не смог его сохранить. Перезагрузите этот телевизор и войдите снова.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles принял вход, но это устройство не смогло его сохранить. Перезагрузите это устройство и войдите снова.</string>
     <string name="error_not_a_guide">Этот адрес не программа передач. Проверьте, что ссылка верная, или войдите в сеть Wi-Fi, если она просит.</string>
     <string name="settings_guide_bad_address">Это не веб-адрес. Проверьте, что он введён так, как в ссылке на программу, например example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee не удалось прочитать свою базу данных, поэтому этих цифр нет.</string>

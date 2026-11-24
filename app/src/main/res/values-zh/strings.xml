@@ -144,6 +144,9 @@
     <string name="sync_nas_done">已从 %2$d 台设备同步 %1$d 项。</string>
     <string name="sync_nas_uploaded">已将本设备的数据保存到 NAS。目前还没有其他设备同步到这里。</string>
     <string name="sync_nas_failed">无法连接到你的 NAS。请确认它已开机，并检查“录制”设置中的信息是否正确。</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">无法读取其他 %1$d 台设备保存在 NAS 上的内容。请稍后再同步，或在这些设备上更新 Settee。</item>
+    </plurals>
     <string name="about_update_available">有可用更新：%1$s——请查看安装提示。</string>
     <string name="about_up_to_date">你使用的已是最新版本。</string>
     <string name="about_checking">检查中…</string>
@@ -359,6 +362,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles 不接受该用户名或密码。请检查后重试。</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles 已将这台电视退出登录。请在设置中重新登录。</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles 已将此设备退出登录。请在设置中重新登录。</string>
+    <string name="error_opensubtitles_not_saved_tv">这台电视没有空间保存该字幕。请释放一些空间，然后重试。</string>
+    <string name="error_opensubtitles_not_saved_device">此设备没有空间保存该字幕。请释放一些空间，然后重试。</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles 已接受登录，但这台电视无法保存。请重启这台电视，然后重新登录。</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles 已接受登录，但此设备无法保存。请重启此设备，然后重新登录。</string>
     <string name="error_not_a_guide">该地址不是节目指南。请检查链接是否正确，或在 Wi-Fi 要求时登录。</string>
     <string name="settings_guide_bad_address">这不是网址。请检查是否按指南链接所示输入，例如 example.com/guide.xml。</string>
     <string name="diagnostics_database_failed">Settee 无法读取自己的数据库，因此缺少这些数字。</string>

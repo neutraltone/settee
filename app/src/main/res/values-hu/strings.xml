@@ -144,6 +144,10 @@
     <string name="sync_nas_done">%1$d elem szinkronizálva %2$d eszközről.</string>
     <string name="sync_nas_uploaded">Ez az eszköz mentve a NAS-ra. Még egyetlen másik eszköz sem szinkronizált ide.</string>
     <string name="sync_nas_failed">Nem sikerült elérni a NAS-t. Ellenőrizze, hogy be van-e kapcsolva, és hogy a Felvétel beállításaiban megadott adatok helyesek-e.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nem sikerült beolvasni, amit %1$d másik eszköz mentett a NAS-ra. Szinkronizáljon újra egy kis idő múlva, vagy frissítse rajta a Settee-t.</item>
+        <item quantity="other">Nem sikerült beolvasni, amit %1$d másik eszköz mentett a NAS-ra. Szinkronizáljon újra egy kis idő múlva, vagy frissítse rajtuk a Settee-t.</item>
+    </plurals>
     <string name="about_update_available">Elérhető frissítés: %1$s — a telepítéshez lásd a felugró ablakot.</string>
     <string name="about_up_to_date">A legújabb verziót használja.</string>
     <string name="about_checking">Ellenőrzés…</string>
@@ -359,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">Az OpenSubtitles nem fogadta el ezt a felhasználónevet vagy jelszót. Ellenőrizd őket, és próbáld újra.</string>
     <string name="error_opensubtitles_token_tv">Az OpenSubtitles kijelentkeztette ezt a tévét. Jelentkezz be újra a Beállításokban.</string>
     <string name="error_opensubtitles_token_device">Az OpenSubtitles kijelentkeztette ezt az eszközt. Jelentkezz be újra a Beállításokban.</string>
+    <string name="error_opensubtitles_not_saved_tv">Ezen a tévén nincs hely a felirat megtartásához. Szabadíts fel helyet, majd próbáld újra.</string>
+    <string name="error_opensubtitles_not_saved_device">Ezen az eszközön nincs hely a felirat megtartásához. Szabadíts fel helyet, majd próbáld újra.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">Az OpenSubtitles elfogadta a bejelentkezést, de ez a tévé nem tudta menteni. Indítsd újra ezt a tévét, majd jelentkezz be újra.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">Az OpenSubtitles elfogadta a bejelentkezést, de ez az eszköz nem tudta menteni. Indítsd újra ezt az eszközt, majd jelentkezz be újra.</string>
     <string name="error_not_a_guide">Ez a cím nem műsorújság. Ellenőrizze, hogy a megfelelő hivatkozás-e, vagy jelentkezzen be a Wi-Fi-hálózatba, ha kéri.</string>
     <string name="settings_guide_bad_address">Ez nem webcím. Ellenőrizze, hogy úgy írta-e be, ahogy a műsorújság hivatkozása mutatja, például example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">A Settee nem tudta beolvasni az adatbázisát, ezért ezek a számok hiányoznak.</string>

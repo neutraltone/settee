@@ -144,6 +144,9 @@
     <string name="sync_nas_done">Đã đồng bộ %1$d mục từ %2$d thiết bị.</string>
     <string name="sync_nas_uploaded">Đã lưu thiết bị này vào NAS. Chưa có thiết bị nào khác đồng bộ ở đây.</string>
     <string name="sync_nas_failed">Không thể kết nối tới NAS của bạn. Kiểm tra xem nó đã bật chưa và thông tin trong Cài đặt ghi hình có đúng không.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Không đọc được dữ liệu mà %1$d thiết bị khác đã lưu trên NAS của bạn. Hãy đồng bộ lại sau giây lát hoặc cập nhật Settee trên thiết bị đó.</item>
+    </plurals>
     <string name="about_update_available">Có bản cập nhật: %1$s — xem hướng dẫn để cài đặt.</string>
     <string name="about_up_to_date">Bạn đang dùng phiên bản mới nhất.</string>
     <string name="about_checking">Đang kiểm tra…</string>
@@ -359,6 +362,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles không chấp nhận tên người dùng hoặc mật khẩu đó. Hãy kiểm tra rồi thử lại.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles đã đăng xuất TV này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
+    <string name="error_opensubtitles_not_saved_tv">TV này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
+    <string name="error_opensubtitles_not_saved_device">Thiết bị này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles đã chấp nhận đăng nhập, nhưng TV này không lưu được. Hãy khởi động lại TV này rồi đăng nhập lại.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles đã chấp nhận đăng nhập, nhưng thiết bị này không lưu được. Hãy khởi động lại thiết bị này rồi đăng nhập lại.</string>
     <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
     <string name="settings_guide_bad_address">Đó không phải địa chỉ web. Kiểm tra xem đã nhập đúng như liên kết của lịch phát sóng chưa, ví dụ example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee không đọc được cơ sở dữ liệu của mình, nên không có các con số này.</string>

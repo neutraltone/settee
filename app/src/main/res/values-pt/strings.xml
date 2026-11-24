@@ -144,6 +144,11 @@
     <string name="sync_nas_done">%1$d item(ns) sincronizado(s) de %2$d dispositivo(s).</string>
     <string name="sync_nas_uploaded">Este dispositivo foi guardado no NAS. Ainda nenhum outro dispositivo sincronizou aqui.</string>
     <string name="sync_nas_failed">Não foi possível contactar o seu NAS. Verifique se está ligado e se os dados nas definições de Gravação estão corretos.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Não foi possível ler o que %1$d outro dispositivo guardou no seu NAS. Sincronize de novo daqui a pouco ou atualize o Settee nesse dispositivo.</item>
+        <item quantity="many">Não foi possível ler o que %1$d outros dispositivos guardaram no seu NAS. Sincronize de novo daqui a pouco ou atualize o Settee nesses dispositivos.</item>
+        <item quantity="other">Não foi possível ler o que %1$d outros dispositivos guardaram no seu NAS. Sincronize de novo daqui a pouco ou atualize o Settee nesses dispositivos.</item>
+    </plurals>
     <string name="about_update_available">Atualização disponível: %1$s — veja o aviso para instalar.</string>
     <string name="about_up_to_date">Está a usar a versão mais recente.</string>
     <string name="about_checking">A verificar…</string>
@@ -359,6 +364,10 @@
     <string name="error_opensubtitles_sign_in">O OpenSubtitles não aceitou esse nome de usuário ou senha. Verifique e tente novamente.</string>
     <string name="error_opensubtitles_token_tv">O OpenSubtitles desconectou esta TV. Entre novamente nas Configurações.</string>
     <string name="error_opensubtitles_token_device">O OpenSubtitles desconectou este dispositivo. Entre novamente nas Configurações.</string>
+    <string name="error_opensubtitles_not_saved_tv">Não há espaço nesta TV para guardar essas legendas. Libere espaço e tente novamente.</string>
+    <string name="error_opensubtitles_not_saved_device">Não há espaço neste dispositivo para guardar essas legendas. Libere espaço e tente novamente.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">O OpenSubtitles aceitou o login, mas esta TV não conseguiu salvá-lo. Reinicie esta TV e entre novamente.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">O OpenSubtitles aceitou o login, mas este dispositivo não conseguiu salvá-lo. Reinicie este dispositivo e entre novamente.</string>
     <string name="error_not_a_guide">Esse endereço não é um guia. Verifique se é a ligação certa, ou inicie sessão no Wi-Fi se este o pedir.</string>
     <string name="settings_guide_bad_address">Isso não é um endereço web. Verifique se está escrito como a ligação do guia o mostra, por exemplo example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">O Settee não conseguiu ler a sua base de dados, por isso estes números estão em falta.</string>

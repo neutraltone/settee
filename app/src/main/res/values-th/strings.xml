@@ -144,6 +144,9 @@
     <string name="sync_nas_done">ซิงค์แล้ว %1$d รายการจาก %2$d อุปกรณ์</string>
     <string name="sync_nas_uploaded">บันทึกอุปกรณ์นี้ไปยัง NAS แล้ว ยังไม่มีอุปกรณ์อื่นซิงค์มาที่นี่</string>
     <string name="sync_nas_failed">ไม่สามารถเข้าถึง NAS ของคุณได้ ตรวจสอบว่าเปิดเครื่องอยู่และรายละเอียดในการตั้งค่าการบันทึกถูกต้อง</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">ไม่สามารถอ่านข้อมูลที่อุปกรณ์อื่น %1$d เครื่องบันทึกไว้ใน NAS ของคุณ ซิงค์อีกครั้งในอีกสักครู่ หรืออัปเดต Settee บนอุปกรณ์นั้น</item>
+    </plurals>
     <string name="about_update_available">มีอัปเดต: %1$s — ดูข้อความแจ้งเพื่อติดตั้ง</string>
     <string name="about_up_to_date">คุณใช้เวอร์ชันล่าสุดอยู่แล้ว</string>
     <string name="about_checking">กำลังตรวจสอบ…</string>
@@ -359,6 +362,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ไม่ยอมรับชื่อผู้ใช้หรือรหัสผ่านนั้น ตรวจสอบแล้วลองอีกครั้ง</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ออกจากระบบทีวีเครื่องนี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
+    <string name="error_opensubtitles_not_saved_tv">ทีวีเครื่องนี้ไม่มีพื้นที่เก็บคำบรรยายนั้น ล้างพื้นที่บางส่วน แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_not_saved_device">อุปกรณ์นี้ไม่มีพื้นที่เก็บคำบรรยายนั้น ล้างพื้นที่บางส่วน แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ยอมรับการลงชื่อเข้าใช้แล้ว แต่ทีวีเครื่องนี้บันทึกไว้ไม่ได้ รีสตาร์ททีวีเครื่องนี้ แล้วลงชื่อเข้าใช้อีกครั้ง</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ยอมรับการลงชื่อเข้าใช้แล้ว แต่อุปกรณ์นี้บันทึกไว้ไม่ได้ รีสตาร์ทอุปกรณ์นี้ แล้วลงชื่อเข้าใช้อีกครั้ง</string>
     <string name="error_not_a_guide">ที่อยู่นั้นไม่ใช่ผังรายการ ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
     <string name="settings_guide_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ตามที่ลิงก์ของผังรายการแสดง เช่น example.com/guide.xml</string>
     <string name="diagnostics_database_failed">Settee อ่านฐานข้อมูลของตัวเองไม่ได้ จึงไม่มีตัวเลขเหล่านี้</string>
