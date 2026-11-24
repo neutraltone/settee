@@ -125,9 +125,9 @@ or a sign-in that fails, offer **Send report**. Pressing it sends that one error
 crash reports off, and doesn't turn them on; it then shows Sent, and that error can't be sent again.
 Errors that are certainly not Settee's, such as no internet or a wrong password, don't offer it. This
 is the only way a problem with your provider is ever reported, and only when you press it. A report
-contains only what kind of error it was (not the sentence on screen), the line of detail under it
-(such as the error code, the HTTP status and the stream's format) with any web addresses and MAC
-addresses cut out, the screen it was on, what kind of provider it was (Xtream, M3U, Stalker or
+contains only what kind of error it was (the code that starts the line of detail, not the sentence
+on screen), the line of detail under it (such as the error code, the HTTP status and the stream's
+format) with any web addresses and MAC addresses cut out, the screen it was on, what kind of provider it was (Xtream, M3U, Stalker or
 Stremio), the stack trace if there is one, and the version and device details listed above, with the
 random id only if crash reports have been turned on on this device. It never contains your
 provider's address, name, username, password or MAC, the channel or title, or the stream's address.

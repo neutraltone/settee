@@ -53,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
@@ -73,6 +74,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -368,13 +370,7 @@ private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -
         Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
-        ErrorMessage(
-            failure.sentence,
-            failure.detail,
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
-        )
+    val tryAgain = @Composable {
         PillButton(
             label = stringResource(R.string.common_try_again),
             icon = Icons.Filled.Refresh,
@@ -386,6 +382,15 @@ private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -
             },
         )
     }
+    // Try again inside the error, so Send report comes after it, Down from it. Only an Xtream panel has shows.
+    ErrorMessage(
+        failure.sentence,
+        failure.detail,
+        textAlign = TextAlign.Start,
+        modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
+        sendReport = sendReportFor(failure, ReportedSource.XTREAM),
+        actions = tryAgain,
+    )
 }
 
 /** The selected season's episodes, or a line saying they're on their way. */

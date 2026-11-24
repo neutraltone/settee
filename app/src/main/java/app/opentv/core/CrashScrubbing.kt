@@ -30,12 +30,25 @@ internal object CrashScrubbing {
     /** The tag naming the screen that was open. */
     const val SCREEN_TAG = "screen"
 
+    /** An Error Report's kind (ADR 0010): the detail line's first code. */
+    const val ERROR_KIND_TAG = "error-kind"
+
+    /** An Error Report's detail line (code · status · format), scrubbed. */
+    const val ERROR_DETAIL_TAG = "error-detail"
+
+    /** The kind of Source (xtream, m3u, stalker, stremio), never which one. */
+    const val SOURCE_KIND_TAG = "source-kind"
+
+    /** The tags an event may carry besides the screen, each value [scrub]bed. */
+    private val KEPT_TAGS = setOf(ERROR_KIND_TAG, ERROR_DETAIL_TAG, SOURCE_KIND_TAG)
+
     /** Breadcrumbs: none are on the list. Even a navigation one can carry a route's arguments. */
     @Suppress("FunctionOnlyReturningConstant", "UnusedParameter") // The before-breadcrumb hook's shape.
     fun breadcrumb(breadcrumb: Breadcrumb): Breadcrumb? = null
 
     /** [event] with only the listed fields, every string in them [scrub]bed, [installId] as its only id. */
     fun event(event: SentryEvent, installId: String?, screen: String?): SentryEvent = event.apply {
+        val kept = tags.orEmpty().filterKeys { it in KEPT_TAGS }.mapValues { (_, value) -> scrub(value) }
         exceptions = exceptions?.map(::exception)
         threads = threads?.map(::thread)
         message = message?.let { from ->
@@ -44,7 +57,7 @@ internal object CrashScrubbing {
             }
         }
         user = installId?.let { id -> User().apply { this.id = id } }
-        tags = screen?.let { mapOf(SCREEN_TAG to it) }
+        tags = (kept + listOfNotNull(screen?.let { SCREEN_TAG to it })).takeIf { it.isNotEmpty() }
         extras = null
         breadcrumbs = null
         request = null

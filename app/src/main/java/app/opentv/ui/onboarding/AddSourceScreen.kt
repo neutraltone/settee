@@ -42,11 +42,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.sendReportFor
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.SendReport
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -221,6 +224,11 @@ private fun ProviderForm(
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
         FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup)
+        // After the buttons rather than in the error, so it's Down from them and they stay where they are.
+        val failure = ui.addFailure ?: ui.testError
+        sendReportFor(failure, ReportedSource.of(formKind))?.let { send ->
+            failure?.let { SendReport(it.sentence, it.detail, send) }
+        }
 
         AdvancedFields(details)
 

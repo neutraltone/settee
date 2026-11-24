@@ -43,6 +43,7 @@ import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -297,7 +298,14 @@ private fun SignInStatus(signingIn: Boolean, problem: ViewerError?) =
             )
         } else {
             problem?.let {
-                ErrorMessage(it.sentence, it.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
+                // Under the sign-in row, so Send report is Down from it. A wrong password never offers it.
+                ErrorMessage(
+                    it.sentence,
+                    it.detail,
+                    Modifier.padding(top = 12.dp),
+                    textAlign = TextAlign.Start,
+                    sendReport = sendReportFor(it, source = null),
+                )
             }
         }
     }

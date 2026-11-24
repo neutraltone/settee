@@ -21,7 +21,8 @@ import androidx.compose.ui.unit.dp
 /**
  * What a screen says in its middle when it has nothing else to show: an optional [title], the
  * [body] in quiet text, and [below] for what can be done about it, usually an [ActionButton].
- * An error passes its [detail] too, and the body is then drawn as an [ErrorMessage].
+ * An error passes its [detail] too, and the body is then drawn as an [ErrorMessage], with its
+ * [sendReport] under [below] when the failure could be Settee's.
  */
 @Composable
 fun Message(
@@ -29,6 +30,7 @@ fun Message(
     modifier: Modifier = Modifier,
     title: String? = null,
     detail: String = "",
+    sendReport: (() -> Unit)? = null,
     below: @Composable () -> Unit = {},
 ) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -37,13 +39,20 @@ fun Message(
                 Text(it, SetteeType.Section, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(MESSAGE_GAP))
             }
-            if (detail.isBlank()) {
-                Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-            } else {
-                ErrorMessage(body, detail)
+            when {
+                // Its buttons go inside the error, so Send report comes after them.
+                sendReport != null -> ErrorMessage(body, detail, sendReport = sendReport, actions = below)
+                detail.isBlank() -> {
+                    Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(MESSAGE_GAP * 2))
+                    below()
+                }
+                else -> {
+                    ErrorMessage(body, detail)
+                    Spacer(Modifier.height(MESSAGE_GAP * 2))
+                    below()
+                }
             }
-            Spacer(Modifier.height(MESSAGE_GAP * 2))
-            below()
         }
     }
 }

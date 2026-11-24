@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
@@ -61,6 +62,7 @@ import app.opentv.ui.ExpectedRows
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
+import app.opentv.ui.sendReportFor
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.browseKey
@@ -446,6 +448,7 @@ private fun vodEmpty(
             failure.reason,
             onRetry = onRetry,
             onEditProvider = { onEditProvider(failure.sourceId) },
+            sendReport = sendReportFor(failure.reason, failure.sourceKind?.let(ReportedSource::of)),
         )
         else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
     }
@@ -464,8 +467,13 @@ internal sealed interface VodEmpty {
     class WayForward(val title: String, val body: String, val button: String, val onPress: () -> Unit) : VodEmpty
 
     /** The latest download of this kind failed and nothing of it is stored: why, and what to do. */
-    class Failed(val title: String, val reason: ViewerError, val onRetry: () -> Unit, val onEditProvider: () -> Unit) :
-        VodEmpty
+    class Failed(
+        val title: String,
+        val reason: ViewerError,
+        val onRetry: () -> Unit,
+        val onEditProvider: () -> Unit,
+        val sendReport: (() -> Unit)? = null,
+    ) : VodEmpty
 }
 
 /**
@@ -608,7 +616,12 @@ internal fun EmptyBrowse(empty: VodEmpty) {
     // Drawn as Live's channels that failed to load are, its buttons first in the content, so
     // coming in from the rail lands on Try again.
     when (empty) {
-        is VodEmpty.Failed -> Message(empty.reason.sentence, title = empty.title, detail = empty.reason.detail) {
+        is VodEmpty.Failed -> Message(
+            empty.reason.sentence,
+            title = empty.title,
+            detail = empty.reason.detail,
+            sendReport = empty.sendReport,
+        ) {
             Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
                 ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
                 ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)

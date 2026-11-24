@@ -67,6 +67,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
@@ -80,6 +81,8 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.label
+import app.opentv.ui.reportedSourceOf
+import app.opentv.ui.sendReportFor
 import app.opentv.ui.player.BackOnRelease
 import app.opentv.ui.player.OK_KEYS
 import app.opentv.ui.player.PlayerChoice
@@ -133,6 +136,8 @@ fun VodPlayerScreen(
     // The player is built for it, so it waits until the recording's row says whether it is.
     val growing by produceState<Boolean?>(null, mediaKey) { value = graph.playbackSources.isGrowing(mediaKey) }
     val growingRec = growing ?: return
+    // For Send report on a failure: only the kind of provider it came from.
+    val reportedSource by produceState<ReportedSource?>(null, mediaKey) { value = graph.reportedSourceOf(mediaKey) }
     // The SMB source lets a recording stored on a NAS play and seek in-app; harmless for the
     // http/file URLs of ordinary VOD.
     val controller = remember {
@@ -209,7 +214,7 @@ fun VodPlayerScreen(
     LaunchedEffect(finished) { if (finished) onBack() }
 
     CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles) {
-        VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
+        VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack, reportedSource)
     }
 }
 
@@ -258,6 +263,7 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
  * The player's picture, transport bar and Next Episode card, with everything about playback that the
  * remote drives. [VodPlayerScreen] owns the stream, resume, saving progress and moving between
  * episodes; this owns what the viewer sees and presses, and pausing behind another app.
+ * [reportedSource] is the kind of provider it plays from, for Send report on a failure.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -267,6 +273,7 @@ fun VodPlayerContent(
     growingRec: Boolean,
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
+    reportedSource: ReportedSource? = null,
 ) {
     // Leave the film when the sleep timer runs out (VodPlayerScreen saves the position on dispose).
     SleepTimerEffect(onRunOut = onBack)
@@ -596,7 +603,12 @@ fun VodPlayerContent(
                     }
                 }
 
-            is PlayerController.State.Error -> PlayerErrorPanel(current, onRetry = controller::retry, onBack = onBack)
+            is PlayerController.State.Error -> PlayerErrorPanel(
+                current,
+                onRetry = controller::retry,
+                onBack = onBack,
+                sendReport = sendReportFor(current.reason, reportedSource),
+            )
 
             else -> Unit
         }

@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
@@ -63,6 +64,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.ProviderFailure
+import app.opentv.ui.sendReportFor
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -483,6 +485,7 @@ private fun LoadFailed(failure: ProviderFailure?, onRetry: () -> Unit, onEditPro
         title = failure?.let { stringResource(R.string.guide_load_failed_title_named, it.name) }
             ?: stringResource(R.string.guide_load_failed_title),
         detail = failure?.error?.detail.orEmpty(),
+        sendReport = sendReportFor(failure?.error, failure?.kind?.let(ReportedSource::of)),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
             ActionButton(stringResource(R.string.common_try_again), onRetry)

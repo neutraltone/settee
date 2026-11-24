@@ -934,8 +934,11 @@ sealed interface AddonStreams {
     data class Failed(val error: ViewerError) : AddonStreams
 }
 
-/** A Movies or Shows download that failed: which provider, so Provider setup can open it, and why. */
-data class VodLoadFailure(val sourceId: Long, val reason: ViewerError)
+/**
+ * A Movies or Shows download that failed: which provider, so Provider setup can open it, why, and
+ * its kind, for Send report.
+ */
+data class VodLoadFailure(val sourceId: Long, val reason: ViewerError, val sourceKind: SourceKind? = null)
 
 class VodViewModel @JvmOverloads constructor(
     app: Application,
@@ -1334,7 +1337,7 @@ class VodViewModel @JvmOverloads constructor(
         ) { failures, sources, anyStored ->
             if (anyStored) return@combine null
             sources.firstNotNullOfOrNull { source ->
-                failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it) }
+                failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it, source.kind) }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(LOAD_FAILURE_KEEP_MILLIS), null)
 
@@ -1740,15 +1743,18 @@ data class HomeState(
  */
 data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
-/** A provider's saved refresh failure, with its [name] for the screen to say whose it is. */
-data class ProviderFailure(val sourceId: Long, val name: String, val error: ViewerError)
+/**
+ * A provider's saved refresh failure, with its [name] for the screen to say whose it is, and its
+ * [kind] for Send report, which never sends the name.
+ */
+data class ProviderFailure(val sourceId: Long, val name: String, val error: ViewerError, val kind: SourceKind? = null)
 
 /**
  * Each enabled provider's saved refresh failure, in the providers' order. A disabled one's is left out:
  * it isn't refreshed, so nothing would ever clear it.
  */
 fun List<Source>.providerFailures(): List<ProviderFailure> = mapNotNull { source ->
-    source.refreshFailure?.takeIf { source.enabled }?.let { ProviderFailure(source.id, source.name, it) }
+    source.refreshFailure?.takeIf { source.enabled }?.let { ProviderFailure(source.id, source.name, it, source.kind) }
 }
 
 /**

@@ -38,9 +38,15 @@ import app.opentv.ui.player.isBack
 /**
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
  * to reach these buttons, and with the bar hidden behind them the viewer would be left with nothing lit.
+ * [sendReport], where the failure could be Settee's, goes under them, Down from the one lit.
  */
 @Composable
-internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -> Unit, onBack: () -> Unit) {
+internal fun PlayerErrorPanel(
+    error: PlayerController.State.Error,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+    sendReport: (() -> Unit)? = null,
+) {
     val first = remember { FocusRequester() }
     LaunchedEffect(error) { runCatching { first.requestFocus() } }
     Box(
@@ -59,14 +65,15 @@ internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(48.dp)) {
             Text(error.title, SetteeType.ScreenTitle)
             Spacer(Modifier.height(12.dp))
-            ErrorMessage(error.reason.sentence, error.reason.detail)
-            Spacer(Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (error.canRetry) {
-                    PanelButton(R.string.common_try_again, onRetry, Modifier.focusRequester(first))
-                    PanelButton(R.string.common_back, onBack)
-                } else {
-                    PanelButton(R.string.common_back, onBack, Modifier.focusRequester(first))
+            ErrorMessage(error.reason.sentence, error.reason.detail, sendReport = sendReport) {
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    if (error.canRetry) {
+                        PanelButton(R.string.common_try_again, onRetry, Modifier.focusRequester(first))
+                        PanelButton(R.string.common_back, onBack)
+                    } else {
+                        PanelButton(R.string.common_back, onBack, Modifier.focusRequester(first))
+                    }
                 }
             }
         }

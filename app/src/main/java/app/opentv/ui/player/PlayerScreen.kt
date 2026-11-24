@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
@@ -95,6 +97,8 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.reportedSourceOf
+import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -299,6 +303,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
 
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
     val openOptions = LocalOpenOptions.current
+    // Send report names only the kind of the channel's provider.
+    val reportedSource by produceState<ReportedSource?>(null, channel?.primary?.id) {
+        value = channel?.primary?.id?.let { graph.reportedSourceOf(MediaKey.Live(it)) }
+    }
 
     LivePlayerContent(
         controller = controller,
@@ -332,6 +340,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
         subtitlePicks = subtitlePicks,
         onBack = onBack,
+        reportedSource = reportedSource,
         onChannelOptions = { item, onWatch ->
             scope.launch {
                 // The list holds queue items, not Channels. As when playing, a channel hidden or
@@ -378,6 +387,8 @@ fun LivePlayerContent(
     onDontAskAgain: () -> Unit,
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
+    /** The kind of provider the channel is from, for Send report on a failure. */
+    reportedSource: ReportedSource? = null,
     onChannelOptions: (PlaybackQueue.Item, onWatch: () -> Unit) -> Unit = { _, _ -> },
 ) {
     // Stop and leave when the sleep timer runs out. Switching live pause on replaces the controller
@@ -573,6 +584,7 @@ fun LivePlayerContent(
     // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
     // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
+    val sendReport = sendReportFor((state as? PlayerController.State.Error)?.reason, reportedSource)
     val focusOn = when {
         channelListVisible -> listFocus
         controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barReturn
@@ -778,15 +790,25 @@ fun LivePlayerContent(
                     ) {
                         SetteeText(current.title, SetteeType.ScreenTitle)
                         Spacer(Modifier.height(12.dp))
-                        ErrorMessage(current.reason.sentence, current.reason.detail)
-                        if (current.canRetry) {
-                            Spacer(Modifier.height(24.dp))
-                            PillButton(
-                                stringResource(R.string.common_try_again),
-                                onClick = { controller.retry() },
-                                modifier = Modifier.focusRequester(retryFocus),
-                            )
-                        }
+                        // Send report only beside Try again: without it the Highlight stays on the
+                        // full-screen catcher, where Up and Down change channel, and couldn't reach it.
+                        ErrorMessage(
+                            current.reason.sentence,
+                            current.reason.detail,
+                            sendReport = sendReport.takeIf { current.canRetry },
+                            actions = if (current.canRetry) {
+                                {
+                                    Spacer(Modifier.height(14.dp))
+                                    PillButton(
+                                        stringResource(R.string.common_try_again),
+                                        onClick = { controller.retry() },
+                                        modifier = Modifier.focusRequester(retryFocus),
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
                     }
                 }
             }
