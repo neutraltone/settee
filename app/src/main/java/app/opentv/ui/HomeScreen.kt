@@ -69,7 +69,6 @@ import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
-import app.opentv.ui.vod.WhenDrawn
 import app.opentv.ui.vod.rememberCoverBadge
 import app.opentv.ui.vod.rememberRowState
 import app.opentv.ui.vod.takesFocus

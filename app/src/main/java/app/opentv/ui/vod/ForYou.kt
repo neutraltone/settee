@@ -26,10 +26,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
@@ -42,6 +40,7 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.ui.ContinueWatchingShelf
 import app.opentv.ui.OnShellReturn
 import app.opentv.ui.PickRow
+import app.opentv.ui.WhenDrawn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.RowPick
 import app.opentv.ui.design.ArtCardSize
@@ -198,20 +197,6 @@ internal fun <T> ScreenFrameScope.ForYou(
                 }
             }
         }
-    }
-}
-
-/**
- * Calls [onDrawn] on the frame after [drawn] turns true, each time it does: when a journey that ends
- * with something on screen has really drawn it (ADR 0010's Slow Journeys).
- */
-@Composable
-internal fun WhenDrawn(drawn: Boolean, onDrawn: () -> Unit) {
-    val latest by rememberUpdatedState(onDrawn)
-    if (!drawn) return
-    LaunchedEffect(Unit) {
-        withFrameNanos {}
-        latest()
     }
 }
 
