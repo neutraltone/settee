@@ -76,6 +76,7 @@ class RecordingsContentTest {
     private val played = mutableListOf<Recording>()
     private val retried = mutableListOf<Recording>()
     private val chosen = mutableListOf<Pair<RecordingsRow, ItemOption>>()
+    private var emptied = 0
 
     /** What the screen lists, so a test can change it under the screen as the database would. */
     private var shown by mutableStateOf(emptyList<Recording>())
@@ -106,6 +107,7 @@ class RecordingsContentTest {
                     onChoose = { row, option -> chosen += row to option },
                     deleteFailure = deleteFailure,
                     onDismissFailure = { deleteFailure = null },
+                    onEmptied = { emptied++ },
                     now = { NOW },
                 )
             }
@@ -223,6 +225,32 @@ class RecordingsContentTest {
         compose.waitForIdle()
 
         row("Recorded 1").assertIsFocused()
+    }
+
+    @Test
+    fun `the Highlight goes to the row that followed the deleted one, even when another row went with it`() {
+        show(recordings = (1L..5L).map { completed(it) })
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+
+        deleteHighlighted()
+        // Recording 1 goes at the same time (deleted on another TV), so Recording 4 is now third.
+        shown = shown.filter { it.id != 1L && it.id != 3L }
+        compose.waitForIdle()
+
+        row("Recorded 4").assertIsFocused()
+    }
+
+    @Test
+    fun `deleting the only recording says the list has emptied`() {
+        show(recordings = listOf(completed(1)))
+
+        deleteHighlighted()
+        assertThat(emptied).isEqualTo(0)
+        shown = emptyList()
+        compose.waitForIdle()
+
+        assertThat(emptied).isEqualTo(1)
     }
 
     @Test
