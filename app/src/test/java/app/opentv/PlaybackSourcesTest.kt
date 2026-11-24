@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ReportedSource
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Programme
@@ -55,6 +56,7 @@ class PlaybackSourcesTest {
                 userAgent = "Panel/1",
                 title = "BBC One",
                 isLive = true,
+                source = ReportedSource.XTREAM,
             ),
         )
     }
@@ -112,6 +114,7 @@ class PlaybackSourcesTest {
                 url = "http://example.com/movie/u/p/3.mkv",
                 userAgent = "Panel/1",
                 title = "Drive",
+                source = ReportedSource.XTREAM,
                 isLive = false,
             ),
         )
@@ -126,7 +129,14 @@ class PlaybackSourcesTest {
         val playable = sources.forWatching(key)
 
         assertThat(playable).isEqualTo(
-            Playable.Ready(key, "https://example.org/addon/drive.mp4", "OpenTV/0.1 (Android)", "Drive", isLive = false),
+            Playable.Ready(
+                key,
+                "https://example.org/addon/drive.mp4",
+                "OpenTV/0.1 (Android)",
+                "Drive",
+                isLive = false,
+                source = ReportedSource.STREMIO,
+            ),
         )
     }
 
@@ -142,6 +152,7 @@ class PlaybackSourcesTest {
                 key = MediaKey.Episode(12),
                 url = "https://example.com/1-2.mkv",
                 userAgent = "Panel/1",
+                source = ReportedSource.XTREAM,
                 title = "S1E2 · Episode 2",
                 isLive = false,
             ),
@@ -161,6 +172,7 @@ class PlaybackSourcesTest {
             Playable.Ready(
                 key = key,
                 url = "http://example.com/timeshift/u/p/30/2023-11-14:21-00/9.ts",
+                source = ReportedSource.XTREAM,
                 userAgent = "Panel/1",
                 title = "BBC One · News",
                 isLive = false,
@@ -343,6 +355,7 @@ class PlaybackSourcesTest {
         assertThat(capture).isEqualTo(
             Playable.Ready(
                 key = MediaKey.Recording(id),
+                source = ReportedSource.XTREAM,
                 url = "http://example.com/live/u/p/9.ts",
                 userAgent = "Panel/2",
                 title = "News",
