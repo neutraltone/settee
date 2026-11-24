@@ -5,31 +5,11 @@
  */
 package app.opentv.core
 
-import app.opentv.data.model.SourceKind
-
-/** What kind of Source a report is about (ADR 0010): only the kind, never which Source. */
-enum class ReportedSource(val tag: String) {
-    XTREAM("xtream"),
-    M3U("m3u"),
-    STALKER("stalker"),
-
-    /** A Stremio add-on, which isn't a [SourceKind] but is where a film or episode can come from. */
-    STREMIO("stremio"),
-    ;
-
-    companion object {
-        fun of(kind: SourceKind): ReportedSource = when (kind) {
-            SourceKind.XTREAM -> XTREAM
-            SourceKind.M3U -> M3U
-            SourceKind.STALKER -> STALKER
-        }
-    }
-}
-
 /**
  * An Error Report (ADR 0010): one failure the viewer pressed Send report on, as they saw it. Only
  * its [detail] line (code · status · format), which CrashReports scrubs before it goes, never the
- * sentence; its [kind]; the [source]'s kind; and the [cause]'s stack trace where there is one.
+ * sentence; its [kind]; the [source]'s kind, as [JourneyTimer.sourceOf] names it (or
+ * [JourneyTimer.STREMIO]); and the [cause]'s stack trace where there is one.
  *
  * The kind is the detail line's first code: the [ErrorWording] or [app.opentv.player.PlaybackErrors]
  * category the sentence was chosen by (a provider's problem, an exception's type, Media3's error
@@ -39,7 +19,7 @@ enum class ReportedSource(val tag: String) {
  * An exception only so it goes through [CrashReports.report] as a [CrashReports.Handled.VIEWER_REPORT]:
  * its own message and stack trace are never sent, only the cause's classes and stack trace.
  */
-class ErrorReport(val detail: String, val source: ReportedSource?, cause: Throwable? = null) :
+class ErrorReport(val detail: String, val source: String?, cause: Throwable? = null) :
     Exception(MESSAGE, cause) {
     val kind: String = detail.substringBefore(SEPARATOR).trim().ifBlank { UNKNOWN }
 

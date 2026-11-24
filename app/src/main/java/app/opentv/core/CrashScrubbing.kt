@@ -35,18 +35,32 @@ internal object CrashScrubbing {
     const val OPERATION_TAG = "operation"
     const val STATUS_TAG = "status"
 
+    /** A Slow Journey's tags (ADR 0010): which journey, Settee's own time and the network wait, in ms. */
+    const val JOURNEY_TAG = "journey"
+    const val OWN_TIME_TAG = "own-ms"
+    const val NETWORK_WAIT_TAG = "network-ms"
+
     /** An Error Report's kind (ADR 0010): the detail line's first code. */
     const val ERROR_KIND_TAG = "error-kind"
 
     /** An Error Report's detail line (code · status · format), scrubbed. */
     const val ERROR_DETAIL_TAG = "error-detail"
 
-    /** The kind of Source (xtream, m3u, stalker, stremio), never which one. */
+    /** The kind of Source a report is about: `xtream`, `m3u`, `stalker` or `stremio`, never which one. */
     const val SOURCE_KIND_TAG = "source-kind"
 
     /** The tags an event may carry besides [SCREEN_TAG], each value [scrub]bed. Every other tag is dropped. */
-    private val TAGS_KEPT =
-        setOf(SERVICE_TAG, OPERATION_TAG, STATUS_TAG, ERROR_KIND_TAG, ERROR_DETAIL_TAG, SOURCE_KIND_TAG)
+    private val TAGS_KEPT = setOf(
+        SERVICE_TAG,
+        OPERATION_TAG,
+        STATUS_TAG,
+        JOURNEY_TAG,
+        OWN_TIME_TAG,
+        NETWORK_WAIT_TAG,
+        ERROR_KIND_TAG,
+        ERROR_DETAIL_TAG,
+        SOURCE_KIND_TAG,
+    )
 
     /** Breadcrumbs: none are on the list. Even a navigation one can carry a route's arguments. */
     @Suppress("FunctionOnlyReturningConstant", "UnusedParameter") // The before-breadcrumb hook's shape.

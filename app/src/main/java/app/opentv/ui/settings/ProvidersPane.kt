@@ -26,22 +26,21 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
 import app.opentv.core.findActivity
 import app.opentv.data.model.Source
+import app.opentv.ui.SendReportAfter
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.ListRowInset
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
-import app.opentv.ui.design.SendReport
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
 import app.opentv.ui.providerFailures
-import app.opentv.ui.sendReportFor
 
 /**
  * Providers: a row per provider, which OK edits, and a row to add one. A provider's other actions
@@ -96,10 +95,8 @@ internal fun ProvidersPane(
                     modifier = Modifier.onFocusChanged { againHighlighted = it.isFocused },
                 )
                 // Under Refresh again, so it's Down from it.
-                sendReportFor(failure, ReportedSource.of(source.kind))?.let { send ->
-                    Column(Modifier.padding(horizontal = ListRowInset)) {
-                        SendReport(failure.sentence, failure.detail, send)
-                    }
+                Column(Modifier.padding(horizontal = ListRowInset)) {
+                    SendReportAfter(failure, JourneyTimer.sourceOf(source.kind))
                 }
             }
         }

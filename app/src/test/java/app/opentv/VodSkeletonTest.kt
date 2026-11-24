@@ -32,6 +32,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
+import app.opentv.core.JourneyTimer
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
@@ -152,6 +153,29 @@ class VodSkeletonTest {
         compose.waitForIdle()
 
         compose.onAllNodes(hasText("Heat") and hasClickAction())[0].assertIsFocused()
+    }
+
+    @Test
+    fun `opening Movies is timed until its first row has drawn with its cards, not while skeletons show`() {
+        // As picking the tab on the rail starts it.
+        graph.journeys.start(JourneyTimer.Journey.OPEN_MOVIES)
+        setBesideRail {
+            MoviesScreen(
+                onOpenMovie = {},
+                onResume = {},
+                providers = ProvidersCarry.NO_PROVIDER,
+                isSyncing = false,
+                viewModel = testGraph.viewModel { VodViewModel(app, graph) },
+            )
+        }
+        compose.onAllNodes(hasTestTag(SKELETON_CARD)).onFirst().assertExists()
+        assertThat(graph.journeys.running(JourneyTimer.Journey.OPEN_MOVIES)).isTrue()
+
+        testGraph.release()
+        compose.onAllNodes(hasText("Heat") and hasClickAction()).assertCountEquals(2)
+        compose.waitForIdle()
+
+        assertThat(graph.journeys.running(JourneyTimer.Journey.OPEN_MOVIES)).isFalse()
     }
 
     @Test

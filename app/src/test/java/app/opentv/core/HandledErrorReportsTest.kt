@@ -189,6 +189,7 @@ class HandledErrorReportsTest {
             CrashReports.Handled.TMDB,
             CrashReports.Handled.INTRODB,
             CrashReports.Handled.UPDATE_CHECK,
+            CrashReports.Handled.SLOW_JOURNEY,
             CrashReports.Handled.VIEWER_REPORT,
         )
     }

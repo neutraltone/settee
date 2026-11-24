@@ -56,6 +56,7 @@ import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
 import app.opentv.update.UpdateChecker
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -136,15 +137,20 @@ object ServiceLocator {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
         }
 
+        // Every client is built from this one, so each marks its calls as network wait for the journeys.
         val httpClient: OkHttpClient by lazy {
-            http ?: OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                // Generous: catalogue endpoints on a busy panel can take a long time to
-                // produce 40,000 rows, and timing out mid-list is worse than waiting.
-                .readTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(5, TimeUnit.MINUTES)
-                .retryOnConnectionFailure(true)
-                .followRedirects(true)
+            (
+                http ?: OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    // Generous: catalogue endpoints on a busy panel can take a long time to
+                    // produce 40,000 rows, and timing out mid-list is worse than waiting.
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .callTimeout(5, TimeUnit.MINUTES)
+                    .retryOnConnectionFailure(true)
+                    .followRedirects(true)
+                    .build()
+                ).newBuilder()
+                .eventListener(journeys.network)
                 .build()
         }
 
@@ -343,6 +349,21 @@ object ServiceLocator {
             }
         }
 
+        /**
+         * Times the journeys that matter (ADR 0010). One too slow is a Crash Report; in a debug build,
+         * which never sends one, a line in logcat instead.
+         */
+        val journeys: JourneyTimer by lazy {
+            JourneyTimer { slow ->
+                if (BuildConfig.DEBUG) {
+                    val waited = "${slow.networkMillis} ms on the network"
+                    Log.w("SlowJourney", "${slow.journey.tag} took ${slow.ownMillis} ms of Settee's own, and $waited")
+                } else {
+                    crashReports.report(CrashReports.Handled.SLOW_JOURNEY, CrashReports.TooSlow(slow))
+                }
+            }
+        }
+
         /** GitHub's latest release, for About's check and the automatic one. */
         val updateChecker: UpdateChecker by lazy {
             UpdateChecker(
@@ -365,6 +386,8 @@ object ServiceLocator {
                 release = BuildConfig.VERSION_NAME,
                 // The owner's .pr test builds report too, told apart from the release here.
                 environment = if (BuildConfig.APPLICATION_ID.endsWith(".pr")) "pr" else "production",
+                // One at a time, as a thread of its own would, on the io threads a test can see finish.
+                background = dispatchers.io.limitedParallelism(1).asExecutor(),
             )
         }
 
@@ -410,6 +433,7 @@ object ServiceLocator {
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
                 clock = clock,
                 scope = appScope,
+                journeys = journeys,
             )
         }
 

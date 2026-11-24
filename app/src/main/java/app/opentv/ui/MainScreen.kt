@@ -39,6 +39,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.JourneyTimer
+import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
@@ -112,6 +114,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
+    val journeys = remember { ServiceLocator.get(context).journeys }
     val liveEnabled by settings.liveEnabled.collectAsState()
     val moviesEnabled by settings.moviesEnabled.collectAsState()
     val seriesEnabled by settings.seriesEnabled.collectAsState()
@@ -141,7 +144,10 @@ fun MainScreen(
         MainShell(
             tabs = visibleTabs,
             current = tab,
-            onSelect = onSelectTab,
+            onSelect = { selected ->
+                journeys.tabSelected(selected)
+                onSelectTab(selected)
+            },
             onOpenSearch = onOpenSearch,
             onOpenSettings = onOpenSettings,
             onOpenProfiles = onOpenProfiles,
@@ -192,6 +198,21 @@ fun MainScreen(
                 Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
             }
         }
+    }
+}
+
+/**
+ * Opening Movies or Shows is timed from its tab being picked to its first row drawn (ADR 0010); picking
+ * any other tab first means the viewer left, and so does a cold start's Home.
+ */
+private fun JourneyTimer.tabSelected(tab: Tab) {
+    cancel(JourneyTimer.Journey.COLD_START)
+    cancel(JourneyTimer.Journey.OPEN_MOVIES)
+    cancel(JourneyTimer.Journey.OPEN_SHOWS)
+    when (tab) {
+        Tab.MOVIES -> start(JourneyTimer.Journey.OPEN_MOVIES)
+        Tab.SHOWS -> start(JourneyTimer.Journey.OPEN_SHOWS)
+        Tab.HOME, Tab.LIVE, Tab.RECORDINGS -> Unit
     }
 }
 

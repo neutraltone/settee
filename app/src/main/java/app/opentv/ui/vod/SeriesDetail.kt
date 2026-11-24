@@ -53,7 +53,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
+import app.opentv.data.model.SourceKind
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
@@ -388,7 +389,7 @@ private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -
         failure.detail,
         textAlign = TextAlign.Start,
         modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
-        sendReport = sendReportFor(failure, ReportedSource.XTREAM),
+        sendReport = sendReportFor(failure, JourneyTimer.sourceOf(SourceKind.XTREAM)),
         actions = tryAgain,
     )
 }

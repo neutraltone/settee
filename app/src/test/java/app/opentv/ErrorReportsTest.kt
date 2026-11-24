@@ -26,7 +26,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.core.CrashReports
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
 import app.opentv.core.ViewerError
 import app.opentv.data.model.SourceKind
 import app.opentv.player.PlayerController
@@ -104,10 +104,10 @@ class ErrorReportsTest {
 
     private fun sentEnvelopes() = synchronized(sent) { sent.toList() }
 
-    /** Waits for the report to go: it's sent off the main thread, as the after-crash Send is. */
+    /** Lets the report go: it's sent off the main thread, as the after-crash Send is, on the graph's. */
     private fun awaitSent(count: Int) {
-        compose.waitUntil(SEND_MILLIS) { sentEnvelopes().size >= count }
         compose.waitForIdle()
+        assertThat(sentEnvelopes()).hasSize(count)
     }
 
     private fun press(key: Key) {
@@ -176,9 +176,7 @@ class ErrorReportsTest {
         captureScreen("movies_load_failed_report_sent")
         // Sent can't send it again.
         compose.onNode(hasText(sentLabel) and hasClickAction()).performClick()
-        compose.waitForIdle()
-        Thread.sleep(AFTER_MILLIS)
-        assertThat(sentEnvelopes()).hasSize(1)
+        awaitSent(1)
 
         val report = sentEnvelopes().single()
         assertThat(report).contains("VIEWER_REPORT")
@@ -224,7 +222,7 @@ class ErrorReportsTest {
                     error,
                     onRetry = {},
                     onBack = {},
-                    sendReport = sendReportFor(error.reason, ReportedSource.STREMIO),
+                    sendReport = sendReportFor(error.reason, JourneyTimer.STREMIO),
                 )
             }
         }
@@ -315,8 +313,6 @@ class ErrorReportsTest {
     }
 
     private companion object {
-        const val SEND_MILLIS = 10_000L
-        const val AFTER_MILLIS = 300L
         const val RAIL_HANDOVER_MILLIS = 500L
     }
 }

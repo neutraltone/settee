@@ -69,7 +69,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
@@ -146,6 +146,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                 // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
                 dvr = livePause,
                 diagnostics = graph.diagnosticsLog,
+                journeys = graph.journeys,
             ),
         )
     }
@@ -306,7 +307,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
     val openOptions = LocalOpenOptions.current
     // Send report names only the kind of the channel's provider.
-    val reportedSource by produceState<ReportedSource?>(null, channel?.primary?.id) {
+    val reportedSource by produceState<String?>(null, channel?.primary?.id) {
         value = channel?.primary?.id?.let { graph.reportedSourceOf(MediaKey.Live(it)) }
     }
 

@@ -7,6 +7,8 @@ package app.opentv.data.repo
 
 import android.util.Log
 import app.opentv.core.AppSettings
+import app.opentv.core.JourneyTimer
+import app.opentv.core.JourneyTimer.Journey
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import java.util.concurrent.ConcurrentHashMap
@@ -46,6 +48,8 @@ class CatalogueRefresh(
     private val rescanSeriesRules: suspend () -> Unit,
     private val clock: () -> Long,
     private val scope: CoroutineScope,
+    /** Times each refresh of every provider, as the `catalogue-refresh` journey (ADR 0010). */
+    private val journeys: JourneyTimer? = null,
 ) {
     sealed interface Trigger {
         /** Everything, for every enabled provider. */
@@ -197,9 +201,11 @@ class CatalogueRefresh(
         var outcome: Outcome.Refreshed? = null
         // Finishing and the result are one state, so a result equal to the last still reaches screens.
         return marking(refreshes, { copy(refreshing = it, last = outcome ?: last) }) {
+            journeys?.start(Journey.CATALOGUE_REFRESH)
             var channels = 0
             val failures = LinkedHashMap<Long, ViewerError>()
-            for (source in catalog.enabledSources()) {
+            val enabled = catalog.enabledSources()
+            for (source in enabled) {
                 // Already-fetched rows are left untouched by a switch that's off: turning the type
                 // back on and refreshing restores it.
                 val live = if (settings.liveEnabled.value) {
@@ -219,6 +225,10 @@ class CatalogueRefresh(
                 }
             }
             val summary = syncGuide(force = trigger == Trigger.Manual)
+            // Written, guide and all: the rescan after is the recordings', not the catalogue's. A
+            // refresh of providers of more than one kind isn't any one kind's.
+            val kind = enabled.map { it.kind }.distinct().singleOrNull()
+            journeys?.end(Journey.CATALOGUE_REFRESH, JourneyTimer.sourceOf(kind))
             rescan()
             Outcome.Refreshed(channels, summary, failures).also { outcome = it }
         }

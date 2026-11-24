@@ -42,11 +42,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.core.ReportedSource
-import app.opentv.core.ViewerError
+import app.opentv.core.JourneyTimer
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
+import app.opentv.ui.SendReportAfter
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
@@ -54,12 +54,10 @@ import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
-import app.opentv.ui.design.SendReport
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
-import app.opentv.ui.sendReportFor
 import app.opentv.update.startsFocused
 
 /**
@@ -225,23 +223,13 @@ private fun ProviderForm(
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
         FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup)
-        FormSendReport(ui.addFailure ?: ui.testError, formKind)
+        // After the buttons rather than in the error, so it's Down from them and they stay where they are.
+        SendReportAfter(ui.addFailure ?: ui.testError, JourneyTimer.sourceOf(formKind))
 
         AdvancedFields(details)
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.onboarding_privacy_note), SetteeType.Body, color = SetteeColors.QuietText)
-    }
-}
-
-/**
- * Send report for the form's [failure], after its buttons rather than in the error, so it's Down from
- * them and they stay where they are.
- */
-@Composable
-private fun FormSendReport(failure: ViewerError?, kind: SourceKind) {
-    sendReportFor(failure, ReportedSource.of(kind))?.let { send ->
-        failure?.let { SendReport(it.sentence, it.detail, send) }
     }
 }
 

@@ -67,7 +67,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import app.opentv.R
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
 import app.opentv.core.ServiceLocator
 import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
@@ -138,7 +138,7 @@ fun VodPlayerScreen(
     val growing by produceState<Boolean?>(null, mediaKey) { value = graph.playbackSources.isGrowing(mediaKey) }
     val growingRec = growing ?: return
     // For Send report on a failure: only the kind of provider it came from.
-    val reportedSource by produceState<ReportedSource?>(null, mediaKey) { value = graph.reportedSourceOf(mediaKey) }
+    val reportedSource by produceState<String?>(null, mediaKey) { value = graph.reportedSourceOf(mediaKey) }
     // The SMB source lets a recording stored on a NAS play and seek in-app; harmless for the
     // http/file URLs of ordinary VOD.
     val controller = remember {
@@ -156,6 +156,7 @@ fun VodPlayerScreen(
                 app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
                 liveRecording = growingRec,
                 diagnostics = graph.diagnosticsLog,
+                journeys = graph.journeys,
             ),
         )
     }

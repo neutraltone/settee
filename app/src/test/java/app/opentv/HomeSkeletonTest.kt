@@ -67,6 +67,7 @@ class HomeSkeletonTest {
     private var favouriteMovies by mutableStateOf(emptyList<Cover>())
     private var banner by mutableStateOf<ProviderBanner?>(null)
     private val resumed = mutableListOf<MediaKey>()
+    private var firstRowsDrawn = 0
 
     private fun setHome() = compose.setTvContent {
         HomeContent(
@@ -84,6 +85,7 @@ class HomeSkeletonTest {
             loading = loading,
             liveLoading = liveLoading,
             banner = banner,
+            onFirstRowDrawn = { firstRowsDrawn++ },
         )
     }
 
@@ -108,6 +110,18 @@ class HomeSkeletonTest {
 
         assertThat(resumed).isEmpty()
         openingSkeleton().assertIsFocused()
+    }
+
+    @Test
+    fun `a cold start ends when Home's first row has drawn with its cards, not while only skeletons show`() {
+        setHome()
+        assertThat(firstRowsDrawn).isEqualTo(0)
+
+        recentMovies = listOf(Cover(VodTitle.OfMovie(movie(2, "Heat"))))
+        loading = setOf(HomeRowKind.CONTINUE_WATCHING)
+        compose.waitForIdle()
+
+        assertThat(firstRowsDrawn).isEqualTo(1)
     }
 
     @Test

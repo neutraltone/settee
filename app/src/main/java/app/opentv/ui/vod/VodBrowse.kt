@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,6 +41,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -47,7 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
-import app.opentv.core.ReportedSource
+import app.opentv.core.JourneyTimer
+import app.opentv.core.JourneyTimer.Journey
+import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
@@ -108,6 +112,9 @@ fun MoviesScreen(
     val genreRows by viewModel.movieGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.moviesLoadFailure.collectAsState().value
+    // Selecting the tab started it (MainScreen); leaving before a row is drawn isn't an end.
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
+    DisposableEffect(journeys) { onDispose { journeys.cancel(Journey.OPEN_MOVIES) } }
 
     // Pull the movie library the first time this tab is opened, not at login; refresh the computed
     // rows (recommended, by genre) on open too: cheap, and covers a library already on disk.
@@ -167,6 +174,7 @@ fun MoviesScreen(
             onHighlight,
             recommending,
             loading,
+            onFirstRowDrawn = { journeys.end(Journey.OPEN_MOVIES) },
         )
     }
 }
@@ -192,6 +200,9 @@ fun SeriesScreen(
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.showsLoadFailure.collectAsState().value
+    // Selecting the tab started it (MainScreen); leaving before a row is drawn isn't an end.
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
+    DisposableEffect(journeys) { onDispose { journeys.cancel(Journey.OPEN_SHOWS) } }
 
     LaunchedEffect(Unit) { viewModel.loadHomeFeeds() }
     // Keyed on what the providers carry, so switching an Xtream login on while here fetches its titles.
@@ -249,6 +260,7 @@ fun SeriesScreen(
             onHighlight,
             recommending,
             loading,
+            onFirstRowDrawn = { journeys.end(Journey.OPEN_SHOWS) },
         )
     }
 }
@@ -266,6 +278,7 @@ internal fun ScreenFrameScope.MovieShelves(
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
     loading: ForYouLoading = ForYouLoading.NONE,
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
@@ -283,6 +296,7 @@ internal fun ScreenFrameScope.MovieShelves(
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfMovie(it)) },
         resumeLoading = loading.continueWatching,
+        onFirstRowDrawn = onFirstRowDrawn,
     )
 }
 
@@ -299,6 +313,7 @@ internal fun ScreenFrameScope.SeriesShelves(
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
     loading: ForYouLoading = ForYouLoading.NONE,
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
@@ -316,6 +331,7 @@ internal fun ScreenFrameScope.SeriesShelves(
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfSeries(it)) },
         resumeLoading = loading.continueWatching,
+        onFirstRowDrawn = onFirstRowDrawn,
     )
 }
 
@@ -448,7 +464,7 @@ private fun vodEmpty(
             failure.reason,
             onRetry = onRetry,
             onEditProvider = { onEditProvider(failure.sourceId) },
-            sendReport = sendReportFor(failure.reason, failure.sourceKind?.let(ReportedSource::of)),
+            sendReport = sendReportFor(failure.reason, JourneyTimer.sourceOf(failure.sourceKind)),
         )
         else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
     }
