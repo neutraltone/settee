@@ -8,7 +8,9 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.remote.XtreamApi
 import com.google.common.truth.Truth.assertThat
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,6 +98,17 @@ class PlaylistGuidesTest {
         val summary = refreshWithHeader("#EXTM3U url-tvg=\"$ONE,$TWO\"")
 
         assertThat(summary.feedsFailed).isEqualTo(1)
+    }
+
+    @Test
+    fun `a guide address typed for an Xtream login is used whole, commas and all`() {
+        // Only a playlist lists several guides: a viewer's own address is one, whatever it holds.
+        val typed = "$ONE, $TWO"
+        val login = Source(id = 3, name = "Panel", kind = SourceKind.XTREAM, url = "http://example.com", epgUrl = typed)
+
+        val addresses = XtreamApi(FakePanel().http).epgAddresses(login)
+
+        assertThat(addresses.map { it.toString() }).containsExactly(typed.toHttpUrl().toString())
     }
 
     private companion object {
