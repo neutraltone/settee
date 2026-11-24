@@ -48,15 +48,23 @@ class ServiceFailure private constructor(val service: Service, val operation: Op
         const val UNREADABLE = "unreadable-reply"
 
         /**
-         * Only the statuses that point at Settee's key, request or parsing. A 401 is a viewer's
-         * password or token, 429 and 5xx are the service's own trouble, and a 406 is OpenSubtitles'
-         * quota: none of them is Settee's bug.
+         * Only the statuses that point at Settee's key, request or parsing. 429 and 5xx are the
+         * service's own trouble, and a 406 is OpenSubtitles' quota: none of them is Settee's bug.
          */
-        private val REPORTED = setOf(400, 403, 404, 410)
+        private val REPORTED = setOf(400, 401, 403, 404, 410)
+        private const val UNAUTHORISED = 401
 
-        /** [code] answered to [operation] at [service], or null when it isn't one to report. */
-        fun ofStatus(service: Service, operation: Operation, code: Int): ServiceFailure? =
-            if (code in REPORTED) ServiceFailure(service, operation, "http-$code") else null
+        /**
+         * [code] answered to [operation] at [service], or null when it isn't one to report. A 401 is
+         * Settee's key refused, unless the request carried [viewersCredentials], a password or a
+         * session token of the viewer's: then it's theirs, wrong or expired, and not Settee's bug.
+         */
+        fun ofStatus(service: Service, operation: Operation, code: Int, viewersCredentials: Boolean = false) =
+            if (code in REPORTED && !(code == UNAUTHORISED && viewersCredentials)) {
+                ServiceFailure(service, operation, "http-$code")
+            } else {
+                null
+            }
 
         /** A reply to [operation] Settee couldn't read: a page in front of the API, or an API that changed shape. */
         fun unreadable(service: Service, operation: Operation) = ServiceFailure(service, operation, UNREADABLE)

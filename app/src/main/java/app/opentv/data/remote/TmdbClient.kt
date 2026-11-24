@@ -218,14 +218,22 @@ class TmdbClient(
         .getOrNull()
 
     /**
-     * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing,
-     * so never reported. Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a
-     * refused key, a reply it couldn't read).
+     * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing.
+     * Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a refused key, a
+     * search's 404, a reply it couldn't read).
      */
     private fun fetch(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
         http.newCall(authorised(url, key)).execute().use { response ->
             when {
-                response.code == HTTP_NOT_FOUND -> null
+                // A search answers no match with an empty list, so its 404 can only be Settee asking
+                // wrongly. A look-up by id answers 404 for a title TMDB doesn't know, and for an address
+                // it doesn't have alike: no telling them apart, so that 404 is never reported.
+                response.code == HTTP_NOT_FOUND -> {
+                    if (operation == Operation.SEARCH) {
+                        ServiceFailure.ofStatus(Service.TMDB, operation, response.code)?.let(reportFailure)
+                    }
+                    null
+                }
                 !response.isSuccessful -> {
                     ServiceFailure.ofStatus(Service.TMDB, operation, response.code)?.let(reportFailure)
                     throw IOException("TMDB answered ${response.code}")

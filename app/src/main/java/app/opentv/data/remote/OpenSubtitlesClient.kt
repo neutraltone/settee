@@ -218,7 +218,14 @@ class OpenSubtitlesClient(
         if (succeeded && parsed != null) return parsed
         val failure = when {
             succeeded -> ServiceFailure.unreadable(Service.OPENSUBTITLES, operation)
-            else -> ServiceFailure.ofStatus(Service.OPENSUBTITLES, operation, status)
+            // Signing in sends the viewer's password, and the rest with a token their session: a 401 to
+            // either is theirs. Without either, only Settee's key went, so a 401 is the key refused.
+            else -> ServiceFailure.ofStatus(
+                Service.OPENSUBTITLES,
+                operation,
+                status,
+                viewersCredentials = operation == Operation.SIGN_IN || request.header("Authorization") != null,
+            )
         }
         failure?.let(reportFailure)
         throw failureFor(status, parsed, request, download = operation == Operation.DOWNLOAD)

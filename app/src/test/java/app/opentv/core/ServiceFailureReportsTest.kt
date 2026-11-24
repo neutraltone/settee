@@ -135,6 +135,28 @@ class ServiceFailureReportsTest {
         assertThat(sentEvents()).isEmpty()
     }
 
+    @Test
+    fun `a 401 to a search, which sends only Settee's key, arrives as the key refused`() {
+        reports.setOn(true)
+        openSubtitles.replies["GET /subtitles"] = "!401 {}"
+
+        assertThat(subtitles.search(SubtitleSearch.Film("A film", 2001, null)).isFailure).isTrue()
+
+        assertThat(sentEvents().single()).contains("OPENSUBTITLES search http-401")
+    }
+
+    @Test
+    fun `a 401 to a request with the viewer's token is their session ending, and never arrives`() {
+        reports.setOn(true)
+        openSubtitles.replies["POST /download"] = "!401 {}"
+        openSubtitles.replies["GET /infos/user"] = "!401 {}"
+
+        assertThat(subtitles.download(1, token = "t").isFailure).isTrue()
+        assertThat(subtitles.account("t").isFailure).isTrue()
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
     /** TMDB as the app builds it, answering every request with [reply] (see [FakeJsonHttp]). */
     private fun tmdb(reply: String) = TmdbClient(
         FakeJsonHttp { reply }.http,
@@ -154,6 +176,24 @@ class ServiceFailureReportsTest {
         assertThat(event).doesNotContain("A film")
         assertThat(event).doesNotContain("0123456789abcdef")
         assertThat(event).doesNotContain("api.themoviedb.org")
+    }
+
+    @Test
+    fun `TMDB refusing Settee's key with a 401 arrives`() {
+        reports.setOn(true)
+
+        assertThat(tmdb("!401").movieMetaOrFailure("A film", null, tmdbId = "603").isFailure).isTrue()
+
+        assertThat(sentEvents().single()).contains("TMDB details http-401")
+    }
+
+    @Test
+    fun `a 404 to a TMDB search, which answers no match with an empty list, arrives`() {
+        reports.setOn(true)
+
+        assertThat(tmdb("404").movieMetaOrFailure("A film", null, tmdbId = null).isSuccess).isTrue()
+
+        assertThat(sentEvents().first()).contains("TMDB search http-404")
     }
 
     @Test
@@ -217,6 +257,15 @@ class ServiceFailureReportsTest {
     }
 
     @Test
+    fun `a 401 from IntroDB, which Settee asks without any login, arrives`() {
+        reports.setOn(true)
+
+        assertThat(introDb("!401").timings("tt0903747", 1, 2).isFailure).isTrue()
+
+        assertThat(sentEvents().single()).contains("INTRODB timings http-401")
+    }
+
+    @Test
     fun `a page in front of TheIntroDB arrives as unreadable`() {
         reports.setOn(true)
 
@@ -258,6 +307,15 @@ class ServiceFailureReportsTest {
         assertThat(event).contains("UPDATE_CHECK latest-release http-404")
         assertThat(event).contains(""""service":"update-check"""")
         assertThat(event).doesNotContain("api.github.com")
+    }
+
+    @Test
+    fun `GitHub turning down the update check with a 401 arrives`() {
+        reports.setOn(true)
+
+        assertThat(checkForUpdate("!401")).isInstanceOf(UpdateChecker.Outcome.CouldNotCheck::class.java)
+
+        assertThat(sentEvents().single()).contains("UPDATE_CHECK latest-release http-401")
     }
 
     @Test
