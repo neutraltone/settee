@@ -157,6 +157,47 @@ class M3uRefreshTest {
         assertThat(test.lineup.categoryGroups(playlist.id).first().flatMap { it.ids }).containsExactly("UK")
     }
 
+    @Test
+    fun `a starred channel stays starred and as you left it when channels sharing its guide id appear`() = testing {
+        test.db.sources().insert(playlist)
+        // As the parser stored this playlist when it dropped every channel after the first
+        // that shared a tvg-id: only BBC One London, as tvg:bbc1.uk.
+        test.db.channels().replaceCatalogue(
+            playlist.id,
+            listOf(
+                channel("tvg:itv1.uk", "ITV 1", "http://example.com/live/u/p/3.ts", 0),
+                channel("tvg:bbc1.uk", "BBC One London", "http://example.com/live/u/p/1.ts", 1),
+            ),
+            syncStamp = 1,
+        )
+        val byStream = test.catalog.observeChannels(playlist.id).first().associateBy { it.streamId }
+        val london = byStream.getValue("tvg:bbc1.uk")
+        test.viewerLibrary.favourites.set(london, favourite = true)
+        test.catalog.setChannelOrder(listOf(london.id, byStream.getValue("tvg:itv1.uk").id))
+        test.catalog.setChannelCustomName(london.id, "London")
+        test.panel.replies[""] = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="itv1.uk",ITV 1
+            http://example.com/live/u/p/3.ts
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One London
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One Wales
+            http://example.com/live/u/p/2.ts
+        """.trimIndent()
+
+        test.catalog.fetchLive(playlist, nowUtcMillis = 2)
+
+        val after = test.catalog.observeChannels(playlist.id).first()
+        assertThat(after.map { it.name }).containsExactly("BBC One London", "ITV 1", "BBC One Wales")
+        assertThat(test.viewerLibrary.favourites.channels().first().map { it.streamId })
+            .containsExactly("tvg:bbc1.uk")
+        val keptLondon = after.single { it.streamId == "tvg:bbc1.uk" }
+        assertThat(keptLondon.id).isEqualTo(london.id)
+        assertThat(keptLondon.customName).isEqualTo("London")
+        assertThat(keptLondon.sortIndex).isEqualTo(0)
+        assertThat(after.single { it.name == "BBC One Wales" }.epgChannelId).isEqualTo("bbc1.uk")
+    }
+
     /** What a viewer can change about a channel, which a refresh must carry over. */
     private data class Edits(
         val streamId: String,

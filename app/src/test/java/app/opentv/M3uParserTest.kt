@@ -113,21 +113,120 @@ class M3uParserTest {
     }
 
     @Test
-    fun `duplicate tvg-ids do not collide`() {
-        // Providers routinely list SD and HD variants under one tvg-id. The unique index on
-        // (sourceId, streamId) would otherwise abort the entire import.
+    fun `channels sharing a tvg-id are all listed and all match its guide`() {
+        // Regional variants share one guide id; the unique index on (sourceId, streamId) means
+        // they can't all be tvg:<id>, so only the first keeps it.
         val playlist = """
             #EXTM3U
-            #EXTINF:-1 tvg-id="dup",Channel SD
-            http://example.com/sd.m3u8
-            #EXTINF:-1 tvg-id="dup",Channel HD
-            http://example.com/hd.m3u8
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One London
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One Wales
+            http://example.com/live/u/p/2.ts
         """.trimIndent()
 
-        val result = M3uParser.parse(playlist, sourceId = 1)
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
 
-        assertThat(result.channels).hasSize(1)
-        assertThat(result.channels.single().name).isEqualTo("Channel SD")
+        assertThat(channels.map { it.name }).containsExactly("BBC One London", "BBC One Wales").inOrder()
+        assertThat(channels.map { it.epgChannelId }).containsExactly("bbc1.uk", "bbc1.uk")
+        assertThat(channels.first().streamId).isEqualTo("tvg:bbc1.uk")
+        assertThat(channels.map { it.streamId }.toSet()).hasSize(2)
+    }
+
+    @Test
+    fun `a placeholder tvg-id on every channel still imports every channel`() {
+        val playlist = buildString {
+            appendLine("#EXTM3U")
+            repeat(20) { i ->
+                appendLine("#EXTINF:-1 tvg-id=\"0\",Channel $i")
+                appendLine("http://example.com/live/u/p/$i.ts")
+            }
+        }
+
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
+
+        assertThat(channels).hasSize(20)
+        assertThat(channels.map { it.streamId }.toSet()).hasSize(20)
+        assertThat(channels.map { it.sortIndex }).isEqualTo((0 until 20).toList())
+    }
+
+    @Test
+    fun `repeats sharing a tvg-id and a name are still told apart`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="dup",Channel
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="dup",Channel
+            http://example.com/live/u/p/2.ts
+            #EXTINF:-1 tvg-id="dup",Channel
+            http://example.com/live/u/p/3.ts
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
+
+        assertThat(channels).hasSize(3)
+        assertThat(channels.map { it.streamId }.toSet()).hasSize(3)
+        assertThat(channels.first().streamId).isEqualTo("tvg:dup")
+    }
+
+    @Test
+    fun `a repeat keeps its id across refreshes even when its URL changes`() {
+        // A repeat's id comes from its tvg-id and name, not its URL, whose token can rotate.
+        fun playlist(token: String) = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One London
+            http://example.com/live/u/p/1.ts?token=$token
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One Wales
+            http://example.com/live/u/p/2.ts?token=$token
+        """.trimIndent()
+
+        val before = M3uParser.parse(playlist("a"), sourceId = 1).channels.map { it.streamId }
+        val after = M3uParser.parse(playlist("b"), sourceId = 1).channels.map { it.streamId }
+
+        assertThat(after).isEqualTo(before)
+    }
+
+    @Test
+    fun `a repeat's id is not one another channel's tvg-id could give`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="a",B
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="a",B
+            http://example.com/live/u/p/2.ts
+        """.trimIndent()
+
+        val repeat = M3uParser.parse(playlist, sourceId = 1).channels.last()
+
+        assertThat(repeat.streamId).doesNotMatch("(tvg|url):.*")
+    }
+
+    @Test
+    fun `playlists with one tvg-id per channel or none keep the stream ids they had`() {
+        // Favourites, custom names, hidden flags, order and guide overrides are all keyed by
+        // streamId: these literals are what the parser gave before repeats were kept, and must
+        // never change.
+        val oneEach = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="bbc1.uk",BBC One
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="itv1.uk",ITV 1
+            http://example.com/live/u/p/2.ts?token=abc
+        """.trimIndent()
+        val none = """
+            #EXTM3U
+            #EXTINF:-1,BBC One
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="",ITV 1
+            http://example.com/live/u/p/2.ts?token=abc
+            #EXTINF:-1,ITV 1 again
+            http://example.com/live/u/p/2.ts?token=abc
+        """.trimIndent()
+
+        assertThat(M3uParser.parse(oneEach, sourceId = 1).channels.map { it.streamId })
+            .containsExactly("tvg:bbc1.uk", "tvg:itv1.uk").inOrder()
+        // A URL listed twice is still one channel, as before.
+        assertThat(M3uParser.parse(none, sourceId = 1).channels.map { it.streamId })
+            .containsExactly("url:7a8bab84a10cac93", "url:777b40785c85f83").inOrder()
     }
 
     @Test
