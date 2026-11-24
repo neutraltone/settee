@@ -14,4 +14,13 @@ object SetteeMotion {
      * by the time the eye reaches it. Compose's own ease-out starts too slowly to feel like a response.
      */
     val Arrive = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+
+    /** For a panel coming in from an edge, as a drawer does: fast off the mark, settling gently. */
+    val EaseDrawer = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+
+    /**
+     * How long a Side Panel takes to slide in; it closes at once. If a frame of it misses on a Stick,
+     * set this to 0, never longer (docs/LOOK.md, Motion and cost).
+     */
+    const val PANEL_SLIDE_MILLIS = 200
 }

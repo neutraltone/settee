@@ -5,14 +5,18 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -20,6 +24,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.LayoutDirection
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.PlayerChoice
@@ -79,5 +84,42 @@ class PlayerChoicePanelTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("French").assertIsFocused()
+    }
+
+    @Test
+    fun `a choice panel slides in from the right edge`() {
+        assertThat(slideOf(LayoutDirection.Ltr)).isGreaterThan(0f)
+    }
+
+    @Test
+    fun `in a right-to-left language a choice panel slides in from the left edge`() {
+        assertThat(slideOf(LayoutDirection.Rtl)).isLessThan(0f)
+    }
+
+    /** How far the panel's row is from where it settles, early in its slide in [direction]. */
+    private fun slideOf(direction: LayoutDirection): Float {
+        var open by mutableStateOf(false)
+        compose.setTvContent {
+            CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                if (open) {
+                    PlayerChoicePanel(
+                        title = "Audio",
+                        choices = listOf(PlayerChoice("English", selected = true, onClick = {})),
+                        startFocus = FocusRequester(),
+                        onClose = {},
+                    )
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+        open = true
+        // The clock is held, so nothing else tells Compose the state changed.
+        Snapshot.sendApplyNotifications()
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeByFrame()
+        val early = compose.onNodeWithText("English").getUnclippedBoundsInRoot().left
+        compose.mainClock.advanceTimeBy(1_000)
+        return (early - compose.onNodeWithText("English").getUnclippedBoundsInRoot().left).value
     }
 }
