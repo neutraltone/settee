@@ -168,3 +168,62 @@ jobs:
           files: dist/*.apk
           generate_release_notes: false
           body_path: release-notes.md
+
+  # Tells Sentry which commits went into the release and that it shipped, so a new crash shows its
+  # suspect commits, an issue can be resolved in the next release, and one that comes back later is
+  # marked as a regression (#622). Release health stays off in the app (ADR 0009), so this adds no
+  # viewer data, only the repo's own history.
+  #
+  # A job of its own, after the APKs are published, because Sentry's action pulls a Docker image when
+  # its job is set up, before any step can be skipped or allowed to fail: in the release job, that
+  # registry being down would cost the release. It also keeps the image, which Sentry doesn't pin,
+  # away from the release job's token that can write to the repo.
+  sentry-release:
+    name: Tell Sentry about the release
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Sentry being down is never a failed release.
+    continue-on-error: true
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag }}
+
+    steps:
+      - name: Release name, if there is a token
+        id: sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          # Forks and rebuilds without secrets have no token; they skip the rest.
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then echo "token=true" >> "$GITHUB_OUTPUT"; fi
+          # appVersionName, which is what crash reports name: the tag without its v.
+          echo "release=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.sentry.outputs.token == 'true'
+        with:
+          ref: ${{ inputs.tag }}
+          # The commits since the last release are worked out from the history, which a shallow
+          # clone doesn't have.
+          fetch-depth: 0
+          # Nothing here pushes, and Sentry's container sees the checkout.
+          persist-credentials: false
+
+      - name: Sentry release
+        if: steps.sentry.outputs.token == 'true'
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+        with:
+          release: ${{ steps.sentry.outputs.release }}
+          # A deploy records that the version shipped now, so only when release-please shipped it: an
+          # old tag rebuilt by hand would otherwise become Sentry's newest deploy.
+          environment: ${{ github.event_name != 'workflow_dispatch' && 'production' || '' }}
+          set_commits: auto
+          # The first release Sentry hears of has no previous one to count from.
+          ignore_missing: true
+          disable_telemetry: true
