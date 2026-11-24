@@ -8,6 +8,7 @@ package app.opentv.core
 import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import app.opentv.APP_PREFS
 import app.opentv.BuildConfig
 import app.opentv.data.db.DATABASE_VERSION
 import app.opentv.data.db.OpenTvDatabase
@@ -53,6 +54,7 @@ import app.opentv.recording.FreeSpace
 import app.opentv.recording.RecordingEngine
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
+import app.opentv.sync.LastNasSync
 import app.opentv.ui.HomeSnapshots
 import app.opentv.update.UpdateChecker
 import java.util.concurrent.TimeUnit
@@ -403,6 +405,11 @@ object ServiceLocator {
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
         val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }
+
+        /** How the last NAS sync went, the launch's or Sync now's, for Your devices (#484). */
+        val lastNasSync: LastNasSync by lazy {
+            LastNasSync(appContext.getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE), errorWording)
+        }
 
         /** The last opens and errors, in files of their own so they're readable when the database isn't. */
         val diagnosticsLog: DiagnosticsLog by lazy {
