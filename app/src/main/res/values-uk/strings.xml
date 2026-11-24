@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Цей телевізор не може відтворити %1$s</string>
     <string name="vod_cant_play_device">Цей пристрій не може відтворити %1$s</string>
+    <string name="player_stepped_down_tv">Цей телевізор не може відтворити %1$s. Натомість відтворюється %2$s.</string>
+    <string name="player_stepped_down_device">Цей пристрій не може відтворити %1$s. Натомість відтворюється %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Цей телевізор не може відтворити %1$s. Натомість відтворюється нижча якість.</string>
+    <string name="player_stepped_down_lower_device">Цей пристрій не може відтворити %1$s. Натомість відтворюється нижча якість.</string>
+    <string name="player_stepped_down_unnamed_tv">Цей телевізор не може відтворити цю якість. Натомість відтворюється інша.</string>
+    <string name="player_stepped_down_unnamed_device">Цей пристрій не може відтворити цю якість. Натомість відтворюється інша.</string>
     <string name="vod_language_title">Тут лише мовою: %1$s</string>
     <string name="vod_language_body_tv">Цей телевізор не може відтворити версію вашою мовою.</string>
     <string name="vod_language_body_device">Цей пристрій не може відтворити версію вашою мовою.</string>

@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">TV này không phát được %1$s</string>
     <string name="vod_cant_play_device">Thiết bị này không phát được %1$s</string>
+    <string name="player_stepped_down_tv">TV này không phát được %1$s. Đang phát %2$s thay thế.</string>
+    <string name="player_stepped_down_device">Thiết bị này không phát được %1$s. Đang phát %2$s thay thế.</string>
+    <string name="player_stepped_down_lower_tv">TV này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
+    <string name="player_stepped_down_lower_device">Thiết bị này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
+    <string name="player_stepped_down_unnamed_tv">TV này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
+    <string name="player_stepped_down_unnamed_device">Thiết bị này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
     <string name="vod_language_title">Ở đây chỉ có tiếng %1$s</string>
     <string name="vod_language_body_tv">TV này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
     <string name="vod_language_body_device">Thiết bị này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
