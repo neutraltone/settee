@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -94,6 +95,12 @@ class SeriesDetailVersionsTest {
                     false,
                     false,
                 ),
+                VodQualities.Choice(
+                    MediaKey.Episode(31),
+                    VersionTraits(qualityRank = 200, qualityLabel = "HD"),
+                    playable = true,
+                    playing = false,
+                ),
                 VodQualities.Choice(MediaKey.Episode(51), VersionTraits(), playable = true, playing = true),
             ),
         )
@@ -103,6 +110,7 @@ class SeriesDetailVersionsTest {
         settle()
 
         compose.onNodeWithText("4K").assertIsNotEnabled()
+        compose.onNodeWithText("HD").assertIsEnabled()
         compose.onNodeWithText("Other").assertIsSelected()
         captureScreen("series_detail_quality_pill")
     }

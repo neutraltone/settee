@@ -551,6 +551,21 @@ class MainShellTest {
         assertThat(selected).isEqualTo(Tab.HOME)
     }
 
+    @Test
+    fun `Back from the open rail on another tab puts the highlight on Home, not the tab it left`() {
+        setShellWithTitles(start = Tab.SHOWS)
+        press(Key.DirectionLeft)
+        railItem("Shows").assertIsFocused()
+
+        pressBack()
+        compose.mainClock.advanceTimeBy(ENTRY_WAIT_MILLIS)
+        compose.waitForIdle()
+
+        railItem("Shows").assertIsNotFocused()
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Home 1")
+    }
+
     private fun pressBack() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()

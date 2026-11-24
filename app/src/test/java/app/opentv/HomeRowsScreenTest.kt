@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
@@ -207,6 +209,50 @@ class HomeRowsScreenTest {
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertThat(arrangement.rows.last()).isEqualTo(CONTINUE_WATCHING)
+    }
+
+    @Test
+    fun `a row carried to the last place stays on screen, and so does it once dropped (#440)`() {
+        show()
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+
+        repeat(6) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+
+        assertWhollyOnScreen("Continue watching")
+        captureScreen("home_rows_lifted_last")
+
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertWhollyOnScreen("Continue watching")
+    }
+
+    @Test
+    fun `Back with a row carried down puts it back where it was, in sight (#440)`() {
+        show()
+        // Carry the last row up to the top, then Back: it goes back to the bottom of the page.
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        repeat(6) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        repeat(6) { press(KeyEvent.KEYCODE_DPAD_UP) }
+        assertWhollyOnScreen("Favourite channels")
+
+        Espresso.pressBack()
+        compose.waitForIdle()
+
+        highlighted().assertTextContains("Favourite channels")
+        assertWhollyOnScreen("Favourite channels")
+    }
+
+    private fun assertWhollyOnScreen(text: String) {
+        val node = compose.onNodeWithText(text)
+        node.assertIsDisplayed()
+        val shown = node.getBoundsInRoot()
+        val whole = node.getUnclippedBoundsInRoot()
+        val screen = compose.onRoot().getBoundsInRoot()
+        // Clipped bounds snap to whole pixels, so allow a couple of pixels; a row cut off by the
+        // page's edge loses far more.
+        assertThat(shown.top.value).isWithin(2f).of(whole.top.value)
+        assertThat(shown.bottom.value).isWithin(2f).of(whole.bottom.value)
+        assertThat(whole.bottom).isAtMost(screen.bottom)
     }
 
     @Test
