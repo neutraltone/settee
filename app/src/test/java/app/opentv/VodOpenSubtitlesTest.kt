@@ -8,6 +8,7 @@ package app.opentv
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
@@ -30,6 +31,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SubtitleTitle
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.DOWNLOADED_SUBTITLE_TAG
 import app.opentv.ui.vod.LocalVodSubtitles
@@ -217,6 +219,29 @@ class VodOpenSubtitlesTest {
         settle()
         assertThat(exists(OPENSUBTITLES_RESULTS_TAG)).isFalse()
         compose.onNode(entryRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a failed search says why above the credit line, one under the other`() {
+        site.replies["GET /subtitles"] = "!503 {}"
+        showFilm()
+        until { subtitles.subject.value != null }
+        openSubtitleList()
+
+        compose.onNode(entryRow).performClick()
+        until {
+            compose.onAllNodes(hasTestTag(ERROR_DETAIL_TAG), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // The empty panel's footer holds the Highlight as one merged node, so its pieces are found unmerged.
+        fun boundsOf(matcher: SemanticsMatcher) =
+            compose.onNode(matcher, useUnmergedTree = true).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val sentence = boundsOf(hasText(app.getString(R.string.error_opensubtitles_trouble)))
+        val detail = boundsOf(hasTestTag(ERROR_DETAIL_TAG))
+        val credit = boundsOf(hasText("Subtitles provided by OpenSubtitles.com"))
+        assertThat(sentence.bottom).isAtMost(detail.top)
+        assertThat(detail.bottom).isAtMost(credit.top)
+        captureScreen("opensubtitles_results_failed")
     }
 
     @Test

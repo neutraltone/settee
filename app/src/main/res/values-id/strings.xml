@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">Tidak dapat menjangkau OpenSubtitles. Pastikan TV ini online, lalu coba lagi.</string>
     <string name="error_opensubtitles_unreachable_device">Tidak dapat menjangkau OpenSubtitles. Pastikan perangkat ini online, lalu coba lagi.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles tidak menerima Settee saat ini. Akun Anda baik-baik saja: Settee perlu diperbarui.</string>
     <string name="error_opensubtitles_limit_anonymous">5 subtitel gratis hari ini sudah terpakai. Masuk ke OpenSubtitles di Setelan untuk mendapatkan lebih.</string>
     <string name="error_opensubtitles_limit_account">Unduhan OpenSubtitles hari ini sudah terpakai. Tersedia lagi mulai %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Unduhan OpenSubtitles hari ini sudah terpakai. Tersedia lagi besok.</string>
