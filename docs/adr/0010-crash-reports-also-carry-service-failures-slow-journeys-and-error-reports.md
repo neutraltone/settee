@@ -10,14 +10,18 @@ ADR 0009 let Settee send Crash Reports, and kept them to crashes, freezes and tw
 
 Only the ones that point at Settee's key, request or parsing:
 
-- **Reported:** 400, 403, 404 and 410 from a service's API endpoint, and a reply Settee couldn't read. A 404 that is the API's way of saying it has nothing, as TMDB answers for a title it doesn't know and IntroDB and TheIntroDB for an episode no one has timed, is an answer, not a failure, and isn't reported.
-- **Never reported:** no network, a timeout, a DNS failure, any 5xx, 429 or a quota reply (the service's or the viewer's connection, not Settee's bug), and 401 at OpenSubtitles sign-in (the viewer's own password).
+- **Reported:** 400, 401, 403, 404 and 410 from a service's API endpoint, and a reply Settee couldn't read, with the exceptions below.
+- **A 401 is reported only where Settee's key was all the request carried**: TMDB, IntroDB and TheIntroDB, the update check, and an OpenSubtitles search or download made without a session. A 401 to OpenSubtitles' sign-in is the viewer's password, and a 401 to a request carrying the viewer's session token (a download, the account's allowance) is that session having ended, which Settee renews by asking them to sign in again: neither is Settee's bug, and neither is reported.
+- **A 404 is reported only where it can't mean "nothing here".** A TMDB search answers no match with an empty list, never a 404, so a search's 404 means Settee asked for an address TMDB doesn't have, and is reported. A TMDB look-up by id answers 404 for a title it doesn't know, and IntroDB and TheIntroDB answer 404 for an episode no one has timed; each answers a wrong address with a 404 too, and nothing in the reply tells the two apart, so those 404s are never reported: one that meant a wrong address would be lost among the answers. The update check's 404 (no latest release, or the wrong repository) is reported.
+- **Never reported:** no network, a timeout, a DNS failure, any 5xx, 429 or a quota reply (the service's or the viewer's connection, not Settee's bug).
 
 What the viewer sees doesn't change: these are reported beside the error Settee already shows, never instead of it.
 
 ## Slow Journeys
 
-Each journey is timed by a `JourneyTimer`: when it starts, when it ends, and how long it spent waiting on the network inside it, which the HTTP client marks. Settee's own time is the total minus that wait, so a slow Provider or a slow connection never makes a journey count as slow. Timing is a couple of `SystemClock.elapsedRealtime()` reads and allocates nothing on hot paths.
+Each journey is timed by a `JourneyTimer`: when it starts, when it ends, and how long it spent waiting on the network inside it, which the HTTP clients mark. Settee's own time is the total minus that wait, so a slow Provider or a slow connection never makes a journey count as slow. Timing is a couple of `SystemClock.elapsedRealtime()` reads and allocates nothing on hot paths, but for one small listener per HTTP call that remembers when the call started.
+
+A journey's network wait is only the time its own calls were in flight, not any call in the app. A call counts for a journey only if it started while the journey was running, so a guide download or a recording already going doesn't count. And a stream counts only for `playback-start`: the players and recordings read streams through their own HTTP client, whose calls only a start of playback waits on, so a Live Preview or a recording playing on while Movies opens never hides a slow Movies. Calls a journey didn't make but that started during it, such as a background sync that happens to start then, still count; that can only make it report less, never wrongly.
 
 An event is sent when Settee's own time passes the journey's threshold. Each threshold is about 2–3× the median the Fire TV Stick measured in [PERFORMANCE.md](../PERFORMANCE.md), rounded, so "too slow" means clearly slower than the stick normally is. Where the stick has no measurement of a journey, the threshold is a cautious guess marked provisional, to be replaced with 2–3× a median once one is measured:
 
@@ -29,17 +33,17 @@ An event is sent when Settee's own time passes the journey's threshold. Each thr
 | `catalogue-refresh` | refresh started | catalogue written | none | 60 s, provisional |
 | `playback-start` | asked to play | first frame drawn | none | 4 s, provisional |
 
-The thresholds are constants beside the timer, and this table changes with them. An event carries the journey's name, Settee's own time and the network wait (each rounded to 100 ms), free memory, the screen and the Source's kind (Xtream, M3U, Stalker or Stremio), with the usual app and device fields.
+The thresholds are constants beside the timer (`JourneyTimer.Journey`), marked provisional there too, and this table changes with them. Only `cold-start` has a measured median. The provisional ones are replaced, each with 2–3× its median, once the stick measures that journey: `tools/perf/stick_baseline.py` and docs/PERFORMANCE.md measure cold start today, and each other journey needs a measurement of its own there first. An event carries the journey's name, Settee's own time and the network wait (each rounded to 100 ms), free memory, the screen and the Source's kind (Xtream, M3U, Stalker or Stremio), with the usual app and device fields.
 
 - **At most one per journey per launch.** A second slow run of the same journey in one process sends nothing.
-- **A freeze wins.** A slow journey that also froze the app is reported once, as the freeze.
+- **A freeze wins.** A slow journey that also froze the app is reported once, as the freeze. Before Android 11, Sentry catches a freeze as it happens, while the journey may still be running, and the journey's report is then dropped. From Android 11 on, Sentry reports freezes only from Android's exit history at the next launch, and that history only holds freezes that killed the process: the journey a freeze like that froze never reached its end, so it was never reported, and a freeze found that way is never taken to be one of the new launch's journeys.
 - **Debug builds never send one**, but log to logcat when a journey passes its threshold, so slowness shows during development.
 
 ## Error Reports
 
-Send report appears on the errors where a failure could be Settee's: catalogue and VOD lists, a series' episodes, playback, Provider sign-in and the services' sign-ins. Never on an error that's certainly the viewer's own, such as no internet or a wrong password. A line above it says what will be sent; after sending it shows Sent and can't be pressed again for that error. Try again keeps the Highlight it starts with, and Send report is reached with Down or Right.
+Send report appears on the errors where a failure could be Settee's: catalogue and VOD lists, a series' episodes, playback, Provider sign-in and the services' sign-ins. Never on an error that's certainly the viewer's own, such as no internet or a wrong password. A line above it says what will be sent; after sending it shows Sent and can't be pressed again for that error. Try again keeps the Highlight it starts with, and Send report is reached with Down: it sits under the error's buttons, so it's Down from whichever of them is lit, and Right stays the way along a row of buttons.
 
-The event carries what the viewer saw: the error's kind (its `ErrorWording` or `PlaybackErrors` category, not the sentence), the detail line (code · status · format) after scrubbing, the screen, the Source's kind, the stack trace if there is one, and the usual app and device fields. It never carries the Source's address, name or credentials, the channel or title, or a stream URL.
+The event carries what the viewer saw: the error's kind, the detail line (code · status · format) after scrubbing, the screen, the Source's kind, and the usual app and device fields. The kind is the detail line's first code (such as `HTTP 503`, `IoBadHttpStatus` or `BadReply`), not the sentence: that code is what `ErrorWording` and `PlaybackErrors` chose the sentence by, it's the same in every language, and it survives being saved, as a Source's last refresh failure is, where no category object does. No stack trace is sent: a failure reaches the screen as a `ViewerError`, a sentence and a detail line, with no exception left to send, and the screen's code would say nothing about the failure. It never carries the Source's address, name or credentials, the channel or title, or a stream URL.
 
 **This is the only way a Provider failure leaves the device:** the viewer presses Send report, for that one failure, each time. Settee never reports Provider failures by itself.
 

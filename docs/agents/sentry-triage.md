@@ -110,7 +110,7 @@ Settee keeps only an allow-list of fields before a report leaves the device:
   - `screen`: the navigation route that was open (`main` covers every tab). Nameable.
   - Service failures: `service` (`opensubtitles`, `tmdb`, `introdb` or `update-check`), `operation`
     (`sign-in`, `account`, `search`, `download`, `details`, `timings` or `latest-release`) and
-    `status` (`http-400`, `http-403`, `http-404`, `http-410` or `unreadable-reply`). All nameable.
+    `status` (`http-400`, `http-401`, `http-403`, `http-404`, `http-410` or `unreadable-reply`). All nameable.
   - Slow Journeys: `journey` (`cold-start`, `open-movies`, `open-shows`, `catalogue-refresh` or
     `playback-start`), `own-ms` (Settee's own time) and `network-ms` (time waiting on the network),
     each in milliseconds rounded to 100. All nameable; give times as counts, medians and ranges.
@@ -134,9 +134,9 @@ Settee keeps only an allow-list of fields before a report leaves the device:
   Send, Always send or turned reports on. Its release, `screen`, free memory and versions are from when
   it happened, but it arrives later, so its first-seen time can trail the release it names. A held
   freeze from Android's exit history (Android 11 and later) has no `screen` and no free memory.
-- **Handled errors**: a closed list of kinds (`CrashReports.Handled` in
-  `app/src/main/java/app/opentv/core/CrashReports.kt`), each arriving as an event whose title starts
-  with the kind:
+- **Handled errors**: a closed list of kinds (the sealed `HandledReport` in
+  `app/src/main/java/app/opentv/core/HandledReport.kt`; what each is sent as is in `HandledEvents.kt`
+  beside it), each arriving as an event whose title starts with the kind:
   - `XTREAM_PARSE` (an Xtream reply that arrived whole but wouldn't parse) and `DATABASE_MIGRATION`
     (Room refusing to open the database): exceptions of type `HandledError` with a stack trace.
     Settee bugs, like crashes.
@@ -145,28 +145,31 @@ Settee keeps only an allow-list of fields before a report leaves the device:
     own services turned down Settee's key or request, or answered something Settee couldn't read. An
     exception of type `HandledError` whose message is the kind, the operation and the status, such as
     `OPENSUBTITLES sign-in http-403`, with the `service`, `operation` and `status` tags and the stack
-    of the client that asked. Nothing from the request or the reply is in it. Only 400, 403, 404, 410
-    and unreadable replies are sent; no network, timeouts, 5xx, 429, quota replies and a 401 at
-    OpenSubtitles sign-in never are, and neither is a 404 that is the API's way of saying it has
-    nothing. Settee bugs, like crashes. Sentry groups them by stack, so one Sentry issue can hold
+    of the client that asked. Nothing from the request or the reply is in it. Only 400, 401, 403, 404,
+    410 and unreadable replies are sent; no network, timeouts, 5xx, 429 and quota replies never are.
+    A 401 comes only from a request that carried nothing but Settee's key (never OpenSubtitles'
+    sign-in or a request with the viewer's session), so it means the key was refused. A 404 comes
+    only where it can't mean "nothing here": a TMDB search (`TMDB search http-404`, Settee asking for
+    an address TMDB doesn't have) and the update check; TMDB's look-ups by id and IntroDB's 404s
+    never arrive. Settee bugs, like crashes. Sentry groups them by stack, so one Sentry issue can hold
     more than one status or operation: read its `status` and `operation` breakdowns.
   - **Slow Journeys**: `SLOW_JOURNEY: <journey>`, such as `SLOW_JOURNEY: cold-start`, a warning-level
     message event with no stack trace, carrying the `journey`, `own-ms`, `network-ms` and, when the
     journey was one Source's, `source-kind` tags, plus free memory and the screen. One is sent when
     Settee's own part of a timed journey (total minus network wait) passed its threshold, at most
-    once per journey per launch, never from a debug build, and not when the app froze during it (the
+    once per journey per launch (the network wait is only calls the journey itself started, and a
+    stream only for `playback-start`), never from a debug build, and not when the app froze during it (the
     freeze is reported instead). Sentry groups them by that message, so each journey is one Sentry
     issue. The journeys, their start and end and their thresholds are `JourneyTimer.Journey` in
     `app/src/main/java/app/opentv/core/JourneyTimer.kt` and the table in ADR 0010.
   - **Error Reports**: `VIEWER_REPORT`. A viewer pressed Send report on an error Settee showed, for
-    that one failure, whether or not crash reports were on. With a cause, it's an exception of type
-    `HandledError` titled `VIEWER_REPORT: <exception class>` with the cause's stack, grouped by stack;
-    without one, a message event titled `VIEWER_REPORT: <error kind>`. Either way it carries the
-    `error-kind`, `error-detail` and usually `source-kind` tags. This is the only way a Provider
+    that one failure, whether or not crash reports were on. A message event titled
+    `VIEWER_REPORT: <error kind>` with no stack trace (a failure reaches the screen as a sentence and
+    a detail line, with no exception left to send), carrying the `error-kind`, `error-detail` and
+    usually `source-kind` tags. This is the only way a Provider
     failure (HTTP errors, dead streams, web pages, replies cut off part way) ever reaches Sentry, so
-    many are the Provider's trouble, not Settee's. One error kind can be spread over several Sentry
-    issues (one per stack), and one Sentry issue can hold several kinds: group by the `error-kind`
-    tag, not by Sentry issue.
+    many are the Provider's trouble, not Settee's. Sentry groups them by title, so each error kind is
+    usually one Sentry issue, but still group by the `error-kind` tag, not by Sentry issue.
 - **The daily cap**: each install sends at most 20 non-crash events a day (service failures, Slow
   Journeys and Error Reports together); crashes and freezes aren't capped by Settee. A large event
   count from one or two installs is one device's bad day, not a widespread bug.
@@ -388,8 +391,8 @@ The same title rule, labels and sections, with these differences:
 - **Error Report groups.** Title it for the failure viewers report, for example `Several viewers
   report films stopping with a bad HTTP status`. In **What broke**, the error kind, what the viewer
   saw (the sentence `ErrorWording` or `PlaybackErrors` shows for it, in your own words), and that
-  these are reports viewers chose to send. In **Where**, the code that builds that error and, where
-  the events have a stack, its Settee frames. In **How often**, events and installs (saying how many
+  these are reports viewers chose to send. In **Where**, the code that builds that error (Error
+  Reports have no stack). In **How often**, events and installs (saying how many
   events had no install id), releases, the `source-kind` and `screen` breakdowns, devices and
   Android versions. In **Draft diagnosis**, whether this looks like Settee's bug or the Providers'
   own trouble, and why; never quote `error-detail`. Instead of one `Sentry issue:` line, list every

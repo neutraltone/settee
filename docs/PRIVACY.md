@@ -103,7 +103,8 @@ as signing in or searching), and the kind of failure (such as `http-403`, or a r
 read), with the version and device details listed above. It never contains anything Settee sent or
 the service answered: not what was searched for, not which film or episode, not your OpenSubtitles
 username or password. Your internet being down, a service that's busy or briefly unavailable, a
-service's own daily limit, and your OpenSubtitles password being wrong are never reported.
+service's own daily limit, your OpenSubtitles password being wrong and your OpenSubtitles sign-in
+having expired are never reported.
 
 ### Slow journeys
 
@@ -111,7 +112,8 @@ With crash reports on, Settee also times a few things it does: opening the app u
 first row, opening Movies or Shows until the first row shows, refreshing your catalogue, and starting
 something playing until its first picture. It sends a report only when Settee's own part took clearly
 longer than it normally does on a Fire TV Stick, not counting time spent waiting for your provider or
-the internet, and at most once for each of these each time Settee is opened. When things are fine,
+the internet (only the waiting each of these did itself, so something else downloading or playing at
+the same time doesn't hide it), and at most once for each of these each time Settee is opened. When things are fine,
 nothing is sent and nothing about the timing is kept. A report contains only which of these it was,
 how long Settee's own part took and how long was spent waiting on the network (each rounded to a
 tenth of a second), how much memory was free, the screen it was on, and what kind of provider it was
@@ -128,7 +130,7 @@ is the only way a problem with your provider is ever reported, and only when you
 contains only what kind of error it was (the code that starts the line of detail, not the sentence
 on screen), the line of detail under it (such as the error code, the HTTP status and the stream's
 format) with any web addresses and MAC addresses cut out, the screen it was on, what kind of provider it was (Xtream, M3U, Stalker or
-Stremio), the stack trace if there is one, and the version and device details listed above, with the
+Stremio), and the version and device details listed above, with the
 random id only if crash reports have been turned on on this device. It never contains your
 provider's address, name, username, password or MAC, the channel or title, or the stream's address.
 
