@@ -194,7 +194,9 @@ private fun NoRows(message: String, footer: (@Composable () -> Unit)?, holder: M
         }
     } else {
         Spacer(Modifier.height(12.dp))
-        HighlightSurface(onClick = {}, style = FooterHighlight, modifier = holder) { footer?.invoke() }
+        // The surface lays its content on top of itself, so the footer's pieces (an error, then the
+        // attribution) would print over each other (#627) without a column of their own.
+        HighlightSurface(onClick = {}, style = FooterHighlight, modifier = holder) { Column { footer?.invoke() } }
     }
 }
 

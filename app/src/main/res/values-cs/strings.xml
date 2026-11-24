@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nejsou dostupné. Zkontrolujte, že je tato televize online, a zkuste to znovu.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles nejsou dostupné. Zkontrolujte, že je toto zařízení online, a zkuste to znovu.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles mají potíže. Jsou na jejich straně, zkuste to tedy později.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles teď Settee nepřijímá. Váš účet je v pořádku: Settee potřebuje aktualizaci.</string>
     <string name="error_opensubtitles_limit_anonymous">Dnešních 5 titulků zdarma je vyčerpáno. Pro další se přihlaste k OpenSubtitles v Nastavení.</string>
     <string name="error_opensubtitles_limit_account">Dnešní stahování z OpenSubtitles je vyčerpáno. Další od %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Dnešní stahování z OpenSubtitles je vyčerpáno. Další zítra.</string>
