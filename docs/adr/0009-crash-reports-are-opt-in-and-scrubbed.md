@@ -25,6 +25,7 @@ We turned down three alternatives:
 - The SDK is started by hand, never by its auto-init content provider, so nothing runs before Settee has checked the DSN and the viewer's choice. Performance tracing, profiling, session replay, screenshots, view hierarchy, interaction, network and logcat breadcrumbs, and `sendDefaultPii` all stay off.
 - The scrubber's tests send Xtream-, M3U- and Stalker-shaped URLs and a MAC through the module, with a fake transport in place of Sentry's, and check what would have left the device. A change that leaks a credential fails CI.
 - A DSN can always be pulled out of an APK. It can only send, and Sentry's filters (spike protection, a rate limit, dropping releases that aren't Settee's) are what limit misuse.
+- Sentry also holds, per release, the commits that went into it, sent by `release.yml` (#622). That's the repo's own public history, nothing from a viewer. Release health (crash-free sessions) stays off: it would send a session on every launch, which is the usage tracking this ADR rules out.
 - The daily routine that files GitHub issues from Sentry writes each issue in its own words and never pastes an event, so if the scrubber ever misses something, it still doesn't end up in a public issue.
 - `docs/PRIVACY.md` lists what a report contains and what it never contains, and has to change whenever the allow-list does.
 

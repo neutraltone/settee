@@ -35,6 +35,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
+          # Sentry's release step works out which commits are new since the last release from the
+          # history, which a shallow clone doesn't have.
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v6
@@ -168,3 +171,34 @@ jobs:
           files: dist/*.apk
           generate_release_notes: false
           body_path: release-notes.md
+
+      # Tells Sentry which commits went into this release and that it shipped, so a new crash shows
+      # its suspect commits, an issue can be resolved in the next release, and one that comes back
+      # later is marked as a regression (#622). The name is the version crash reports carry. Release
+      # health stays off in the app (ADR 0009), so this adds no viewer data, only the repo's own
+      # history. After Publish, and allowed to fail, because Sentry being down must never cost a
+      # release; without the token (forks, a rebuild without secrets) it's skipped.
+      - name: Sentry release name, if it has a token
+        id: sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then echo "token=true" >> "$GITHUB_OUTPUT"; fi
+          # appVersionName, which is what crash reports name: the tag without its v.
+          echo "release=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Sentry release
+        if: steps.sentry.outputs.token == 'true'
+        continue-on-error: true
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+        with:
+          release: ${{ steps.sentry.outputs.release }}
+          environment: production
+          set_commits: auto
+          # The first release Sentry hears of has no previous one to count from.
+          ignore_missing: true
+          disable_telemetry: true
