@@ -69,6 +69,7 @@ import app.opentv.ui.options.OptionsPanel
 import app.opentv.ui.options.RowHighlight
 import app.opentv.ui.options.label
 import app.opentv.ui.options.rememberRowHighlight
+import app.opentv.ui.railReturnItem
 import coil.compose.AsyncImage
 
 /**
@@ -162,7 +163,7 @@ fun RecordingsContent(
                             }
                             section.rows.forEach { row ->
                                 val rowIndex = index++
-                                item(key = row.key, contentType = "row") {
+                                railReturnItem(key = row.key, contentType = "row") {
                                     RecordingsRowItem(
                                         row = row,
                                         profileNames = profileNames.takeIf { it.size > 1 }.orEmpty(),
