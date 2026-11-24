@@ -252,20 +252,25 @@ fun LiveScreen(
                 inFull = viewModel::programmeInFull,
             )
             Spacer(Modifier.height(GUIDE_GAP))
-            Box(Modifier.weight(1f)) {
+            // The highlighted cell leaves with the last row, and nothing in the message that replaces
+            // the guide takes the Highlight on its own (#450). Whether the guide had it is read in the
+            // composition that empties it, before the cell's going tells this it lost it.
+            val guideFocus = remember { GuideFocus() }
+            val emptiedFromGuide = remember(rows.isEmpty()) { rows.isEmpty() && guideFocus.has }
+            Box(Modifier.weight(1f).onFocusChanged { guideFocus.has = it.hasFocus }) {
                 // The guide's skeleton holds the Highlight while it shows; losing its cell as the rows
                 // come sent the Highlight back to the rail, where the guide wouldn't take it from.
                 val skeleton = rows.isEmpty() && !favouritesOnly && channelsPresent == true && !rowsBuilt
                 val opening = rememberOpeningPlace(placeNow = skeleton)
                 if (rows.isEmpty()) {
                     when {
-                        favouritesOnly -> NoFavourites(openSidebar)
+                        favouritesOnly -> NoFavourites(openSidebar, takeFocus = emptiedFromGuide)
                         // Channels on the device and the guide still being built from them, as on
                         // every cold start: the guide's shape, its first row holding the Highlight,
                         // so the rows fill in rather than replace a message (#581).
                         skeleton -> OpeningGuideSkeleton(takeFocus, opening.modifierIf(true))
                         // Built, with channels on the device, and nothing here: every one is hidden.
-                        channelsPresent == true -> NothingToShow(openSidebar)
+                        channelsPresent == true -> NothingToShow(openSidebar, takeFocus = emptiedFromGuide)
                         // No channels on the device yet and a sync under way: the first, which takes
                         // a while on a big provider, and "No channels" during it reads as failure.
                         isSyncing -> Loading()
@@ -453,13 +458,34 @@ private fun Loading() {
     )
 }
 
+/** Where the Highlight is, kept outside the snapshot so the guide's every move doesn't recompose. */
+private class GuideFocus {
+    var has = false
+}
+
+/**
+ * Choose a category, which takes the Highlight when [takeFocus]: the message has just replaced a
+ * guide that had it.
+ */
+@Composable
+private fun ChooseCategory(openSidebar: () -> Unit, takeFocus: Boolean) {
+    val button = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (!takeFocus) return@LaunchedEffect
+        // Once it's been laid out, which is when it can take the Highlight.
+        withFrameNanos {}
+        runCatching { button.requestFocus() }
+    }
+    ActionButton(stringResource(R.string.guide_choose_category), openSidebar, Modifier.focusRequester(button))
+}
+
 /** Favourites with none in them: how to add one, and a way to another category. */
 @Composable
-private fun NoFavourites(openSidebar: () -> Unit) {
+private fun NoFavourites(openSidebar: () -> Unit, takeFocus: Boolean) {
     Message(
         stringResource(R.string.guide_no_favourites_hint),
         title = stringResource(R.string.guide_no_favourites_title),
-    ) { ActionButton(stringResource(R.string.guide_choose_category), openSidebar) }
+    ) { ChooseCategory(openSidebar, takeFocus) }
 }
 
 /**
@@ -467,11 +493,11 @@ private fun NoFavourites(openSidebar: () -> Unit) {
  * here to take the Highlight, and so no way to Left and the sidebar.
  */
 @Composable
-private fun NothingToShow(openSidebar: () -> Unit) {
+private fun NothingToShow(openSidebar: () -> Unit, takeFocus: Boolean) {
     Message(
         stringResource(R.string.guide_empty_category_hint),
         title = stringResource(R.string.guide_empty_category_title),
-    ) { ActionButton(stringResource(R.string.guide_choose_category), openSidebar) }
+    ) { ChooseCategory(openSidebar, takeFocus) }
 }
 
 /**
