@@ -14,7 +14,20 @@ internal data class LiveScreen(
     val controlsVisible: Boolean,
     /** A failure trying again could fix, so Try again is on screen. */
     val retryableError: Boolean,
+    /** Where Report is, when the error offers it beside Try again (ADR 0010). */
+    val report: ReportPlace = ReportPlace.NONE,
 )
+
+/** Report beside a live channel's Try again, as far as where a key goes. */
+internal enum class ReportPlace {
+    NONE,
+
+    /** Offered, with the Highlight on Try again to its left: Right goes to it. */
+    BESIDE_TRY_AGAIN,
+
+    /** The Highlight is on it: OK presses it and Left goes back to Try again. */
+    HIGHLIGHTED,
+}
 
 /** What a key press does in the live player. */
 internal sealed interface LiveKey {
@@ -49,8 +62,19 @@ internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
         // With the controls up, the d-pad moves around them: Down reaches Subtitles and the pills, and
         // Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
         screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.ToFocused
-        else -> overPicture(key, screen.retryableError)
+        else -> aroundReport(key, screen.report) ?: overPicture(key, screen.retryableError)
     }
+}
+
+/**
+ * The keys Report beside Try again takes (where [report] says), or null for the rest. It's in the
+ * error's row, as on every error that offers it, so only Right from Try again and Left back from it
+ * move between them: Up and Down still change channel, and Right from Report opens the qualities.
+ */
+private fun aroundReport(key: Key, report: ReportPlace): LiveKey? = when {
+    report == ReportPlace.BESIDE_TRY_AGAIN && key == Key.DirectionRight -> LiveKey.ToFocused
+    report == ReportPlace.HIGHLIGHTED && (key == Key.DirectionLeft || key in OK_KEYS) -> LiveKey.ToFocused
+    else -> null
 }
 
 /** With nothing over the picture, or Try again alone. */

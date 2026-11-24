@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee depolama alanını ölçemedi.</string>
     <string name="diagnostics_memory_failed">Settee belleğini ölçemedi.</string>
     <string name="diagnostics_log_failed">Settee not ettiklerini okuyamadı, bu yüzden bu liste eksik.</string>
+    <string name="report_button">Bildir</string>
+    <string name="report_sent_to_settee">Settee\'ye gönderildi</string>
+    <string name="report_question_title">Rapor gönderilsin mi?</string>
+    <string name="report_question_body">Settee\'ye bu hatanın kodunu, göründüğü ekranı, sürümü ve cihazı gönderir. Sağlayıcınızı, giriş bilgilerini, profillerinizi veya ne izlediğinizi asla göndermez.</string>
+    <string name="report_question_always_note">Her zaman gönder, çökme ve hata raporlarını da açar. Bunları Ayarlar\'da, Gizlilik altında kapatabilirsiniz.</string>
+    <string name="report_question_send">Gönder</string>
+    <string name="report_question_dont_send">Gönderme</string>
+    <string name="report_question_always_send">Her zaman gönder</string>
 </resources>

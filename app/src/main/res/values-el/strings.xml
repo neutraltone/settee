@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Το Settee δεν μπόρεσε να μετρήσει τον αποθηκευτικό του χώρο.</string>
     <string name="diagnostics_memory_failed">Το Settee δεν μπόρεσε να μετρήσει τη μνήμη του.</string>
     <string name="diagnostics_log_failed">Το Settee δεν μπόρεσε να διαβάσει όσα είχε σημειώσει, γι\' αυτό λείπει αυτή η λίστα.</string>
+    <string name="report_button">Αναφορά</string>
+    <string name="report_sent_to_settee">Στάλθηκε στο Settee</string>
+    <string name="report_question_title">Αποστολή αναφοράς;</string>
+    <string name="report_question_body">Στέλνει στο Settee τον κωδικό αυτού του σφάλματος, την οθόνη όπου εμφανίζεται, την έκδοση και τη συσκευή. Ποτέ τον πάροχό σας, τα στοιχεία σύνδεσης, τα προφίλ σας ή τι βλέπετε.</string>
+    <string name="report_question_always_note">Η «Πάντα αποστολή» ενεργοποιεί επίσης τις αναφορές σφαλμάτων και κατάρρευσης. Μπορείτε να τις απενεργοποιήσετε στις Ρυθμίσεις, στο Απόρρητο.</string>
+    <string name="report_question_send">Αποστολή</string>
+    <string name="report_question_dont_send">Χωρίς αποστολή</string>
+    <string name="report_question_always_send">Πάντα αποστολή</string>
 </resources>

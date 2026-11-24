@@ -48,8 +48,7 @@ import kotlinx.coroutines.withContext
 typealias UpdateCheck = suspend (Context) -> UpdateChecker.Outcome
 
 internal val CheckGitHub: UpdateCheck = { context ->
-    val graph = ServiceLocator.get(context)
-    UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME, dispatchers = graph.dispatchers).check()
+    ServiceLocator.get(context).updateChecker.check()
 }
 
 /**

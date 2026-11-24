@@ -14,6 +14,7 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.Programme
 import app.opentv.data.remote.StalkerApi
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -81,7 +82,7 @@ class TestCatalog(
         stalkerApi = StalkerApi(panel.http, dispatchers = dispatchers),
         http = panel.http,
         settings = AppSettings.get(context),
-        tmdbKey = tmdbKey,
+        tmdb = TmdbClient(panel.http, tmdbKey),
         wording = ErrorWording(context, onTelevision = false),
         dispatchers = dispatchers,
     ).apply {

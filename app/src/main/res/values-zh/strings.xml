@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee 无法测量自己的存储空间。</string>
     <string name="diagnostics_memory_failed">Settee 无法测量自己的内存。</string>
     <string name="diagnostics_log_failed">Settee 无法读取自己记下的内容，因此缺少此列表。</string>
+    <string name="report_button">报告</string>
+    <string name="report_sent_to_settee">已发送给 Settee</string>
+    <string name="report_question_title">发送报告？</string>
+    <string name="report_question_body">向 Settee 发送此错误的代码、出现它的屏幕，以及版本和设备。绝不发送你的服务商、其登录信息、你的个人资料或你观看的内容。</string>
+    <string name="report_question_always_note">“始终发送”也会开启崩溃和错误报告。你可以在“设置”的“隐私”中关闭它们。</string>
+    <string name="report_question_send">发送</string>
+    <string name="report_question_dont_send">不发送</string>
+    <string name="report_question_always_send">始终发送</string>
 </resources>

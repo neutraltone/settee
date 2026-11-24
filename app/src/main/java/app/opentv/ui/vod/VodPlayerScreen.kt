@@ -150,6 +150,7 @@ fun VodPlayerScreen(
                 app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
                 liveRecording = growingRec,
                 diagnostics = graph.diagnosticsLog,
+                journeys = graph.journeys,
             ),
         )
     }
@@ -296,6 +297,8 @@ fun VodPlayerContent(
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     val title by controller.title.collectAsState()
+    // Only the kind of Source it plays from, for a failure's Error Report.
+    val reportedSource by controller.reportedSource.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
     val playingKey by viewModel.current.collectAsState()
     // Whether the card or the question is up, not which second it shows: effects keyed on this
@@ -596,7 +599,12 @@ fun VodPlayerContent(
                     }
                 }
 
-            is PlayerController.State.Error -> PlayerErrorPanel(current, onRetry = controller::retry, onBack = onBack)
+            is PlayerController.State.Error -> PlayerErrorPanel(
+                current,
+                onRetry = controller::retry,
+                onBack = onBack,
+                reportedSource = reportedSource,
+            )
 
             else -> Unit
         }

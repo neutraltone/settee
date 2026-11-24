@@ -381,7 +381,11 @@ Highlight holds steady, and OK does nothing on it.
 
 ### Error message
 A sentence in the Voice saying what happened and what to do, then a small Mushroom line with the code,
-status and format. Never a provider URL, username, password or MAC.
+status and format, then the error's own buttons in one row. Never a provider URL, username, password or
+MAC. An error that might be Settee's fault (ADR 0010) is sent as it's shown while crash and error
+reports are on, and the Mushroom line ends " · Sent to Settee". While they're off, a Report pill ends
+the button row, after Try again, Provider setup or Back, and opens the Send a report? Side Panel; once
+it's sent, Report goes and the Highlight returns to the error's main action.
 
 ## Do's and Don'ts
 

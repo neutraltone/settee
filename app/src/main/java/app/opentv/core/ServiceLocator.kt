@@ -54,10 +54,12 @@ import app.opentv.recording.RecordingEngine
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
+import app.opentv.update.UpdateChecker
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.job
@@ -135,15 +137,24 @@ object ServiceLocator {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
         }
 
+        /** How Settee's own services report turning down Settee's request (ADR 0010): each names itself. */
+        private val reportServiceFailure: (ServiceFailure) -> Unit = { crashReports.report(it) }
+
+        // Every client is built from this one, so each marks its calls as network wait for the journeys:
+        // the players' and recordings' as [streamingHttpClient]'s, which only a start of playback waits on.
         val httpClient: OkHttpClient by lazy {
-            http ?: OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                // Generous: catalogue endpoints on a busy panel can take a long time to
-                // produce 40,000 rows, and timing out mid-list is worse than waiting.
-                .readTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(5, TimeUnit.MINUTES)
-                .retryOnConnectionFailure(true)
-                .followRedirects(true)
+            (
+                http ?: OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    // Generous: catalogue endpoints on a busy panel can take a long time to
+                    // produce 40,000 rows, and timing out mid-list is worse than waiting.
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .callTimeout(5, TimeUnit.MINUTES)
+                    .retryOnConnectionFailure(true)
+                    .followRedirects(true)
+                    .build()
+                ).newBuilder()
+                .eventListenerFactory(journeys.network)
                 .build()
         }
 
@@ -162,6 +173,8 @@ object ServiceLocator {
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .retryOnConnectionFailure(true)
+                // A stream is the wait only for the start of playback that asked for it (ADR 0010).
+                .eventListenerFactory(journeys.streaming)
                 .build()
         }
 
@@ -170,7 +183,7 @@ object ServiceLocator {
                 httpClient,
                 downloads = appContext.cacheDir,
                 dispatchers = dispatchers,
-                reportParseFailure = { crashReports.report(CrashReports.Handled.XTREAM_PARSE, it) },
+                reportParseFailure = { crashReports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, it)) },
             )
         }
 
@@ -193,19 +206,24 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
-                tmdbKey = tmdbKey,
+                tmdb = tmdb,
                 wording = errorWording,
                 dispatchers = dispatchers,
             ).apply { staging = appContext.cacheDir }
+        }
+
+        /** TMDB, with Settee's own key: unconfigured in a build without one, so never asked. */
+        private val tmdb: TmdbClient by lazy {
+            TmdbClient(httpClient, tmdbKey, reportFailure = reportServiceFailure)
         }
 
         /** Where episodes' intros and credits fall, for the Next Episode card (#517). */
         val episodeTimings: EpisodeTimingsRepository by lazy {
             EpisodeTimingsRepository(
                 dao = database.episodeTimings(),
-                theIntroDb = TheIntroDbClient(httpClient),
-                introDb = IntroDbClient(httpClient),
-                tmdb = TmdbClient(httpClient, tmdbKey),
+                theIntroDb = TheIntroDbClient(httpClient, reportServiceFailure),
+                introDb = IntroDbClient(httpClient, reportServiceFailure),
+                tmdb = tmdb,
                 shows = object : EpisodeTimingsRepository.Shows {
                     override suspend fun seriesOf(episode: Episode) = catalogRepository.seriesOf(episode)
 
@@ -316,7 +334,12 @@ object ServiceLocator {
                 OpenSubtitles(
                     account = OpenSubtitlesAccount(
                         settings,
-                        OpenSubtitlesClient(httpClient, key, BuildConfig.VERSION_NAME),
+                        OpenSubtitlesClient(
+                            httpClient,
+                            key,
+                            BuildConfig.VERSION_NAME,
+                            reportFailure = reportServiceFailure,
+                        ),
                         KeystoreSealer(),
                         clock,
                         dispatchers,
@@ -332,6 +355,31 @@ object ServiceLocator {
             }
         }
 
+        /**
+         * Times the journeys that matter (ADR 0010). One too slow is a Crash Report; in a debug build,
+         * which never sends one, a line in logcat instead.
+         */
+        val journeys: JourneyTimer by lazy {
+            JourneyTimer { slow ->
+                if (BuildConfig.DEBUG) {
+                    val waited = "${slow.networkMillis} ms on the network"
+                    Log.w("SlowJourney", "${slow.journey.tag} took ${slow.ownMillis} ms of Settee's own, and $waited")
+                } else {
+                    crashReports.report(slow)
+                }
+            }
+        }
+
+        /** GitHub's latest release, for About's check and the automatic one. */
+        val updateChecker: UpdateChecker by lazy {
+            UpdateChecker(
+                httpClient,
+                BuildConfig.VERSION_NAME,
+                dispatchers = dispatchers,
+                reportFailure = reportServiceFailure,
+            )
+        }
+
         /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
         val crashReports: CrashReports by lazy {
             CrashReports(
@@ -340,6 +388,8 @@ object ServiceLocator {
                 release = BuildConfig.VERSION_NAME,
                 // The owner's .pr test builds report too, told apart from the release here.
                 environment = if (BuildConfig.APPLICATION_ID.endsWith(".pr")) "pr" else "production",
+                // One at a time, as a thread of its own would, on the io threads a test can see finish.
+                background = dispatchers.io.limitedParallelism(1).asExecutor(),
             )
         }
 
@@ -385,6 +435,7 @@ object ServiceLocator {
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
                 clock = clock,
                 scope = appScope,
+                journeys = journeys,
             )
         }
 

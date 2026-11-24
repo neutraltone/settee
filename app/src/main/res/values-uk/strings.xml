@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee не вдалося виміряти своє сховище.</string>
     <string name="diagnostics_memory_failed">Settee не вдалося виміряти свою пам\'ять.</string>
     <string name="diagnostics_log_failed">Settee не вдалося прочитати свої записи, тому цього списку немає.</string>
+    <string name="report_button">Повідомити</string>
+    <string name="report_sent_to_settee">Надіслано в Settee</string>
+    <string name="report_question_title">Надіслати звіт?</string>
+    <string name="report_question_body">Надсилає в Settee код цієї помилки, екран, на якому вона з\'явилася, версію та пристрій. Не надсилає вашого провайдера, його логін, ваші профілі чи те, що ви дивитеся.</string>
+    <string name="report_question_always_note">«Завжди надсилати» також вмикає звіти про збої та помилки. Їх можна вимкнути в Налаштуваннях, у розділі «Конфіденційність».</string>
+    <string name="report_question_send">Надіслати</string>
+    <string name="report_question_dont_send">Не надсилати</string>
+    <string name="report_question_always_send">Завжди надсилати</string>
 </resources>

@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import app.opentv.core.ReportedSource
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
@@ -105,6 +106,11 @@ sealed interface Playable {
         val title: String,
         val isLive: Boolean,
         val recordedOn: RecordedOn? = null,
+        /**
+         * The kind of Source it plays from, for a Slow Journey's or an Error Report's: Stremio for an
+         * add-on's stream, and null for a recording, kept on the device or the viewer's NAS.
+         */
+        val source: ReportedSource? = null,
     ) : Playable
 
     /**
@@ -202,25 +208,53 @@ class PlaybackSources(
         } else {
             channel.streamUrl
         }
-        return Playable.Ready(key, url, userAgentOf(source), channel.shownName, isLive = true)
+        return Playable.Ready(
+            key,
+            url,
+            userAgentOf(source),
+            channel.shownName,
+            isLive = true,
+            source = ReportedSource.of(source?.kind),
+        )
     }
 
     private suspend fun movie(key: MediaKey.Movie): Playable.Ready {
         val movie = db.movies().byId(key.movieId).or(Failure.GONE)
         val source = db.sources().byId(movie.sourceId)
-        return Playable.Ready(key, movie.streamUrl, userAgentOf(source), movie.displayTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            movie.streamUrl,
+            userAgentOf(source),
+            movie.displayTitle,
+            isLive = false,
+            source = ReportedSource.of(source?.kind),
+        )
     }
 
     /** An add-on's stream isn't the panel's, so the panel's user agent has no business on it. */
     private suspend fun addonStream(key: MediaKey.AddonStream): Playable.Ready {
         val movie = db.movies().byId(key.movieId).or(Failure.GONE)
-        return Playable.Ready(key, key.url, Source.DEFAULT_USER_AGENT, movie.displayTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            key.url,
+            Source.DEFAULT_USER_AGENT,
+            movie.displayTitle,
+            isLive = false,
+            source = ReportedSource.STREMIO,
+        )
     }
 
     private suspend fun episode(key: MediaKey.Episode): Playable.Ready {
         val episode = db.episodes().byId(key.episodeId).or(Failure.GONE)
         val source = db.sources().byId(episode.sourceId)
-        return Playable.Ready(key, episode.streamUrl, userAgentOf(source), episode.playerTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            episode.streamUrl,
+            userAgentOf(source),
+            episode.playerTitle,
+            isLive = false,
+            source = ReportedSource.of(source?.kind),
+        )
     }
 
     private suspend fun catchup(key: MediaKey.Catchup): Playable.Ready {
@@ -247,6 +281,7 @@ class PlaybackSources(
             userAgentOf(source),
             "${channel.shownName} · ${programme.title}",
             isLive = false,
+            source = ReportedSource.of(source.kind),
         )
     }
 

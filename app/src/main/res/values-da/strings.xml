@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee kunne ikke måle sin lagerplads.</string>
     <string name="diagnostics_memory_failed">Settee kunne ikke måle sin hukommelse.</string>
     <string name="diagnostics_log_failed">Settee kunne ikke læse det, den havde noteret, så denne liste mangler.</string>
+    <string name="report_button">Rapportér</string>
+    <string name="report_sent_to_settee">Sendt til Settee</string>
+    <string name="report_question_title">Send en rapport?</string>
+    <string name="report_question_body">Sender Settee denne fejls kode, skærmen den er på, og hvilken version og enhed. Aldrig din udbyder, dens login, dine profiler eller hvad du ser.</string>
+    <string name="report_question_always_note">Send altid slår også nedbruds- og fejlrapporter til. Du kan slå dem fra i Indstillinger under Privatliv.</string>
+    <string name="report_question_send">Send</string>
+    <string name="report_question_dont_send">Send ikke</string>
+    <string name="report_question_always_send">Send altid</string>
 </resources>

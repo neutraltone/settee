@@ -164,6 +164,17 @@ class VodLoadFailedTest {
     }
 
     @Test
+    fun `a build without Settee's Sentry key never offers Report`() {
+        // A failure that would offer it in a release build (ErrorReportsTest).
+        panel.replies["get_vod_streams"] = "!503"
+
+        setMovies()
+
+        awaitText(app.getString(R.string.common_try_again))
+        assertNone(app.getString(R.string.report_button))
+    }
+
+    @Test
     fun `Try again, highlighted on coming into Movies, shows the covers once the provider answers`() {
         panel.replies["get_vod_streams"] = "!host"
         setMovies()

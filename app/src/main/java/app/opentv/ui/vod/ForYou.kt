@@ -42,6 +42,7 @@ import app.opentv.ui.OnShellReturn
 import app.opentv.ui.PickRow
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.RowPick
+import app.opentv.ui.WhenDrawn
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeSpace
@@ -72,12 +73,15 @@ internal fun <T> ScreenFrameScope.ForYou(
     onHighlight: (Long) -> Unit,
     options: @Composable (T) -> (() -> Unit)?,
     resumeLoading: Boolean = false,
+    /** Once a row has drawn with its cards: the end of opening Movies or Shows. */
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val column = rememberLazyListState()
     // Until the viewer moves down, a row that lands above the first (Recommended, worked out after
     // the others) is shown at the top, rather than the list holding on to the row that was first.
     var atTheTop by remember { mutableStateOf(true) }
     val rowKeys = rowKeys(resume, rows, resumeLoading)
+    WhenDrawn(rowKeys.withCards.isNotEmpty(), onFirstRowDrawn)
     LaunchedEffect(rowKeys.all.firstOrNull()) { if (atTheTop) column.scrollToItem(0) }
 
     // The highlighted cover's row goes to the top ([RowToTheTop]): a cover sits its row's title and

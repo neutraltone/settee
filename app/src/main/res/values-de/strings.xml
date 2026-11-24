@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee konnte seinen Speicherplatz nicht messen.</string>
     <string name="diagnostics_memory_failed">Settee konnte seinen Arbeitsspeicher nicht messen.</string>
     <string name="diagnostics_log_failed">Settee konnte seine Notizen nicht lesen, deshalb fehlt diese Liste.</string>
+    <string name="report_button">Melden</string>
+    <string name="report_sent_to_settee">An Settee gesendet</string>
+    <string name="report_question_title">Bericht senden?</string>
+    <string name="report_question_body">Sendet Settee den Code dieses Fehlers, den Bildschirm, auf dem er steht, sowie Version und Gerät. Nie deinen Anbieter, seine Anmeldedaten, deine Profile oder was du schaust.</string>
+    <string name="report_question_always_note">„Immer senden“ schaltet auch Absturz- und Fehlerberichte ein. Du kannst sie in den Einstellungen unter Datenschutz ausschalten.</string>
+    <string name="report_question_send">Senden</string>
+    <string name="report_question_dont_send">Nicht senden</string>
+    <string name="report_question_always_send">Immer senden</string>
 </resources>

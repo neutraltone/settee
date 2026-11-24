@@ -7,6 +7,8 @@ package app.opentv.ui.design
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +23,10 @@ const val ERROR_DETAIL_TAG = "error_detail"
  * An error as Voice writes it (docs/LOOK.md): the [sentence] saying what happened and what to do,
  * with the [detail] (code · status · format) in a small quiet line under it for anyone who wants it.
  * Takes plain strings, so it never decides what a failure says: docs/ERRORS.md lists that.
+ *
+ * [actions] are the error's own buttons, such as Try again, as one row under the detail line.
+ * An error that could be Settee's adds Report as the last of them, and once it's been reported its
+ * caller says so at the end of the [detail] (ADR 0010): neither is this one's to word.
  */
 @Composable
 fun ErrorMessage(
@@ -30,6 +36,7 @@ fun ErrorMessage(
     textAlign: TextAlign = TextAlign.Center,
     /** For a small space such as the Live Preview tile; the detail line always keeps to one line. */
     maxLines: Int = Int.MAX_VALUE,
+    actions: (@Composable () -> Unit)? = null,
 ) {
     val horizontal = if (textAlign == TextAlign.Center) Alignment.CenterHorizontally else Alignment.Start
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(DETAIL_GAP)) {
@@ -45,8 +52,15 @@ fun ErrorMessage(
                 modifier = Modifier.testTag(ERROR_DETAIL_TAG),
             )
         }
+        actions?.let {
+            Spacer(Modifier.height(ACTIONS_GAP))
+            it()
+        }
     }
 }
 
 /** Close enough to read as one message, apart enough that the quiet line stays quiet. */
 private val DETAIL_GAP = 6.dp
+
+/** With the column's own gap, the space Message leaves between an error and its buttons. */
+private val ACTIONS_GAP = 10.dp

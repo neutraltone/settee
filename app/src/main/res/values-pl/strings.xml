@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee nie mógł zmierzyć swojej pamięci masowej.</string>
     <string name="diagnostics_memory_failed">Settee nie mógł zmierzyć swojej pamięci.</string>
     <string name="diagnostics_log_failed">Settee nie mógł odczytać swoich notatek, więc brakuje tej listy.</string>
+    <string name="report_button">Zgłoś</string>
+    <string name="report_sent_to_settee">Wysłano do Settee</string>
+    <string name="report_question_title">Wysłać zgłoszenie?</string>
+    <string name="report_question_body">Wysyła do Settee kod tego błędu, ekran, na którym się pojawił, oraz wersję i urządzenie. Nigdy Twojego dostawcy, danych logowania, profili ani tego, co oglądasz.</string>
+    <string name="report_question_always_note">Zawsze wysyłaj włącza też raporty o awariach i błędach. Możesz je wyłączyć w Ustawieniach, w sekcji Prywatność.</string>
+    <string name="report_question_send">Wyślij</string>
+    <string name="report_question_dont_send">Nie wysyłaj</string>
+    <string name="report_question_always_send">Zawsze wysyłaj</string>
 </resources>

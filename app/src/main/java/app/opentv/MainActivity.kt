@@ -45,7 +45,8 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import app.opentv.core.CrashReports
+import app.opentv.core.CaughtError
+import app.opentv.core.JourneyTimer
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
@@ -122,7 +123,7 @@ class MainActivity : ComponentActivity() {
                         open = {
                             val failure = withContext(graph.dispatchers.io) {
                                 graph.database.wontOpen {
-                                    graph.crashReports.report(CrashReports.Handled.DATABASE_MIGRATION, it)
+                                    graph.crashReports.report(CaughtError(CaughtError.Kind.DATABASE_MIGRATION, it))
                                 }
                             }
                             // The launch work reads the database too, so it waits for it as well.
@@ -326,9 +327,12 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     val navController = key(navGeneration) { rememberNavController() }
     // The screen a Crash Report names: the route's name only, which CrashReports cuts down to.
     val crashReports = ServiceLocator.get(LocalContext.current).crashReports
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
             crashReports.screenOpened(destination.route)
+            // A launch that opens on another screen, Setup or Who's watching?, hasn't been slow to show Home.
+            if (destination.route != Routes.MAIN) journeys.cancel(JourneyTimer.Journey.COLD_START)
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }

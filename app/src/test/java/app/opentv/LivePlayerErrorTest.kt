@@ -8,6 +8,8 @@ package app.opentv
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -48,8 +50,11 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class, UnstableApi::class)
 class LivePlayerErrorTest {
 
+    private val compose = createComposeRule()
+
+    // Offers Report beside Try again, as a release build does.
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, crashReportsTo = reportsOffered())
 
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val players = TestPlayers(context)
@@ -210,13 +215,40 @@ class LivePlayerErrorTest {
     }
 
     @Test
-    fun `up and down still change channel`() {
+    fun `up, down and the channel keys still change channel, with Report beside Try again`() {
         show(deadChannel())
 
+        press(Key.ChannelDown)
+        press(Key.DirectionUp)
         press(Key.DirectionDown)
-        press(Key.ChannelUp)
 
-        assertThat(zapped).containsExactly(1, -1).inOrder()
+        assertThat(zapped).containsExactly(1, -1, 1).inOrder()
+    }
+
+    @Test
+    fun `Report is Right of Try again, its panel's Send doesn't try again, and the Highlight goes back to Try again`() {
+        show(deadChannel())
+        compose.onNodeWithText("Try again").assertIsFocused()
+        val before = tries
+        val report = compose.onNode(hasText(context.getString(R.string.report_button)) and hasClickAction())
+
+        press(Key.DirectionRight)
+        report.assertIsFocused()
+        captureScreen("live_player_error_report")
+        press(Key.DirectionLeft)
+        compose.onNodeWithText("Try again").assertIsFocused()
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        compose.onNodeWithText(context.getString(R.string.report_question_send)).assertIsFocused()
+        captureScreen("live_player_error_report_panel")
+        compose.pressKeyOnPanel(android.view.KeyEvent.KEYCODE_DPAD_CENTER)
+
+        report.assertDoesNotExist()
+        compose.onNodeWithText("Try again").assertIsFocused()
+        compose.onNodeWithText(context.getString(R.string.report_sent_to_settee), substring = true).assertExists()
+        captureScreen("live_player_error_report_sent")
+        assertThat(tries).isEqualTo(before)
+        assertThat(zapped).isEmpty()
     }
 
     @Test

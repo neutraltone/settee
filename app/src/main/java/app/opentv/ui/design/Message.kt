@@ -37,13 +37,18 @@ fun Message(
                 Text(it, SetteeType.Section, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(MESSAGE_GAP))
             }
-            if (detail.isBlank()) {
-                Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-            } else {
-                ErrorMessage(body, detail)
+            when {
+                detail.isBlank() -> {
+                    Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(MESSAGE_GAP * 2))
+                    below()
+                }
+                else -> {
+                    ErrorMessage(body, detail)
+                    Spacer(Modifier.height(MESSAGE_GAP * 2))
+                    below()
+                }
             }
-            Spacer(Modifier.height(MESSAGE_GAP * 2))
-            below()
         }
     }
 }

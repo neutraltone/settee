@@ -23,6 +23,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -38,11 +40,13 @@ import app.opentv.data.remote.OpenSubtitlesSession
 import app.opentv.data.repo.OpenSubtitles
 import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.pairing.PairingServer
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -76,12 +80,14 @@ internal fun OpenSubtitlesPane(openSubtitles: OpenSubtitles) {
                 ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start)
             }
             if (entry.offersSignInAgain) {
+                val signInAgain = remember { FocusRequester() }
                 ListRow(
                     stringResource(R.string.opensubtitles_sign_in_again),
                     onClick = { signingInAgainAs = name },
                     opens = true,
+                    modifier = Modifier.focusRequester(signInAgain),
                 )
-                SignInStatus(entry.signingIn, entry.problem)
+                SignInStatus(entry.signingIn, entry.problem, returnTo = signInAgain)
             }
             ListRow(stringResource(R.string.opensubtitles_sign_out), onClick = account::signOut)
         } else {
@@ -233,14 +239,15 @@ internal fun OpenSubtitlesSignInRows(
             }
         },
         {
+            val signInHere = remember { FocusRequester() }
             ListRow(
                 stringResource(R.string.opensubtitles_sign_in_here),
                 onClick = { askingUsername = true },
                 note = stringResource(R.string.opensubtitles_create_account),
                 opens = true,
-                modifier = Modifier.testTag(OPENSUBTITLES_SIGN_IN_HERE_TAG),
+                modifier = Modifier.testTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).focusRequester(signInHere),
             )
-            SignInStatus(entry.signingIn, entry.problem)
+            SignInStatus(entry.signingIn, entry.problem, returnTo = signInHere)
         },
     )
 
@@ -284,9 +291,13 @@ private fun SignInWindows(
     }
 }
 
-/** Signing in, or why the last try failed, in space that's always there so nothing below moves. */
+/**
+ * Signing in, or why the last try failed, in space that's always there so nothing below moves. A
+ * failure that could be Settee's has Report under it, the only button of its own, and once it's been
+ * sent the Highlight goes back to the sign-in row above, [returnTo].
+ */
 @Composable
-private fun SignInStatus(signingIn: Boolean, problem: ViewerError?) =
+private fun SignInStatus(signingIn: Boolean, problem: ViewerError?, returnTo: FocusRequester) =
     Box(Modifier.fillMaxWidth().heightIn(min = STATUS_HEIGHT), contentAlignment = Alignment.TopStart) {
         if (signingIn) {
             Text(
@@ -297,7 +308,16 @@ private fun SignInStatus(signingIn: Boolean, problem: ViewerError?) =
             )
         } else {
             problem?.let {
-                ErrorMessage(it.sentence, it.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
+                // A wrong password is never reported.
+                val report = rememberErrorReport(it, source = null)
+                ErrorMessage(
+                    it.sentence,
+                    report?.detail ?: it.detail,
+                    Modifier.padding(top = 12.dp),
+                    textAlign = TextAlign.Start,
+                    // Kept once Report goes, so it can hand the Highlight back.
+                    actions = report?.let { { ReportButton(it, returnTo) } },
+                )
             }
         }
     }

@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee نتوانست فضای ذخیره‌سازی‌اش را اندازه بگیرد.</string>
     <string name="diagnostics_memory_failed">Settee نتوانست حافظه‌اش را اندازه بگیرد.</string>
     <string name="diagnostics_log_failed">Settee نتوانست یادداشت‌هایش را بخواند، پس این فهرست در دسترس نیست.</string>
+    <string name="report_button">گزارش</string>
+    <string name="report_sent_to_settee">به Settee ارسال شد</string>
+    <string name="report_question_title">گزارش ارسال شود؟</string>
+    <string name="report_question_body">کد این خطا، صفحه‌ای که در آن است و نسخه و دستگاه را برای Settee می‌فرستد. هرگز ارائه‌دهنده، اطلاعات ورود، نمایه‌ها یا آنچه تماشا می‌کنید را نمی‌فرستد.</string>
+    <string name="report_question_always_note">«همیشه ارسال» گزارش‌های خرابی و خطا را هم روشن می‌کند. می‌توانید آن‌ها را در تنظیمات، بخش حریم خصوصی خاموش کنید.</string>
+    <string name="report_question_send">ارسال</string>
+    <string name="report_question_dont_send">ارسال نشود</string>
+    <string name="report_question_always_send">همیشه ارسال</string>
 </resources>

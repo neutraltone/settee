@@ -8,10 +8,12 @@ package app.opentv.core
 import android.app.Application
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.FakeJsonHttp
 import app.opentv.FakePanel
 import app.opentv.PANEL_SOURCE
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.wontOpen
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
@@ -42,13 +44,15 @@ class HandledErrorReportsTest {
         ),
         release = "1.4.0",
         environment = "test",
+        // An Error Report the viewer sends goes at once, so a test can see what follows it.
+        background = Runnable::run,
     ).also { it.start(app) }
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
 
     /** An Xtream client whose parse failures are reported, as the app's is. */
     private fun xtream(panel: FakePanel) =
-        XtreamApi(panel.http, reportParseFailure = { reports.report(CrashReports.Handled.XTREAM_PARSE, it) })
+        XtreamApi(panel.http, reportParseFailure = { reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, it)) })
 
     /** Signs in to [panel], which fails: every reply here is one Settee refuses. */
     private fun signIn(panel: FakePanel) {
@@ -65,7 +69,7 @@ class HandledErrorReportsTest {
         }
         val database = OpenTvDatabase.build(app)
         return try {
-            database.wontOpen { reports.report(CrashReports.Handled.DATABASE_MIGRATION, it) }
+            database.wontOpen { reports.report(CaughtError(CaughtError.Kind.DATABASE_MIGRATION, it)) }
         } finally {
             database.close()
         }
@@ -181,9 +185,100 @@ class HandledErrorReportsTest {
     }
 
     @Test
-    fun `only Settee's own failures can be reported, so playback and provider failures have no kind`() {
-        assertThat(CrashReports.Handled.entries)
-            .containsExactly(CrashReports.Handled.XTREAM_PARSE, CrashReports.Handled.DATABASE_MIGRATION)
+    fun `only Settee's own failures can be reported, and playback and provider failures only as a viewer's report`() {
+        // The rest of HandledReport's kinds are a Slow Journey and an Error Report, closed by its being sealed.
+        assertThat(CaughtError.Kind.entries).containsExactly(
+            CaughtError.Kind.XTREAM_PARSE,
+            CaughtError.Kind.DATABASE_MIGRATION,
+        )
+        assertThat(ServiceFailure.Service.entries).containsExactly(
+            ServiceFailure.Service.OPENSUBTITLES,
+            ServiceFailure.Service.TMDB,
+            ServiceFailure.Service.INTRODB,
+            ServiceFailure.Service.UPDATE_CHECK,
+        )
+    }
+
+    @Test
+    fun `a build without a DSN sends no service failure, Slow Journey or Error Report, even with reports on`() {
+        val blank = CrashReports(
+            settings,
+            CrashReports.Destination("", CrashReports.Outbox { envelope -> synchronized(sent) { sent += envelope } }),
+            release = "1.4.0",
+            environment = "test",
+        ).also { it.start(app) }
+        blank.setOn(true)
+
+        val tmdb = TmdbClient(
+            FakeJsonHttp { "!403" }.http,
+            "0123456789abcdef0123456789abcdef",
+            reportFailure = blank::report,
+        )
+        tmdb.movieMetaOrFailure("A film", null, tmdbId = "603")
+        JourneyTimer(slow = blank::report).run {
+            start(JourneyTimer.Journey.COLD_START, at = -60_000)
+            end(JourneyTimer.Journey.COLD_START)
+        }
+        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.VIEWER))
+        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.SETTEE))
+        blank.close()
+
+        assertThat(blank.available).isFalse()
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    private fun shown(detail: String = "HTTP 503", source: ReportedSource? = ReportedSource.M3U) =
+        ErrorReport(detail, source, ErrorReport.SentBy.SETTEE)
+
+    @Test
+    fun `an error shown while crash reports are on is sent by Settee once, however often it's drawn again`() {
+        reports.setOn(true)
+        reports.screenOpened("main")
+
+        repeat(3) { reports.report(shown()) }
+
+        val event = sentEvents().single()
+        assertThat(event).contains("ERROR_REPORT: HTTP 503")
+        assertThat(event).contains(""""sent-by":"settee"""")
+        assertThat(event).contains(""""source-kind":"m3u"""")
+        assertThat(event).contains(""""screen":"main"""")
+    }
+
+    @Test
+    fun `the same error on another screen or from another kind of source, or another error, is sent again`() {
+        reports.setOn(true)
+        reports.screenOpened("main")
+        reports.report(shown())
+
+        reports.report(shown(source = ReportedSource.XTREAM))
+        reports.report(shown(detail = "HTTP 500"))
+        reports.screenOpened("settings")
+        reports.report(shown())
+
+        assertThat(sentEvents()).hasSize(4)
+    }
+
+    @Test
+    fun `with crash reports off, Settee never sends an error on its own`() {
+        reports.screenOpened("main")
+
+        reports.report(shown())
+
+        assertThat(sentEvents()).isEmpty()
+        assertThat(reports.hasSent(shown())).isFalse()
+    }
+
+    @Test
+    fun `an error the viewer sent says so, and Settee doesn't send it again once reports are on`() {
+        reports.screenOpened("main")
+        reports.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.VIEWER))
+
+        reports.setOn(true)
+        reports.report(shown())
+
+        val event = sentEvents().single()
+        assertThat(event).contains(""""sent-by":"viewer"""")
+        assertThat(reports.hasSent(shown())).isTrue()
     }
 
     private companion object {

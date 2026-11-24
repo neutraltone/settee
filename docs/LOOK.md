@@ -31,7 +31,7 @@ A Live Preview adds one Down to the Home routes. It must always be obvious where
 A calm, capable friend, writing for the viewer as "you". Technical terms appear only in setup, with a plain line explaining them. British English, sentence case, short sentences and contractions. Exclamation marks only when really warranted, and no em dashes.
 
 - **Terms:** "provider" for the service, "EPG source" for guide data in setup only, "Movies", and "Season" for part of a series.
-- **Errors:** a friendly sentence saying what happened and what to do next, and whose end it's on when known. No apologies or jokes. A small, quiet line under it always shows the code, status and format, and never a provider URL, username, password or MAC.
+- **Errors:** a friendly sentence saying what happened and what to do next, and whose end it's on when known. No apologies or jokes. A small, quiet line under it always shows the code, status and format, and never a provider URL, username, password or MAC. An error that might be Settee's fault is reported (ADR 0010): with crash and error reports on it goes as it's shown, and the quiet line ends "· Sent to Settee"; with them off, Report is the last button in the error's own row, never a row or a note of its own under it.
 - **Empty states:** what will appear here, plus the one thing to do about it if there is one.
 - **Wordplay:** one or two lines at most, on the welcome and setup screens only.
 - **Settee itself:** no subject where the sentence works without one, then "Settee", and "we" only where it reads warmer. Never "I".
@@ -200,6 +200,7 @@ Every question, choice and notice opens in a Side Panel: down the right of the s
 - **Long notes,** such as release notes, scroll inside the panel and never take the Highlight. It starts on the main choice, such as Got it or Update, where Up and Down scroll the notes. Once they reach their end, Down carries on to the other choices.
 - **Progress** in a panel shows real progress only, as a percentage and a bar.
 - **Errors** in a panel follow Voice: the sentence, then the quiet detail line, then the way on, such as Try again.
+- **Send a report?** opens from an error's Report: a body saying what a report holds and that Always send turns crash and error reports on, then Send, Don't send and Always send. It starts on Send, as the crash question does, since the viewer just asked to report this one error. Back, like Don't send, sends nothing. Once it's sent, Report goes from the row, the Highlight goes back to the error's main action (Try again, or its first button), and the quiet line ends "· Sent to Settee".
 
 ## Details
 

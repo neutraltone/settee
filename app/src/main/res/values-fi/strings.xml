@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee ei voinut mitata tallennustilaansa.</string>
     <string name="diagnostics_memory_failed">Settee ei voinut mitata muistiaan.</string>
     <string name="diagnostics_log_failed">Settee ei voinut lukea muistiinpanojaan, joten tämä luettelo puuttuu.</string>
+    <string name="report_button">Raportoi</string>
+    <string name="report_sent_to_settee">Lähetetty Setteelle</string>
+    <string name="report_question_title">Lähetetäänkö raportti?</string>
+    <string name="report_question_body">Lähettää Setteelle tämän virheen koodin, näkymän, jossa se on, sekä version ja laitteen. Ei koskaan palveluntarjoajaasi, sen kirjautumistietoja, profiilejasi tai sitä, mitä katsot.</string>
+    <string name="report_question_always_note">Lähetä aina laittaa päälle myös kaatumis- ja virheraportit. Voit poistaa ne käytöstä kohdassa Asetukset › Yksityisyys.</string>
+    <string name="report_question_send">Lähetä</string>
+    <string name="report_question_dont_send">Älä lähetä</string>
+    <string name="report_question_always_send">Lähetä aina</string>
 </resources>

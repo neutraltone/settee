@@ -6,11 +6,13 @@
 package app.opentv.core
 
 import android.content.Context
+import android.os.SystemClock
 import io.sentry.Hint
 import io.sentry.ITransportFactory
 import io.sentry.RequestDetails
 import io.sentry.Sentry
 import io.sentry.SentryEnvelope
+import io.sentry.SentryEvent
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
@@ -24,6 +26,7 @@ import io.sentry.transport.RateLimiter
 import io.sentry.util.HintUtils
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Crash Reports (ADR 0009): crashes and freezes sent to Sentry, only from a build with Settee's
  * DSN and only while the viewer has them [on], with nothing in them that could identify the
  * viewer or their Provider ([CrashScrubbing]). Only this and its own helpers in `core/`
- * ([CrashScrubbing], [HeldCrash]) touch Sentry's SDK, and nothing outside `core/` does: screens, view
+ * ([CrashScrubbing], [HeldCrash], [HandledEvents]) touch Sentry's SDK, and nothing outside `core/` does: screens, view
  * models and the app go through this, so a rule changes in one place (CrashReportsBoundaryTest).
  *
  * Sentry is started here, by hand, never by its auto-init content provider (removed in the
@@ -52,7 +55,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * transport, so a test can see each envelope exactly as it would leave the device. [freezes] and
  * [background] are the same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
-// The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place.
+// The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place,
+// so its functions are each a door into one of them.
+@Suppress("TooManyFunctions")
 class CrashReports(
     private val settings: AppSettings,
     private val to: Destination,
@@ -65,9 +70,15 @@ class CrashReports(
      * Where reports go: the project [dsn] names, which is blank in a build without Settee's key (so
      * none go at all), and, for a test, an [outbox] that takes the place of Sentry's own transport.
      * [queue] is where each envelope waits its turn to go to the outbox, as Sentry's own transport
-     * queues them: a test can hold it, to turn reports off while one waits.
+     * queues them: a test can hold it, to turn reports off while one waits. [cap] is how many
+     * reports that aren't crashes or freezes the project takes from this install a day (ADR 0010).
      */
-    class Destination(val dsn: String, val outbox: Outbox? = null, val queue: Executor = Executor(Runnable::run))
+    class Destination(
+        val dsn: String,
+        val outbox: Outbox? = null,
+        val queue: Executor = Executor(Runnable::run),
+        val cap: DailyCap = DailyCap(),
+    )
 
     /** Where envelopes go instead of Sentry: each one serialized, as it would be sent. */
     fun interface Outbox {
@@ -77,11 +88,14 @@ class CrashReports(
     /**
      * What counts as a freeze while reports are off: the main thread stuck for [afterMillis] (as
      * Sentry's own default) and Android agreeing it's [notResponding]. [held] runs once one is held.
+     * While they're on, Sentry catches freezes, and each is noted on [elapsed]'s clock.
      */
     class Freezes(
         val afterMillis: Long = FREEZE_MILLIS,
         val notResponding: (Context) -> Boolean = FreezeWatch::androidSaysNotResponding,
         val held: () -> Unit = {},
+        /** The clock [JourneyTimer] times journeys on, to tell whether one froze. */
+        val elapsed: () -> Long = SystemClock::elapsedRealtime,
     )
 
     /** The viewer's answers to the question after a crash. */
@@ -111,6 +125,10 @@ class CrashReports(
 
     @Volatile private var screen: String? = null
 
+    // When Sentry last caught the app frozen as it happened, on the [elapsed] clock: a slow journey that
+    // froze is the freeze's.
+    @Volatile private var frozeAt = Long.MIN_VALUE
+
     private var started = false
 
     private val _askAboutHeld = MutableStateFlow(false)
@@ -123,11 +141,32 @@ class CrashReports(
 
     private var held: HeldCrashes? = null
 
-    // The held crash being sent, by its event's id: the one event the before-send hook lets through
-    // while reports are off, and the one it gives back its own screen and free memory.
-    @Volatile private var sendingHeld: Pair<SentryId?, HeldCrash>? = null
+    // The event being sent on the viewer's say-so: the one the before-send hook lets through while
+    // reports are off, with the screen it gives back.
+    @Volatile private var sendingAsked: Asked? = null
+
+    /** What's being sent on the viewer's say-so, by its event's id. */
+    private class Asked(val eventId: SentryId?, val what: Outgoing)
+
+    /** What the viewer said to send: one held crash or one Error Report, never both or neither. */
+    private sealed interface Outgoing {
+        fun toEvent(): SentryEvent
+
+        /** A held crash, which carries its own screen and free memory, given back as it goes. */
+        class Held(val crash: HeldCrash) : Outgoing {
+            override fun toEvent() = crash.toEvent()
+        }
+
+        /** An Error Report, from the [screen] it was pressed on, not whichever is open by the time it goes. */
+        class Viewer(val report: ErrorReport, val screen: String?) : Outgoing {
+            override fun toEvent() = HandledEvents.of(report)
+        }
+    }
 
     private val mayHold: Boolean get() = available && settings.crashReportsRefusals < MOST_REFUSALS
+
+    // Whether a handled error goes now: a build that has reports, the viewer's yes, and Sentry started.
+    private val reporting: Boolean get() = available && on.value && Sentry.isEnabled()
 
     /**
      * Called once, from `OpenTvApp.onCreate`: starts Sentry if the build and the viewer allow it, or
@@ -158,7 +197,7 @@ class CrashReports(
     fun answer(answer: Answer) {
         _askAboutHeld.value = false
         when (answer) {
-            Answer.SEND -> held?.take()?.let(::send)
+            Answer.SEND -> held?.take()?.let { send(Outgoing.Held(it)) }
             Answer.DONT_SEND -> if (held?.take() != null) settings.addCrashReportsRefusal()
             // Which sends the held one, as turning them on anywhere does.
             Answer.ALWAYS_SEND -> setOn(true)
@@ -192,7 +231,7 @@ class CrashReports(
             held?.stopWatching()
             if (available) {
                 startSentry()
-                held?.take()?.let(::send)
+                held?.take()?.let { send(Outgoing.Held(it)) }
             }
         } else {
             held?.discard()
@@ -212,57 +251,57 @@ class CrashReports(
     }
 
     /**
-     * The handled errors Settee reports (ADR 0009): only failures Settee's own code can cause. Closed
-     * on purpose: a Provider's failures (HTTP errors, dead streams, web pages instead of video) and
-     * playback errors have no kind here, so they can't leave the device. [keepsMessages]: whether the
-     * error's own messages are sent (scrubbed) or only its classes and stack trace.
+     * Reports [report], one of the handled kinds ([HandledReport]), while Crash Reports are on,
+     * through the same scrubber as a crash. Off, it's dropped, never held for the after-crash question:
+     * that's for crashes the viewer saw, and a handled error was already shown as one.
+     *
+     * An [ErrorReport] the viewer sent ([ErrorReport.SentBy.VIEWER]) is the exception (ADR 0010): sent
+     * whether or not Crash Reports are on and without turning them on, as the after-crash Send is. One
+     * Settee sends on its own goes only while they're on, and only once per process for each failure
+     * on each screen ([hasSent]). Neither in a build without a DSN, which never reports them.
+     *
+     * Every kind counts towards the install's daily [DailyCap], and once it's reached the rest of
+     * the day's are dropped. Crashes and freezes don't come through here, and are never capped.
      */
-    enum class Handled(internal val keepsMessages: Boolean) {
-        /** A panel's reply that starts as JSON but Settee couldn't read. Its message quotes the reply, login too. */
-        XTREAM_PARSE(keepsMessages = false),
-
-        /**
-         * Room refusing to open the database: a missing migration or a schema that doesn't match.
-         * Its message names versions and tables, never rows.
-         */
-        DATABASE_MIGRATION(keepsMessages = true),
+    fun report(report: HandledReport) {
+        when {
+            report is ErrorReport -> reportError(report)
+            !reporting -> Unit
+            // A journey that froze is the freeze's: that was reported, and says more.
+            report is JourneyTimer.SlowJourney && frozeAt in report.startedAt..report.endedAt -> Unit
+            // Counted only once it's going: one dropped while reports are off, or as a freeze's, isn't.
+            !to.cap.take(settings) -> Unit
+            else -> Sentry.captureEvent(HandledEvents.of(report))
+        }
     }
 
     /**
-     * Reports [error], a handled error of [kind], while Crash Reports are on, through the same
-     * scrubber as a crash. Off, it's dropped, never held for the after-crash question: that's for
-     * crashes the viewer saw, and a handled error was already shown as one.
+     * Whether [report]'s failure, on the screen open now, was already sent in this process, by the
+     * viewer or by Settee: Settee doesn't send it again, and the error says it went.
      */
-    fun report(kind: Handled, error: Throwable) {
-        if (!available || !on.value || !Sentry.isEnabled()) return
-        Sentry.captureException(HandledError.of(kind, error))
-    }
+    fun hasSent(report: ErrorReport): Boolean = failureKey(screen, report) in sentErrors
 
-    /** What a handled error is sent as: Settee's own type, so none of the original's fields ride along. */
-    class HandledError internal constructor(message: String, cause: Throwable?) : Exception(message, cause) {
-        internal companion object {
-            /** Causes copied: enough for any real chain, and an end to a looping one. */
-            private const val MAX_CAUSES = 8
-
-            /**
-             * [error] as a [HandledError] named after [kind] and each class in its chain, with the same
-             * stack traces, and the original messages only where [Handled.keepsMessages] says they're safe.
-             */
-            fun of(kind: Handled, error: Throwable): HandledError {
-                fun copy(from: Throwable, depth: Int): HandledError {
-                    val type = from.javaClass.name
-                    val message = if (kind.keepsMessages) "$type: ${from.message}" else type
-                    val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
-                    return HandledError(message, cause).apply { stackTrace = from.stackTrace }
-                }
-                val copied = copy(error, 0)
-                return HandledError("${kind.name}: ${copied.message}", copied.cause).apply {
-                    stackTrace =
-                        error.stackTrace
-                }
+    private fun reportError(report: ErrorReport) {
+        val key = failureKey(screen, report)
+        when {
+            !available -> Unit
+            // The viewer was heard even over the day's cap: the error still says it went.
+            report.sentBy == ErrorReport.SentBy.VIEWER -> {
+                sentErrors += key
+                if (to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
             }
+            reporting && sentErrors.add(key) && to.cap.take(settings) -> Sentry.captureEvent(HandledEvents.of(report))
         }
     }
+
+    // The failures sent in this process, so Settee sends each once however often it's drawn: an error
+    // is composed again on every recomposition, every time its screen comes back, and a Source's saved
+    // refresh failure on every launch. Keyed on the screen, the kind of Source and the detail line,
+    // which together are what the triage reads; the sentence adds nothing (it's chosen by the detail)
+    // and a Source's name or id would be identifying. Per process rather than saved: a launch that
+    // still shows the failure is one more viewer seeing it, which is worth one more event, and the
+    // daily cap bounds the rest. Nothing about the failure is written to the device for it.
+    private val sentErrors = Collections.synchronizedSet(HashSet<String>())
 
     @Synchronized
     private fun startSentry() {
@@ -278,21 +317,25 @@ class CrashReports(
             // checked as each envelope's turn to go comes, so one still queued when they're turned
             // off stays behind. In place of Sentry's own gate, which waits for a connection; offline,
             // an envelope fails to go and is kept for later, as it would be anyway.
-            options.setTransportGate { on.value || sendingHeld != null }
+            options.setTransportGate { on.value || sendingAsked != null }
             options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
                 // Checked again here: a crash can land between turning reports off and Sentry closing.
-                // While off, the held crash being sent is the only event let through: a handled error
-                // or anything else is dropped, never held, since only the crash handler and the
-                // freeze watch hold. A freeze or crash Sentry finds in Android's exit history from
-                // before reports were turned on happened while the viewer hadn't said yes.
+                // While off, the held crash or Error Report being sent is the only event let through:
+                // a handled error or anything else is dropped, never held, since only the crash
+                // handler and the freeze watch hold. A freeze or crash Sentry finds in Android's exit
+                // history from before reports were turned on happened while the viewer hadn't said yes.
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
+                if (event.isFreezeAsItHappened(exitedAt)) frozeAt = freezes.elapsed()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
-                val held = sendingHeld?.takeIf { it.first == event.eventId }?.second
+                val asked = sendingAsked?.takeIf { it.eventId == event.eventId }?.what
+                val id = settings.crashReportsInstallId
                 when {
-                    held != null -> CrashScrubbing.event(event, settings.crashReportsInstallId, held.at.screen)
-                        .also(held::restoreAt)
+                    asked is Outgoing.Held -> CrashScrubbing.event(event, id, asked.crash.at.screen)
+                        .also { asked.crash.restoreAt(it) }
+                    asked is Outgoing.Viewer -> CrashScrubbing.event(event, id, asked.screen)
                     !on.value || fromBefore -> null
-                    else -> CrashScrubbing.event(event, settings.crashReportsInstallId, screen)
+                    else -> CrashScrubbing.event(event, id, screen)
+                        .also { HandledEvents.withFreeMemory(it, context) }
                 }
             }
             to.outbox?.let { options.setTransportFactory(OutboxTransport.Factory(it, to.queue)) }
@@ -301,9 +344,9 @@ class CrashReports(
     }
 
     // Off the main thread: starting Sentry and waiting for the report to go both take a while.
-    private fun send(crash: HeldCrash) = background.execute {
-        val event = crash.toEvent()
-        sendingHeld = event.eventId to crash
+    private fun send(what: Outgoing) = background.execute {
+        val event = what.toEvent()
+        sendingAsked = Asked(event.eventId, what)
         startSentry()
         Sentry.captureEvent(event)
         if (!on.value) {
@@ -312,7 +355,7 @@ class CrashReports(
             Sentry.flush(FLUSH_MILLIS)
             stopSentry(throwAwayWaiting = false)
         }
-        sendingHeld = null
+        sendingAsked = null
     }
 
     @Synchronized
@@ -380,6 +423,19 @@ class CrashReports(
     }
 }
 
+/** How Sentry marks a freeze. */
+private const val ANR_MECHANISM = "ANR"
+
+/**
+ * Whether this is a freeze Sentry caught as it happened, rather than one it read from Android's exit
+ * history ([exitedAt] set): only those can be a journey still running's. Only before Android 11 does
+ * Sentry catch them so; from 11 on it reads them from the exit history at the next launch, and that
+ * only holds freezes that killed the process: the journey one froze never ended to be reported, and
+ * this launch's journeys weren't its.
+ */
+private fun SentryEvent.isFreezeAsItHappened(exitedAt: Long?) =
+    exitedAt == null && exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }
+
 /** Errors and freezes only (ADR 0009): everything else Sentry can collect or send, off. */
 private fun SentryAndroidOptions.errorsAndFreezesOnly() {
     // No tracing, profiling, replay, screenshots, view hierarchy, breadcrumbs of any kind, sessions or
@@ -420,3 +476,10 @@ private fun SentryAndroidOptions.errorsAndFreezesOnly() {
         CrashScrubbing.breadcrumb(breadcrumb)
     }
 }
+
+/**
+ * What makes two Error Reports the same failure, for [CrashReports.hasSent]: the [screen] it's on,
+ * the kind of Source and the detail line.
+ */
+private fun failureKey(screen: String?, report: ErrorReport) =
+    listOf(screen, report.source?.tag, report.detail).joinToString("\u001F")

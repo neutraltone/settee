@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee がストレージを測定できませんでした。</string>
     <string name="diagnostics_memory_failed">Settee がメモリを測定できませんでした。</string>
     <string name="diagnostics_log_failed">Settee が記録した内容を読み込めなかったため、この一覧はありません。</string>
+    <string name="report_button">報告</string>
+    <string name="report_sent_to_settee">Settee に送信しました</string>
+    <string name="report_question_title">レポートを送信しますか？</string>
+    <string name="report_question_body">このエラーのコード、表示された画面、バージョンとデバイスを Settee に送信します。プロバイダー、ログイン情報、プロフィール、視聴内容は送信しません。</string>
+    <string name="report_question_always_note">「常に送信」を選ぶと、クラッシュとエラーのレポートもオンになります。設定の「プライバシー」でオフにできます。</string>
+    <string name="report_question_send">送信</string>
+    <string name="report_question_dont_send">送信しない</string>
+    <string name="report_question_always_send">常に送信</string>
 </resources>

@@ -360,4 +360,12 @@
     <string name="diagnostics_storage_failed">Settee non è riuscito a misurare il suo spazio di archiviazione.</string>
     <string name="diagnostics_memory_failed">Settee non è riuscito a misurare la sua memoria.</string>
     <string name="diagnostics_log_failed">Settee non è riuscito a leggere ciò che aveva annotato, quindi questo elenco manca.</string>
+    <string name="report_button">Segnala</string>
+    <string name="report_sent_to_settee">Inviata a Settee</string>
+    <string name="report_question_title">Inviare una segnalazione?</string>
+    <string name="report_question_body">Invia a Settee il codice di questo errore, la schermata in cui appare, la versione e il dispositivo. Mai il tuo fornitore, i suoi dati di accesso, i tuoi profili o ciò che guardi.</string>
+    <string name="report_question_always_note">Invia sempre attiva anche le segnalazioni di arresti ed errori. Puoi disattivarle in Impostazioni, sotto Privacy.</string>
+    <string name="report_question_send">Invia</string>
+    <string name="report_question_dont_send">Non inviare</string>
+    <string name="report_question_always_send">Invia sempre</string>
 </resources>

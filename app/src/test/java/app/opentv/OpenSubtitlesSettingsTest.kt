@@ -63,7 +63,7 @@ class OpenSubtitlesSettingsTest {
     }
 
     @get:Rule
-    val testGraph = TestGraph(compose, name = SETTINGS, http = site.http)
+    val testGraph = TestGraph(compose, name = SETTINGS, http = site.http, crashReportsTo = reportsOffered())
 
     private val app = testGraph.app
     private val graph = testGraph.graph
@@ -151,6 +151,21 @@ class OpenSubtitlesSettingsTest {
 
         waitFor("OpenSubtitles didn't accept that username or password. Check them and try again.")
         assertThat(openSubtitles.account.signedInAs.value).isNull()
+    }
+
+    @Test
+    fun `a sign-in turned down for a reason that could be Settee's offers Report, Down from the sign-in row`() {
+        site.replies["POST /login"] = """!403 {"message": "You cannot consume this service"}"""
+        show()
+
+        signInOnTheTv(password = "p")
+
+        val report = app.getString(R.string.report_button)
+        waitFor(report)
+        compose.onNodeWithTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).assertIsFocused()
+        captureScreen("settings_opensubtitles_sign_in_failed_report")
+        press(Key.DirectionDown)
+        row(report).assertIsFocused()
     }
 
     /** Signed in, then OpenSubtitles turns down the token and the saved password alike. */

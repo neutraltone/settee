@@ -192,8 +192,16 @@ Where the box is set up: its sections down the left, and the highlighted section
 _Avoid_: Preferences, options (that's an item's options), menu
 
 **Crash Report**:
-What Settee sends to Sentry about one crash or freeze, and only from a device whose viewer has turned crash reports on: which version, which device, which screen, and where in Settee's own code it failed. Never anything about the viewer, their Profiles, their Provider or what they watch.
+What Settee sends to Sentry by itself about one crash, freeze, failure of one of Settee's own services or Slow Journey, and only from a device whose viewer has turned crash reports on: which version, which device, which screen, and where in Settee's own code it failed. Never anything about the viewer, their Profiles, their Provider or what they watch.
 _Avoid_: Telemetry, analytics, diagnostics (that's the report Settings → Diagnostics saves to the viewer's own NAS)
+
+**Slow Journey**:
+One of a few things Settee times (opening the app, opening Movies or Shows, a Catalogue Refresh, starting playback) when Settee's own part of it, leaving out time spent waiting on the Provider or the network, took clearly longer than its threshold. Only a slow one is sent, at most once a launch, and only from a device with Crash Reports on.
+_Avoid_: Performance trace, timing, metrics
+
+**Error Report**:
+One error that could be Settee's fault, as the viewer saw it, sent to Sentry: its kind and detail line, the screen, the Provider's kind and who sent it, never the Provider's address, name or login. With Crash Reports on, Settee sends it as the error is shown, once per failure, and the detail line ends "Sent to Settee". With them off, the error's Report asks whether to send it: Send sends that one and leaves them off, Always send turns them on.
+_Avoid_: Feedback, bug report, Crash Report (that one is a crash or freeze)
 
 **Privacy**:
 The Settings section where a viewer turns Crash Reports on or off for this device, and sees what one contains.

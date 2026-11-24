@@ -37,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -53,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
@@ -63,6 +65,7 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
@@ -73,6 +76,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -193,7 +197,7 @@ internal fun SeriesDetailContent(
                 )
             } else {
                 if (shown.selected == null && episodeFetch.noEpisodes) {
-                    NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
+                    NoEpisodes(nav, episodeFetch)
                 } else {
                     EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions)
                 }
@@ -356,36 +360,51 @@ private fun SeasonPills(
  * why when every fetch [failure]d, and [onTryAgain] to ask again.
  */
 @Stable
-class EpisodeFetch(val noEpisodes: Boolean = false, val failure: ViewerError? = null, val onTryAgain: () -> Unit = {})
+class EpisodeFetch(
+    val noEpisodes: Boolean = false,
+    val failure: ViewerError? = null,
+    /** The kind of the show's Source, for its [failure]'s Error Report. */
+    val source: ReportedSource? = null,
+    val onTryAgain: () -> Unit = {},
+)
 
 /**
  * In the episodes' place when a show has none once they've been asked for: why, with Try again, when
- * every fetch failed ([failure]), or else a plain line, as a provider listing none isn't an error.
+ * every fetch failed ([EpisodeFetch.failure]), or else a plain line, as a provider listing none isn't an error.
  */
 @Composable
-private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -> Unit) {
+private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
+    val failure = fetch.failure
     if (failure == null) {
         Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
-        ErrorMessage(
-            failure.sentence,
-            failure.detail,
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
-        )
-        PillButton(
-            label = stringResource(R.string.common_try_again),
-            icon = Icons.Filled.Refresh,
-            onClick = {
-                // Up to the hero first: this button goes while it asks, and the Highlight would go with
-                // it. From there it moves on to Play when the episodes come, as on a first opening.
-                nav.backToHero()
-                onTryAgain()
-            },
-        )
+    val report = rememberErrorReport(failure, fetch.source)
+    val tryAgainFocus = remember { FocusRequester() }
+    val buttons = @Composable {
+        // Centred: Try again's icon makes it a little taller than Report.
+        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP), verticalAlignment = Alignment.CenterVertically) {
+            PillButton(
+                label = stringResource(R.string.common_try_again),
+                icon = Icons.Filled.Refresh,
+                onClick = {
+                    // Up to the hero first: this button goes while it asks, and the Highlight would go with
+                    // it. From there it moves on to Play when the episodes come, as on a first opening.
+                    nav.backToHero()
+                    fetch.onTryAgain()
+                },
+                modifier = Modifier.focusRequester(tryAgainFocus),
+            )
+            ReportButton(report, returnTo = tryAgainFocus)
+        }
     }
+    ErrorMessage(
+        failure.sentence,
+        report?.detail ?: failure.detail,
+        textAlign = TextAlign.Start,
+        modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
+        actions = buttons,
+    )
 }
 
 /** The selected season's episodes, or a line saying they're on their way. */
@@ -790,3 +809,4 @@ private const val LIKE_THIS_KEY = "more-like-this"
 
 private const val FIRST_HIGHLIGHT_DELAY_MILLIS = 60L
 private const val SYNOPSIS_WIDTH = 0.6f
+private val BUTTON_GAP = 12.dp

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,6 +41,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -47,6 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.JourneyTimer.Journey
+import app.opentv.core.ReportedSource
+import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
@@ -57,8 +62,10 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
+import app.opentv.ui.ErrorReporting
 import app.opentv.ui.ExpectedRows
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.ReportButton
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
@@ -79,6 +86,7 @@ import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -106,6 +114,9 @@ fun MoviesScreen(
     val genreRows by viewModel.movieGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.moviesLoadFailure.collectAsState().value
+    // Selecting the tab started it (MainScreen); leaving before a row is drawn isn't an end.
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
+    DisposableEffect(journeys) { onDispose { journeys.cancel(Journey.OPEN_MOVIES) } }
 
     // Pull the movie library the first time this tab is opened, not at login; refresh the computed
     // rows (recommended, by genre) on open too: cheap, and covers a library already on disk.
@@ -165,6 +176,7 @@ fun MoviesScreen(
             onHighlight,
             recommending,
             loading,
+            onFirstRowDrawn = { journeys.end(Journey.OPEN_MOVIES) },
         )
     }
 }
@@ -190,6 +202,9 @@ fun SeriesScreen(
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.showsLoadFailure.collectAsState().value
+    // Selecting the tab started it (MainScreen); leaving before a row is drawn isn't an end.
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
+    DisposableEffect(journeys) { onDispose { journeys.cancel(Journey.OPEN_SHOWS) } }
 
     LaunchedEffect(Unit) { viewModel.loadHomeFeeds() }
     // Keyed on what the providers carry, so switching an Xtream login on while here fetches its titles.
@@ -247,6 +262,7 @@ fun SeriesScreen(
             onHighlight,
             recommending,
             loading,
+            onFirstRowDrawn = { journeys.end(Journey.OPEN_SHOWS) },
         )
     }
 }
@@ -264,6 +280,7 @@ internal fun ScreenFrameScope.MovieShelves(
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
     loading: ForYouLoading = ForYouLoading.NONE,
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
@@ -281,6 +298,7 @@ internal fun ScreenFrameScope.MovieShelves(
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfMovie(it)) },
         resumeLoading = loading.continueWatching,
+        onFirstRowDrawn = onFirstRowDrawn,
     )
 }
 
@@ -297,6 +315,7 @@ internal fun ScreenFrameScope.SeriesShelves(
     onHighlight: (Long) -> Unit = {},
     recommending: Boolean = false,
     loading: ForYouLoading = ForYouLoading.NONE,
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val held = rememberHeldRow(recommended)
     val badges = LocalCoverBadges.current
@@ -314,6 +333,7 @@ internal fun ScreenFrameScope.SeriesShelves(
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfSeries(it)) },
         resumeLoading = loading.continueWatching,
+        onFirstRowDrawn = onFirstRowDrawn,
     )
 }
 
@@ -446,6 +466,7 @@ private fun vodEmpty(
             failure.reason,
             onRetry = onRetry,
             onEditProvider = { onEditProvider(failure.sourceId) },
+            report = rememberErrorReport(failure.reason, ReportedSource.of(failure.sourceKind)),
         )
         else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
     }
@@ -464,8 +485,13 @@ internal sealed interface VodEmpty {
     class WayForward(val title: String, val body: String, val button: String, val onPress: () -> Unit) : VodEmpty
 
     /** The latest download of this kind failed and nothing of it is stored: why, and what to do. */
-    class Failed(val title: String, val reason: ViewerError, val onRetry: () -> Unit, val onEditProvider: () -> Unit) :
-        VodEmpty
+    class Failed(
+        val title: String,
+        val reason: ViewerError,
+        val onRetry: () -> Unit,
+        val onEditProvider: () -> Unit,
+        val report: ErrorReporting? = null,
+    ) : VodEmpty
 }
 
 /**
@@ -608,10 +634,20 @@ internal fun EmptyBrowse(empty: VodEmpty) {
     // Drawn as Live's channels that failed to load are, its buttons first in the content, so
     // coming in from the rail lands on Try again.
     when (empty) {
-        is VodEmpty.Failed -> Message(empty.reason.sentence, title = empty.title, detail = empty.reason.detail) {
+        is VodEmpty.Failed -> Message(
+            empty.reason.sentence,
+            title = empty.title,
+            detail = empty.report?.detail ?: empty.reason.detail,
+        ) {
+            val tryAgain = remember { FocusRequester() }
             Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
-                ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
+                ActionButton(
+                    stringResource(R.string.common_try_again),
+                    empty.onRetry,
+                    Modifier.focusRequester(tryAgain),
+                )
                 ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)
+                ReportButton(empty.report, returnTo = tryAgain)
             }
         }
         is VodEmpty.WayForward -> Message(empty.body, title = empty.title) {

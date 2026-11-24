@@ -455,3 +455,9 @@ class TestGraph(
  * to skip ahead while a read is still out on one (ADR 0008). Returns nothing, as JUnit wants of a test.
  */
 fun testing(block: suspend CoroutineScope.() -> Unit) = runBlocking(block = block)
+
+/**
+ * Crash Reports for a screen test whose errors are reported (ADR 0010): a build with a DSN, as a release
+ * is, whose reports go nowhere. Crash reports stay off, so nothing else of them starts.
+ */
+fun reportsOffered() = CrashReports.Destination("https://k@sentry.example.org/1", CrashReports.Outbox {})

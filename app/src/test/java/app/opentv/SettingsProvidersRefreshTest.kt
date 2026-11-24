@@ -68,7 +68,12 @@ class SettingsProvidersRefreshTest {
     }.build()
 
     @get:Rule(order = 0)
-    val testGraph = TestGraph(compose, name = "settings-providers-refresh-test", http = http)
+    val testGraph = TestGraph(
+        compose,
+        name = "settings-providers-refresh-test",
+        http = http,
+        crashReportsTo = reportsOffered(),
+    )
 
     @get:Rule(order = 1)
     val secrets = FixedServerSecrets()
@@ -152,6 +157,21 @@ class SettingsProvidersRefreshTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
         val manual = WorkManager.getInstance(app()).getWorkInfosForUniqueWork(SyncWorker.MANUAL_WORK_NAME).get()
         assertThat(manual).isNotEmpty()
+    }
+
+    @Test
+    fun `a refresh failure that could be Settee's offers Report, Down from Refresh again`() {
+        storeChannels(saveProvider("Broken films on 464", ViewerError("Couldn't load channels.", "HTTP 500")))
+        show()
+        waitFor("Broken films on 464")
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Broken films on 464").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        highlighted().assertTextContains("Refresh again")
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        highlighted().assertTextContains(app().getString(R.string.report_button))
+        captureScreen("settings_providers_refresh_failed_report")
     }
 
     @Test
