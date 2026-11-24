@@ -93,6 +93,16 @@ scratch. It fixes nothing. The next refresh fails the same way.
 4. A failed sync, or one cut off part way, deletes nothing: what it wrote stays, and so does
    everything it didn't get to. It returns the reason.
 
+A provider's feed can have **several addresses** (#505): a playlist's `url-tvg` may list more than one
+guide, kept comma-separated in the source's one guide address (`GuideAddresses`; only an M3U source's is
+split, since an Xtream login's address is one the viewer typed). `syncFeed` reads each in turn, and the
+feed succeeds if any of them gave programmes. `deleteSuperseded` only gets the spans of the addresses
+read in full, widened across them where two cover the same channel: one that failed or was cut off has
+said nothing about what replaces the rest, so the programmes it gave last time stay until they age out
+(`deleteEndedBefore`, which runs as after any successful sync). A failed address beside a working one
+is only logged (docs/ERRORS.md says why). When every address fails, the feed fails with the first
+address's reason.
+
 `XmltvParser` streams via `XmlPullParser` and emits programmes to a callback. A week of guide
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of
 a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
