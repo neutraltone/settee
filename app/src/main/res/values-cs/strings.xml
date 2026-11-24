@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Tato televize nedokáže přehrát %1$s</string>
     <string name="vod_cant_play_device">Toto zařízení nedokáže přehrát %1$s</string>
+    <string name="player_stepped_down_tv">Tato televize nedokáže přehrát %1$s. Místo toho se přehrává %2$s.</string>
+    <string name="player_stepped_down_device">Toto zařízení nedokáže přehrát %1$s. Místo toho se přehrává %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Tato televize nedokáže přehrát %1$s. Místo toho se přehrává nižší kvalita.</string>
+    <string name="player_stepped_down_lower_device">Toto zařízení nedokáže přehrát %1$s. Místo toho se přehrává nižší kvalita.</string>
+    <string name="player_stepped_down_unnamed_tv">Tato televize nedokáže přehrát tuto kvalitu. Místo toho se přehrává jiná.</string>
+    <string name="player_stepped_down_unnamed_device">Toto zařízení nedokáže přehrát tuto kvalitu. Místo toho se přehrává jiná.</string>
     <string name="vod_language_title">Zde jen v jazyce %1$s</string>
     <string name="vod_language_body_tv">Tato televize nedokáže přehrát verzi ve vašem jazyce.</string>
     <string name="vod_language_body_device">Toto zařízení nedokáže přehrát verzi ve vašem jazyce.</string>

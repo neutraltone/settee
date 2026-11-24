@@ -39,7 +39,7 @@ internal class StreamGuard(
     private val decoders: DecoderList,
     /** Moves to the next Quality, if there is one, and says what from and to. [forSound]: only sound is wrong. */
     private val moveDown: (forSound: Boolean) -> Step?,
-    /** Picks "this TV" over "this device" in what [onCantPlay] is given. */
+    /** Picks "this TV" over "this device" in what [onCantPlay] is given and in the notices. */
     private val onTelevision: Boolean,
     private val onCantPlay: (reason: ViewerError, canRetry: Boolean) -> Unit,
 ) {
@@ -114,13 +114,20 @@ internal class StreamGuard(
     /** Says the stream moved from the Quality called [from] to [to], and holds on to where it went. */
     fun steppedDown(from: String, to: PlayerController.Quality) {
         _steppedDownTo.value = to.key
-        say(
-            when {
-                from.isEmpty() -> context.getString(R.string.player_stepped_down_unnamed)
-                to.label.isEmpty() -> context.getString(R.string.player_stepped_down_lower, from)
-                else -> context.getString(R.string.player_stepped_down, from, to.label)
-            },
-        )
+        val sentence = when {
+            from.isEmpty() -> hardware(
+                onTelevision,
+                R.string.player_stepped_down_unnamed_tv,
+                R.string.player_stepped_down_unnamed_device,
+            )
+            to.label.isEmpty() -> hardware(
+                onTelevision,
+                R.string.player_stepped_down_lower_tv,
+                R.string.player_stepped_down_lower_device,
+            )
+            else -> hardware(onTelevision, R.string.player_stepped_down_tv, R.string.player_stepped_down_device)
+        }
+        say(context.getString(sentence, from, to.label))
     }
 
     /** The viewer has moved on to something else, so what was said about the last one no longer holds. */

@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Questa TV non può riprodurre il %1$s</string>
     <string name="vod_cant_play_device">Questo dispositivo non può riprodurre il %1$s</string>
+    <string name="player_stepped_down_tv">Questa TV non può riprodurre la qualità %1$s. Viene riprodotta la qualità %2$s.</string>
+    <string name="player_stepped_down_device">Questo dispositivo non può riprodurre la qualità %1$s. Viene riprodotta la qualità %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Questa TV non può riprodurre la qualità %1$s. Viene riprodotta una qualità inferiore.</string>
+    <string name="player_stepped_down_lower_device">Questo dispositivo non può riprodurre la qualità %1$s. Viene riprodotta una qualità inferiore.</string>
+    <string name="player_stepped_down_unnamed_tv">Questa TV non può riprodurre questa qualità. Ne viene riprodotta un\'altra.</string>
+    <string name="player_stepped_down_unnamed_device">Questo dispositivo non può riprodurre questa qualità. Ne viene riprodotta un\'altra.</string>
     <string name="vod_language_title">Qui solo in %1$s</string>
     <string name="vod_language_body_tv">Questa TV non può riprodurre una versione nella tua lingua.</string>
     <string name="vod_language_body_device">Questo dispositivo non può riprodurre una versione nella tua lingua.</string>

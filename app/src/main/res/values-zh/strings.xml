@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">这台电视无法播放 %1$s</string>
     <string name="vod_cant_play_device">这台设备无法播放 %1$s</string>
+    <string name="player_stepped_down_tv">这台电视无法播放 %1$s，正在改为播放 %2$s。</string>
+    <string name="player_stepped_down_device">这台设备无法播放 %1$s，正在改为播放 %2$s。</string>
+    <string name="player_stepped_down_lower_tv">这台电视无法播放 %1$s，正在改为播放较低画质。</string>
+    <string name="player_stepped_down_lower_device">这台设备无法播放 %1$s，正在改为播放较低画质。</string>
+    <string name="player_stepped_down_unnamed_tv">这台电视无法播放该画质，正在改为播放其他画质。</string>
+    <string name="player_stepped_down_unnamed_device">这台设备无法播放该画质，正在改为播放其他画质。</string>
     <string name="vod_language_title">这里只有%1$s版本</string>
     <string name="vod_language_body_tv">这台电视无法播放你所用语言的版本。</string>
     <string name="vod_language_body_device">这台设备无法播放你所用语言的版本。</string>

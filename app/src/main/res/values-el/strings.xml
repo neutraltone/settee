@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s</string>
     <string name="vod_cant_play_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s</string>
+    <string name="player_stepped_down_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s. Αναπαράγεται %2$s στη θέση του.</string>
+    <string name="player_stepped_down_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s. Αναπαράγεται %2$s στη θέση του.</string>
+    <string name="player_stepped_down_lower_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s. Αναπαράγεται χαμηλότερη ποιότητα στη θέση του.</string>
+    <string name="player_stepped_down_lower_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s. Αναπαράγεται χαμηλότερη ποιότητα στη θέση του.</string>
+    <string name="player_stepped_down_unnamed_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει αυτή την ποιότητα. Αναπαράγεται άλλη στη θέση της.</string>
+    <string name="player_stepped_down_unnamed_device">Αυτή η συσκευή δεν μπορεί να παίξει αυτή την ποιότητα. Αναπαράγεται άλλη στη θέση της.</string>
     <string name="vod_language_title">Εδώ μόνο στα %1$s</string>
     <string name="vod_language_body_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
     <string name="vod_language_body_device">Αυτή η συσκευή δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>

@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">이 TV에서는 %1$s을(를) 재생할 수 없습니다</string>
     <string name="vod_cant_play_device">이 기기에서는 %1$s을(를) 재생할 수 없습니다</string>
+    <string name="player_stepped_down_tv">이 TV에서는 %1$s을(를) 재생할 수 없습니다. 대신 %2$s(으)로 재생합니다.</string>
+    <string name="player_stepped_down_device">이 기기에서는 %1$s을(를) 재생할 수 없습니다. 대신 %2$s(으)로 재생합니다.</string>
+    <string name="player_stepped_down_lower_tv">이 TV에서는 %1$s을(를) 재생할 수 없습니다. 대신 더 낮은 화질로 재생합니다.</string>
+    <string name="player_stepped_down_lower_device">이 기기에서는 %1$s을(를) 재생할 수 없습니다. 대신 더 낮은 화질로 재생합니다.</string>
+    <string name="player_stepped_down_unnamed_tv">이 TV에서는 해당 화질을 재생할 수 없습니다. 대신 다른 화질로 재생합니다.</string>
+    <string name="player_stepped_down_unnamed_device">이 기기에서는 해당 화질을 재생할 수 없습니다. 대신 다른 화질로 재생합니다.</string>
     <string name="vod_language_title">여기서는 %1$s만 있습니다</string>
     <string name="vod_language_body_tv">이 TV에서는 사용자 언어로 된 버전을 재생할 수 없습니다.</string>
     <string name="vod_language_body_device">이 기기에서는 사용자 언어로 된 버전을 재생할 수 없습니다.</string>

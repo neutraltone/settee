@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Bu TV %1$s oynatamıyor</string>
     <string name="vod_cant_play_device">Bu cihaz %1$s oynatamıyor</string>
+    <string name="player_stepped_down_tv">Bu TV %1$s oynatamıyor. Bunun yerine %2$s oynatılıyor.</string>
+    <string name="player_stepped_down_device">Bu cihaz %1$s oynatamıyor. Bunun yerine %2$s oynatılıyor.</string>
+    <string name="player_stepped_down_lower_tv">Bu TV %1$s oynatamıyor. Bunun yerine daha düşük bir kalite oynatılıyor.</string>
+    <string name="player_stepped_down_lower_device">Bu cihaz %1$s oynatamıyor. Bunun yerine daha düşük bir kalite oynatılıyor.</string>
+    <string name="player_stepped_down_unnamed_tv">Bu TV bu kaliteyi oynatamıyor. Bunun yerine başka bir kalite oynatılıyor.</string>
+    <string name="player_stepped_down_unnamed_device">Bu cihaz bu kaliteyi oynatamıyor. Bunun yerine başka bir kalite oynatılıyor.</string>
     <string name="vod_language_title">Burada yalnızca %1$s</string>
     <string name="vod_language_body_tv">Bu TV, dilinizde bir sürümü oynatamıyor.</string>
     <string name="vod_language_body_device">Bu cihaz, dilinizde bir sürümü oynatamıyor.</string>

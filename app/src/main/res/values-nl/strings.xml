@@ -329,6 +329,12 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Deze tv kan %1$s niet afspelen</string>
     <string name="vod_cant_play_device">Dit apparaat kan %1$s niet afspelen</string>
+    <string name="player_stepped_down_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
+    <string name="player_stepped_down_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
+    <string name="player_stepped_down_lower_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
+    <string name="player_stepped_down_unnamed_tv">Deze tv kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
+    <string name="player_stepped_down_unnamed_device">Dit apparaat kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
     <string name="vod_language_title">Hier alleen in het %1$s</string>
     <string name="vod_language_body_tv">Deze tv kan geen versie in jouw taal afspelen.</string>
     <string name="vod_language_body_device">Dit apparaat kan geen versie in jouw taal afspelen.</string>
