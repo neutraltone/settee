@@ -133,18 +133,17 @@ class SettingsRoutesTest {
     }
 
     @Test
-    fun `after a first provider added from Settings goes through Setup, Settings next opens on its sections`() {
-        val memory = SettingsMemory(SettingsSection.Providers)
-        setApp(memory, start = Routes.MAIN)
+    fun `a first provider added from Settings comes back to Settings after Setup, and Back leaves Settings`() {
+        setApp(SettingsMemory(SettingsSection.Providers), start = Routes.MAIN)
         compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
 
         openFrom("Add a provider")
         savePlaylist()
         compose.onAllNodes(hasText("Take me to Settee")).onFirst().performClick()
-        assertThat(route()).isEqualTo(Routes.MAIN)
-        compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
 
         onProvidersSection()
+        Espresso.pressBack()
+        assertThat(route()).isEqualTo(Routes.MAIN)
     }
 
     @Test

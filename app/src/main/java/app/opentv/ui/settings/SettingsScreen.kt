@@ -107,9 +107,9 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
     internal var openedRow: String? = null
 
     /**
-     * A provider was added from the add page. Settings opens next on its sections, where the first
-     * Back leaves it (#442): the Add row was done with, and by Setup's way the Settings it opened
-     * from is gone, so the row would have caught a later, unrelated visit.
+     * A provider was added from the add page, by itself or through Setup. Settings opens next on its
+     * sections, where the first Back leaves it (#442): the Add row was done with, and left named it
+     * would catch a later, unrelated visit when Setup went to Live TV instead.
      */
     fun providerAdded() {
         openedRow = null
