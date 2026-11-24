@@ -81,6 +81,21 @@ sealed class OpenSubtitlesFailure(message: String, cause: Throwable? = null) : I
      * 403 with OpenSubtitles' own words, or a 401 to a request that carried only the key.
      */
     class KeyRejected(val status: Int = 403) : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
+
+    /**
+     * A subtitle downloaded, but this box couldn't keep it: storage full, the write failed, or the file
+     * is over the Downloaded Subtitles' cap. Thrown by [app.opentv.data.repo.OpenSubtitles], not this
+     * client, and kept apart from [Unreachable] so the viewer isn't sent to check a network that's fine
+     * and spend another of the day's downloads on the same failure.
+     */
+    class NotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't keep the subtitle on this box", cause)
+
+    /**
+     * OpenSubtitles accepted the sign-in, but this box couldn't seal the password to keep it (a Keystore
+     * fault). Thrown by [app.opentv.data.repo.OpenSubtitlesAccount]; signing in again the same way
+     * reaches the same Keystore, so it isn't worded as the network.
+     */
+    class SignInNotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't save the sign-in on this box", cause)
 }
 
 /**

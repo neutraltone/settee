@@ -364,6 +364,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles non ha accettato quel nome utente o quella password. Controllali e riprova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha disconnesso questa TV. Accedi di nuovo nelle Impostazioni.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
+    <string name="error_opensubtitles_not_saved_tv">Su questa TV non c\'è spazio per conservare quei sottotitoli. Libera un po\' di spazio, poi riprova.</string>
+    <string name="error_opensubtitles_not_saved_device">Su questo dispositivo non c\'è spazio per conservare quei sottotitoli. Libera un po\' di spazio, poi riprova.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ha accettato l\'accesso, ma questa TV non è riuscita a salvarlo. Riavvia questa TV, poi accedi di nuovo.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ha accettato l\'accesso, ma questo dispositivo non è riuscito a salvarlo. Riavvia questo dispositivo, poi accedi di nuovo.</string>
     <string name="error_not_a_guide">Quell\'indirizzo non è una guida. Controlla che sia il link giusto, oppure accedi al Wi-Fi se te lo chiede.</string>
     <string name="settings_guide_bad_address">Questo non è un indirizzo web. Controlla che sia scritto come lo mostra il link della guida, ad esempio example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee non è riuscito a leggere il suo database, quindi questi numeri mancano.</string>

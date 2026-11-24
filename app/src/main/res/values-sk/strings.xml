@@ -365,6 +365,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles neprijali toto používateľské meno alebo heslo. Skontrolujte ich a skúste to znova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles tento televízor odhlásili. Prihláste sa znova v Nastaveniach.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
+    <string name="error_opensubtitles_not_saved_tv">Na tomto televízore nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
+    <string name="error_opensubtitles_not_saved_device">Na tomto zariadení nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles prihlásenie prijali, ale tento televízor ho nedokázal uložiť. Reštartujte tento televízor a prihláste sa znova.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles prihlásenie prijali, ale toto zariadenie ho nedokázalo uložiť. Reštartujte toto zariadenie a prihláste sa znova.</string>
     <string name="error_not_a_guide">Táto adresa nie je sprievodca. Skontrolujte, že ide o správny odkaz, alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
     <string name="settings_guide_bad_address">To nie je webová adresa. Skontrolujte, že je zadaná tak, ako ju ukazuje odkaz na sprievodcu, napríklad example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nemohol prečítať svoju databázu, preto tieto čísla chýbajú.</string>

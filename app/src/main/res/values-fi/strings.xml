@@ -363,6 +363,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ei hyväksynyt käyttäjätunnusta tai salasanaa. Tarkista ne ja yritä uudelleen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles kirjasi tämän television ulos. Kirjaudu uudelleen asetuksissa.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
+    <string name="error_opensubtitles_not_saved_tv">Tässä televisiossa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_not_saved_device">Tässä laitteessa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles hyväksyi kirjautumisen, mutta tämä televisio ei voinut tallentaa sitä. Käynnistä tämä televisio uudelleen ja kirjaudu uudelleen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles hyväksyi kirjautumisen, mutta tämä laite ei voinut tallentaa sitä. Käynnistä tämä laite uudelleen ja kirjaudu uudelleen.</string>
     <string name="error_not_a_guide">Osoite ei ole ohjelmaopas. Tarkista, että linkki on oikea, tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
     <string name="settings_guide_bad_address">Tämä ei ole verkko-osoite. Tarkista, että se on kirjoitettu kuten oppaan linkki sen näyttää, esimerkiksi example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee ei voinut lukea tietokantaansa, joten nämä luvut puuttuvat.</string>

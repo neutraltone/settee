@@ -745,6 +745,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles didn\'t accept that username or password. Check them and try again.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles signed this TV out. Sign in again in Settings.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles signed this device out. Sign in again in Settings.</string>
+    <string name="error_opensubtitles_not_saved_tv">There\'s no room on this TV to keep that subtitle. Free up some space, then try again.</string>
+    <string name="error_opensubtitles_not_saved_device">There\'s no room on this device to keep that subtitle. Free up some space, then try again.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles accepted the sign-in, but this TV couldn\'t save it. Restart this TV, then sign in again.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles accepted the sign-in, but this device couldn\'t save it. Restart this device, then sign in again.</string>
     <string name="opensubtitles_name" translatable="false">OpenSubtitles</string>
     <string name="opensubtitles_attribution">Subtitles provided by OpenSubtitles.com</string>
     <string name="opensubtitles_find">Find subtitles online</string>

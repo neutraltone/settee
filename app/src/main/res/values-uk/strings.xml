@@ -365,6 +365,10 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прийняв це ім\'я користувача або пароль. Перевірте їх і спробуйте ще раз.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles вийшов з облікового запису на цьому телевізорі. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
+    <string name="error_opensubtitles_not_saved_tv">На цьому телевізорі немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_not_saved_device">На цьому пристрої немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles прийняв вхід, але цей телевізор не зміг його зберегти. Перезапустіть цей телевізор і увійдіть знову.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles прийняв вхід, але цей пристрій не зміг його зберегти. Перезапустіть цей пристрій і увійдіть знову.</string>
     <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
     <string name="settings_guide_bad_address">Це не вебадреса. Перевірте, чи її введено так, як у посиланні на програму, наприклад example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee не вдалося прочитати свою базу даних, тому цих чисел немає.</string>
