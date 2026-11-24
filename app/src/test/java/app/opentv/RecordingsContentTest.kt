@@ -81,6 +81,9 @@ class RecordingsContentTest {
     /** What the screen lists, so a test can change it under the screen as the database would. */
     private var shown by mutableStateOf(emptyList<Recording>())
 
+    /** The series links the screen lists, changeable under it in the same way. */
+    private var links by mutableStateOf(emptyList<SeriesRule>())
+
     /** What the screen says about a delete that failed, as the view model would expose it. */
     private var deleteFailure by mutableStateOf<ViewerError?>(null)
 
@@ -97,10 +100,11 @@ class RecordingsContentTest {
     ) {
         val enter = FocusRequester()
         shown = recordings
+        links = seriesRules
         compose.setTvContent {
             Box(Modifier.focusRequester(enter)) {
                 RecordingsContent(
-                    sections = recordingsSections(shown, reminders, seriesRules, NOW, shortOfRoom),
+                    sections = recordingsSections(shown, reminders, links, NOW, shortOfRoom),
                     profileNames = profileNames,
                     onPlay = { played += it },
                     onRetry = { retried += it },
@@ -239,6 +243,29 @@ class RecordingsContentTest {
         compose.waitForIdle()
 
         row("Recorded 4").assertIsFocused()
+    }
+
+    @Test
+    fun `removing a series link and its bookings puts the Highlight on the link that moves up`() {
+        val bookings = listOf(booking(1), booking(2)).map { it.copy(seriesRuleId = 3) }
+        show(recordings = bookings, seriesRules = listOf(seriesLink(3), seriesLink(4), seriesLink(5)))
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        row("Series 3").assertIsFocused()
+
+        press(Key.DirectionCenter)
+        compose.onAllNodes(hasText("Remove series link")).onFirst().assertExists()
+        compose.onNode(hasText("Remove series link") and hasClickAction()).performClick()
+        compose.onAllNodes(hasText("bookings are cancelled", substring = true)).onFirst().assertExists()
+        compose.onNode(hasText("Remove series link") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        assertThat(chosen.map { it.second }).containsExactly(ItemOption.RemoveSeriesLink)
+        // Its bookings in Coming up, above it, go with it, as RecordingEngine.removeSeriesRule does.
+        shown = emptyList()
+        links = links.filter { it.id != 3L }
+        compose.waitForIdle()
+
+        row("Series 4").assertIsFocused()
     }
 
     @Test
