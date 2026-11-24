@@ -11,6 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.JourneyTimer.Journey
 import com.google.common.truth.Truth.assertThat
 import io.sentry.Sentry
+import io.sentry.hints.AbnormalExit
+import io.sentry.util.HintUtils
 import io.sentry.exception.ExceptionMechanismException
 import io.sentry.protocol.Mechanism
 import okhttp3.OkHttpClient
@@ -222,6 +224,35 @@ class SlowJourneyReportsTest {
         val event = sentEvents().single()
         assertThat(event).contains("\"type\":\"ANR\"")
         assertThat(event).doesNotContain("SLOW_JOURNEY")
+    }
+
+    @Test
+    fun `a freeze from the last launch, reported on this one, doesn't swallow this launch's slow start`() {
+        reports.setOn(true)
+
+        timer.start(Journey.COLD_START)
+        clock += 5_000
+        // Android 11 and later: Sentry finds the freeze that ended the last launch in the exit history.
+        val main = Thread.currentThread()
+        Sentry.captureException(
+            ExceptionMechanismException(Mechanism().apply { type = "ANR" }, IllegalStateException("Frozen"), main),
+            HintUtils.createWithTypeCheckHint(EndedLastLaunch(System.currentTimeMillis())),
+        )
+        clock += 5_000
+        timer.end(Journey.COLD_START)
+
+        val events = sentEvents()
+        assertThat(events).hasSize(2)
+        assertThat(events.last()).contains("SLOW_JOURNEY: cold-start")
+    }
+
+    /** What Sentry's exit-history reader marks a freeze it found with: its own hint is private. */
+    private class EndedLastLaunch(private val at: Long) : AbnormalExit {
+        override fun mechanism() = "anr_foreground"
+
+        override fun ignoreCurrentThread() = false
+
+        override fun timestamp() = at
     }
 
     @Test

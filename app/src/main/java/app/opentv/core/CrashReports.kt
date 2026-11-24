@@ -122,7 +122,8 @@ class CrashReports(
 
     @Volatile private var screen: String? = null
 
-    // When Sentry last caught the app frozen, on the [elapsed] clock: a slow journey that froze is the freeze's.
+    // When Sentry last caught the app frozen as it happened, on the [elapsed] clock: a slow journey that
+    // froze is the freeze's.
     @Volatile private var frozeAt = Long.MIN_VALUE
 
     private var started = false
@@ -292,8 +293,13 @@ class CrashReports(
                 // a handled error or anything else is dropped, never held, since only the crash
                 // handler and the freeze watch hold. A freeze or crash Sentry finds in Android's exit
                 // history from before reports were turned on happened while the viewer hadn't said yes.
-                if (event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }) frozeAt = freezes.elapsed()
                 val exitedAt = (HintUtils.getSentrySdkHint(hint) as? AbnormalExit)?.timestamp()
+                // A freeze caught as it happens is one a journey still running could be slow for. Only
+                // before Android 11 does Sentry catch them so; from 11 on it reads them from the exit
+                // history at the next launch, and those only ever killed the process: the journey they
+                // froze never ended to be reported, and this launch's journeys weren't theirs.
+                val frozeNow = exitedAt == null && event.exceptions.orEmpty().any { it.mechanism?.type == ANR_MECHANISM }
+                if (frozeNow) frozeAt = freezes.elapsed()
                 val fromBefore = exitedAt != null && exitedAt < settings.crashReportsOnSince
                 val asked = sendingAsked?.takeIf { it.eventId == event.eventId }?.what
                 when {
