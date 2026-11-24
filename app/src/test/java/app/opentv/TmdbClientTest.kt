@@ -230,6 +230,45 @@ class TmdbClientTest {
         }
     }
 
+    /** The query of the film search TMDB was sent for [title], with [year] as the provider's year field. */
+    private fun movieQueryFor(title: String, year: Int? = null): String? {
+        tmdbWith(API_KEY).movieMetaOrFailure(title, year, tmdbId = null)
+        return toTmdb().first { it.url.encodedPath == "/3/search/movie" }.url.queryParameter("query")
+    }
+
+    @Test
+    fun `a film whose name ends in a year that isn't its year is searched for by its whole name`() {
+        assertThat(movieQueryFor("Blade Runner 2049")).isEqualTo("Blade Runner 2049")
+        panel.requests.clear()
+        assertThat(movieQueryFor("Blade Runner 2049", year = 2017)).isEqualTo("Blade Runner 2049")
+    }
+
+    @Test
+    fun `a film named after a year is searched for by that year`() {
+        assertThat(movieQueryFor("1917")).isEqualTo("1917")
+        panel.requests.clear()
+        assertThat(movieQueryFor("1917", year = 2019)).isEqualTo("1917")
+    }
+
+    @Test
+    fun `a film named after its own year is still searched for by that name`() {
+        assertThat(movieQueryFor("1917", year = 1917)).isEqualTo("1917")
+        panel.requests.clear()
+        assertThat(movieQueryFor("(2012)")).isEqualTo("(2012)")
+    }
+
+    @Test
+    fun `a year in brackets after a film's name is left out of the search`() {
+        assertThat(movieQueryFor("Heat (1995)")).isEqualTo("Heat")
+        panel.requests.clear()
+        assertThat(movieQueryFor("Heat  (1995) ", year = 1995)).isEqualTo("Heat")
+    }
+
+    @Test
+    fun `a bare year after a film's name that is its year is left out of the search`() {
+        assertThat(movieQueryFor("Heat 1995", year = 1995)).isEqualTo("Heat")
+    }
+
     private companion object {
         /**
          * Placeholders in the shape of each (a v3 key is 32 hex digits, a v4 token a JWT), built so

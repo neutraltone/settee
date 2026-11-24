@@ -31,6 +31,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.personKey
 import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
+import app.opentv.data.parser.GuideAddresses
 import app.opentv.data.parser.M3uParser
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.remote.StalkerApi
@@ -456,7 +457,9 @@ class CatalogRepository(
 
         // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
         val info = if (!movie.isEnriched && source?.kind == SourceKind.XTREAM) {
-            runCatching { api.movieInfo(source, movie.streamId) }.getOrNull()
+            // Not swallowing a cancel: a page left, or a highlight moved on, while the panel was slow
+            // would otherwise go on to a TMDB look-up whose answer nobody waits for.
+            runCatching { api.movieInfo(source, movie.streamId) }.rethrowCancel().getOrNull()
         } else {
             null
         }
@@ -797,7 +800,7 @@ class CatalogRepository(
         if (storeEpisodes && reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
         reply.info
     }
-        .onFailure { if (it is CancellationException) throw it }
+        .rethrowCancel()
         // The exception's kind only: some clients put the request's address, with the account's
         // login in it, in the message, and the browse backdrop can fail here on every highlight.
         .onFailure { Log.w(TAG, "Series info failed for series $seriesId: ${it.javaClass.simpleName}") }
@@ -852,7 +855,7 @@ class CatalogRepository(
     suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(dispatchers.io) {
         if (!source.kind.carriesMoviesAndShows) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
-            .onFailure { if (it is CancellationException) throw it }
+            .rethrowCancel()
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
             .getOrElse { vodFailed(it, wording, settings) }
     }
@@ -972,7 +975,7 @@ class CatalogRepository(
 
     /** Why [fetch] failed, or null if it worked; anything but cancelling counts as a list that didn't come back. */
     private suspend fun fetchList(fetch: suspend () -> Unit): Throwable? = runCatching { fetch() }
-        .onFailure { if (it is CancellationException) throw it }
+        .rethrowCancel()
         .onFailure { Log.w(TAG, "A movie or show list failed", it) }
         .exceptionOrNull()
 
@@ -1045,9 +1048,11 @@ class CatalogRepository(
         // more is a group the playlist dropped, or the films and shows an earlier version stored.
         categoryDao.deleteEmptyLive(source.id)
 
-        // If the playlist declared its own guide URL and the user did not set one, adopt it.
-        if (source.epgUrl.isNullOrBlank() && !parsed.declaredEpgUrl.isNullOrBlank()) {
-            sourceDao.update(source.copy(epgUrl = parsed.declaredEpgUrl))
+        // If the playlist declared its own guides and the user did not set one, adopt them, all of
+        // them in the one address (see GuideAddresses), so one that's gone doesn't cost the guide.
+        val declared = GuideAddresses.join(parsed.declaredEpgUrls)
+        if (source.epgUrl.isNullOrBlank() && declared != null) {
+            sourceDao.update(source.copy(epgUrl = declared))
         }
 
         sourceDao.markCatalogSynced(source.id, nowUtcMillis)
@@ -1200,3 +1205,9 @@ class CatalogRepository(
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
 private const val MORE_LIKE_THIS_LIMIT = 20
+
+/**
+ * This result, unless it failed by being cancelled: that's thrown on, so the caller stops rather than
+ * going on as if the call had just failed. Out here, not in the class, as detekt counts the class's size.
+ */
+private fun <T> Result<T>.rethrowCancel(): Result<T> = onFailure { if (it is CancellationException) throw it }

@@ -12,8 +12,10 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.providerDirector
+import app.opentv.data.parser.GuideAddresses
 import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
@@ -305,11 +307,24 @@ class XtreamApi(
     }
 
     /**
-     * The provider's guide, with its size where the server gives one (Setup's bar moves on it). The
-     * caller must close it.
+     * Where [source]'s guide is: each address its guide address lists that parses, in order, or else
+     * the panel's own `xmltv.php` when none does. Only a playlist's address is split: it's where a
+     * playlist's declared guides are kept (see GuideAddresses), while an Xtream login's is one the
+     * viewer typed, and a comma in it is theirs.
      */
-    suspend fun openEpg(source: Source): ResponseBody = withContext(dispatchers.io) {
-        val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
+    fun epgAddresses(source: Source): List<HttpUrl> {
+        val listed = when (source.kind) {
+            SourceKind.M3U -> GuideAddresses.split(source.epgUrl)
+            else -> listOfNotNull(source.epgUrl)
+        }
+        return listed.mapNotNull { it.toHttpUrlOrNull() }.ifEmpty { listOf(xmltvUrl(source)) }
+    }
+
+    /**
+     * The provider's guide at [url], one of [epgAddresses], with its size where the server gives one
+     * (Setup's bar moves on it). The caller must close it.
+     */
+    suspend fun openEpg(source: Source, url: HttpUrl): ResponseBody = withContext(dispatchers.io) {
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
             response.close()

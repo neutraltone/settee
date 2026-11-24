@@ -266,6 +266,13 @@ provider"; the provider's own guide (`xmltv.php`) is worded as the provider is (
 | Downloaded, no programmes | `error_guide_empty` | This guide downloaded, but had no programmes in it. Check it's the right link. | NoProgrammes | The feed's |
 | Any other exception | `error_guide` | Couldn't download this guide. Try again in a moment. | exception type · HTTP status | The feed's server, or the network |
 
+A playlist can list several guides, all kept as its provider's one guide feed (#505). The feed fails, with
+the first guide's reason from the table above, only when none of them gives programmes. One that fails
+beside one that works shows nothing: the feed shows the programme count it got, and the failed address
+reaches only the log (`EpgRepository`, the guide's number in the list and the detail). That's deliberate:
+the viewer has a working guide, can't fix the playlist's list, and a problem shown for a guide that works
+would only worry them.
+
 Guide settings' address entry adds `http://` to an address typed without a scheme, and won't save one
 that still isn't a web address: the entry window stays open with `settings_guide_bad_address` ("That
 isn't a web address. Check it's typed as the guide's link shows it, such as example.com/guide.xml.").
