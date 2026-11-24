@@ -127,7 +127,9 @@ class SlowJourneyReportsTest {
             .build()
 
         timer.start(Journey.PLAYBACK_START)
-        http.newCall(Request.Builder().url("https://example.com/live/u/p/1.ts").build()).execute().use { it.body.string() }
+        http.newCall(Request.Builder().url("https://example.com/live/u/p/1.ts").build()).execute().use {
+            it.body.string()
+        }
         clock += 1_000
         timer.end(Journey.PLAYBACK_START)
 

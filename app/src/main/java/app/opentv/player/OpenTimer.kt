@@ -28,10 +28,8 @@ import app.opentv.diagnostics.PlaybackDiagnostics
  * last one (the same rule [FirstFrameWatch] keeps).
  */
 @OptIn(UnstableApi::class)
-internal class OpenTimer(
-    private val diagnostics: PlaybackDiagnostics?,
-    private val journeys: JourneyTimer? = null,
-) : AnalyticsListener {
+internal class OpenTimer(private val diagnostics: PlaybackDiagnostics?, private val journeys: JourneyTimer? = null) :
+    AnalyticsListener {
 
     /** An open being timed: for Diagnostics when it has a [kind], and as a journey whatever it is. */
     private class Pending(val kind: OpenKind?, val startedAt: Long, var source: String?) {

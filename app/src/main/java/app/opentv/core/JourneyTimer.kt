@@ -7,9 +7,9 @@ package app.opentv.core
 
 import android.os.SystemClock
 import app.opentv.data.model.SourceKind
+import java.io.IOException
 import okhttp3.Call
 import okhttp3.EventListener
-import java.io.IOException
 
 /**
  * Times the journeys that matter (ADR 0010, Slow Journeys): when each starts and ends, and how long the

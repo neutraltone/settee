@@ -204,7 +204,14 @@ class PlaybackSources(
         } else {
             channel.streamUrl
         }
-        return Playable.Ready(key, url, userAgentOf(source), channel.shownName, isLive = true, sourceKind = source?.kind)
+        return Playable.Ready(
+            key,
+            url,
+            userAgentOf(source),
+            channel.shownName,
+            isLive = true,
+            sourceKind = source?.kind,
+        )
     }
 
     private suspend fun movie(key: MediaKey.Movie): Playable.Ready {
