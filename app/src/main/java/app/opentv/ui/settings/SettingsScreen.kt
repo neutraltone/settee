@@ -102,6 +102,15 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
 
     /** The row that opened a screen of its own, which takes the Highlight back on return. */
     internal var openedRow: String? = null
+
+    /**
+     * A provider was added from the add page. Settings opens next on its sections, where the first
+     * Back leaves it (#442): the Add row was done with, and by Setup's way the Settings it opened
+     * from is gone, so the row would have caught a later, unrelated visit.
+     */
+    fun providerAdded() {
+        openedRow = null
+    }
 }
 
 /**
