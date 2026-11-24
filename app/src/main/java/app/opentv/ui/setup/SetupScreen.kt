@@ -6,6 +6,8 @@
 package app.opentv.ui.setup
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -39,11 +42,13 @@ import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeMotion
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.update.startsFocused
 import java.text.NumberFormat
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Setup: the first provider's Catalogue Refresh, shown until the library is ready to browse
@@ -62,6 +67,8 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     // opening: only a step finishing while the screen is up.
     var justDone by remember { mutableStateOf<StepDone?>(null) }
     var seen by remember { mutableIntStateOf(setup.done.size) }
+    // Like the counts: the finish rises only when it happens in front of the viewer, not on opening.
+    val openedFinished = remember { setup.finished }
     LaunchedEffect(setup.done.size) {
         if (setup.done.size <= seen) return@LaunchedEffect
         seen = setup.done.size
@@ -75,7 +82,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                 SetupIcon(setup.finished)
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
-                    Finished(setup)
+                    Finished(setup, rises = !openedFinished)
                 } else {
                     Text(stringResource(R.string.setup_wordplay), SetteeType.Hero)
                     Spacer(Modifier.height(12.dp))
@@ -119,20 +126,45 @@ private fun SetupIcon(finished: Boolean) {
     }
 }
 
+/**
+ * "You're all set." and the summary, rising in two beats when setup finishes with the screen up
+ * (docs/LOOK.md, Setting up). The button below isn't part of it: it keeps the Highlight and acts at once.
+ */
 @Composable
-private fun Finished(setup: Setup) {
-    Text(stringResource(R.string.setup_finished_title), SetteeType.Hero)
-    Spacer(Modifier.height(12.dp))
-    Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-    setup.failed.mapNotNull { it.failure }.forEach { failure ->
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(failure),
-            SetteeType.Body,
-            color = SetteeColors.QuietText,
-            textAlign = TextAlign.Center,
+private fun Finished(setup: Setup, rises: Boolean) {
+    val title = remember { Animatable(if (rises) 0f else 1f) }
+    val rest = remember { Animatable(if (rises) 0f else 1f) }
+    LaunchedEffect(Unit) {
+        if (!rises) return@LaunchedEffect
+        launch { title.animateTo(1f, tween(FINISH_RISE_MILLIS, easing = SetteeMotion.Arrive)) }
+        rest.animateTo(
+            1f,
+            tween(FINISH_RISE_MILLIS, delayMillis = FINISH_SECOND_BEAT_MILLIS, easing = SetteeMotion.Arrive),
         )
     }
+    Text(stringResource(R.string.setup_finished_title), SetteeType.Hero, modifier = Modifier.rising(title))
+    Spacer(Modifier.height(12.dp))
+    Column(Modifier.rising(rest), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+        setup.failed.mapNotNull { it.failure }.forEach { failure ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(failure),
+                SetteeType.Body,
+                color = SetteeColors.QuietText,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/*
+ * Moved and faded in the draw phase only: the column around it is centred, and animating any size or
+ * offset in layout would re-lay out the whole screen every frame.
+ */
+private fun Modifier.rising(progress: Animatable<Float, *>) = graphicsLayer {
+    alpha = progress.value
+    translationY = (1f - progress.value) * FINISH_RISE.toPx()
 }
 
 /** "1,204 channels, 6,400 movies and 1,100 shows.", counting only what loaded, and film details if any did. */
@@ -188,6 +220,12 @@ private fun runningLine(step: SetupStep, found: Int): String {
 
 /** How long a step's count stays up once it's done. */
 private const val COUNT_MILLIS = 2_000L
+
+// Longer than the usual 300 ms: it's seen once per install. If it misses the frame budget on the
+// Stick, these go to 0, never longer or softer.
+private const val FINISH_RISE_MILLIS = 400
+private const val FINISH_SECOND_BEAT_MILLIS = 80
+private val FINISH_RISE = 12.dp
 
 @Composable
 private fun countLine(done: StepDone): String? {

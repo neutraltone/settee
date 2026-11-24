@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CatalogueRefresh.Setup
 import app.opentv.data.repo.SetupStep
@@ -196,6 +197,66 @@ class SetupScreenTest {
         setup = finished()
 
         compose.onNodeWithText("Take me to Settee").assertIsFocused()
+    }
+
+    private fun topOf(text: String) = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.top
+
+    private val summary =
+        "1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."
+
+    @Test
+    fun `when setup finishes in front of the viewer, You're all set rises in, with the summary just behind`() {
+        var setup by mutableStateOf(channelsIn)
+        compose.setTvContent { SetupScreen(setup, onWatchLive = {}, onFinish = {}) }
+        compose.mainClock.autoAdvance = false
+
+        setup = finished()
+        Snapshot.sendApplyNotifications()
+        // A few frames in: inside the summary's 80 ms head start.
+        compose.mainClock.advanceTimeBy(48)
+        val titleRising = topOf("You're all set.")
+        val summaryRising = topOf(summary)
+        compose.mainClock.advanceTimeBy(1_000)
+        val titleDrop = titleRising - topOf("You're all set.")
+        val summaryDrop = summaryRising - topOf(summary)
+
+        val rise = with(compose.density) { 12.dp.toPx() }
+        // On its way up from 12 dp below where it settles...
+        assertThat(titleDrop).isGreaterThan(0f)
+        assertThat(titleDrop).isLessThan(rise)
+        // ...while the summary hasn't set off yet.
+        assertThat(summaryDrop).isWithin(0.5f).of(rise)
+    }
+
+    @Test
+    fun `while You're all set rises, Take me to Settee keeps the highlight and OK goes in at once`() {
+        var setup by mutableStateOf(channelsIn)
+        compose.setTvContent { SetupScreen(setup, onWatchLive = {}, onFinish = { pressed += "finish" }) }
+        compose.mainClock.autoAdvance = false
+
+        setup = finished()
+        Snapshot.sendApplyNotifications()
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("Take me to Settee").assertIsFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeByFrame()
+
+        assertThat(pressed).containsExactly("finish")
+    }
+
+    @Test
+    fun `opened already finished, the text is simply there, not rising`() {
+        compose.mainClock.autoAdvance = false
+        setScreen(finished())
+        compose.mainClock.advanceTimeByFrame()
+        val title = topOf("You're all set.")
+        val rest = topOf(summary)
+
+        compose.mainClock.advanceTimeBy(1_000)
+
+        assertThat(topOf("You're all set.")).isEqualTo(title)
+        assertThat(topOf(summary)).isEqualTo(rest)
     }
 
     @Test
