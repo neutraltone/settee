@@ -53,9 +53,13 @@ internal fun Flow<Pair<Long, Long>>.guideIndex(
  * "All channels" for a big provider takes far longer than the pause on a Fire TV Stick: paced from
  * arrival, a newer index was always waiting when a build ended, and the guide rebuilt back to back
  * for the whole of a guide sync.
+ *
+ * [remembered] holds what the last build was made from, across collections: coming back to the
+ * guide, the index replays the listings it last held, and those rows are already on screen.
  */
 internal fun <C, R> Flow<C>.guideBuilds(
     index: Flow<ProgrammeIndex>,
+    remembered: GuideBuildMemory<C>,
     settleMillis: Long = GUIDE_SETTLE_MILLIS,
     build: suspend (channels: C, byChannel: Map<String, List<GuideProgramme>>) -> R,
 ): Flow<R> = channelFlow {
@@ -72,14 +76,38 @@ internal fun <C, R> Flow<C>.guideBuilds(
         val inputs = combine(latest, settledSinceBuild) { next, settled -> next?.takeIf { it.due(built, settled) } }
             .filterNotNull()
             .first()
-        send(build(inputs.channels, inputs.index.byChannel))
+        val onScreen = built == null && remembered.built(inputs.channels, inputs.index)
         built = inputs
+        if (onScreen) continue
+        send(build(inputs.channels, inputs.index.byChannel))
+        remembered.keep(inputs.channels, inputs.index)
         settledSinceBuild.value = false
         settling?.cancel()
         settling = launch {
             delay(settleMillis)
             settledSinceBuild.value = true
         }
+    }
+}
+
+/**
+ * What the guide's rows were last built from, kept by their view model rather than inside
+ * [guideBuilds], whose locals start again on every collection (#374). The rows stop five seconds
+ * after Live TV is covered; on coming back, the index replays the listings it last held, and
+ * without this the first build repeated the rows already on screen, holding up the fresh listings
+ * for a whole extra build and the pause after it.
+ *
+ * Channels are compared by content: each collection reads them again as a new list. The index is
+ * compared by identity, as everywhere else in the guide.
+ */
+internal class GuideBuildMemory<C> {
+    @Volatile private var last: Pair<C, ProgrammeIndex>? = null
+
+    fun built(channels: C, index: ProgrammeIndex): Boolean =
+        last?.let { (lastChannels, lastIndex) -> lastIndex === index && lastChannels == channels } ?: false
+
+    fun keep(channels: C, index: ProgrammeIndex) {
+        last = channels to index
     }
 }
 

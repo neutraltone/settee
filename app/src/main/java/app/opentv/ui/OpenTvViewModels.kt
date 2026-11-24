@@ -594,6 +594,9 @@ class ChannelsViewModel @JvmOverloads constructor(
     @androidx.compose.runtime.Immutable
     data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
 
+    /** What [guideRows] were last built from, so coming back to Live TV doesn't build them twice. */
+    private val guideBuilt = GuideBuildMemory<Pair<LineupScope, List<LineupChannel>>>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val guideRows: StateFlow<GuideRows> =
         guideScope
@@ -609,9 +612,12 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // a guide sync doesn't keep a slow build running back to back (#257).
                 // Building the guide is the screen being built, which its skeleton rows show; the
                 // main screen's corner is for background work (#581, #583).
-                lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
-                    GuideRows(scope, buildRows(channels, byEpgChannel, now()))
-                }
+                // The scope goes in with the channels it remembers, so a category whose channels
+                // match the last one's still builds, with its own scope (#374).
+                lineup.channels(scope).map { scope to it }
+                    .guideBuilds(programmeIndex, guideBuilt) { (_, channels), byEpgChannel ->
+                        GuideRows(scope, buildRows(channels, byEpgChannel, now()))
+                    }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
             // enough to freeze the UI for a big provider — a category tap that took minutes. Run the
