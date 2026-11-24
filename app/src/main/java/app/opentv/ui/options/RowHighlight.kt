@@ -31,7 +31,11 @@ import androidx.compose.ui.focus.onFocusChanged
  * nearest one before it: by key rather than by place, as other rows can leave with it (a series
  * link's bookings), and counting places would then skip past the row that moved into the gap.
  */
-internal class RowHighlight(private val listState: LazyListState, private val keepScroll: Boolean) {
+internal class RowHighlight(
+    private val listState: LazyListState,
+    private val itemIndex: (row: Int) -> Int,
+    private val keepScroll: () -> Boolean,
+) {
     private val requester = FocusRequester()
     private var restoringTo by mutableStateOf<Any?>(null)
 
@@ -39,9 +43,6 @@ internal class RowHighlight(private val listState: LazyListState, private val ke
     internal var handing by mutableStateOf<Handing?>(null)
         private set
     private var highlighted: Any? = null
-
-    /** Which of the list's items row `i` is. */
-    internal var itemIndex: (row: Int) -> Int = { it }
 
     // What a row that has just left is looked up in: the list goes on to its new rows in the
     // composition that removes the row, before the row says it lost the highlight.
@@ -141,28 +142,28 @@ internal class RowHighlight(private val listState: LazyListState, private val ke
             onEmptied()
         } else {
             for (key in handing.heirs) {
-                if (restoreTo(key, keepScroll)) break
+                if (restoreTo(key)) break
             }
         }
         if (this.handing === handing) this.handing = null
     }
 
     /**
-     * Puts the highlight on the row keyed [key], scrolling to it only if it's out of sight: Back to a
-     * screen that was built again asks for the row it left (Recordings, #432).
+     * Puts the highlight on the row keyed [key], scrolling as a handing on does: Back to a screen that
+     * was built again asks for the row it left (Recordings, #432).
      */
     suspend fun aimAt(key: Any) {
-        restoreTo(key, keepScroll = true)
+        restoreTo(key)
     }
 
-    private suspend fun restoreTo(key: Any, keepScroll: Boolean): Boolean {
+    private suspend fun restoreTo(key: Any): Boolean {
         val index = indexOf[key] ?: return false
         // `highlighted` isn't cleared first: Compose may already have moved focus onto this row by
         // itself when the old one left (a series link going with its bookings), and asking for focus
         // a row already has reports nothing, so the row would be judged unable to take it (#445).
         restoringTo = key
         val item = itemIndex(index)
-        if (!keepScroll || listState.layoutInfo.visibleItemsInfo.none { it.index == item }) {
+        if (!keepScroll() || listState.layoutInfo.visibleItemsInfo.none { it.index == item }) {
             listState.scrollToItem(item)
         }
         // A frame resumes this before it recomposes, so the row wears the requester a frame later.
@@ -184,8 +185,8 @@ internal class RowHighlight(private val listState: LazyListState, private val ke
 
 /**
  * A [RowHighlight] for [rows] drawn by [listState]. [key] must be what the list keys its rows by.
- * Row `i` is the list's item [itemIndex] of `i`: after [firstRowItem] items (a header), unless the
- * rows are interleaved with headings. [onEmptied] is told when the highlighted row leaves and no row
+ * Row `i` is the list's item [itemIndex] of `i`: `1 + it` after a header, or mapped past headings
+ * when the rows are interleaved with them. [onEmptied] is told when the highlighted row leaves and no row
  * is left to take the highlight. [keepScroll] leaves the list where it is when the row taking the
  * highlight is already in sight, rather than scrolling it to the start.
  */
@@ -193,19 +194,22 @@ internal class RowHighlight(private val listState: LazyListState, private val ke
 internal fun <T> rememberRowHighlight(
     rows: List<T>,
     listState: LazyListState,
-    firstRowItem: Int = 0,
-    itemIndex: (row: Int) -> Int = { firstRowItem + it },
+    itemIndex: (row: Int) -> Int = { it },
     keepScroll: Boolean = false,
     onEmptied: () -> Unit = {},
     key: (T) -> Any,
 ): RowHighlight {
-    val highlight = remember(listState) { RowHighlight(listState, keepScroll) }
+    // Read through state, so a list that changes either is seen without building the highlight again.
+    val currentItemIndex by rememberUpdatedState(itemIndex)
+    val currentKeepScroll by rememberUpdatedState(keepScroll)
+    val highlight = remember(listState) {
+        RowHighlight(listState, itemIndex = { currentItemIndex(it) }, keepScroll = { currentKeepScroll })
+    }
     // Built once per list: every row that loses the highlight asks whether it's still listed, and a
     // guide can run to twenty thousand rows on a weak box.
     val keys = remember(rows) { rows.map(key) }
     val places = remember(keys) { keys.withIndex().associateTo(HashMap(keys.size)) { it.value to it.index } }
     highlight.list(keys, places)
-    highlight.itemIndex = itemIndex
     val emptied by rememberUpdatedState(onEmptied)
     LaunchedEffect(highlight.handing) {
         highlight.handing?.let { highlight.finishHanding(it) { emptied() } }
