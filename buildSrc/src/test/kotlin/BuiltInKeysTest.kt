@@ -52,6 +52,24 @@ class BuiltInKeysTest {
     }
 
     @Test
+    fun `a v3 TMDB key in uppercase hex is built in as it is`() {
+        val upper = TMDB_V3.uppercase()
+        assertThat(checkedBuiltInKey(BuiltInKey.TMDB, upper)).isEqualTo(upper)
+    }
+
+    @Test
+    fun `whitespace around a key, such as a secret's trailing newline, is trimmed rather than stopping the build`() {
+        assertThat(checkedBuiltInKey(BuiltInKey.OPENSUBTITLES, "$OPENSUBTITLES\n")).isEqualTo(OPENSUBTITLES)
+        assertThat(checkedBuiltInKey(BuiltInKey.TMDB, " $TMDB_V4 ")).isEqualTo(TMDB_V4)
+        assertThat(checkedBuiltInKey(BuiltInKey.SENTRY_DSN, "$SENTRY_DSN\r\n")).isEqualTo(SENTRY_DSN)
+    }
+
+    @Test
+    fun `a key of only whitespace builds as blank`() {
+        assertThat(checkedBuiltInKey(BuiltInKey.OPENSUBTITLES, " \n")).isEmpty()
+    }
+
+    @Test
     fun `a TMDB key that is neither form is refused without showing it`() {
         val bad = listOf(
             // Not hex.

@@ -221,7 +221,9 @@ class OpenSubtitlesClient(
     private fun failureFor(status: Int, answer: JsonObject?, request: Request, download: Boolean) = when {
         status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.TokenRejected()
         // Told by its message too: Cloudflare answers 403 with a challenge page, which is passing trouble.
-        status == HTTP_FORBIDDEN && answer?.string("message") == KEY_REFUSED -> OpenSubtitlesFailure.KeyRejected()
+        // The same contains-match as the release check, tools/keys/check_keys.py: change both together.
+        status == HTTP_FORBIDDEN && answer?.string("message")?.contains(KEY_REFUSED) == true ->
+            OpenSubtitlesFailure.KeyRejected()
         status == HTTP_NOT_ACCEPTABLE && download -> OpenSubtitlesFailure.DownloadLimit(
             signedIn = request.header("Authorization") != null,
             resetsAt = resetTime(answer),

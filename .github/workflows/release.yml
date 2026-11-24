@@ -60,9 +60,17 @@ jobs:
           echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
       # Without these the release would quietly ship without OpenSubtitles, TMDB or crash reports. The
-      # build itself still allows them blank (this Mac, forks, PR CI) and refuses one in the wrong
+      # build itself still allows them blank (local builds, forks, PR CI) and refuses one in the wrong
       # format (buildSrc/BuiltInKeys.kt), so only a release checks they are set (#628).
-      - name: Built-in keys are set
+      #
+      # Then asks the services, since a key in the right format can still be the wrong one, or turned
+      # down: v1.5.0 shipped a GitHub token as its OpenSubtitles key. That fails only on each
+      # service's own invalid-key answer; a service that is down or behind a challenge page is a
+      # warning, never a blocked release.
+      #
+      # One step, so the secrets are listed once for both checks. Not job-level env: the Unit tests
+      # step must not see them, as the app's tests assume no built-in keys.
+      - name: Built-in keys are set and work
         env:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
@@ -75,16 +83,13 @@ jobs:
               missing=1
             fi
           done
-          exit "$missing"
-
-      # A key in the right format can still be the wrong one, or turned down: v1.5.0 shipped a GitHub
-      # token as its OpenSubtitles key. Fails only on each service's own invalid-key answer; a service
-      # that is down or behind a challenge page is a warning, never a blocked release.
-      - name: Built-in keys work
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-        run: python3 tools/keys/check_keys.py
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          # A manual rebuild of an older tag may predate the script.
+          if [ ! -f tools/keys/check_keys.py ]; then
+            echo "::warning::${TAG} has no tools/keys/check_keys.py, so the keys weren't checked with the services."
+            exit 0
+          fi
+          python3 tools/keys/check_keys.py
 
       # The tagged commit is on main, where Build's "Test and assemble" runs the whole suite on it. A
       # second run here could only re-roll a flaky test, and that blocked v1.4.0, which Build had

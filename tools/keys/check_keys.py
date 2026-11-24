@@ -19,9 +19,11 @@ release.yml refuses those in a step of its own.
 Exits 1 if a key was turned down, else 0. Prints GitHub Actions ::error:: and ::warning:: lines.
 """
 
+import enum
 import json
 import os
 import sys
+from typing import Callable, NamedTuple
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -32,9 +34,15 @@ OPENSUBTITLES_LOGIN = "https://api.opensubtitles.com/api/v1/login"
 # OpenSubtitles turns away requests without one; the app sends "Settee v<version>".
 USER_AGENT = "Settee release check"
 
-VALID = "valid"
-INVALID = "invalid"
-UNSURE = "unsure"
+# The message OpenSubtitles sends with a 403 when it turns a key down. The app's
+# OpenSubtitlesClient.failureFor tells KeyRejected by the same contains-match: change both together.
+OPENSUBTITLES_KEY_REFUSED = "You cannot consume this service"
+
+
+class Verdict(enum.Enum):
+    VALID = "valid"
+    INVALID = "invalid"
+    UNSURE = "unsure"
 
 
 def fetch(request):
@@ -68,11 +76,11 @@ def tmdb_request(key):
 
 def tmdb_verdict(status, body):
     if status == 200:
-        return VALID
+        return Verdict.VALID
     answer = json_object(body)
     if status == 401 and answer is not None and answer.get("status_code") == 7:
-        return INVALID
-    return UNSURE
+        return Verdict.INVALID
+    return Verdict.UNSURE
 
 
 def opensubtitles_request(key):
@@ -94,23 +102,31 @@ def opensubtitles_request(key):
 
 def opensubtitles_verdict(status, body):
     if status in (200, 401):
-        return VALID
+        return Verdict.VALID
     answer = json_object(body)
-    if status == 403 and answer is not None and "You cannot consume this service" in str(answer.get("message", "")):
-        return INVALID
-    return UNSURE
+    if status == 403 and answer is not None and OPENSUBTITLES_KEY_REFUSED in str(answer.get("message", "")):
+        return Verdict.INVALID
+    return Verdict.UNSURE
+
+
+class Service(NamedTuple):
+    name: str
+    secret: str
+    request_for: Callable[[str], urllib.request.Request]
+    verdict_of: Callable[[int, str], Verdict]
 
 
 SERVICES = [
-    ("TMDB", "TMDB_API_KEY", tmdb_request, tmdb_verdict),
-    ("OpenSubtitles", "OPENSUBTITLES_API_KEY", opensubtitles_request, opensubtitles_verdict),
+    Service("TMDB", "TMDB_API_KEY", tmdb_request, tmdb_verdict),
+    Service("OpenSubtitles", "OPENSUBTITLES_API_KEY", opensubtitles_request, opensubtitles_verdict),
 ]
 
 
 def main(env, http, out):
     failed = False
     for name, secret, request_for, verdict_of in SERVICES:
-        key = env.get(secret, "")
+        # A secret pasted with a trailing newline is still the key it holds; the build trims it too.
+        key = env.get(secret, "").strip()
         if not key:
             continue
         try:
@@ -120,10 +136,10 @@ def main(env, http, out):
             print(f"::warning::Couldn't ask {name} whether {secret} works ({type(e).__name__}).", file=out)
             continue
         verdict = verdict_of(status, body)
-        if verdict == INVALID:
+        if verdict == Verdict.INVALID:
             print(f"::error::{name} turned down {secret}. Replace the secret, then run Release again.", file=out)
             failed = True
-        elif verdict == UNSURE:
+        elif verdict == Verdict.UNSURE:
             print(f"::warning::{name} gave no clear answer about {secret} (HTTP {status}); releasing anyway.", file=out)
         else:
             print(f"{name} accepted {secret}.", file=out)

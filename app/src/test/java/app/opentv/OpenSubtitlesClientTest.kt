@@ -156,6 +156,15 @@ class OpenSubtitlesClientTest {
     }
 
     @Test
+    fun `a turned-down key is told by the message containing OpenSubtitles' words, as the release check does`() {
+        site.replies["GET /subtitles"] = """!403 {"message":"You cannot consume this service. Contact support."}"""
+
+        val failure = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null)).exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+    }
+
+    @Test
     fun `any other 403, such as a challenge page, is still trouble at their end`() {
         site.replies["GET /subtitles"] = "!403 <html><body>Just a moment...</body></html>"
 

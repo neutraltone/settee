@@ -127,6 +127,22 @@ class CheckKeysTest(unittest.TestCase):
         self.assertEqual(login.get_header("Api-key"), OPENSUBTITLES)
         self.assertTrue(login.get_header("User-agent"))
 
+    def test_whitespace_around_a_key_is_not_sent(self):
+        # A secret pasted with a trailing newline must still be checked as the key it holds.
+        answers = Answers()
+        code, out = run(answers, {"OPENSUBTITLES_API_KEY": OPENSUBTITLES + "\n", "TMDB_API_KEY": " " + TMDB_V3 + " "})
+        self.assertEqual(code, 0)
+        login = next(r for r in answers.requests if r.host == "api.opensubtitles.com")
+        self.assertEqual(login.get_header("Api-key"), OPENSUBTITLES)
+        tmdb = next(r for r in answers.requests if r.host == "api.themoviedb.org")
+        self.assertTrue(tmdb.full_url.endswith("api_key=" + TMDB_V3))
+
+    def test_a_key_of_only_whitespace_counts_as_blank(self):
+        answers = Answers()
+        code, out = run(answers, {"OPENSUBTITLES_API_KEY": "\n", "TMDB_API_KEY": TMDB_V3})
+        self.assertEqual(code, 0)
+        self.assertEqual([r.host for r in answers.requests], ["api.themoviedb.org"])
+
     def test_a_blank_key_is_not_asked_about(self):
         # release.yml refuses blank keys in a step of its own, before this runs.
         answers = Answers()
