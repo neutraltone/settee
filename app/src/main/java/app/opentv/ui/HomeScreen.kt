@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -33,6 +35,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.core.JourneyTimer
+import app.opentv.core.ServiceLocator
 import app.opentv.R
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
@@ -88,6 +92,7 @@ internal fun HomeScreen(
     onOpenProviders: (sourceId: Long) -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
+    val journeys = ServiceLocator.get(LocalContext.current).journeys
     val banner by viewModel.providerBanner.collectAsState()
     // Null only until the quick checks of which rows to expect are back: then every row is drawn,
     // as its cards or as a skeleton holding its place.
@@ -125,6 +130,7 @@ internal fun HomeScreen(
         onOpenProviders = onOpenProviders,
         loading = state.loading,
         liveLoading = state.liveLoading,
+        onFirstRowDrawn = { journeys.end(JourneyTimer.Journey.COLD_START) },
     )
 }
 
@@ -161,6 +167,8 @@ internal fun HomeContent(
     loading: Set<HomeRowKind> = emptySet(),
     /** Whether the Live Preview is still on its way, its place held above the rows ([HomeState.liveLoading]). */
     liveLoading: Boolean = false,
+    /** Once a row has drawn with its cards, or Home has drawn with none to show: the end of a cold start. */
+    onFirstRowDrawn: () -> Unit = {},
 ) {
     val all =
         remember(
@@ -189,6 +197,13 @@ internal fun HomeContent(
             )
         }
     val shelves = all.shown
+    val firstRowDrawn by rememberUpdatedState(onFirstRowDrawn)
+    if (shelves.isEmpty() || shelves.any { it is HomeShelf.Row }) {
+        LaunchedEffect(Unit) {
+            withFrameNanos {}
+            firstRowDrawn()
+        }
+    }
     ScreenFrame {
         // Above the rows rather than one of them, so the rows' list still hands its first card the
         // opening Highlight; Up from the top row reaches the banner's button.

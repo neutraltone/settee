@@ -183,7 +183,11 @@ class HandledErrorReportsTest {
     @Test
     fun `only Settee's own failures can be reported, so playback and provider failures have no kind`() {
         assertThat(CrashReports.Handled.entries)
-            .containsExactly(CrashReports.Handled.XTREAM_PARSE, CrashReports.Handled.DATABASE_MIGRATION)
+            .containsExactly(
+                CrashReports.Handled.XTREAM_PARSE,
+                CrashReports.Handled.DATABASE_MIGRATION,
+                CrashReports.Handled.SLOW_JOURNEY,
+            )
     }
 
     private companion object {

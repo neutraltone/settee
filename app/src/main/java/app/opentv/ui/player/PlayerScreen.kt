@@ -140,6 +140,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                 // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
                 dvr = livePause,
                 diagnostics = graph.diagnosticsLog,
+                journeys = graph.journeys,
             ),
         )
     }

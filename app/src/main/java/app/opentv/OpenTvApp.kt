@@ -5,10 +5,13 @@
  */
 package app.opentv
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
+import android.os.Process
 import android.util.Log
 import app.opentv.core.AppSettings
+import app.opentv.core.JourneyTimer
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.core.carryLivePreviewFromBefore
@@ -78,6 +81,11 @@ open class OpenTvApp :
         val graph = ServiceLocator.get(this)
         // First, so a crash in the rest of the launch is caught; costs a setting read unless reports are on.
         graph.crashReports.start(this)
+        // Timed from the process starting, only when it started to show a screen: not for a sync or an
+        // alarm, which could leave it running until the viewer opens Settee hours later.
+        if (startedForAScreen()) {
+            graph.journeys.start(JourneyTimer.Journey.COLD_START, at = Process.getStartElapsedRealtime())
+        }
         SyncWorker.schedule(this)
 
         // Cold-start reconciliation: a recording still marked "in progress" at process start is an
@@ -108,6 +116,12 @@ open class OpenTvApp :
             }
         }
     }
+
+    private fun startedForAScreen(): Boolean = runCatching {
+        val process = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(process)
+        process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+    }.getOrDefault(false)
 
     /**
      * A screen has opened. The first call in the process starts [onFirstOpen]; later ones, from

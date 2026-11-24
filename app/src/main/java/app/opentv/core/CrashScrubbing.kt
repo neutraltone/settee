@@ -30,6 +30,17 @@ internal object CrashScrubbing {
     /** The tag naming the screen that was open. */
     const val SCREEN_TAG = "screen"
 
+    /** A Slow Journey's tags (ADR 0010): which journey, Settee's own time and the network wait, in ms. */
+    const val JOURNEY_TAG = "journey"
+    const val OWN_TIME_TAG = "own-ms"
+    const val NETWORK_WAIT_TAG = "network-ms"
+
+    /** The kind of Source a report is about: `xtream`, `m3u`, `stalker` or `stremio`, never which one. */
+    const val SOURCE_KIND_TAG = "source-kind"
+
+    /** The tags [CrashReports] sets itself that may leave, each value scrubbed; the screen is added here. */
+    private val KEPT_TAGS = setOf(JOURNEY_TAG, OWN_TIME_TAG, NETWORK_WAIT_TAG, SOURCE_KIND_TAG)
+
     /** Breadcrumbs: none are on the list. Even a navigation one can carry a route's arguments. */
     @Suppress("FunctionOnlyReturningConstant", "UnusedParameter") // The before-breadcrumb hook's shape.
     fun breadcrumb(breadcrumb: Breadcrumb): Breadcrumb? = null
@@ -44,7 +55,7 @@ internal object CrashScrubbing {
             }
         }
         user = installId?.let { id -> User().apply { this.id = id } }
-        tags = screen?.let { mapOf(SCREEN_TAG to it) }
+        tags = tags(event, screen)
         extras = null
         breadcrumbs = null
         request = null
@@ -55,6 +66,11 @@ internal object CrashScrubbing {
         fingerprints = null
         debugMeta = debugMeta?.let(::debugMeta)
         keepContexts(this)
+    }
+
+    private fun tags(event: SentryEvent, screen: String?): Map<String, String>? {
+        val kept = event.tags.orEmpty().filterKeys { it in KEPT_TAGS }.mapValues { scrub(it.value) }
+        return (kept + listOfNotNull(screen?.let { SCREEN_TAG to it })).takeIf { it.isNotEmpty() }
     }
 
     /**

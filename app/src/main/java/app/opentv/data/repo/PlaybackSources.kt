@@ -105,6 +105,8 @@ sealed interface Playable {
         val title: String,
         val isLive: Boolean,
         val recordedOn: RecordedOn? = null,
+        /** The kind of Source it comes from, for a Slow Journey's report; null for an add-on's or a finished recording's. */
+        val sourceKind: SourceKind? = null,
     ) : Playable
 
     /**
@@ -202,13 +204,20 @@ class PlaybackSources(
         } else {
             channel.streamUrl
         }
-        return Playable.Ready(key, url, userAgentOf(source), channel.shownName, isLive = true)
+        return Playable.Ready(key, url, userAgentOf(source), channel.shownName, isLive = true, sourceKind = source?.kind)
     }
 
     private suspend fun movie(key: MediaKey.Movie): Playable.Ready {
         val movie = db.movies().byId(key.movieId).or(Failure.GONE)
         val source = db.sources().byId(movie.sourceId)
-        return Playable.Ready(key, movie.streamUrl, userAgentOf(source), movie.displayTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            movie.streamUrl,
+            userAgentOf(source),
+            movie.displayTitle,
+            isLive = false,
+            sourceKind = source?.kind,
+        )
     }
 
     /** An add-on's stream isn't the panel's, so the panel's user agent has no business on it. */
@@ -220,7 +229,14 @@ class PlaybackSources(
     private suspend fun episode(key: MediaKey.Episode): Playable.Ready {
         val episode = db.episodes().byId(key.episodeId).or(Failure.GONE)
         val source = db.sources().byId(episode.sourceId)
-        return Playable.Ready(key, episode.streamUrl, userAgentOf(source), episode.playerTitle, isLive = false)
+        return Playable.Ready(
+            key,
+            episode.streamUrl,
+            userAgentOf(source),
+            episode.playerTitle,
+            isLive = false,
+            sourceKind = source?.kind,
+        )
     }
 
     private suspend fun catchup(key: MediaKey.Catchup): Playable.Ready {
@@ -247,6 +263,7 @@ class PlaybackSources(
             userAgentOf(source),
             "${channel.shownName} · ${programme.title}",
             isLive = false,
+            sourceKind = source.kind,
         )
     }
 

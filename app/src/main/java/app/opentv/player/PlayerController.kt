@@ -20,6 +20,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import app.opentv.core.JourneyTimer
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -133,6 +134,8 @@ class PlayerController(
         val decoders: DecoderList = DeviceDecoders(),
         /** Told how long each film and episode took to open, and every error shown. None for the preview. */
         val diagnostics: PlaybackDiagnostics? = null,
+        /** Times each start of playback, as the `playback-start` journey (ADR 0010). None for the preview. */
+        val journeys: JourneyTimer? = null,
     )
 
     /**
@@ -155,7 +158,7 @@ class PlayerController(
         val stepsForSound: Boolean = false,
     )
 
-    private val opens = OpenTimer(options.diagnostics)
+    private val opens = OpenTimer(options.diagnostics, options.journeys)
     private val states = PlayerStates(options.diagnostics, opens)
     val state: StateFlow<State> = states.flow
 
@@ -472,6 +475,7 @@ class PlayerController(
                     return@launch
                 }
             }
+            opens.resolved(playable)
             _title.value = playable.title
             titled = request.key
             httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))

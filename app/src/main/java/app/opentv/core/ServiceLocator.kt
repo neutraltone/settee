@@ -135,15 +135,20 @@ object ServiceLocator {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
         }
 
+        // Every client is built from this one, so each marks its calls as network wait for the journeys.
         val httpClient: OkHttpClient by lazy {
-            http ?: OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                // Generous: catalogue endpoints on a busy panel can take a long time to
-                // produce 40,000 rows, and timing out mid-list is worse than waiting.
-                .readTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(5, TimeUnit.MINUTES)
-                .retryOnConnectionFailure(true)
-                .followRedirects(true)
+            (
+                http ?: OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    // Generous: catalogue endpoints on a busy panel can take a long time to
+                    // produce 40,000 rows, and timing out mid-list is worse than waiting.
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .callTimeout(5, TimeUnit.MINUTES)
+                    .retryOnConnectionFailure(true)
+                    .followRedirects(true)
+                    .build()
+                ).newBuilder()
+                .eventListener(journeys.network)
                 .build()
         }
 
@@ -332,6 +337,21 @@ object ServiceLocator {
             }
         }
 
+        /**
+         * Times the journeys that matter (ADR 0010). One too slow is a Crash Report; in a debug build,
+         * which never sends one, a line in logcat instead.
+         */
+        val journeys: JourneyTimer by lazy {
+            JourneyTimer { slow ->
+                if (BuildConfig.DEBUG) {
+                    val waited = "${slow.networkMillis} ms on the network"
+                    Log.w("SlowJourney", "${slow.journey.tag} took ${slow.ownMillis} ms of Settee's own, and $waited")
+                } else {
+                    crashReports.slowJourney(slow)
+                }
+            }
+        }
+
         /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
         val crashReports: CrashReports by lazy {
             CrashReports(
@@ -385,6 +405,7 @@ object ServiceLocator {
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
                 clock = clock,
                 scope = appScope,
+                journeys = journeys,
             )
         }
 
