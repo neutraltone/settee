@@ -8,10 +8,12 @@ package app.opentv.core
 import android.app.Application
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.FakeJsonHttp
 import app.opentv.FakePanel
 import app.opentv.PANEL_SOURCE
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.wontOpen
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
@@ -193,6 +195,33 @@ class HandledErrorReportsTest {
             ServiceFailure.Service.INTRODB,
             ServiceFailure.Service.UPDATE_CHECK,
         )
+    }
+
+    @Test
+    fun `a build without a DSN sends no service failure, Slow Journey or Error Report, even with reports on`() {
+        val blank = CrashReports(
+            settings,
+            CrashReports.Destination("", CrashReports.Outbox { envelope -> synchronized(sent) { sent += envelope } }),
+            release = "1.4.0",
+            environment = "test",
+        ).also { it.start(app) }
+        blank.setOn(true)
+
+        val tmdb = TmdbClient(
+            FakeJsonHttp { "!403" }.http,
+            "0123456789abcdef0123456789abcdef",
+            reportFailure = blank::report,
+        )
+        tmdb.movieMetaOrFailure("A film", null, tmdbId = "603")
+        JourneyTimer(slow = blank::report).run {
+            start(JourneyTimer.Journey.COLD_START, at = -60_000)
+            end(JourneyTimer.Journey.COLD_START)
+        }
+        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U))
+        blank.close()
+
+        assertThat(blank.available).isFalse()
+        assertThat(sentEvents()).isEmpty()
     }
 
     private companion object {
