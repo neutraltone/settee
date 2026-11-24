@@ -23,6 +23,7 @@ object M3uParser {
 
     private val ATTRIBUTE_REGEX = Regex("""([\w-]+)="([^"]*)"""")
     private const val SCHEME_SEPARATOR = "://"
+    private const val BYTE_ORDER_MARK = "\uFEFF"
 
     /** What can end a URL's host: its path, query or fragment. */
     private const val HOST_ENDS = "/?#"
@@ -31,8 +32,8 @@ object M3uParser {
 
     data class Result(
         val channels: List<Channel>,
-        /** Value of `url-tvg`/`x-tvg-url` on the #EXTM3U header, if the playlist declares one. */
-        val declaredEpgUrl: String?,
+        /** The guides `url-tvg`/`x-tvg-url` on the #EXTM3U header lists, in order; empty when it lists none. */
+        val declaredEpgUrls: List<String>,
         /** Malformed entries. Films and episodes are left out of the channels but not counted here. */
         val skippedEntries: Int,
     )
@@ -44,7 +45,8 @@ object M3uParser {
     fun parse(reader: BufferedReader, sourceId: Long): Result {
         val channels = ArrayList<Channel>()
         val seenStreamIds = HashSet<String>()
-        var declaredEpgUrl: String? = null
+        val repeatIds = RepeatIds()
+        var declaredEpgUrls = emptyList<String>()
         var skipped = 0
 
         var pendingName: String? = null
@@ -54,15 +56,17 @@ object M3uParser {
         var index = 0
 
         reader.forEachLine { rawLine ->
-            val line = rawLine.trim()
+            // A byte-order mark isn't whitespace to trim(), so a playlist saved with one had its
+            // header read as a channel's URL, losing the guide it declares. Only the first line can
+            // carry one, and on any other it would mean nothing, so every line goes without a test.
+            val line = rawLine.removePrefix(BYTE_ORDER_MARK).trim()
             when {
                 line.isEmpty() -> Unit
 
                 line.startsWith("#EXTM3U", ignoreCase = true) -> {
                     val attributes = parseAttributes(line)
-                    declaredEpgUrl = attributes["url-tvg"]
-                        ?: attributes["x-tvg-url"]
-                        ?: declaredEpgUrl
+                    val listed = attributes["url-tvg"] ?: attributes["x-tvg-url"]
+                    if (listed != null) declaredEpgUrls = GuideAddresses.split(listed)
                 }
 
                 line.startsWith("#EXTINF", ignoreCase = true) -> {
@@ -83,14 +87,15 @@ object M3uParser {
                         // Films and episodes are left out before the dedupe and sortIndex, so the
                         // channels' positions stay consecutive.
                         val attributes = pendingAttributes
-                        val streamId = attributes["tvg-id"]
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { "tvg:$it" }
-                            ?: "url:${stableHash(line)}"
+                        val tvgId = attributes["tvg-id"]?.takeIf { it.isNotBlank() }
+                        val streamId = when {
+                            tvgId == null -> "url:${stableHash(line)}"
+                            "tvg:$tvgId" !in seenStreamIds -> "tvg:$tvgId"
+                            else -> repeatIds.next(tvgId, name)
+                        }
 
-                        // Providers repeat the same tvg-id across quality variants. Keep the
-                        // first and drop later duplicates rather than letting them collide on
-                        // the unique index and abort the whole import.
+                        // A URL listed twice with no tvg-id is one channel: keep the first rather
+                        // than let the second collide on the unique index and abort the import.
                         if (seenStreamIds.add(streamId)) {
                             channels += channelOf(sourceId, streamId, name, attributes, pendingNumber, line, index++)
                         }
@@ -102,7 +107,31 @@ object M3uParser {
             }
         }
 
-        return Result(channels, declaredEpgUrl, skipped)
+        return Result(channels, declaredEpgUrls, skipped)
+    }
+
+    /**
+     * Ids for the channels listed after the first with the same tvg-id: regional variants
+     * ("BBC One London", "BBC One Wales") and playlists that put a placeholder such as `0` on
+     * every channel. The first keeps `tvg:<tvg-id>`, the id it always had, because favourites,
+     * custom names, hidden flags, order and guide overrides are all keyed by streamId and the
+     * repeats, dropped before #500, carry none of those. Keying every channel on tvg-id plus
+     * name was rejected for that reason: it would have moved every one of them.
+     *
+     * Built from the tvg-id and name rather than the URL, so a rotating token doesn't change
+     * it, plus the repeat's ordinal when the name repeats too. Hashed under its own prefix so
+     * no tvg-id or URL can produce the same id, whatever characters the tvg-id holds.
+     */
+    private class RepeatIds {
+        /** How many repeats of each tvg-id and name have been listed so far. */
+        private val seen = HashMap<String, Int>()
+
+        fun next(tvgId: String, name: String): String {
+            // A newline can't occur in either part: both come from one line of the playlist.
+            val key = "$tvgId\n$name"
+            val ordinal = seen.merge(key, 1, Int::plus) ?: 1
+            return "tvgrepeat:" + stableHash(if (ordinal == 1) key else "$key\n$ordinal")
+        }
     }
 
     @Suppress("LongParameterList") // One entry's parts, as parse has gathered them.
@@ -153,14 +182,32 @@ object M3uParser {
     }
 
     /**
-     * The display name is whatever follows the last comma on the #EXTINF line. Falling back
-     * to `tvg-name` matters because a fair number of playlists emit `#EXTINF:-1 ...,` with
+     * The display name is everything after the first comma outside the quoted attributes, as
+     * VLC and Kodi read it: the last comma would cut "News, Weather & Sport" to its tail, and
+     * the first comma on the line can sit inside `group-title="News, Sport"`. Falling back to
+     * `tvg-name` matters because a fair number of playlists emit `#EXTINF:-1 ...,` with
      * nothing after the comma.
      */
     private fun displayNameOf(line: String, attributes: Map<String, String>): String? {
-        val afterComma = line.substringAfterLast(',', missingDelimiterValue = "").trim()
+        val separator = nameSeparatorOf(line)
+        val afterComma = if (separator < 0) "" else line.substring(separator + 1).trim()
         return afterComma.takeIf { it.isNotBlank() }
             ?: attributes["tvg-name"]?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * The index of the first comma outside double quotes. A line whose quotes don't balance
+     * has none by that reading, so it falls back to the last comma rather than lose the name.
+     */
+    private fun nameSeparatorOf(line: String): Int {
+        var quoted = false
+        for (i in line.indices) {
+            when (line[i]) {
+                '"' -> quoted = !quoted
+                ',' -> if (!quoted) return i
+            }
+        }
+        return line.lastIndexOf(',')
     }
 
     private fun parseAttributes(line: String): Map<String, String> = ATTRIBUTE_REGEX.findAll(line).associate { match ->

@@ -93,6 +93,16 @@ scratch. It fixes nothing. The next refresh fails the same way.
 4. A failed sync, or one cut off part way, deletes nothing: what it wrote stays, and so does
    everything it didn't get to. It returns the reason.
 
+A provider's feed can have **several addresses** (#505): a playlist's `url-tvg` may list more than one
+guide, kept comma-separated in the source's one guide address (`GuideAddresses`; only an M3U source's is
+split, since an Xtream login's address is one the viewer typed). `syncFeed` reads each in turn, and the
+feed succeeds if any of them gave programmes. `deleteSuperseded` only gets the spans of the addresses
+read in full, widened across them where two cover the same channel: one that failed or was cut off has
+said nothing about what replaces the rest, so the programmes it gave last time stay until they age out
+(`deleteEndedBefore`, which runs as after any successful sync). A failed address beside a working one
+is only logged (docs/ERRORS.md says why). When every address fails, the feed fails with the first
+address's reason.
+
 `XmltvParser` streams via `XmlPullParser` and emits programmes to a callback. A week of guide
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of
 a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
@@ -186,8 +196,8 @@ channels (`ChannelUserState`: the row id, `hidden`, `sortIndex`, custom name and
 names or URLs, so a large catalogue isn't held twice while it merges), carries those across to the
 incoming rows by `streamId`, updates the rows it matched and inserts the rest (not Room's `@Upsert`,
 whose failed INSERT a row was most of a refresh's work; see `updateOrInsert`), and only then
-deletes channels the provider no longer lists. A `streamId` listed twice is saved once, as its last
-listing. Movies and series save the same way (`VodLists`): each saved title is stamped with the
+deletes channels the provider no longer lists. A `streamId` handed to it twice is saved once, as its
+last listing; `M3uParser` never hands it one twice (see below). Movies and series save the same way (`VodLists`): each saved title is stamped with the
 refresh, in the same transaction, and once a whole list is saved `RetiredTitles` deletes the source's
 titles with an older stamp, and a deleted series' episodes. A list that fails or is cut off throws
 before anything is saved, and an empty one deletes nothing. A series' episodes are matched the same way
@@ -206,10 +216,22 @@ that arrives with no stored row. Series links and reminders record their channel
 one whose channel is still missing stays listed and books nothing until it returns. Keeping deleted
 rows marked gone was rejected: every channel query would need to leave them out.
 
-This is why `M3uParser` works so hard to produce a **stable** `streamId` for playlists with no
-`tvg-id` — an FNV-1a hash of the URL rather than `String.hashCode()`. An unstable id means
-every refresh looks like a completely new set of channels, and the user's hidden channels and
-ordering silently vanish.
+This is why `M3uParser` works so hard to produce a **stable** `streamId`. A channel with a
+`tvg-id` is `tvg:<tvg-id>`; one without is `url:` plus an FNV-1a hash of its whole URL rather than
+`String.hashCode()`, and a URL listed twice is kept once, as its first listing. An unstable id
+means every refresh looks like a completely new set of channels, and the user's favourites, hidden
+channels, custom names and ordering silently vanish.
+
+Channels that share a `tvg-id` (regional variants, or a playlist that puts `0` on every channel)
+are all kept (#500). The first listed keeps `tvg:<tvg-id>`, exactly the id it had when the parser
+dropped the rest, so nothing a viewer set on it moves; each later one gets `tvgrepeat:` plus a hash
+of the `tvg-id` and its name, and its ordinal among repeats when the name repeats too, so a rotating
+URL token doesn't change it. Every one keeps the shared `tvg-id` as its `epgChannelId`, so they all
+match the guide. Giving every channel a `tvg-id`-plus-name id was rejected: it would have moved the
+id of every channel already stored. The cost is that if a provider reorders its repeats, a
+different one becomes "first" and the two swap what the viewer set on them. Hashing the URL
+without its query string, which would survive rotating tokens, was rejected for the same reason:
+it would move every stored no-`tvg-id` channel whose URL has a query.
 
 ### Episodes load lazily, with two exceptions
 
