@@ -80,6 +80,22 @@
           trade-off is documented in docs/PRIVACY.md.
         -->
 
+        <!--
+          Sentry's providers would start it before Settee runs a line, whatever the build's DSN or
+          the viewer's choice. CrashReports starts it by hand instead (ADR 0009).
+        -->
+        <provider
+            android:name="io.sentry.android.core.SentryInitProvider"
+            android:authorities="${applicationId}.SentryInitProvider"
+            tools:node="remove" />
+        <provider
+            android:name="io.sentry.android.core.SentryPerformanceProvider"
+            android:authorities="${applicationId}.SentryPerformanceProvider"
+            tools:node="remove" />
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

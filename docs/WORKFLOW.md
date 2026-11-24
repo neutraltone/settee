@@ -10,7 +10,9 @@ step below can be done by hand, and CI checks the result the same either way.
 The skills aren't in this repository. Each contributor installs them for their own user, so they
 work in every checkout and update separately. The only agent tooling committed here is what's
 specific to Settee: `CLAUDE.md`, `docs/agents/` (how the skills find this repo's issue tracker,
-labels and domain docs) and the `settee-audit` workflow in `.claude/workflows/`.
+labels and domain docs, plus the prompt of the daily Sentry triage routine,
+[`docs/agents/sentry-triage.md`](agents/sentry-triage.md)) and the `settee-audit` workflow in
+`.claude/workflows/`.
 
 | Skills | What they're for here | Install |
 |---|---|---|
@@ -39,7 +41,8 @@ Where a skill and this repo disagree, the repo wins. In particular:
 1. **Ideas become issues.** Larger work starts as a spec (`/wayfinder`, `/to-spec`, then
    `/to-tickets`), with `/grilling` to stress-test it first. Every bug and feature is an issue on
    `neutraltone/settee`. New issues stay `needs-triage` until the owner triages them
-   (`docs/agents/triage-labels.md`).
+   (`docs/agents/triage-labels.md`). Crashes reach the tracker the same way: a daily routine files
+   them from Sentry labelled `sentry` and `needs-triage` ([`docs/agents/sentry-triage.md`](agents/sentry-triage.md)).
 2. **The board sets the order.** [Settee's project board](https://github.com/users/neutraltone/projects/2)
    ranks the work: P0 is the main sequence, P1 the rest, P2 undecided ideas; within a priority, the
    top card is next.

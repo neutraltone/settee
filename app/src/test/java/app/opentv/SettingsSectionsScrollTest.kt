@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.espresso.Espresso
+import app.opentv.core.CrashReports
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsTags
@@ -52,16 +53,23 @@ class SettingsSectionsScrollTest {
     @Test
     fun `each section comes into view as the Highlight goes down to About, into its settings, and back up`() {
         val app = testGraph.app
-        // With OpenSubtitles, as a build with Settee's key has it: the most sections Settings has
-        // (TMDB's went with #515).
+        // With OpenSubtitles and Crash Reports, as a build with Settee's keys has them: the most
+        // sections Settings has (TMDB's went with #515). Nothing turns reports on, so nothing's sent.
         val openSubtitles = FakeOpenSubtitles().openSubtitles(testGraph.graph, app.filesDir)
+        val crashReports = CrashReports(
+            testGraph.graph.settings,
+            CrashReports.Destination("https://k@sentry.example.org/1", CrashReports.Outbox {}),
+            release = "1.4.0",
+            environment = "test",
+        )
         compose.setTvContent {
             view = LocalView.current
-            SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = openSubtitles)
+            SettingsScreen(memory = SettingsMemory(), onBack = {
+            }, openSubtitles = openSubtitles, crashReports = crashReports)
         }
         val sections = compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes()
             .map { it.config[SemanticsProperties.Text].joinToString("") }
-        assertThat(sections).hasSize(12)
+        assertThat(sections).hasSize(13)
 
         sections.drop(1).forEach { section ->
             press(KeyEvent.KEYCODE_DPAD_DOWN)

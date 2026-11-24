@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -38,13 +39,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.opentv.core.CrashReports
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.CrashQuestion
 import app.opentv.ui.DatabaseGate
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
@@ -115,7 +120,11 @@ class MainActivity : ComponentActivity() {
                     }.collectAsState(initial = false)
                     DatabaseGate(
                         open = {
-                            val failure = withContext(graph.dispatchers.io) { graph.database.wontOpen() }
+                            val failure = withContext(graph.dispatchers.io) {
+                                graph.database.wontOpen {
+                                    graph.crashReports.report(CrashReports.Handled.DATABASE_MIGRATION, it)
+                                }
+                            }
                             // The launch work reads the database too, so it waits for it as well.
                             if (failure == null) (application as? OpenTvApp)?.opened()
                             failure
@@ -229,6 +238,7 @@ object Routes {
     const val ADD_SOURCE = "add-source"
     const val SETUP = "setup"
     const val OPENSUBTITLES_STEP = "opensubtitles-step"
+    const val CRASH_REPORTS_STEP = "crash-reports-step"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
     const val SETTINGS = "settings"
@@ -314,6 +324,19 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     // rotation keeps the same count, and with it the back stack.
     var navGeneration by rememberSaveable { mutableIntStateOf(0) }
     val navController = key(navGeneration) { rememberNavController() }
+    // The screen a Crash Report names: the route's name only, which CrashReports cuts down to.
+    val crashReports = ServiceLocator.get(LocalContext.current).crashReports
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            crashReports.screenOpened(destination.route)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+    // Before anything can return early, so it shows over whichever screen opens first, Who's watching?
+    // and Setup included. What's new waits for it to be answered.
+    CrashQuestion(crashReports)
+    val askingAboutCrash by crashReports.askAboutHeld.collectAsState()
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
@@ -368,7 +391,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
         if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
     }
 
-    val bootContext = androidx.compose.ui.platform.LocalContext.current
+    val bootContext = LocalContext.current
 
     // A tapped reminder notification asks for a specific channel. Consume it so it fires once and
     // never re-triggers on a later launch.
@@ -548,7 +571,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 val routeName = route?.destination?.route
                 var whatsNewSettled by remember { mutableStateOf(false) }
                 WhatsNewGate(
-                    canShow = launchPromptMayShow(routeName),
+                    canShow = launchPromptMayShow(routeName) && !askingAboutCrash,
                     onSettled = { whatsNewSettled = true },
                 )
                 UpdateGate(canShow = launchPromptMayShow(routeName, afterWhatsNew = whatsNewSettled))

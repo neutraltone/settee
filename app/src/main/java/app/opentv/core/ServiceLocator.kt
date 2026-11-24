@@ -97,7 +97,8 @@ object ServiceLocator {
      * a recording's bytes go, so a test can fill the storage, and [captureReconnectMillis] how long a
      * recording waits before connecting again, so one whose stream has gone ends without waiting.
      * [dispatchers] are the threads repositories and view models run their background work on, so a
-     * test can tell when that work has finished.
+     * test can tell when that work has finished. [crashReportsTo] is where Crash Reports go: Settee's
+     * Sentry project by default (none, in a build without its DSN), or a test's own outbox.
      */
     @Suppress("LongParameterList") // All but context are only passed by tests.
     class Graph(
@@ -109,6 +110,7 @@ object ServiceLocator {
         val decoders: DecoderList = DeviceDecoders(),
         private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
         val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
+        private val crashReportsTo: CrashReports.Destination = CrashReports.Destination(BuildConfig.SENTRY_DSN),
         // Last, so a test can pass it as a trailing lambda.
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
@@ -164,7 +166,12 @@ object ServiceLocator {
         }
 
         val xtreamApi: XtreamApi by lazy {
-            XtreamApi(httpClient, downloads = appContext.cacheDir, dispatchers = dispatchers)
+            XtreamApi(
+                httpClient,
+                downloads = appContext.cacheDir,
+                dispatchers = dispatchers,
+                reportParseFailure = { crashReports.report(CrashReports.Handled.XTREAM_PARSE, it) },
+            )
         }
 
         /** Stalker / Ministra portal client (MAC handshake + create_link). */
@@ -323,6 +330,17 @@ object ServiceLocator {
                     sources = sourceRepository,
                 )
             }
+        }
+
+        /** Crash Reports (ADR 0009): the only way anything reaches Sentry. */
+        val crashReports: CrashReports by lazy {
+            CrashReports(
+                settings,
+                crashReportsTo,
+                release = BuildConfig.VERSION_NAME,
+                // The owner's .pr test builds report too, told apart from the release here.
+                environment = if (BuildConfig.APPLICATION_ID.endsWith(".pr")) "pr" else "production",
+            )
         }
 
         /**

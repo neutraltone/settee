@@ -18,6 +18,7 @@ import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
 import java.io.File
+import java.io.Reader
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -67,6 +68,12 @@ class XtreamApi(
         isLenient = true
     },
     private val dispatchers: AppDispatchers = AppDispatchers(),
+    /**
+     * Told of a reply that is whole JSON but couldn't be read, which may be Settee's parsing at
+     * fault, so Crash Reports can send it (#576). Never of a web page, a reply cut short or an HTTP
+     * error: those are the Provider's, and never leave the device.
+     */
+    private val reportParseFailure: (Throwable) -> Unit = {},
 ) {
 
     class XtreamException(
@@ -386,7 +393,22 @@ class XtreamApi(
         action: String?,
         oneTitle: Boolean = false,
         extra: (HttpUrl.Builder) -> Unit = {},
-    ): JsonElement = open(source, action, oneTitle, extra).use { parsed(json, it.body.string(), oneTitle) }
+    ): JsonElement = open(source, action, oneTitle, extra).use { response ->
+        val text = response.body.string()
+        reportingSettees({ text.reader() }) { parsed(json, text, oneTitle) }
+    }
+
+    /**
+     * [read], telling [reportParseFailure] when it fails on a [reply] that is whole JSON: the one parse
+     * failure that may be Settee's. A web page, or a reply that breaks off, is the Provider's.
+     */
+    private inline fun <T> reportingSettees(reply: () -> Reader, read: () -> T): T = try {
+        read()
+    } catch (e: XtreamException) {
+        val unreadable = e.cause as? IllegalArgumentException
+        if (unreadable != null && reply().use(::isWholeJson)) reportParseFailure(unreadable)
+        throw e
+    }
 
     private fun open(
         source: Source,
@@ -432,18 +454,16 @@ class XtreamApi(
             file.delete()
             throw e
         }
-        return CatalogueList(file, json, parse, dispatchers)
+        return CatalogueList(file, parse)
     }
 
     /**
      * A channel, movie or series list on disk, read one array element at a time, so nothing ever holds more
      * than a batch of it. Close it to delete the file.
      */
-    class CatalogueList<T : Any> internal constructor(
+    inner class CatalogueList<T : Any> internal constructor(
         private val file: File,
-        private val json: Json,
         private val parse: (JsonObject) -> T?,
-        private val dispatchers: AppDispatchers,
     ) : Closeable {
         /**
          * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
@@ -465,17 +485,19 @@ class XtreamApi(
                         progress((read.toFloat() / size).coerceAtMost(1f))
                     }
                 }
-                CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
-                    while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
-                    if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
-                        val elements = json.decodeToSequence<JsonElement>(
-                            body.inputStream(),
-                            DecodeSequenceMode.ARRAY_WRAPPED,
-                        )
-                            .iterator()
-                        while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
-                    } else {
-                        parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                reportingSettees({ file.reader() }) {
+                    CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
+                        while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
+                        if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
+                            val elements = json.decodeToSequence<JsonElement>(
+                                body.inputStream(),
+                                DecodeSequenceMode.ARRAY_WRAPPED,
+                            )
+                                .iterator()
+                            while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+                        } else {
+                            parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                        }
                     }
                 }
                 if (batch.isNotEmpty()) save(batch.toList())
@@ -558,6 +580,48 @@ private inline fun <T> readingCatalogue(problem: Problem = Problem.BAD_REPLY, re
         e,
         problem,
     )
+}
+
+/**
+ * Whether [reply] is whole JSON, readable or not: it starts as an object, array or string, as only a
+ * panel's reply does, and doesn't end inside one. A reply that breaks off part way does, whatever
+ * Settee's parsing makes of it, so failing on it is the Provider's fault, not Settee's.
+ */
+private fun isWholeJson(reply: Reader): Boolean {
+    val chars = generateSequence { reply.read().takeIf { it >= 0 }?.toChar() }.dropWhile { it.isWhitespace() }
+    val nesting = JsonNesting()
+    var first: Char? = null
+    for (c in chars) {
+        if (first == null) first = c
+        nesting.take(c)
+    }
+    return first != null && first in "{[\"" && nesting.closed
+}
+
+/** How deep in objects, arrays and strings JSON is, one character at a time. */
+private class JsonNesting {
+    private var depth = 0
+    private var inString = false
+    private var escaped = false
+
+    /** Whether everything opened so far has closed again. */
+    val closed: Boolean get() = depth <= 0 && !inString
+
+    fun take(c: Char) {
+        if (inString) {
+            when {
+                escaped -> escaped = false
+                c == '\\' -> escaped = true
+                c == '"' -> inString = false
+            }
+        } else {
+            when (c) {
+                '"' -> inString = true
+                '{', '[' -> depth++
+                '}', ']' -> depth--
+            }
+        }
+    }
 }
 
 // ---- Defensive JSON accessors ------------------------------------------------------------

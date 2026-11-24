@@ -1,7 +1,9 @@
 # Privacy
 
-OpenTV collects nothing. There is no analytics SDK, no crash reporter, no telemetry, and no
-network call to any domain the project controls — because the project controls none.
+Settee collects nothing about you. There is no analytics SDK, no telemetry, and no network call to
+any domain the project controls, because the project controls none. The only report Settee can ever
+send is a crash report, and only once you've turned crash reports on: see
+[Crash reports](#crash-reports) below.
 
 ## What is stored, and where
 
@@ -35,6 +37,59 @@ IMDb id only when TheIntroDB hasn't timed its credits. Unlike TMDB's lookups, th
 episode you're watching: nothing else about you, though both see your device's IP address. What
 they answer stays on your device, isn't synced, and is asked again only for an episode nobody had
 timed, after a week. Turn off Settings → Display → Skip intros and credits and neither is asked.
+
+[Sentry](https://sentry.io), for crash reports, and only if you've turned them on. See below.
+
+## Crash reports
+
+When Settee crashes or stops responding, it can send a report to Sentry so the bug can be found and
+fixed. So can two errors Settee shows rather than crashing, because they usually mean a bug in Settee: a
+provider's list that arrived whole but that Settee couldn't read, and Settee's own database failing to
+open after an update. For the first, the report says where in Settee's code reading failed, never what
+the provider sent. A list that arrives cut off is your provider's problem, and isn't reported.
+
+Crash reports are **off until you turn them on**: on the last step of setting Settee up, in
+Settings → Privacy, or by answering Send or Always send when Settee asks about a crash the next time
+it opens. Until you answer, that crash is kept only on this device, with any web addresses and
+MAC addresses in it already cut out, and Don't send deletes it. Say Don't send twice and it stops asking.
+Turning reports on in Settings or during setup sends a crash that's being kept, as Always send would.
+Settings → Privacy turns them off again at any time, and turning them off throws away any report still
+waiting to go, and any crash being kept. A freeze or crash from while reports were off is never sent
+later just because they're turned on, other than the one kept crash. The choice belongs to each
+device: it isn't synced and doesn't depend on who's watching.
+
+A report contains only:
+
+- Settee's version
+- the Android or Fire OS version
+- the device model
+- how much memory was free
+- the screen that was open, by its name only (such as the guide, or a film's page), not which channel
+  or title was on it
+- a random id made when you first turn reports on, so ten crashes on one device can be told apart from
+  one crash on ten devices
+- the stack trace: which parts of Settee's own code were running, with any web addresses cut down to
+  their path and anything shaped like a MAC address hidden
+- an id for the exact build, the same in every copy of a release, so the stack trace can be matched
+  to Settee's code
+
+For a crash kept until you answer, the screen, the free memory and the versions are the ones from
+when it happened, not from when the report is sent.
+
+A report never contains your provider's address, username, password or MAC, the names of your
+providers, profiles or channels, or what you were watching. Settee removes everything not on the list
+above before a report leaves your device, rather than looking for things to take out, so nothing new
+slips through. Sentry is set not to store your IP address, though like any website it sees it when the
+report arrives. Problems with your provider, such as a stream that won't play or a login it refuses,
+are never reported.
+
+Only Settee's own release builds can send a report. A build made without Settee's Sentry key, such as
+a fork or a developer's own build, never sends one and never asks.
+
+Reports are read by Settee's maintainer, and once a day by an automated check, an AI agent run by
+the maintainer, that decides which crashes are worth looking into. A crash that keeps happening may
+become an issue on Settee's public GitHub, written up from scratch to say what broke and where. A
+report itself, or any part of one, is never posted.
 
 ## Cleartext HTTP
 
