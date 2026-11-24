@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee n\'a pas pu mesurer son stockage.</string>
     <string name="diagnostics_memory_failed">Settee n\'a pas pu mesurer sa mémoire.</string>
     <string name="diagnostics_log_failed">Settee n\'a pas pu lire ce qu\'il avait noté, cette liste est donc absente.</string>
-    <string name="report_note">Envoie à Settee le code de cette erreur et l\'écran où elle apparaît. Jamais votre fournisseur, son identifiant ni ce que vous regardez.</string>
-    <string name="report_send">Envoyer un rapport</string>
-    <string name="report_sent">Envoyé</string>
+    <string name="report_button">Signaler</string>
+    <string name="report_sent_to_settee">Envoyé à Settee</string>
+    <string name="report_question_title">Envoyer un rapport ?</string>
+    <string name="report_question_body">Envoie à Settee le code de cette erreur, l\'écran où elle apparaît, ainsi que la version et l\'appareil. Jamais votre fournisseur, son identifiant, vos profils ni ce que vous regardez.</string>
+    <string name="report_question_always_note">Toujours envoyer active aussi les rapports de plantage et d\'erreur. Vous pouvez les désactiver dans Paramètres, sous Confidentialité.</string>
+    <string name="report_question_send">Envoyer</string>
+    <string name="report_question_dont_send">Ne pas envoyer</string>
+    <string name="report_question_always_send">Toujours envoyer</string>
 </resources>

@@ -70,9 +70,9 @@ class CrashReportsStepTest {
     fun `the step says what a report holds, with Not now highlighted, and OK there leaves reports off`() {
         show()
 
-        compose.onNodeWithText("which version, which device and screen", substring = true).assertExists()
+        compose.onNodeWithText("which version, device and screen", substring = true).assertExists()
         compose.onNodeWithText("Never your provider", substring = true).assertExists()
-        button("Send crash reports").assertExists()
+        button("Send crash and error reports").assertExists()
         compose.onAllNodes(hasText("Not now") and isFocused()).onFirst().assertExists()
         captureScreen("onboarding_crash_reports_step")
 
@@ -89,7 +89,7 @@ class CrashReportsStepTest {
         compose.onAllNodes(hasText("Not now") and isFocused()).onFirst().assertExists()
 
         device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
-        highlighted().assertTextContains("Send crash reports")
+        highlighted().assertTextContains("Send crash and error reports")
         captureScreen("onboarding_crash_reports_step_send")
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 

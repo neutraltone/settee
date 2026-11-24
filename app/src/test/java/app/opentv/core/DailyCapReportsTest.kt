@@ -65,7 +65,8 @@ class DailyCapReportsTest {
     private fun parseFailure() =
         reports.report(CaughtError(CaughtError.Kind.XTREAM_PARSE, IllegalStateException("bad JSON")))
 
-    private fun errorReport() = reports.report(ErrorReport("HTTP 503", ReportedSource.STREMIO, ErrorReport.SentBy.VIEWER))
+    private fun errorReport() =
+        reports.report(ErrorReport("HTTP 503", ReportedSource.STREMIO, ErrorReport.SentBy.VIEWER))
 
     /** The app crashing: whatever handler is installed hears of it, as the JVM would tell it. */
     private fun crash(error: Throwable = IllegalStateException("Settee broke")) {

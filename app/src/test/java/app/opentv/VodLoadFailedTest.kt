@@ -164,14 +164,14 @@ class VodLoadFailedTest {
     }
 
     @Test
-    fun `a build without Settee's Sentry key never offers Send report`() {
+    fun `a build without Settee's Sentry key never offers Report`() {
         // A failure that would offer it in a release build (ErrorReportsTest).
         panel.replies["get_vod_streams"] = "!503"
 
         setMovies()
 
         awaitText(app.getString(R.string.common_try_again))
-        assertNone(app.getString(R.string.report_send))
+        assertNone(app.getString(R.string.report_button))
     }
 
     @Test

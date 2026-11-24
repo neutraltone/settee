@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee không đo được dung lượng lưu trữ của mình.</string>
     <string name="diagnostics_memory_failed">Settee không đo được bộ nhớ của mình.</string>
     <string name="diagnostics_log_failed">Settee không đọc được những gì đã ghi lại, nên không có danh sách này.</string>
-    <string name="report_note">Gửi mã lỗi này và màn hình nơi nó xuất hiện cho Settee. Không bao giờ gửi nhà cung cấp của bạn, thông tin đăng nhập hay những gì bạn xem.</string>
-    <string name="report_send">Gửi báo cáo</string>
-    <string name="report_sent">Đã gửi</string>
+    <string name="report_button">Báo cáo</string>
+    <string name="report_sent_to_settee">Đã gửi tới Settee</string>
+    <string name="report_question_title">Gửi báo cáo?</string>
+    <string name="report_question_body">Gửi tới Settee mã của lỗi này, màn hình nơi lỗi xuất hiện, phiên bản và thiết bị. Không bao giờ gửi nhà cung cấp, thông tin đăng nhập, hồ sơ của bạn hay những gì bạn xem.</string>
+    <string name="report_question_always_note">Luôn gửi cũng bật báo cáo sự cố và lỗi. Bạn có thể tắt chúng trong Cài đặt, mục Quyền riêng tư.</string>
+    <string name="report_question_send">Gửi</string>
+    <string name="report_question_dont_send">Không gửi</string>
+    <string name="report_question_always_send">Luôn gửi</string>
 </resources>

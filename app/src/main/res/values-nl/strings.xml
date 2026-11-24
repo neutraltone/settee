@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee kon zijn opslag niet meten.</string>
     <string name="diagnostics_memory_failed">Settee kon zijn geheugen niet meten.</string>
     <string name="diagnostics_log_failed">Settee kon niet lezen wat het had genoteerd, dus deze lijst ontbreekt.</string>
-    <string name="report_note">Stuurt de code van deze fout en het scherm waarop hij staat naar Settee. Nooit je provider, de inloggegevens of wat je kijkt.</string>
-    <string name="report_send">Rapport sturen</string>
-    <string name="report_sent">Verstuurd</string>
+    <string name="report_button">Melden</string>
+    <string name="report_sent_to_settee">Naar Settee verstuurd</string>
+    <string name="report_question_title">Rapport sturen?</string>
+    <string name="report_question_body">Stuurt Settee de code van deze fout, het scherm waarop hij staat, en welke versie en welk apparaat. Nooit je provider, de inloggegevens, je profielen of wat je kijkt.</string>
+    <string name="report_question_always_note">Altijd sturen zet ook crash- en foutrapporten aan. Je kunt ze uitzetten in Instellingen, onder Privacy.</string>
+    <string name="report_question_send">Sturen</string>
+    <string name="report_question_dont_send">Niet sturen</string>
+    <string name="report_question_always_send">Altijd sturen</string>
 </resources>

@@ -10,11 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -29,11 +24,9 @@ const val ERROR_DETAIL_TAG = "error_detail"
  * with the [detail] (code · status · format) in a small quiet line under it for anyone who wants it.
  * Takes plain strings, so it never decides what a failure says: docs/ERRORS.md lists that.
  *
- * [actions] are the error's own buttons, such as Try again, drawn under the detail line. With
- * [sendReport], a failure that could be Settee's offers Send report under them (ADR 0010), with a
- * line saying what's sent: below the main action, so Try again keeps the Highlight it starts with and
- * Send report is Down from it. Once pressed it says Sent for as long as this error is shown, and
- * stays where the Highlight is rather than vanishing from under it.
+ * [actions] are the error's own buttons, such as Try again, as one row under the detail line.
+ * An error that could be Settee's adds Report as the last of them, and once it's been reported its
+ * caller says so at the end of the [detail] (ADR 0010): neither is this one's to word.
  */
 @Composable
 fun ErrorMessage(
@@ -43,7 +36,6 @@ fun ErrorMessage(
     textAlign: TextAlign = TextAlign.Center,
     /** For a small space such as the Live Preview tile; the detail line always keeps to one line. */
     maxLines: Int = Int.MAX_VALUE,
-    sendReport: ReportOffer? = null,
     actions: (@Composable () -> Unit)? = null,
 ) {
     val horizontal = if (textAlign == TextAlign.Center) Alignment.CenterHorizontally else Alignment.Start
@@ -64,38 +56,7 @@ fun ErrorMessage(
             Spacer(Modifier.height(ACTIONS_GAP))
             it()
         }
-        sendReport?.let { OfferedReport(it, textAlign) }
     }
-}
-
-/**
- * Send report as an error offers it: the [note] saying what's sent, the button's [sendLabel], and
- * [sentLabel] once it's been pressed, which calls [onSend]. The words come from the feature that
- * offers it: what a report holds isn't the design system's to say.
- */
-@Immutable
-class ReportOffer(val note: String, val sendLabel: String, val sentLabel: String, val onSend: () -> Unit)
-
-/**
- * The [offer]'s note, and its button, which says Sent once pressed for as long as this [offer] is
- * shown. Drawn by [ErrorMessage]; on its own only where the error's main action isn't the error's,
- * such as a form whose buttons sit under the error: there it goes after them, so it's Down from them
- * and they never move.
- */
-@Composable
-fun OfferedReport(offer: ReportOffer, textAlign: TextAlign = TextAlign.Start) {
-    var sent by remember(offer) { mutableStateOf(false) }
-    Spacer(Modifier.height(ACTIONS_GAP))
-    Text(offer.note, SetteeType.Body, color = SetteeColors.QuietText, textAlign = textAlign)
-    ActionButton(
-        if (sent) offer.sentLabel else offer.sendLabel,
-        onClick = {
-            if (!sent) {
-                sent = true
-                offer.onSend()
-            }
-        },
-    )
 }
 
 /** Close enough to read as one message, apart enough that the quiet line stays quiet. */

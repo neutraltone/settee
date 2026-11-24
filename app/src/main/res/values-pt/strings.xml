@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">O Settee não conseguiu medir o seu armazenamento.</string>
     <string name="diagnostics_memory_failed">O Settee não conseguiu medir a sua memória.</string>
     <string name="diagnostics_log_failed">O Settee não conseguiu ler o que tinha anotado, por isso esta lista está em falta.</string>
-    <string name="report_note">Envia ao Settee o código deste erro e o ecrã em que aparece. Nunca o seu fornecedor, o início de sessão dele ou o que vê.</string>
-    <string name="report_send">Enviar relatório</string>
-    <string name="report_sent">Enviado</string>
+    <string name="report_button">Relatar</string>
+    <string name="report_sent_to_settee">Enviado ao Settee</string>
+    <string name="report_question_title">Enviar um relatório?</string>
+    <string name="report_question_body">Envia ao Settee o código deste erro, a tela em que ele aparece e qual versão e dispositivo. Nunca seu provedor, o login dele, seus perfis ou o que você assiste.</string>
+    <string name="report_question_always_note">Sempre enviar também ativa os relatórios de falhas e erros. Você pode desativá-los em Configurações, em Privacidade.</string>
+    <string name="report_question_send">Enviar</string>
+    <string name="report_question_dont_send">Não enviar</string>
+    <string name="report_question_always_send">Sempre enviar</string>
 </resources>

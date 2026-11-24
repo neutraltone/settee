@@ -14,18 +14,18 @@ internal data class LiveScreen(
     val controlsVisible: Boolean,
     /** A failure trying again could fix, so Try again is on screen. */
     val retryableError: Boolean,
-    /** Where Send report is, when the error offers it under Try again (ADR 0010). */
+    /** Where Report is, when the error offers it beside Try again (ADR 0010). */
     val report: ReportPlace = ReportPlace.NONE,
 )
 
-/** Send report under a live channel's Try again, as far as where a key goes. */
+/** Report beside a live channel's Try again, as far as where a key goes. */
 internal enum class ReportPlace {
     NONE,
 
-    /** Offered, with the Highlight on Try again above it: Down goes down to it. */
-    UNDER_TRY_AGAIN,
+    /** Offered, with the Highlight on Try again to its left: Right goes to it. */
+    BESIDE_TRY_AGAIN,
 
-    /** The Highlight is on it: OK presses it and Up goes back to Try again. */
+    /** The Highlight is on it: OK presses it and Left goes back to Try again. */
     HIGHLIGHTED,
 }
 
@@ -67,13 +67,13 @@ internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
 }
 
 /**
- * The keys Send report under Try again takes (where [report] says), or null for the rest. It's reached
- * with Down, as on every error that offers it, so only Up, and Down from Send report itself, change
- * channel there: the channel keys always do.
+ * The keys Report beside Try again takes (where [report] says), or null for the rest. It's in the
+ * error's row, as on every error that offers it, so only Right from Try again and Left back from it
+ * move between them: Up and Down still change channel, and Right from Report opens the qualities.
  */
 private fun aroundReport(key: Key, report: ReportPlace): LiveKey? = when {
-    report == ReportPlace.UNDER_TRY_AGAIN && key == Key.DirectionDown -> LiveKey.ToFocused
-    report == ReportPlace.HIGHLIGHTED && (key == Key.DirectionUp || key in OK_KEYS) -> LiveKey.ToFocused
+    report == ReportPlace.BESIDE_TRY_AGAIN && key == Key.DirectionRight -> LiveKey.ToFocused
+    report == ReportPlace.HIGHLIGHTED && (key == Key.DirectionLeft || key in OK_KEYS) -> LiveKey.ToFocused
     else -> null
 }
 

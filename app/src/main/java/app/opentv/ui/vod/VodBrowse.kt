@@ -62,8 +62,10 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
+import app.opentv.ui.ErrorReporting
 import app.opentv.ui.ExpectedRows
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.ReportButton
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
@@ -73,7 +75,6 @@ import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
 import app.opentv.ui.design.Message
-import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
@@ -85,7 +86,7 @@ import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import app.opentv.ui.sendReportFor
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -465,7 +466,7 @@ private fun vodEmpty(
             failure.reason,
             onRetry = onRetry,
             onEditProvider = { onEditProvider(failure.sourceId) },
-            sendReport = sendReportFor(failure.reason, ReportedSource.of(failure.sourceKind)),
+            report = rememberErrorReport(failure.reason, ReportedSource.of(failure.sourceKind)),
         )
         else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
     }
@@ -489,7 +490,7 @@ internal sealed interface VodEmpty {
         val reason: ViewerError,
         val onRetry: () -> Unit,
         val onEditProvider: () -> Unit,
-        val sendReport: ReportOffer? = null,
+        val report: ErrorReporting? = null,
     ) : VodEmpty
 }
 
@@ -636,12 +637,17 @@ internal fun EmptyBrowse(empty: VodEmpty) {
         is VodEmpty.Failed -> Message(
             empty.reason.sentence,
             title = empty.title,
-            detail = empty.reason.detail,
-            sendReport = empty.sendReport,
+            detail = empty.report?.detail ?: empty.reason.detail,
         ) {
+            val tryAgain = remember { FocusRequester() }
             Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
-                ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
+                ActionButton(
+                    stringResource(R.string.common_try_again),
+                    empty.onRetry,
+                    Modifier.focusRequester(tryAgain),
+                )
                 ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)
+                ReportButton(empty.report, returnTo = tryAgain)
             }
         }
         is VodEmpty.WayForward -> Message(empty.body, title = empty.title) {

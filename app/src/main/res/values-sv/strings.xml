@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee kunde inte mäta sitt lagringsutrymme.</string>
     <string name="diagnostics_memory_failed">Settee kunde inte mäta sitt minne.</string>
     <string name="diagnostics_log_failed">Settee kunde inte läsa det den hade antecknat, så den här listan saknas.</string>
-    <string name="report_note">Skickar felets kod och skärmen det visas på till Settee. Aldrig din leverantör, dess inloggning eller vad du tittar på.</string>
-    <string name="report_send">Skicka rapport</string>
-    <string name="report_sent">Skickad</string>
+    <string name="report_button">Rapportera</string>
+    <string name="report_sent_to_settee">Skickad till Settee</string>
+    <string name="report_question_title">Skicka en rapport?</string>
+    <string name="report_question_body">Skickar Settee felets kod, skärmen det visas på och vilken version och enhet. Aldrig din leverantör, dess inloggning, dina profiler eller vad du tittar på.</string>
+    <string name="report_question_always_note">Skicka alltid slår också på krasch- och felrapporter. Du kan stänga av dem i Inställningar, under Integritet.</string>
+    <string name="report_question_send">Skicka</string>
+    <string name="report_question_dont_send">Skicka inte</string>
+    <string name="report_question_always_send">Skicka alltid</string>
 </resources>

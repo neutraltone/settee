@@ -198,7 +198,7 @@ class AddSourceScreenTest {
     }
 
     @Test
-    fun `a test that failed in a way that could be Settee's keeps Test connection lit, with Send report Down`() {
+    fun `a test that could have failed through Settee keeps Test connection lit, with Report after Save and load`() {
         panel.replies[""] = "!503"
         show(on = panelGraph)
         compose.onNodeWithText(M3U).performClick()
@@ -209,9 +209,10 @@ class AddSourceScreenTest {
         assertThat(viewModel.ui.value.testError?.detail).contains("HTTP 503")
 
         compose.onNodeWithText("Test connection").assertIsFocused()
-        captureScreen("add_source_test_failed_send_report")
-        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
-        compose.onNode(isFocused()).assertTextContains(app.getString(R.string.report_send))
+        captureScreen("add_source_test_failed_report")
+        device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
+        device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNode(isFocused()).assertTextContains(app.getString(R.string.report_button))
     }
 
     @Test

@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee nu și-a putut măsura spațiul de stocare.</string>
     <string name="diagnostics_memory_failed">Settee nu și-a putut măsura memoria.</string>
     <string name="diagnostics_log_failed">Settee nu a putut citi ce notase, așa că această listă lipsește.</string>
-    <string name="report_note">Trimite către Settee codul acestei erori și ecranul pe care apare. Niciodată furnizorul tău, autentificarea lui sau ce urmărești.</string>
-    <string name="report_send">Trimite raportul</string>
-    <string name="report_sent">Trimis</string>
+    <string name="report_button">Raportează</string>
+    <string name="report_sent_to_settee">Trimis către Settee</string>
+    <string name="report_question_title">Trimiți un raport?</string>
+    <string name="report_question_body">Trimite către Settee codul acestei erori, ecranul pe care apare, versiunea și dispozitivul. Niciodată furnizorul tău, datele lui de conectare, profilurile tale sau ce te uiți.</string>
+    <string name="report_question_always_note">Trimite mereu pornește și rapoartele de blocare și eroare. Le poți opri din Setări, la Confidențialitate.</string>
+    <string name="report_question_send">Trimite</string>
+    <string name="report_question_dont_send">Nu trimite</string>
+    <string name="report_question_always_send">Trimite mereu</string>
 </resources>

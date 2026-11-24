@@ -9,8 +9,9 @@ package app.opentv.core
  * An Error Report (ADR 0010): one failure on screen that could be Settee's, as the viewer saw it,
  * [sentBy] Settee on its own while Crash Reports are on, or by the viewer from the error's Report
  * while they're off. Only its [detail] line (code · status · format), which CrashReports scrubs
- * before it goes, never the sentence; its [kind]; and the kind of [source] it came from. No stack trace: a failure reaches the
- * screen as a [ViewerError], a sentence and a detail line, with no exception left to send.
+ * before it goes, never the sentence; its [kind]; and the kind of [source] it came from. No stack
+ * trace: a failure reaches the screen as a [ViewerError], a sentence and a detail line, with no
+ * exception left to send.
  *
  * The kind is the detail line's first code: the [ErrorWording] or [app.opentv.player.PlaybackErrors]
  * category the sentence was chosen by (a provider's problem, an exception's type, Media3's error

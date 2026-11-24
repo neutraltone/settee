@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">تعذّر على Settee قياس مساحة التخزين.</string>
     <string name="diagnostics_memory_failed">تعذّر على Settee قياس ذاكرته.</string>
     <string name="diagnostics_log_failed">تعذّر على Settee قراءة ما دوّنه، لذا هذه القائمة غير متوفرة.</string>
-    <string name="report_note">يرسل رمز هذا الخطأ والشاشة التي ظهر عليها إلى Settee. لا يرسل أبدًا مزوّدك أو بيانات تسجيل الدخول أو ما تشاهده.</string>
-    <string name="report_send">إرسال تقرير</string>
-    <string name="report_sent">تم الإرسال</string>
+    <string name="report_button">إبلاغ</string>
+    <string name="report_sent_to_settee">أُرسل إلى Settee</string>
+    <string name="report_question_title">إرسال تقرير؟</string>
+    <string name="report_question_body">يرسل إلى Settee رمز هذا الخطأ والشاشة التي ظهر عليها والإصدار والجهاز. لا يرسل أبدًا مزوّدك أو بيانات الدخول أو ملفاتك الشخصية أو ما تشاهده.</string>
+    <string name="report_question_always_note">«الإرسال دائمًا» يفعّل أيضًا تقارير الأعطال والأخطاء. يمكنك إيقافها من الإعدادات، ضمن الخصوصية.</string>
+    <string name="report_question_send">إرسال</string>
+    <string name="report_question_dont_send">عدم الإرسال</string>
+    <string name="report_question_always_send">الإرسال دائمًا</string>
 </resources>

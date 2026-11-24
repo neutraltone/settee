@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee kunne ikke måle lagringsplassen sin.</string>
     <string name="diagnostics_memory_failed">Settee kunne ikke måle minnet sitt.</string>
     <string name="diagnostics_log_failed">Settee kunne ikke lese det den hadde notert, så denne listen mangler.</string>
-    <string name="report_note">Sender feilens kode og skjermen den vises på til Settee. Aldri leverandøren din, innloggingen dens eller hva du ser på.</string>
-    <string name="report_send">Send rapport</string>
-    <string name="report_sent">Sendt</string>
+    <string name="report_button">Rapporter</string>
+    <string name="report_sent_to_settee">Sendt til Settee</string>
+    <string name="report_question_title">Sende en rapport?</string>
+    <string name="report_question_body">Sender Settee koden for denne feilen, skjermen den er på, og hvilken versjon og enhet. Aldri leverandøren din, påloggingen, profilene dine eller hva du ser på.</string>
+    <string name="report_question_always_note">Send alltid slår også på krasj- og feilrapporter. Du kan slå dem av i Innstillinger, under Personvern.</string>
+    <string name="report_question_send">Send</string>
+    <string name="report_question_dont_send">Ikke send</string>
+    <string name="report_question_always_send">Send alltid</string>
 </resources>

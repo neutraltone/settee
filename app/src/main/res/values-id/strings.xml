@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee tidak dapat mengukur penyimpanannya.</string>
     <string name="diagnostics_memory_failed">Settee tidak dapat mengukur memorinya.</string>
     <string name="diagnostics_log_failed">Settee tidak dapat membaca catatannya, jadi daftar ini tidak tersedia.</string>
-    <string name="report_note">Mengirim kode kesalahan ini dan layar tempatnya muncul ke Settee. Tidak pernah penyedia Anda, login-nya, atau apa yang Anda tonton.</string>
-    <string name="report_send">Kirim laporan</string>
-    <string name="report_sent">Terkirim</string>
+    <string name="report_button">Laporkan</string>
+    <string name="report_sent_to_settee">Terkirim ke Settee</string>
+    <string name="report_question_title">Kirim laporan?</string>
+    <string name="report_question_body">Mengirim ke Settee kode error ini, layar tempat error muncul, serta versi dan perangkat. Tidak pernah penyedia Anda, login-nya, profil Anda, atau apa yang Anda tonton.</string>
+    <string name="report_question_always_note">Selalu kirim juga menyalakan laporan crash dan error. Anda bisa mematikannya di Setelan, bagian Privasi.</string>
+    <string name="report_question_send">Kirim</string>
+    <string name="report_question_dont_send">Jangan kirim</string>
+    <string name="report_question_always_send">Selalu kirim</string>
 </resources>

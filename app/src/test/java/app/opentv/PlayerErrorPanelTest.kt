@@ -162,16 +162,17 @@ class PlayerErrorPanelTest {
     }
 
     @Test
-    fun `Send report is Down from Try again, which keeps the Highlight it lands on`() {
+    fun `Report ends the row after Try again and Back, and Try again keeps the Highlight it lands on`() {
         show(players.controller { key -> Playable.Failed(key, Playable.Failure.GONE, "Film") })
         waitFor(hasText("Try again"))
         compose.onNodeWithText("Try again").assertIsFocused()
 
-        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
         compose.waitForIdle()
 
-        compose.onNode(hasText(app.getString(R.string.report_send)) and hasClickAction()).assertIsFocused()
-        captureScreen("vod_player_retry_send_report")
+        compose.onNode(hasText(app.getString(R.string.report_button)) and hasClickAction()).assertIsFocused()
+        captureScreen("vod_player_retry_report")
     }
 
     @Test

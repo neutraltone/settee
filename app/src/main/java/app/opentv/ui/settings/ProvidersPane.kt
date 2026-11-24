@@ -17,6 +17,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,7 +32,7 @@ import app.opentv.R
 import app.opentv.core.ReportedSource
 import app.opentv.core.findActivity
 import app.opentv.data.model.Source
-import app.opentv.ui.SendReportAfter
+import app.opentv.ui.ReportButton
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
@@ -41,6 +44,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
 import app.opentv.ui.providerFailures
+import app.opentv.ui.rememberErrorReport
 
 /**
  * Providers: a row per provider, which OK edits, and a row to add one. A provider's other actions
@@ -81,10 +85,13 @@ internal fun ProvidersPane(
                 onOptions = { options = source },
             )
             failure?.let { failure ->
+                val report = rememberErrorReport(failure, ReportedSource.of(source.kind))
+                val again = remember { FocusRequester() }
+                val reportFocus = remember { FocusRequester() }
                 // Lined up with the row's label, and kept under it, so it reads as that provider's.
                 ErrorMessage(
                     failure.sentence,
-                    failure.detail,
+                    report?.detail ?: failure.detail,
                     Modifier.padding(horizontal = ListRowInset, vertical = 6.dp),
                     textAlign = TextAlign.Start,
                 )
@@ -92,11 +99,16 @@ internal fun ProvidersPane(
                 ListRow(
                     stringResource(R.string.providers_refresh_again),
                     onClick = viewModel::refreshAll,
-                    modifier = Modifier.onFocusChanged { againHighlighted = it.isFocused },
+                    modifier = Modifier
+                        .focusRequester(again)
+                        // Said outright: left to itself, Down picks the next row, being in line with it,
+                        // over Report, which sits to the left under its label.
+                        .focusProperties { if (report?.offered == true) down = reportFocus }
+                        .onFocusChanged { againHighlighted = it.isFocused },
                 )
-                // Under Refresh again, so it's Down from it.
+                // The error's own action here is a row, so Report is the next thing Down from it.
                 Column(Modifier.padding(horizontal = ListRowInset)) {
-                    SendReportAfter(failure, ReportedSource.of(source.kind))
+                    ReportButton(report, returnTo = again, Modifier.focusRequester(reportFocus))
                 }
             }
         }

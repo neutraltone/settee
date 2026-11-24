@@ -349,12 +349,12 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `Send crash reports on their step turns them on and goes on to Setup`() {
+    fun `Send crash and error reports on their step turns them on and goes on to Setup`() {
         setApp(start = Routes.ADD_SOURCE, sources = testGraph.track(SourcesViewModel(app, withCrashReports)))
         savePlaylist()
         compose.waitForIdle()
 
-        openSubtitlesStepButton("Send crash reports").performClick()
+        openSubtitlesStepButton("Send crash and error reports").performClick()
 
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.SETUP)

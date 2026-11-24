@@ -215,34 +215,40 @@ class LivePlayerErrorTest {
     }
 
     @Test
-    fun `up and the channel keys still change channel, with Send report under Try again`() {
+    fun `up, down and the channel keys still change channel, with Report beside Try again`() {
         show(deadChannel())
 
         press(Key.ChannelDown)
         press(Key.DirectionUp)
+        press(Key.DirectionDown)
 
-        assertThat(zapped).containsExactly(1, -1).inOrder()
+        assertThat(zapped).containsExactly(1, -1, 1).inOrder()
     }
 
     @Test
-    fun `Send report is Down from Try again, OK on it sends without trying again, and Down from it zaps`() {
+    fun `Report is Right of Try again, its panel's Send doesn't try again, and the Highlight goes back to Try again`() {
         show(deadChannel())
         compose.onNodeWithText("Try again").assertIsFocused()
         val before = tries
+        val report = compose.onNode(hasText(context.getString(R.string.report_button)) and hasClickAction())
 
-        press(Key.DirectionDown)
-        compose.onNode(hasText(context.getString(R.string.report_send)) and hasClickAction()).assertIsFocused()
-        captureScreen("live_player_error_send_report")
+        press(Key.DirectionRight)
+        report.assertIsFocused()
+        captureScreen("live_player_error_report")
+        press(Key.DirectionLeft)
+        compose.onNodeWithText("Try again").assertIsFocused()
+        press(Key.DirectionRight)
         press(Key.DirectionCenter)
-        compose.onNode(hasText(context.getString(R.string.report_sent)) and hasClickAction()).assertIsFocused()
+        compose.onNodeWithText(context.getString(R.string.report_question_send)).assertIsFocused()
+        captureScreen("live_player_error_report_panel")
+        compose.pressKeyOnPanel(android.view.KeyEvent.KEYCODE_DPAD_CENTER)
+
+        report.assertDoesNotExist()
+        compose.onNodeWithText("Try again").assertIsFocused()
+        compose.onNodeWithText(context.getString(R.string.report_sent_to_settee), substring = true).assertExists()
+        captureScreen("live_player_error_report_sent")
         assertThat(tries).isEqualTo(before)
         assertThat(zapped).isEmpty()
-
-        press(Key.DirectionUp)
-        compose.onNodeWithText("Try again").assertIsFocused()
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-        assertThat(zapped).containsExactly(1)
     }
 
     @Test

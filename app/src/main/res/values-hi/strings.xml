@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee अपनी स्टोरेज नहीं माप सका।</string>
     <string name="diagnostics_memory_failed">Settee अपनी मेमोरी नहीं माप सका।</string>
     <string name="diagnostics_log_failed">Settee अपने नोट किए गए विवरण नहीं पढ़ सका, इसलिए यह सूची उपलब्ध नहीं है।</string>
-    <string name="report_note">इस त्रुटि का कोड और वह स्क्रीन जिस पर यह है, Settee को भेजता है। आपका प्रदाता, उसका लॉगिन या आप क्या देखते हैं, कभी नहीं।</string>
-    <string name="report_send">रिपोर्ट भेजें</string>
-    <string name="report_sent">भेज दी गई</string>
+    <string name="report_button">रिपोर्ट करें</string>
+    <string name="report_sent_to_settee">Settee को भेजी गई</string>
+    <string name="report_question_title">रिपोर्ट भेजें?</string>
+    <string name="report_question_body">Settee को इस त्रुटि का कोड, वह स्क्रीन जिस पर यह है, और कौन-सा संस्करण और डिवाइस, भेजता है। आपका प्रदाता, उसका लॉगिन, आपकी प्रोफ़ाइलें या आप क्या देखते हैं, कभी नहीं।</string>
+    <string name="report_question_always_note">हमेशा भेजें से क्रैश और त्रुटि रिपोर्ट भी चालू हो जाती हैं। आप इन्हें सेटिंग में, गोपनीयता के अंतर्गत बंद कर सकते हैं।</string>
+    <string name="report_question_send">भेजें</string>
+    <string name="report_question_dont_send">न भेजें</string>
+    <string name="report_question_always_send">हमेशा भेजें</string>
 </resources>

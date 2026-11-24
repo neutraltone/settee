@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee วัดพื้นที่จัดเก็บของตัวเองไม่ได้</string>
     <string name="diagnostics_memory_failed">Settee วัดหน่วยความจำของตัวเองไม่ได้</string>
     <string name="diagnostics_log_failed">Settee อ่านสิ่งที่จดไว้ไม่ได้ จึงไม่มีรายการนี้</string>
-    <string name="report_note">ส่งรหัสของข้อผิดพลาดนี้และหน้าจอที่แสดงอยู่ไปยัง Settee ไม่ส่งผู้ให้บริการของคุณ ข้อมูลเข้าสู่ระบบ หรือสิ่งที่คุณดูเด็ดขาด</string>
-    <string name="report_send">ส่งรายงาน</string>
-    <string name="report_sent">ส่งแล้ว</string>
+    <string name="report_button">รายงาน</string>
+    <string name="report_sent_to_settee">ส่งถึง Settee แล้ว</string>
+    <string name="report_question_title">ส่งรายงานไหม</string>
+    <string name="report_question_body">ส่งรหัสของข้อผิดพลาดนี้ หน้าจอที่แสดง รวมถึงเวอร์ชันและอุปกรณ์ให้ Settee ไม่ส่งผู้ให้บริการ ข้อมูลเข้าสู่ระบบ โปรไฟล์ หรือสิ่งที่คุณดูเลย</string>
+    <string name="report_question_always_note">ส่งทุกครั้งจะเปิดรายงานข้อขัดข้องและข้อผิดพลาดด้วย ปิดได้ในการตั้งค่า ใต้ความเป็นส่วนตัว</string>
+    <string name="report_question_send">ส่ง</string>
+    <string name="report_question_dont_send">ไม่ส่ง</string>
+    <string name="report_question_always_send">ส่งทุกครั้ง</string>
 </resources>

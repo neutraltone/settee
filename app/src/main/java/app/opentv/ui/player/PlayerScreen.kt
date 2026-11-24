@@ -17,8 +17,10 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -81,6 +83,7 @@ import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
@@ -97,7 +100,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
-import app.opentv.ui.sendReportFor
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -445,8 +448,8 @@ fun LivePlayerContent(
     val rootFocus = remember { FocusRequester() }
     val listFocus = remember { FocusRequester() }
     val retryFocus = remember { FocusRequester() }
-    // Where the Highlight is on a retryable error, for Send report under Try again (ADR 0010): the
-    // key handler sees Down and OK first, and only leaves them to the buttons when it knows.
+    // Where the Highlight is on a retryable error, for Report beside Try again (ADR 0010): the key
+    // handler sees Left, Right and OK first, and only leaves them to the buttons when it knows.
     var errorHighlighted by remember { mutableStateOf(false) }
     var retryHighlighted by remember { mutableStateOf(false) }
     var reportOffered by remember { mutableStateOf(false) }
@@ -514,7 +517,7 @@ fun LivePlayerContent(
         report = when {
             !reportOffered -> ReportPlace.NONE
             errorHighlighted && !retryHighlighted -> ReportPlace.HIGHLIGHTED
-            else -> ReportPlace.UNDER_TRY_AGAIN
+            else -> ReportPlace.BESIDE_TRY_AGAIN
         },
     )
 
@@ -588,8 +591,10 @@ fun LivePlayerContent(
     // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
     val reportedSource by controller.reportedSource.collectAsState()
-    val sendReport = sendReportFor(retryError?.reason, reportedSource)
-    SideEffect { reportOffered = sendReport != null }
+    // Every failure is reported while reports are on; Report itself only beside Try again, since
+    // without it the Highlight stays on the full-screen catcher and couldn't reach it.
+    val report = rememberErrorReport((state as? PlayerController.State.Error)?.reason, reportedSource)
+    SideEffect { reportOffered = retryError != null && report?.offered == true }
     val focusOn = when {
         channelListVisible -> listFocus
         controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barReturn
@@ -797,22 +802,22 @@ fun LivePlayerContent(
                     ) {
                         SetteeText(current.title, SetteeType.ScreenTitle)
                         Spacer(Modifier.height(12.dp))
-                        // Send report only under Try again: without it the Highlight stays on the
-                        // full-screen catcher, where Up and Down change channel, and couldn't reach it.
                         ErrorMessage(
                             current.reason.sentence,
-                            current.reason.detail,
-                            sendReport = sendReport,
+                            report?.detail ?: current.reason.detail,
                             actions = if (current.canRetry) {
                                 {
                                     Spacer(Modifier.height(14.dp))
-                                    PillButton(
-                                        stringResource(R.string.common_try_again),
-                                        onClick = { controller.retry() },
-                                        modifier = Modifier
-                                            .focusRequester(retryFocus)
-                                            .onFocusChanged { retryHighlighted = it.isFocused },
-                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        PillButton(
+                                            stringResource(R.string.common_try_again),
+                                            onClick = { controller.retry() },
+                                            modifier = Modifier
+                                                .focusRequester(retryFocus)
+                                                .onFocusChanged { retryHighlighted = it.isFocused },
+                                        )
+                                        ReportButton(report, returnTo = retryFocus)
+                                    }
                                 }
                             } else {
                                 null

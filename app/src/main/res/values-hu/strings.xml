@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">A Settee nem tudta megmérni a tárhelyét.</string>
     <string name="diagnostics_memory_failed">A Settee nem tudta megmérni a memóriáját.</string>
     <string name="diagnostics_log_failed">A Settee nem tudta beolvasni a feljegyzéseit, ezért ez a lista hiányzik.</string>
-    <string name="report_note">Elküldi a Settee-nek a hiba kódját és a képernyőt, amelyen megjelent. Soha nem küldi el a szolgáltatót, a bejelentkezését vagy azt, amit néz.</string>
-    <string name="report_send">Jelentés küldése</string>
-    <string name="report_sent">Elküldve</string>
+    <string name="report_button">Jelentés</string>
+    <string name="report_sent_to_settee">Elküldve a Settee-nek</string>
+    <string name="report_question_title">Elküldi a jelentést?</string>
+    <string name="report_question_body">Elküldi a Settee-nek a hiba kódját, a képernyőt, amelyen megjelent, valamint a verziót és az eszközt. Soha nem küldi a szolgáltatóját, a bejelentkezési adatait, a profiljait vagy azt, amit néz.</string>
+    <string name="report_question_always_note">A Mindig küldje a hiba- és összeomlás-jelentéseket is bekapcsolja. A Beállítások Adatvédelem részében kapcsolhatja ki őket.</string>
+    <string name="report_question_send">Küldés</string>
+    <string name="report_question_dont_send">Ne küldje</string>
+    <string name="report_question_always_send">Mindig küldje</string>
 </resources>

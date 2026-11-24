@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee no pudo medir su almacenamiento.</string>
     <string name="diagnostics_memory_failed">Settee no pudo medir su memoria.</string>
     <string name="diagnostics_log_failed">Settee no pudo leer lo que había anotado, así que falta esta lista.</string>
-    <string name="report_note">Envía a Settee el código de este error y la pantalla en la que aparece. Nunca tu proveedor, su inicio de sesión ni lo que ves.</string>
-    <string name="report_send">Enviar informe</string>
-    <string name="report_sent">Enviado</string>
+    <string name="report_button">Informar</string>
+    <string name="report_sent_to_settee">Enviado a Settee</string>
+    <string name="report_question_title">¿Enviar un informe?</string>
+    <string name="report_question_body">Envía a Settee el código de este error, la pantalla en la que aparece y qué versión y dispositivo usas. Nunca tu proveedor, su inicio de sesión, tus perfiles ni lo que ves.</string>
+    <string name="report_question_always_note">Enviar siempre también activa los informes de fallos y errores. Puedes desactivarlos en Ajustes, en Privacidad.</string>
+    <string name="report_question_send">Enviar</string>
+    <string name="report_question_dont_send">No enviar</string>
+    <string name="report_question_always_send">Enviar siempre</string>
 </resources>

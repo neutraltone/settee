@@ -64,6 +64,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.ProviderFailure
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -74,8 +75,8 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.rememberErrorReport
 import app.opentv.ui.rememberOpeningPlace
-import app.opentv.ui.sendReportFor
 import app.opentv.ui.vod.rememberSidebarSlide
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -479,17 +480,19 @@ private fun NothingToShow(openSidebar: () -> Unit) {
  */
 @Composable
 private fun LoadFailed(failure: ProviderFailure?, onRetry: () -> Unit, onEditProvider: () -> Unit) {
+    val report = rememberErrorReport(failure?.error, ReportedSource.of(failure?.kind))
     // With no saved failure to say why, the generic sentence; it has no detail to show.
     Message(
         failure?.error?.sentence ?: stringResource(R.string.guide_load_failed_desc),
         title = failure?.let { stringResource(R.string.guide_load_failed_title_named, it.name) }
             ?: stringResource(R.string.guide_load_failed_title),
-        detail = failure?.error?.detail.orEmpty(),
-        sendReport = sendReportFor(failure?.error, ReportedSource.of(failure?.kind)),
+        detail = report?.detail ?: failure?.error?.detail.orEmpty(),
     ) {
+        val tryAgain = remember { FocusRequester() }
         Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
-            ActionButton(stringResource(R.string.common_try_again), onRetry)
+            ActionButton(stringResource(R.string.common_try_again), onRetry, Modifier.focusRequester(tryAgain))
             ActionButton(stringResource(R.string.guide_edit_provider), onEditProvider)
+            ReportButton(report, returnTo = tryAgain)
         }
     }
 }

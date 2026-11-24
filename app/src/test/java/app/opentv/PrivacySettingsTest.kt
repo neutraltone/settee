@@ -76,22 +76,22 @@ class PrivacySettingsTest {
         show(crashReports)
 
         highlighted().assertTextContains("Privacy")
-        compose.onNodeWithText("Send crash reports").assertIsOff()
-        compose.onNodeWithText("which version, which device and screen", substring = true).assertExists()
+        compose.onNodeWithText("Send crash and error reports").assertIsOff()
+        compose.onNodeWithText("which version, device and screen", substring = true).assertExists()
         compose.onNodeWithText("Never your provider", substring = true).assertExists()
 
         device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
-        highlighted().assertTextContains("Send crash reports")
+        highlighted().assertTextContains("Send crash and error reports")
         captureScreen("settings_privacy")
 
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNodeWithText("Send crash reports").assertIsOn()
+        compose.onNodeWithText("Send crash and error reports").assertIsOn()
         assertThat(crashReports.on.value).isTrue()
         assertThat(graph.settings.crashReportsInstallId).isNotNull()
         captureScreen("settings_privacy_on")
 
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNodeWithText("Send crash reports").assertIsOff()
+        compose.onNodeWithText("Send crash and error reports").assertIsOff()
         assertThat(crashReports.on.value).isFalse()
         assertThat(sent).isEmpty()
     }

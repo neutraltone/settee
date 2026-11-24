@@ -160,7 +160,7 @@ class SettingsProvidersRefreshTest {
     }
 
     @Test
-    fun `a refresh failure that could be Settee's offers Send report, Down from Refresh again`() {
+    fun `a refresh failure that could be Settee's offers Report, Down from Refresh again`() {
         storeChannels(saveProvider("Broken films on 464", ViewerError("Couldn't load channels.", "HTTP 500")))
         show()
         waitFor("Broken films on 464")
@@ -170,8 +170,8 @@ class SettingsProvidersRefreshTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         highlighted().assertTextContains("Refresh again")
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        highlighted().assertTextContains(app().getString(R.string.report_send))
-        captureScreen("settings_providers_refresh_failed_send_report")
+        highlighted().assertTextContains(app().getString(R.string.report_button))
+        captureScreen("settings_providers_refresh_failed_report")
     }
 
     @Test

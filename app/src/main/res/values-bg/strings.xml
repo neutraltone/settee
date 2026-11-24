@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee не можа да измери хранилището си.</string>
     <string name="diagnostics_memory_failed">Settee не можа да измери паметта си.</string>
     <string name="diagnostics_log_failed">Settee не можа да прочете записаното, затова този списък липсва.</string>
-    <string name="report_note">Изпраща кода на тази грешка и екрана, на който е, до Settee. Никога доставчика ви, данните му за вход или какво гледате.</string>
-    <string name="report_send">Изпрати доклад</string>
-    <string name="report_sent">Изпратено</string>
+    <string name="report_button">Докладвай</string>
+    <string name="report_sent_to_settee">Изпратено до Settee</string>
+    <string name="report_question_title">Да изпратя ли доклад?</string>
+    <string name="report_question_body">Изпраща на Settee кода на тази грешка, екрана, на който е, версията и устройството. Никога доставчика ти, данните за вход, профилите ти или какво гледаш.</string>
+    <string name="report_question_always_note">„Винаги изпращай“ включва и докладите за сривове и грешки. Можеш да ги изключиш от Настройки, в Поверителност.</string>
+    <string name="report_question_send">Изпрати</string>
+    <string name="report_question_dont_send">Не изпращай</string>
+    <string name="report_question_always_send">Винаги изпращай</string>
 </resources>

@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee nije mogao izmjeriti svoju pohranu.</string>
     <string name="diagnostics_memory_failed">Settee nije mogao izmjeriti svoju memoriju.</string>
     <string name="diagnostics_log_failed">Settee nije mogao pročitati što je zabilježio, pa ovaj popis nedostaje.</string>
-    <string name="report_note">Šalje Setteeju kôd ove pogreške i zaslon na kojem je. Nikad vašeg pružatelja usluge, njegovu prijavu ni ono što gledate.</string>
-    <string name="report_send">Pošalji izvješće</string>
-    <string name="report_sent">Poslano</string>
+    <string name="report_button">Prijavi</string>
+    <string name="report_sent_to_settee">Poslano u Settee</string>
+    <string name="report_question_title">Poslati izvješće?</string>
+    <string name="report_question_body">Šalje u Settee kod ove pogreške, zaslon na kojem je te verziju i uređaj. Nikad vašeg pružatelja, njegovu prijavu, vaše profile ni ono što gledate.</string>
+    <string name="report_question_always_note">Uvijek pošalji uključuje i izvješća o rušenjima i pogreškama. Možete ih isključiti u Postavkama, pod Privatnost.</string>
+    <string name="report_question_send">Pošalji</string>
+    <string name="report_question_dont_send">Nemoj slati</string>
+    <string name="report_question_always_send">Uvijek pošalji</string>
 </resources>

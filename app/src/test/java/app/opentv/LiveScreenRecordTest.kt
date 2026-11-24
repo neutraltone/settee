@@ -133,7 +133,7 @@ class LiveScreenRecordTest {
     }
 
     @Test
-    fun `a guide failing in a way that could be Settee's keeps Try again lit, with Send report Down`() {
+    fun `a guide failing in a way that could be Settee's keeps Try again lit, with Report at the end of its buttons`() {
         compose.setTvContent {
             MainShell(
                 tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
@@ -162,9 +162,9 @@ class LiveScreenRecordTest {
                 )
             }
         }
-        val sendReport = compose.onNode(hasText(testGraph.app.getString(R.string.report_send)) and hasClickAction())
-        sendReport.assertExists()
-        captureScreen("live_guide_load_failed_send_report")
+        val report = compose.onNode(hasText(testGraph.app.getString(R.string.report_button)) and hasClickAction())
+        report.assertExists()
+        captureScreen("live_guide_load_failed_report")
 
         // Into the guide from the rail, as the remote comes.
         compose.onNode(hasContentDescription("Live TV") or hasText("Live TV")).requestFocus()
@@ -172,8 +172,9 @@ class LiveScreenRecordTest {
         compose.mainClock.advanceTimeBy(RAIL_HANDOVER_MILLIS)
         compose.waitForIdle()
         compose.onNode(hasText("Try again") and hasClickAction()).assertIsFocused()
-        press(Key.DirectionDown)
-        sendReport.assertIsFocused()
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        report.assertIsFocused()
     }
 
     private fun press(key: Key) {

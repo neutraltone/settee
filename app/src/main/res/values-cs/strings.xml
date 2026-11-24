@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee nemohl změřit své úložiště.</string>
     <string name="diagnostics_memory_failed">Settee nemohl změřit svou paměť.</string>
     <string name="diagnostics_log_failed">Settee nemohl přečíst, co si zapsal, proto tento seznam chybí.</string>
-    <string name="report_note">Odešle Settee kód této chyby a obrazovku, na které je. Nikdy vašeho poskytovatele, jeho přihlašovací údaje ani to, co sledujete.</string>
-    <string name="report_send">Odeslat hlášení</string>
-    <string name="report_sent">Odesláno</string>
+    <string name="report_button">Nahlásit</string>
+    <string name="report_sent_to_settee">Odesláno do Settee</string>
+    <string name="report_question_title">Odeslat hlášení?</string>
+    <string name="report_question_body">Pošle do Settee kód této chyby, obrazovku, na které je, verzi a zařízení. Nikdy vašeho poskytovatele, jeho přihlášení, vaše profily ani to, co sledujete.</string>
+    <string name="report_question_always_note">Vždy odeslat zapne i hlášení o pádech a chybách. Vypnout je můžete v Nastavení, v části Soukromí.</string>
+    <string name="report_question_send">Odeslat</string>
+    <string name="report_question_dont_send">Neodesílat</string>
+    <string name="report_question_always_send">Vždy odeslat</string>
 </resources>

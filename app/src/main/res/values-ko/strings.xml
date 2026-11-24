@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee가 저장 공간을 측정하지 못했습니다.</string>
     <string name="diagnostics_memory_failed">Settee가 메모리를 측정하지 못했습니다.</string>
     <string name="diagnostics_log_failed">Settee가 기록해 둔 내용을 읽지 못해 이 목록이 없습니다.</string>
-    <string name="report_note">이 오류의 코드와 표시된 화면을 Settee에 보냅니다. 공급자, 공급자 로그인 정보, 시청 내용은 절대 보내지 않습니다.</string>
-    <string name="report_send">보고서 보내기</string>
-    <string name="report_sent">보냈습니다</string>
+    <string name="report_button">보고</string>
+    <string name="report_sent_to_settee">Settee에 보냈습니다</string>
+    <string name="report_question_title">보고서를 보낼까요?</string>
+    <string name="report_question_body">이 오류의 코드, 오류가 표시된 화면, 버전과 기기를 Settee에 보냅니다. 제공업체, 로그인 정보, 프로필, 시청 내용은 절대 보내지 않습니다.</string>
+    <string name="report_question_always_note">항상 보내기를 선택하면 충돌 및 오류 보고서도 켜집니다. 설정의 개인정보 보호에서 끌 수 있습니다.</string>
+    <string name="report_question_send">보내기</string>
+    <string name="report_question_dont_send">보내지 않기</string>
+    <string name="report_question_always_send">항상 보내기</string>
 </resources>

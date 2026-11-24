@@ -97,7 +97,6 @@ import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.backOnRelease
 import app.opentv.ui.player.isBack
 import app.opentv.ui.player.trackLabel
-import app.opentv.ui.sendReportFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -604,7 +603,7 @@ fun VodPlayerContent(
                 current,
                 onRetry = controller::retry,
                 onBack = onBack,
-                sendReport = sendReportFor(current.reason, reportedSource),
+                reportedSource = reportedSource,
             )
 
             else -> Unit

@@ -39,31 +39,36 @@ class LiveKeysTest {
     }
 
     @Test
-    fun `on an error trying again could fix, up and down still change channel`() {
-        assertThat(liveKey(Key.DirectionUp, retryableError)).isEqualTo(LiveKey.Zap(-1))
-        assertThat(liveKey(Key.ChannelUp, retryableError)).isEqualTo(LiveKey.Zap(-1))
-        assertThat(liveKey(Key.DirectionDown, retryableError)).isEqualTo(LiveKey.Zap(1))
-        assertThat(liveKey(Key.ChannelDown, retryableError)).isEqualTo(LiveKey.Zap(1))
+    fun `on an error trying again could fix, up and down still change channel, wherever Report is`() {
+        val screens = listOf(
+            retryableError,
+            retryableError.copy(report = ReportPlace.BESIDE_TRY_AGAIN),
+            retryableError.copy(report = ReportPlace.HIGHLIGHTED),
+        )
+        for (screen in screens) {
+            assertThat(liveKey(Key.DirectionUp, screen)).isEqualTo(LiveKey.Zap(-1))
+            assertThat(liveKey(Key.ChannelUp, screen)).isEqualTo(LiveKey.Zap(-1))
+            assertThat(liveKey(Key.DirectionDown, screen)).isEqualTo(LiveKey.Zap(1))
+            assertThat(liveKey(Key.ChannelDown, screen)).isEqualTo(LiveKey.Zap(1))
+        }
     }
 
     @Test
-    fun `with Send report under Try again, Down reaches it, and Up and the channel keys still zap`() {
-        val offered = retryableError.copy(report = ReportPlace.UNDER_TRY_AGAIN)
+    fun `with Report beside Try again, Right reaches it, and OK still tries again`() {
+        val offered = retryableError.copy(report = ReportPlace.BESIDE_TRY_AGAIN)
 
-        assertThat(liveKey(Key.DirectionDown, offered)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.DirectionUp, offered)).isEqualTo(LiveKey.Zap(-1))
-        assertThat(liveKey(Key.ChannelDown, offered)).isEqualTo(LiveKey.Zap(1))
+        assertThat(liveKey(Key.DirectionRight, offered)).isEqualTo(LiveKey.ToFocused)
+        assertThat(liveKey(Key.DirectionLeft, offered)).isEqualTo(LiveKey.OpenChannelList)
         for (ok in OK_KEYS) assertThat(liveKey(ok, offered)).isEqualTo(LiveKey.Retry)
     }
 
     @Test
-    fun `on Send report, OK presses it, Up goes back to Try again, and Down zaps on`() {
+    fun `on Report, OK presses it, Left goes back to Try again, and Right still opens the qualities`() {
         val onReport = retryableError.copy(report = ReportPlace.HIGHLIGHTED)
 
         for (ok in OK_KEYS) assertThat(liveKey(ok, onReport)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.DirectionUp, onReport)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.DirectionDown, onReport)).isEqualTo(LiveKey.Zap(1))
-        assertThat(liveKey(Key.ChannelUp, onReport)).isEqualTo(LiveKey.Zap(-1))
+        assertThat(liveKey(Key.DirectionLeft, onReport)).isEqualTo(LiveKey.ToFocused)
+        assertThat(liveKey(Key.DirectionRight, onReport)).isEqualTo(LiveKey.OpenQualities)
     }
 
     @Test

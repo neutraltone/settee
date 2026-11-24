@@ -55,7 +55,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * transport, so a test can see each envelope exactly as it would leave the device. [freezes] and
  * [background] are the same kind of seam: what counts as a freeze, and where sending a held crash runs.
  */
-// The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place.
+// The spec's one deep module: consent, held crashes, handled errors and Sentry's setup in one place,
+// so its functions are each a door into one of them.
+@Suppress("TooManyFunctions")
 class CrashReports(
     private val settings: AppSettings,
     private val to: Destination,
@@ -277,7 +279,20 @@ class CrashReports(
      * Whether [report]'s failure, on the screen open now, was already sent in this process, by the
      * viewer or by Settee: Settee doesn't send it again, and the error says it went.
      */
-    fun hasSent(report: ErrorReport): Boolean = sameFailure(report) in sentErrors
+    fun hasSent(report: ErrorReport): Boolean = failureKey(screen, report) in sentErrors
+
+    private fun reportError(report: ErrorReport) {
+        val key = failureKey(screen, report)
+        when {
+            !available -> Unit
+            // The viewer was heard even over the day's cap: the error still says it went.
+            report.sentBy == ErrorReport.SentBy.VIEWER -> {
+                sentErrors += key
+                if (to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
+            }
+            reporting && sentErrors.add(key) && to.cap.take(settings) -> Sentry.captureEvent(HandledEvents.of(report))
+        }
+    }
 
     // The failures sent in this process, so Settee sends each once however often it's drawn: an error
     // is composed again on every recomposition, every time its screen comes back, and a Source's saved
@@ -287,22 +302,6 @@ class CrashReports(
     // still shows the failure is one more viewer seeing it, which is worth one more event, and the
     // daily cap bounds the rest. Nothing about the failure is written to the device for it.
     private val sentErrors = Collections.synchronizedSet(HashSet<String>())
-
-    private fun sameFailure(report: ErrorReport) = listOf(screen, report.source?.tag, report.detail).joinToString("\u001F")
-
-    private fun reportError(report: ErrorReport) {
-        if (!available) return
-        when (report.sentBy) {
-            // The viewer was heard even over the day's cap: the error still says it went.
-            ErrorReport.SentBy.VIEWER -> {
-                sentErrors += sameFailure(report)
-                if (to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
-            }
-            ErrorReport.SentBy.SETTEE -> if (reporting && sentErrors.add(sameFailure(report)) && to.cap.take(settings)) {
-                Sentry.captureEvent(HandledEvents.of(report))
-            }
-        }
-    }
 
     @Synchronized
     private fun startSentry() {
@@ -477,3 +476,10 @@ private fun SentryAndroidOptions.errorsAndFreezesOnly() {
         CrashScrubbing.breadcrumb(breadcrumb)
     }
 }
+
+/**
+ * What makes two Error Reports the same failure, for [CrashReports.hasSent]: the [screen] it's on,
+ * the kind of Source and the detail line.
+ */
+private fun failureKey(screen: String?, report: ErrorReport) =
+    listOf(screen, report.source?.tag, report.detail).joinToString("\u001F")

@@ -64,6 +64,7 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
@@ -74,7 +75,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import app.opentv.ui.sendReportFor
+import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -377,26 +378,30 @@ private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
         Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
-    val tryAgain = @Composable {
-        PillButton(
-            label = stringResource(R.string.common_try_again),
-            icon = Icons.Filled.Refresh,
-            onClick = {
-                // Up to the hero first: this button goes while it asks, and the Highlight would go with
-                // it. From there it moves on to Play when the episodes come, as on a first opening.
-                nav.backToHero()
-                fetch.onTryAgain()
-            },
-        )
+    val report = rememberErrorReport(failure, fetch.source)
+    val tryAgainFocus = remember { FocusRequester() }
+    val buttons = @Composable {
+        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
+            PillButton(
+                label = stringResource(R.string.common_try_again),
+                icon = Icons.Filled.Refresh,
+                onClick = {
+                    // Up to the hero first: this button goes while it asks, and the Highlight would go with
+                    // it. From there it moves on to Play when the episodes come, as on a first opening.
+                    nav.backToHero()
+                    fetch.onTryAgain()
+                },
+                modifier = Modifier.focusRequester(tryAgainFocus),
+            )
+            ReportButton(report, returnTo = tryAgainFocus)
+        }
     }
-    // Try again inside the error, so Send report comes after it, Down from it.
     ErrorMessage(
         failure.sentence,
-        failure.detail,
+        report?.detail ?: failure.detail,
         textAlign = TextAlign.Start,
         modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
-        sendReport = sendReportFor(failure, fetch.source),
-        actions = tryAgain,
+        actions = buttons,
     )
 }
 
@@ -802,3 +807,4 @@ private const val LIKE_THIS_KEY = "more-like-this"
 
 private const val FIRST_HIGHLIGHT_DELAY_MILLIS = 60L
 private const val SYNOPSIS_WIDTH = 0.6f
+private val BUTTON_GAP = 12.dp

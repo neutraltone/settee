@@ -35,6 +35,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -46,7 +48,8 @@ import app.opentv.core.ReportedSource
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
-import app.opentv.ui.SendReportAfter
+import app.opentv.ui.ErrorReporting
+import app.opentv.ui.ReportButton
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
@@ -58,6 +61,8 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
+import app.opentv.ui.detailOf
+import app.opentv.ui.rememberErrorReport
 import app.opentv.update.startsFocused
 
 /**
@@ -217,14 +222,14 @@ private fun ProviderForm(
         )
         KindFields(details, Modifier.startsFocused())
 
+        // The latest failure is the one Report sends, and the one whose detail line says it went.
+        val report = rememberErrorReport(ui.addFailure ?: ui.testError, ReportedSource.of(formKind))
         ui.testResult?.let { Text(it, SetteeType.Body) }
-        ui.testError?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
-        ui.addFailure?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
+        ui.testError?.let { ErrorMessage(it.sentence, report.detailOf(it), textAlign = TextAlign.Start) }
+        ui.addFailure?.let { ErrorMessage(it.sentence, report.detailOf(it), textAlign = TextAlign.Start) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
-        FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup)
-        // After the buttons rather than in the error, so it's Down from them and they stay where they are.
-        SendReportAfter(ui.addFailure ?: ui.testError, ReportedSource.of(formKind))
+        FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup, report)
 
         AdvancedFields(details)
 
@@ -233,7 +238,10 @@ private fun ProviderForm(
     }
 }
 
-/** Test connection and Save and load, which work on [details] once it has what its kind needs. */
+/**
+ * Test connection and Save and load, which work on [details] once it has what its kind needs, and
+ * Report after them when the last failure could be Settee's ([report]).
+ */
 @Composable
 private fun FormButtons(
     viewModel: SourcesViewModel,
@@ -241,7 +249,9 @@ private fun FormButtons(
     defaultName: String,
     adds: Boolean,
     onSetup: () -> Unit,
+    report: ErrorReporting?,
 ) {
+    val test = remember { FocusRequester() }
     val ui by viewModel.ui.collectAsState()
     // Working ignores presses rather than disabling the buttons: one that isn't enabled can't
     // hold the Highlight, so the button just pressed would drop it and leave nothing highlighted.
@@ -253,6 +263,7 @@ private fun FormButtons(
             ),
             onClick = { if (!working) viewModel.test(details.draft(defaultName, storedId = null)) },
             enabled = details.canSubmit,
+            modifier = Modifier.focusRequester(test),
         )
         PillButton(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
@@ -267,6 +278,7 @@ private fun FormButtons(
             },
             enabled = details.canSubmit,
         )
+        ReportButton(report, returnTo = test)
     }
 }
 

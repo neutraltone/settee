@@ -359,7 +359,12 @@
     <string name="diagnostics_storage_failed">Settee не удалось измерить своё хранилище.</string>
     <string name="diagnostics_memory_failed">Settee не удалось измерить свою память.</string>
     <string name="diagnostics_log_failed">Settee не удалось прочитать свои записи, поэтому этого списка нет.</string>
-    <string name="report_note">Отправляет в Settee код этой ошибки и экран, на котором она появилась. Никогда — вашего провайдера, его логин или то, что вы смотрите.</string>
-    <string name="report_send">Отправить отчёт</string>
-    <string name="report_sent">Отправлено</string>
+    <string name="report_button">Сообщить</string>
+    <string name="report_sent_to_settee">Отправлено в Settee</string>
+    <string name="report_question_title">Отправить отчёт?</string>
+    <string name="report_question_body">Отправляет в Settee код этой ошибки, экран, на котором она появилась, версию и устройство. Не отправляет вашего провайдера, его логин, ваши профили и то, что вы смотрите.</string>
+    <string name="report_question_always_note">«Всегда отправлять» также включает отчёты о сбоях и ошибках. Их можно выключить в Настройках, в разделе «Конфиденциальность».</string>
+    <string name="report_question_send">Отправить</string>
+    <string name="report_question_dont_send">Не отправлять</string>
+    <string name="report_question_always_send">Всегда отправлять</string>
 </resources>

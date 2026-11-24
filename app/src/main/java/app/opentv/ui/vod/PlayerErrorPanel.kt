@@ -28,26 +28,29 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ReportedSource
 import app.opentv.player.PlayerController
+import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
-import app.opentv.ui.design.ReportOffer
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.isBack
+import app.opentv.ui.rememberErrorReport
 
 /**
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
  * to reach these buttons, and with the bar hidden behind them the viewer would be left with nothing lit.
- * [sendReport], where the failure could be Settee's, goes under them, Down from the one lit.
+ * Where the failure could be Settee's, Report ends the row (ADR 0010), from a Source of [reportedSource]'s kind.
  */
 @Composable
 internal fun PlayerErrorPanel(
     error: PlayerController.State.Error,
     onRetry: () -> Unit,
     onBack: () -> Unit,
-    sendReport: ReportOffer? = null,
+    reportedSource: ReportedSource? = null,
 ) {
+    val report = rememberErrorReport(error.reason, reportedSource)
     val first = remember { FocusRequester() }
     LaunchedEffect(error) { runCatching { first.requestFocus() } }
     Box(
@@ -66,7 +69,7 @@ internal fun PlayerErrorPanel(
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(48.dp)) {
             Text(error.title, SetteeType.ScreenTitle)
             Spacer(Modifier.height(12.dp))
-            ErrorMessage(error.reason.sentence, error.reason.detail, sendReport = sendReport) {
+            ErrorMessage(error.reason.sentence, report?.detail ?: error.reason.detail) {
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (error.canRetry) {
@@ -75,6 +78,7 @@ internal fun PlayerErrorPanel(
                     } else {
                         PanelButton(R.string.common_back, onBack, Modifier.focusRequester(first))
                     }
+                    ReportButton(report, returnTo = first)
                 }
             }
         }
