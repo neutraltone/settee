@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee がストレージを測定できませんでした。</string>
     <string name="diagnostics_memory_failed">Settee がメモリを測定できませんでした。</string>
     <string name="diagnostics_log_failed">Settee が記録した内容を読み込めなかったため、この一覧はありません。</string>
+    <string name="report_note">このエラーのコードと表示されている画面をSetteeに送信します。プロバイダー、そのログイン情報、視聴内容は送信しません。</string>
+    <string name="report_send">レポートを送信</string>
+    <string name="report_sent">送信しました</string>
 </resources>

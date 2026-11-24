@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee نتوانست فضای ذخیره‌سازی‌اش را اندازه بگیرد.</string>
     <string name="diagnostics_memory_failed">Settee نتوانست حافظه‌اش را اندازه بگیرد.</string>
     <string name="diagnostics_log_failed">Settee نتوانست یادداشت‌هایش را بخواند، پس این فهرست در دسترس نیست.</string>
+    <string name="report_note">کد این خطا و صفحه‌ای که در آن است را به Settee می‌فرستد. هرگز ارائه‌دهنده شما، اطلاعات ورود آن یا آنچه تماشا می‌کنید را نمی‌فرستد.</string>
+    <string name="report_send">ارسال گزارش</string>
+    <string name="report_sent">ارسال شد</string>
 </resources>

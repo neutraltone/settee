@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee nije mogao izmjeriti svoju pohranu.</string>
     <string name="diagnostics_memory_failed">Settee nije mogao izmjeriti svoju memoriju.</string>
     <string name="diagnostics_log_failed">Settee nije mogao pročitati što je zabilježio, pa ovaj popis nedostaje.</string>
+    <string name="report_note">Šalje Setteeju kôd ove pogreške i zaslon na kojem je. Nikad vašeg pružatelja usluge, njegovu prijavu ni ono što gledate.</string>
+    <string name="report_send">Pošalji izvješće</string>
+    <string name="report_sent">Poslano</string>
 </resources>

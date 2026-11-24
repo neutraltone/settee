@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee 无法测量自己的存储空间。</string>
     <string name="diagnostics_memory_failed">Settee 无法测量自己的内存。</string>
     <string name="diagnostics_log_failed">Settee 无法读取自己记下的内容，因此缺少此列表。</string>
+    <string name="report_note">将此错误的代码及其所在的屏幕发送给 Settee。绝不发送你的提供商、其登录信息或你观看的内容。</string>
+    <string name="report_send">发送报告</string>
+    <string name="report_sent">已发送</string>
 </resources>

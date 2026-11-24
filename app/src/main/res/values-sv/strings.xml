@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee kunde inte mäta sitt lagringsutrymme.</string>
     <string name="diagnostics_memory_failed">Settee kunde inte mäta sitt minne.</string>
     <string name="diagnostics_log_failed">Settee kunde inte läsa det den hade antecknat, så den här listan saknas.</string>
+    <string name="report_note">Skickar felets kod och skärmen det visas på till Settee. Aldrig din leverantör, dess inloggning eller vad du tittar på.</string>
+    <string name="report_send">Skicka rapport</string>
+    <string name="report_sent">Skickad</string>
 </resources>

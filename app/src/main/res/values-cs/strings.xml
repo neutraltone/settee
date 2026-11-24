@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee nemohl změřit své úložiště.</string>
     <string name="diagnostics_memory_failed">Settee nemohl změřit svou paměť.</string>
     <string name="diagnostics_log_failed">Settee nemohl přečíst, co si zapsal, proto tento seznam chybí.</string>
+    <string name="report_note">Odešle Settee kód této chyby a obrazovku, na které je. Nikdy vašeho poskytovatele, jeho přihlašovací údaje ani to, co sledujete.</string>
+    <string name="report_send">Odeslat hlášení</string>
+    <string name="report_sent">Odesláno</string>
 </resources>

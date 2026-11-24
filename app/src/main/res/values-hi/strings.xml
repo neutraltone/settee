@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee अपनी स्टोरेज नहीं माप सका।</string>
     <string name="diagnostics_memory_failed">Settee अपनी मेमोरी नहीं माप सका।</string>
     <string name="diagnostics_log_failed">Settee अपने नोट किए गए विवरण नहीं पढ़ सका, इसलिए यह सूची उपलब्ध नहीं है।</string>
+    <string name="report_note">इस त्रुटि का कोड और वह स्क्रीन जिस पर यह है, Settee को भेजता है। आपका प्रदाता, उसका लॉगिन या आप क्या देखते हैं, कभी नहीं।</string>
+    <string name="report_send">रिपोर्ट भेजें</string>
+    <string name="report_sent">भेज दी गई</string>
 </resources>

@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee kon zijn opslag niet meten.</string>
     <string name="diagnostics_memory_failed">Settee kon zijn geheugen niet meten.</string>
     <string name="diagnostics_log_failed">Settee kon niet lezen wat het had genoteerd, dus deze lijst ontbreekt.</string>
+    <string name="report_note">Stuurt de code van deze fout en het scherm waarop hij staat naar Settee. Nooit je provider, de inloggegevens of wat je kijkt.</string>
+    <string name="report_send">Rapport sturen</string>
+    <string name="report_sent">Verstuurd</string>
 </resources>

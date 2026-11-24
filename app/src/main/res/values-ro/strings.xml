@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee nu și-a putut măsura spațiul de stocare.</string>
     <string name="diagnostics_memory_failed">Settee nu și-a putut măsura memoria.</string>
     <string name="diagnostics_log_failed">Settee nu a putut citi ce notase, așa că această listă lipsește.</string>
+    <string name="report_note">Trimite către Settee codul acestei erori și ecranul pe care apare. Niciodată furnizorul tău, autentificarea lui sau ce urmărești.</string>
+    <string name="report_send">Trimite raportul</string>
+    <string name="report_sent">Trimis</string>
 </resources>

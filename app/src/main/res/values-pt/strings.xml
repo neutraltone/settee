@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">O Settee não conseguiu medir o seu armazenamento.</string>
     <string name="diagnostics_memory_failed">O Settee não conseguiu medir a sua memória.</string>
     <string name="diagnostics_log_failed">O Settee não conseguiu ler o que tinha anotado, por isso esta lista está em falta.</string>
+    <string name="report_note">Envia ao Settee o código deste erro e o ecrã em que aparece. Nunca o seu fornecedor, o início de sessão dele ou o que vê.</string>
+    <string name="report_send">Enviar relatório</string>
+    <string name="report_sent">Enviado</string>
 </resources>

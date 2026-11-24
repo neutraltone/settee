@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">A Settee nem tudta megmérni a tárhelyét.</string>
     <string name="diagnostics_memory_failed">A Settee nem tudta megmérni a memóriáját.</string>
     <string name="diagnostics_log_failed">A Settee nem tudta beolvasni a feljegyzéseit, ezért ez a lista hiányzik.</string>
+    <string name="report_note">Elküldi a Settee-nek a hiba kódját és a képernyőt, amelyen megjelent. Soha nem küldi el a szolgáltatót, a bejelentkezését vagy azt, amit néz.</string>
+    <string name="report_send">Jelentés küldése</string>
+    <string name="report_sent">Elküldve</string>
 </resources>

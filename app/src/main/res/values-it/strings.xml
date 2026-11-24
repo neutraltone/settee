@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee non è riuscito a misurare il suo spazio di archiviazione.</string>
     <string name="diagnostics_memory_failed">Settee non è riuscito a misurare la sua memoria.</string>
     <string name="diagnostics_log_failed">Settee non è riuscito a leggere ciò che aveva annotato, quindi questo elenco manca.</string>
+    <string name="report_note">Invia a Settee il codice di questo errore e la schermata in cui compare. Mai il tuo provider, il suo accesso o cosa guardi.</string>
+    <string name="report_send">Invia segnalazione</string>
+    <string name="report_sent">Inviata</string>
 </resources>

@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee konnte seinen Speicherplatz nicht messen.</string>
     <string name="diagnostics_memory_failed">Settee konnte seinen Arbeitsspeicher nicht messen.</string>
     <string name="diagnostics_log_failed">Settee konnte seine Notizen nicht lesen, deshalb fehlt diese Liste.</string>
+    <string name="report_note">Sendet den Code dieses Fehlers und den Bildschirm, auf dem er steht, an Settee. Nie deinen Anbieter, seine Anmeldedaten oder was du schaust.</string>
+    <string name="report_send">Bericht senden</string>
+    <string name="report_sent">Gesendet</string>
 </resources>

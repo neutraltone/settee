@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee kunne ikke måle sin lagerplads.</string>
     <string name="diagnostics_memory_failed">Settee kunne ikke måle sin hukommelse.</string>
     <string name="diagnostics_log_failed">Settee kunne ikke læse det, den havde noteret, så denne liste mangler.</string>
+    <string name="report_note">Sender fejlens kode og den skærm, den er på, til Settee. Aldrig din udbyder, dens login eller hvad du ser.</string>
+    <string name="report_send">Send rapport</string>
+    <string name="report_sent">Sendt</string>
 </resources>

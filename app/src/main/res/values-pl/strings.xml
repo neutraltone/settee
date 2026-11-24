@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee nie mógł zmierzyć swojej pamięci masowej.</string>
     <string name="diagnostics_memory_failed">Settee nie mógł zmierzyć swojej pamięci.</string>
     <string name="diagnostics_log_failed">Settee nie mógł odczytać swoich notatek, więc brakuje tej listy.</string>
+    <string name="report_note">Wysyła do Settee kod tego błędu i ekran, na którym się pojawił. Nigdy Twojego dostawcy, jego danych logowania ani tego, co oglądasz.</string>
+    <string name="report_send">Wyślij zgłoszenie</string>
+    <string name="report_sent">Wysłano</string>
 </resources>

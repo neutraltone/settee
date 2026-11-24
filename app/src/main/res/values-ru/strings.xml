@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee не удалось измерить своё хранилище.</string>
     <string name="diagnostics_memory_failed">Settee не удалось измерить свою память.</string>
     <string name="diagnostics_log_failed">Settee не удалось прочитать свои записи, поэтому этого списка нет.</string>
+    <string name="report_note">Отправляет в Settee код этой ошибки и экран, на котором она появилась. Никогда — вашего провайдера, его логин или то, что вы смотрите.</string>
+    <string name="report_send">Отправить отчёт</string>
+    <string name="report_sent">Отправлено</string>
 </resources>

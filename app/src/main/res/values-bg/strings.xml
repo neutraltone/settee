@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee не можа да измери хранилището си.</string>
     <string name="diagnostics_memory_failed">Settee не можа да измери паметта си.</string>
     <string name="diagnostics_log_failed">Settee не можа да прочете записаното, затова този списък липсва.</string>
+    <string name="report_note">Изпраща кода на тази грешка и екрана, на който е, до Settee. Никога доставчика ви, данните му за вход или какво гледате.</string>
+    <string name="report_send">Изпрати доклад</string>
+    <string name="report_sent">Изпратено</string>
 </resources>

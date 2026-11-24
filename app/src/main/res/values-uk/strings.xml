@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee не вдалося виміряти своє сховище.</string>
     <string name="diagnostics_memory_failed">Settee не вдалося виміряти свою пам\'ять.</string>
     <string name="diagnostics_log_failed">Settee не вдалося прочитати свої записи, тому цього списку немає.</string>
+    <string name="report_note">Надсилає в Settee код цієї помилки та екран, на якому вона з\'явилася. Ніколи — вашого провайдера, його логін чи те, що ви дивитеся.</string>
+    <string name="report_send">Надіслати звіт</string>
+    <string name="report_sent">Надіслано</string>
 </resources>

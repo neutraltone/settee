@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee n\'a pas pu mesurer son stockage.</string>
     <string name="diagnostics_memory_failed">Settee n\'a pas pu mesurer sa mémoire.</string>
     <string name="diagnostics_log_failed">Settee n\'a pas pu lire ce qu\'il avait noté, cette liste est donc absente.</string>
+    <string name="report_note">Envoie à Settee le code de cette erreur et l\'écran où elle apparaît. Jamais votre fournisseur, son identifiant ni ce que vous regardez.</string>
+    <string name="report_send">Envoyer un rapport</string>
+    <string name="report_sent">Envoyé</string>
 </resources>

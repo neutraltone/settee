@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee depolama alanını ölçemedi.</string>
     <string name="diagnostics_memory_failed">Settee belleğini ölçemedi.</string>
     <string name="diagnostics_log_failed">Settee not ettiklerini okuyamadı, bu yüzden bu liste eksik.</string>
+    <string name="report_note">Bu hatanın kodunu ve göründüğü ekranı Settee\'ye gönderir. Sağlayıcınızı, onun giriş bilgilerini veya ne izlediğinizi asla göndermez.</string>
+    <string name="report_send">Rapor gönder</string>
+    <string name="report_sent">Gönderildi</string>
 </resources>

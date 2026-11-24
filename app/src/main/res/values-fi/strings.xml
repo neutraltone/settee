@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee ei voinut mitata tallennustilaansa.</string>
     <string name="diagnostics_memory_failed">Settee ei voinut mitata muistiaan.</string>
     <string name="diagnostics_log_failed">Settee ei voinut lukea muistiinpanojaan, joten tämä luettelo puuttuu.</string>
+    <string name="report_note">Lähettää Setteelle tämän virheen koodin ja näkymän, jossa se on. Ei koskaan palveluntarjoajaasi, sen kirjautumistietoja tai sitä, mitä katsot.</string>
+    <string name="report_send">Lähetä raportti</string>
+    <string name="report_sent">Lähetetty</string>
 </resources>

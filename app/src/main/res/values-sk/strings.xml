@@ -359,4 +359,7 @@
     <string name="diagnostics_storage_failed">Settee nemohol zmerať svoje úložisko.</string>
     <string name="diagnostics_memory_failed">Settee nemohol zmerať svoju pamäť.</string>
     <string name="diagnostics_log_failed">Settee nemohol prečítať, čo si zapísal, preto tento zoznam chýba.</string>
+    <string name="report_note">Odošle Settee kód tejto chyby a obrazovku, na ktorej je. Nikdy nie vášho poskytovateľa, jeho prihlasovacie údaje ani to, čo sledujete.</string>
+    <string name="report_send">Odoslať hlásenie</string>
+    <string name="report_sent">Odoslané</string>
 </resources>
