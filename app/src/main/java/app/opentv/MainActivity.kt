@@ -467,7 +467,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     },
                 ) {
                     ScreensNavHost(navController, startDestination = start) {
-                        providerRoutes(navController, sourcesViewModel)
+                        providerRoutes(navController, sourcesViewModel, onAdded = settingsMemory::providerAdded)
 
                         mainShellRoute()
 
