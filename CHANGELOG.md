@@ -2,6 +2,18 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.6.0](https://github.com/neutraltone/settee/compare/v1.5.0...v1.6.0) (2026-11-24)
+
+
+### Features
+
+* **#629:** Settee's own service failures, slow journeys and errors you choose to send reach Sentry ([#637](https://github.com/neutraltone/settee/issues/637)) ([8577732](https://github.com/neutraltone/settee/commit/8577732a9a40b218d29a85d570e3bedac0d0fa2f))
+
+
+### Bug fixes
+
+* **#625:** OpenSubtitles says when it turns Settee down, and releases check their built-in keys ([#630](https://github.com/neutraltone/settee/issues/630)) ([e1ddb5a](https://github.com/neutraltone/settee/commit/e1ddb5a4274cb5eb2add048e4551f32158ec5b00))
+
 ## [1.5.0](https://github.com/neutraltone/settee/compare/v1.4.0...v1.5.0) (2026-11-24)
 
 
