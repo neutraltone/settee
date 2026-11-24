@@ -6,7 +6,17 @@
 package app.opentv
 
 import android.app.Application
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,9 +33,12 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.MainShell
 import app.opentv.ui.ProviderFailure
+import app.opentv.ui.Tab
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.design.ERROR_DETAIL_TAG
+import app.opentv.ui.visibleTabs
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -45,12 +58,14 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
 class LiveScreenRecordTest {
 
     private val compose = createComposeRule()
 
     @get:Rule
-    val testGraph = TestGraph(compose)
+    // A build that offers Send report on an error that could be Settee's, as a release does.
+    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -117,6 +132,55 @@ class LiveScreenRecordTest {
         captureScreen("live_guide_load_failed")
     }
 
+    @Test
+    fun `a guide that failed in a way that could be Settee's keeps the Highlight on Try again, with Send report Down`() {
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = Tab.LIVE,
+                onSelect = {},
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            ) { _, _, _ ->
+                LiveScreen(
+                    isTelevision = true,
+                    hasSources = true,
+                    isSyncing = false,
+                    loadFailure = ProviderFailure(
+                        1,
+                        "Acme TV",
+                        ViewerError("Couldn't load channels.", "HTTP 500"),
+                        SourceKind.M3U,
+                    ),
+                    onPlayChannel = {},
+                    onAddSource = {},
+                    onRefresh = {},
+                )
+            }
+        }
+        val sendReport = compose.onNode(hasText(testGraph.app.getString(R.string.report_send)) and hasClickAction())
+        sendReport.assertExists()
+        captureScreen("live_guide_load_failed_send_report")
+
+        // Into the guide from the rail, as the remote comes.
+        compose.onNode(hasContentDescription("Live TV") or hasText("Live TV")).requestFocus()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(RAIL_HANDOVER_MILLIS)
+        compose.waitForIdle()
+        compose.onNode(hasText("Try again") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionDown)
+        sendReport.assertIsFocused()
+    }
+
+    private fun press(key: Key) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
     /** One Channel with a 4K and an HD Quality; answers the HD row's id. */
     private suspend fun seedChannel(): Long {
         val db = graph.database
@@ -155,5 +219,8 @@ class LiveScreenRecordTest {
 
     private companion object {
         const val HOUR = 60 * 60 * 1000L
+
+        /** How long the rail takes to hand the Highlight to the tab it opened. */
+        const val RAIL_HANDOVER_MILLIS = 500L
     }
 }

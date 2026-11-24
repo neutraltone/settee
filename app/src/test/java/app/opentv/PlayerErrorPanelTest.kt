@@ -11,6 +11,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -52,8 +53,9 @@ class PlayerErrorPanelTest {
 
     private val compose = createComposeRule()
 
+    // Offers Send report under the panel's buttons, as a release build does.
     @get:Rule
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
 
     private val app = testGraph.app
     private val players = TestPlayers(app)
@@ -157,6 +159,19 @@ class PlayerErrorPanelTest {
         compose.onNodeWithText("Try again").assertIsFocused()
         compose.onNodeWithText("Back").assertExists()
         captureScreen("vod_player_retry")
+    }
+
+    @Test
+    fun `Send report is Down from Try again, which keeps the Highlight it lands on`() {
+        show(players.controller { key -> Playable.Failed(key, Playable.Failure.GONE, "Film") })
+        waitFor(hasText("Try again"))
+        compose.onNodeWithText("Try again").assertIsFocused()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+
+        compose.onNode(hasText(app.getString(R.string.report_send)) and hasClickAction()).assertIsFocused()
+        captureScreen("vod_player_retry_send_report")
     }
 
     @Test

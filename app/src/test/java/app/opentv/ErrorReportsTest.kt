@@ -160,6 +160,8 @@ class ErrorReportsTest {
         )
     }
 
+    // Movies' Send report is drawn here rather than in VodLoadFailedTest, which runs as a build without
+    // a DSN does, to check it's never offered there.
     @Test
     fun `Send report on Movies that failed sends one report with crash reports off, leaves them off, then says Sent`() {
         panel.replies["get_vod_streams"] = "!503"
@@ -233,7 +235,6 @@ class ErrorReportsTest {
         compose.waitForIdle()
 
         compose.onNode(hasText(app.getString(R.string.common_try_again))).assertIsFocused()
-        captureScreen("vod_player_retry_send_report")
         press(Key.DirectionDown)
         compose.onNode(hasText(sendReport) and hasClickAction()).assertIsFocused()
         press(Key.DirectionCenter)

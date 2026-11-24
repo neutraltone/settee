@@ -12,7 +12,9 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -57,8 +59,9 @@ class AddSourceScreenTest {
     @get:Rule(order = 0)
     val panelGraph = TestGraph(name = "add-source-again-test", http = panel.http, swapIn = false)
 
+    // The app's graph, which screens read Send report's offer from: offered, as a release build does.
     @get:Rule(order = 1)
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(compose, crashReportsTo = sendReportOffered())
 
     @get:Rule
     val secrets = FixedServerSecrets()
@@ -192,6 +195,23 @@ class AddSourceScreenTest {
         compose.onNodeWithText(STALKER).performClick()
 
         compose.onNodeWithText(result).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a test that failed in a way that could be Settee's keeps Test connection lit, with Send report Down`() {
+        panel.replies[""] = "!503"
+        show(on = panelGraph)
+        compose.onNodeWithText(M3U).performClick()
+        device.type("http://example.com/list.m3u", device.box(SERVER))
+        compose.onNodeWithText("Test connection").requestFocus()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.waitForIdle()
+        assertThat(viewModel.ui.value.testError?.detail).contains("HTTP 503")
+
+        compose.onNodeWithText("Test connection").assertIsFocused()
+        captureScreen("add_source_test_failed_send_report")
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNode(isFocused()).assertTextContains(app.getString(R.string.report_send))
     }
 
     @Test
