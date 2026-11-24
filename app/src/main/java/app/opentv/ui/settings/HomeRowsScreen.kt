@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -96,17 +98,29 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
     LaunchedEffect(arrangement) { state.latest = arrangement }
     var options by remember { mutableStateOf<HomeRowKind?>(null) }
     val requesters = remember { HomeRowKind.entries.associateWith { FocusRequester() } }
+    val inView = remember { HomeRowKind.entries.associateWith { BringIntoViewRequester() } }
+    // The row last in hand, so a drop or Back can bring it into view where it lands.
+    val carried = remember { mutableStateOf<HomeRowKind?>(null) }
     val livePreviewRow = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         withFrameNanos {}
         runCatching { livePreviewRow.requestFocus() }
     }
-    // The lifted row keeps the Highlight wherever it goes.
+    // The lifted row keeps the Highlight wherever it goes, and stays in sight. It already has the
+    // Highlight, so asking for it again doesn't scroll the page: that only happens when focus moves,
+    // and Up and Down never move it here (#440). So the page is scrolled to the row explicitly, after
+    // a frame, once the row has been laid out in its new place; and again where a drop or Back
+    // leaves it.
     val lifted = state.lifted
     val shown = state.shown
     LaunchedEffect(lifted, shown) {
+        val row = lifted ?: carried.value
+        carried.value = lifted
+        if (row == null) return@LaunchedEffect
         if (lifted != null) runCatching { requesters.getValue(lifted).requestFocus() }
+        withFrameNanos {}
+        inView.getValue(row).bringIntoView()
     }
 
     BackHandler(onBack = onBack)
@@ -146,7 +160,9 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
                     row = row,
                     value = if (state.latest.isShown(row)) shownLabel else hiddenLabel,
                     lifted = row == lifted,
-                    modifier = column.focusRequester(requesters.getValue(row)),
+                    modifier = column
+                        .focusRequester(requesters.getValue(row))
+                        .bringIntoViewRequester(inView.getValue(row)),
                     onSelect = { state.select(row) },
                     onOptions = { if (state.lifted == null) options = row },
                     drag = RowDrag(

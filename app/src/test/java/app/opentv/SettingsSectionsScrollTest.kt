@@ -16,11 +16,14 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.espresso.Espresso
+import app.opentv.core.AppSettings
 import app.opentv.core.CrashReports
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
+import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
@@ -32,7 +35,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Settings' sections scroll when there are more than a 1080p TV has room for (#386). */
+/**
+ * Settings' sections scroll when there are more than a 1080p TV has room for (#386), and each
+ * section's pane opens at its top (#441).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -46,7 +52,7 @@ class SettingsSectionsScrollTest {
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
-    private fun press(key: Int) = device.remote(key)
+    private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
     private fun highlighted() = compose.onNode(isFocused())
 
@@ -94,6 +100,44 @@ class SettingsSectionsScrollTest {
             highlighted().assertTextContains(section)
             compose.assertSectionWhollyOnScreen(section)
         }
+    }
+
+    @Test
+    fun `each section opens at its top, its title showing, after the one beside it was scrolled down`() {
+        // Saving to a network drive gives Recording enough rows to scroll on a 1080p TV.
+        testGraph.graph.settings.setRecordingTarget(AppSettings.RecordingTarget.SMB)
+        compose.setTvContent {
+            view = LocalView.current
+            SettingsScreen(memory = SettingsMemory(SettingsSection.Recording), onBack = {}, openSubtitles = null)
+        }
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        repeat(RECORDING_ROWS) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        assertThat(paneTitleShowing()).isLessThan(paneTitleHeight())
+
+        press(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP)
+
+        highlighted().assertTextContains("Display and playback")
+        assertThat(paneTitleShowing()).isEqualTo(paneTitleHeight())
+        captureScreen("settings_section_top")
+
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertThat(paneTitleShowing()).isEqualTo(paneTitleHeight())
+    }
+
+    private fun paneTitle() = compose.onNodeWithTag(SettingsTags.PANE_TITLE).fetchSemanticsNode()
+
+    private fun paneTitleHeight() = paneTitle().size.height
+
+    /** How much of the pane's title is inside the screen, in pixels. */
+    private fun paneTitleShowing(): Int {
+        val title = paneTitle().boundsInWindow
+        val window = compose.onRoot().fetchSemanticsNode().boundsInWindow
+        return (minOf(title.bottom, window.bottom) - maxOf(title.top, window.top)).coerceAtLeast(0f).roundToInt()
+    }
+
+    private companion object {
+        /** More Downs than Recording has rows, so its last ends highlighted. */
+        const val RECORDING_ROWS = 20
     }
 }
 

@@ -35,8 +35,11 @@ data class PageVersions(
     /** Whether anything of the title plays here; when not, Play is turned off and [cantPlay] says why. */
     val plays: Boolean get() = cantPlay == null
 
-    /** Two or more entries: anything less leaves nothing to choose. */
-    val showsPill: Boolean get() = choices.size > 1
+    /**
+     * Two or more entries this TV can play (#439): anything less leaves nothing to choose, and a panel
+     * of only greyed-out rows would open with nothing to take the highlight.
+     */
+    val showsPill: Boolean get() = choices.count { it.playable } > 1
 
     /** The Version in another language Play would ask to play, in [language] when its name says. */
     data class OtherLanguage(val key: MediaKey, val language: String?)
