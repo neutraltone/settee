@@ -457,7 +457,9 @@ class CatalogRepository(
 
         // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
         val info = if (!movie.isEnriched && source?.kind == SourceKind.XTREAM) {
-            runCatching { api.movieInfo(source, movie.streamId) }.getOrNull()
+            // Not swallowing a cancel: a page left, or a highlight moved on, while the panel was slow
+            // would otherwise go on to a TMDB look-up whose answer nobody waits for.
+            runCatching { api.movieInfo(source, movie.streamId) }.getOrNullUnlessCancelled()
         } else {
             null
         }
@@ -1203,3 +1205,10 @@ class CatalogRepository(
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
 private const val MORE_LIKE_THIS_LIMIT = 20
+
+/**
+ * [Result.getOrNull], except a cancel is thrown on, so the caller stops rather than going on as if
+ * the call had just failed. Out here, not in the class, as detekt counts the class's size.
+ */
+private fun <T> Result<T>.getOrNullUnlessCancelled(): T? =
+    onFailure { if (it is CancellationException) throw it }.getOrNull()
