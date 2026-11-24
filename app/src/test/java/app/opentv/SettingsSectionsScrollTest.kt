@@ -18,13 +18,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.espresso.Espresso
+import app.opentv.core.CrashReports
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlin.math.roundToInt
-import app.opentv.core.CrashReports
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,7 +64,8 @@ class SettingsSectionsScrollTest {
         )
         compose.setTvContent {
             view = LocalView.current
-            SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = openSubtitles, crashReports = crashReports)
+            SettingsScreen(memory = SettingsMemory(), onBack = {
+            }, openSubtitles = openSubtitles, crashReports = crashReports)
         }
         val sections = compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes()
             .map { it.config[SemanticsProperties.Text].joinToString("") }

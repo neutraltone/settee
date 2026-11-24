@@ -108,7 +108,9 @@ class HandledErrorReportsTest {
     @Test
     fun `a movie list Settee can't read is reported`() {
         reports.setOn(true)
-        val panel = FakePanel("get_vod_streams" to """[{"stream_id": 1, "name": "A film"} {"stream_id": 2, "name": "B"}]""")
+        val panel = FakePanel(
+            "get_vod_streams" to """[{"stream_id": 1, "name": "A film"} {"stream_id": 2, "name": "B"}]""",
+        )
 
         assertThrows(XtreamApi.XtreamException::class.java) {
             runBlocking { xtream(panel).movies(PANEL_SOURCE).use { list -> list.forEachBatch { } } }

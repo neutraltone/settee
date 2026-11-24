@@ -250,12 +250,16 @@ class CrashReports(
              */
             fun of(kind: Handled, error: Throwable): HandledError {
                 fun copy(from: Throwable, depth: Int): HandledError {
-                    val message = if (kind.keepsMessages) "${from.javaClass.name}: ${from.message}" else from.javaClass.name
+                    val type = from.javaClass.name
+                    val message = if (kind.keepsMessages) "$type: ${from.message}" else type
                     val cause = from.cause?.takeIf { it !== from && depth < MAX_CAUSES }?.let { copy(it, depth + 1) }
                     return HandledError(message, cause).apply { stackTrace = from.stackTrace }
                 }
                 val copied = copy(error, 0)
-                return HandledError("${kind.name}: ${copied.message}", copied.cause).apply { stackTrace = error.stackTrace }
+                return HandledError("${kind.name}: ${copied.message}", copied.cause).apply {
+                    stackTrace =
+                        error.stackTrace
+                }
             }
         }
     }

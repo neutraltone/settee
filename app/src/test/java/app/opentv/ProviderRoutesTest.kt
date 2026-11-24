@@ -76,11 +76,17 @@ class ProviderRoutesTest {
     /** The same app as [graph], in a build with Settee's Sentry DSN; nothing it'd send leaves the test. */
     @get:Rule(order = 0)
     val crashReportsGraph =
-        TestGraph(name = "provider-routes-crash-reports", http = panel.http, swapIn = false, crashReportsTo = CRASH_REPORTS)
+        TestGraph(
+            name = "provider-routes-crash-reports",
+            http = panel.http,
+            swapIn = false,
+            crashReportsTo = CRASH_REPORTS,
+        )
 
     /** And with both OpenSubtitles' key and Sentry's DSN. */
     @get:Rule(order = 0)
-    val bothGraph = TestGraph(name = "provider-routes-both", http = panel.http, swapIn = false, crashReportsTo = CRASH_REPORTS)
+    val bothGraph =
+        TestGraph(name = "provider-routes-both", http = panel.http, swapIn = false, crashReportsTo = CRASH_REPORTS)
 
     @get:Rule(order = 1)
     val testGraph = TestGraph(compose, name = "provider-routes-test", http = panel.http)

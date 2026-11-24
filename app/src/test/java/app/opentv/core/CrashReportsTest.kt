@@ -49,18 +49,17 @@ class CrashReportsTest {
     // never agrees it's a freeze unless a test says so.
     private var freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { false })
 
-    private fun crashReports(dsn: String = DSN, release: String = "1.4.0") =
-        CrashReports(
-            settings,
-            CrashReports.Destination(dsn, outbox),
-            release,
-            environment = "test",
-            freezes,
-            background = Runnable::run,
-        ).also {
-            reports = it
-            it.start(app)
-        }
+    private fun crashReports(dsn: String = DSN, release: String = "1.4.0") = CrashReports(
+        settings,
+        CrashReports.Destination(dsn, outbox),
+        release,
+        environment = "test",
+        freezes,
+        background = Runnable::run,
+    ).also {
+        reports = it
+        it.start(app)
+    }
 
     /** Settee opening again after [reports]' process ended, as it does after a crash. */
     private fun nextLaunch(dsn: String = DSN, release: String = "1.4.0"): CrashReports {
@@ -90,7 +89,9 @@ class CrashReportsTest {
             .setMemoryInfo(ActivityManager.MemoryInfo().apply { availMem = bytes })
     }
 
-    private fun freezeWatching() = Thread.getAllStackTraces().keys.any { it.name == "Settee freeze watch" && it.isAlive }
+    private fun freezeWatching() = Thread.getAllStackTraces().keys.any {
+        it.name == "Settee freeze watch" && it.isAlive
+    }
 
     /** Android ending Settee for not responding at [atMillis], keeping the main thread's stack (Android 11+). */
     private fun androidEndedSetteeForFreeze(atMillis: Long) {
@@ -467,7 +468,7 @@ class CrashReportsTest {
 
     @Test
     @Config(sdk = [25])
-    fun `off, before Android 11, a freeze is watched for once Settee has launched, and Send sends it with the main thread's stack`() {
+    fun `off, before Android 11, a freeze is watched for once Settee has launched, and Send sends its stack`() {
         val notFreezing = freezes
         // Anything the main thread sits on for 50ms here, and Android agrees it's a freeze.
         freezes = CrashReports.Freezes(afterMillis = 50, notResponding = { true }, held = freezesHeld::countDown)
@@ -490,7 +491,7 @@ class CrashReportsTest {
     }
 
     @Test
-    fun `off, from Android 11 nothing watches the main thread, and a freeze Android ended Settee for is held from its history`() {
+    fun `off, from Android 11 nothing watches, and a freeze Android ended Settee for is held from its history`() {
         crashReports()
         mainThread.awaitIdle()
         assertThat(freezeWatching()).isFalse()

@@ -31,13 +31,13 @@ internal object PastFreezes {
      */
     @RequiresApi(Build.VERSION_CODES.R)
     fun newest(context: Context, afterMillis: Long): Freeze? {
-        val manager = context.getSystemService(ActivityManager::class.java) ?: return null
-        val exit = manager.getHistoricalProcessExitReasons(context.packageName, 0, 0)
-            .filter { it.reason == ApplicationExitInfo.REASON_ANR && it.timestamp > afterMillis }
-            .maxByOrNull { it.timestamp } ?: return null
-        val dump = runCatching { exit.traceInputStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
-        val stack = dump?.let(::mainStack)?.takeIf { it.isNotEmpty() } ?: return null
-        return Freeze(exit.timestamp, stack)
+        val exit = context.getSystemService(ActivityManager::class.java)
+            ?.getHistoricalProcessExitReasons(context.packageName, 0, 0)
+            ?.filter { it.reason == ApplicationExitInfo.REASON_ANR && it.timestamp > afterMillis }
+            ?.maxByOrNull { it.timestamp }
+        val dump = runCatching { exit?.traceInputStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
+        val stack = dump?.let(::mainStack)?.takeIf { it.isNotEmpty() }
+        return if (exit != null && stack != null) Freeze(exit.timestamp, stack) else null
     }
 
     /**
@@ -55,16 +55,22 @@ internal object PastFreezes {
     private val FRAME = Regex("""^\s+at (.+)\.([^.(]+)\(([^:)]*)(?::(\d+))?\)$""")
 
     private fun frame(line: String): StackTraceElement? {
-        val match = FRAME.matchEntire(line) ?: return null
-        val (type, method, file, number) = match.destructured
+        val parts = FRAME.matchEntire(line)?.groupValues ?: return null
+        val file = parts[FILE]
         val native = file == "Native method"
         return StackTraceElement(
-            type,
-            method,
+            parts[TYPE],
+            parts[METHOD],
             file.takeUnless { native || it == "Unknown Source" || it.isEmpty() },
-            number.toIntOrNull() ?: if (native) NATIVE_LINE else -1,
+            parts[LINE].toIntOrNull() ?: if (native) NATIVE_LINE else -1,
         )
     }
+
+    // FRAME's groups.
+    private const val TYPE = 1
+    private const val METHOD = 2
+    private const val FILE = 3
+    private const val LINE = 4
 
     /** What [StackTraceElement] takes as a native method's line. */
     private const val NATIVE_LINE = -2

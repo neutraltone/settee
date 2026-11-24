@@ -175,19 +175,21 @@ internal data class HeldCrash(
          * The main thread stuck at [mainStack] for [afterMillis], or for as long as it took Android to
          * end Settee when that's null, named as Sentry names an ANR.
          */
-        fun freeze(mainStack: List<StackTraceElement>, afterMillis: Long?, release: String, now: Long, at: At) = HeldCrash(
-            freeze = true,
-            timeMillis = now,
-            release = release,
-            exceptions = listOf(
-                Thrown(
-                    "io.sentry.android.core.ApplicationNotResponding",
-                    afterMillis?.let { "Application Not Responding for at least $it ms." } ?: "Application Not Responding.",
-                    mainStack.take(MOST_FRAMES),
+        fun freeze(mainStack: List<StackTraceElement>, afterMillis: Long?, release: String, now: Long, at: At) =
+            HeldCrash(
+                freeze = true,
+                timeMillis = now,
+                release = release,
+                exceptions = listOf(
+                    Thrown(
+                        "io.sentry.android.core.ApplicationNotResponding",
+                        afterMillis?.let { "Application Not Responding for at least $it ms." }
+                            ?: "Application Not Responding.",
+                        mainStack.take(MOST_FRAMES),
+                    ),
                 ),
-            ),
-            at = at,
-        )
+                at = at,
+            )
 
         private fun Array<StackTraceElement>.top() = take(MOST_FRAMES)
 
@@ -261,7 +263,14 @@ internal class HeldCrashes(
         if (handler == null) {
             handler = HoldingHandler(Thread.getDefaultUncaughtExceptionHandler()) { error ->
                 if (shouldHold()) {
-                    hold(HeldCrash.crash(error, release, System.currentTimeMillis(), HeldCrash.At.now(context, screen())))
+                    hold(
+                        HeldCrash.crash(
+                            error,
+                            release,
+                            System.currentTimeMillis(),
+                            HeldCrash.At.now(context, screen()),
+                        ),
+                    )
                 }
             }.also(Thread::setDefaultUncaughtExceptionHandler)
         }
@@ -277,7 +286,15 @@ internal class HeldCrashes(
         return FreezeWatch(freezes.afterMillis, { freezes.notResponding(context) }) {
             if (shouldHold()) {
                 val at = HeldCrash.At.now(context, screen())
-                hold(HeldCrash.freeze(main.stackTrace.toList(), freezes.afterMillis, release, System.currentTimeMillis(), at))
+                hold(
+                    HeldCrash.freeze(
+                        main.stackTrace.toList(),
+                        freezes.afterMillis,
+                        release,
+                        System.currentTimeMillis(),
+                        at,
+                    ),
+                )
                 freezes.held()
             }
         }

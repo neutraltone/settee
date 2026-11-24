@@ -56,4 +56,3 @@ fun CrashReportsStepScreen(crashReports: CrashReports, onDone: () -> Unit, onBac
         },
     )
 }
-
