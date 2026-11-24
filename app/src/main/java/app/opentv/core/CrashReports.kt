@@ -26,6 +26,7 @@ import io.sentry.transport.RateLimiter
 import io.sentry.util.HintUtils
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -252,23 +253,54 @@ class CrashReports(
      * through the same scrubber as a crash. Off, it's dropped, never held for the after-crash question:
      * that's for crashes the viewer saw, and a handled error was already shown as one.
      *
-     * An [ErrorReport] is the exception: one the viewer pressed Send report for (ADR 0010), sent whether
-     * or not Crash Reports are on and without turning them on, as the after-crash Send is. Never in a
-     * build without a DSN, which never offers it.
+     * An [ErrorReport] the viewer sent ([ErrorReport.SentBy.VIEWER]) is the exception (ADR 0010): sent
+     * whether or not Crash Reports are on and without turning them on, as the after-crash Send is. One
+     * Settee sends on its own goes only while they're on, and only once per process for each failure
+     * on each screen ([hasSent]). Neither in a build without a DSN, which never reports them.
      *
      * Every kind counts towards the install's daily [DailyCap], and once it's reached the rest of
      * the day's are dropped. Crashes and freezes don't come through here, and are never capped.
      */
     fun report(report: HandledReport) {
         when {
-            // Over the day's cap it goes no further, but the viewer was still heard: Send report says Sent.
-            report is ErrorReport -> if (available && to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
+            report is ErrorReport -> reportError(report)
             !reporting -> Unit
             // A journey that froze is the freeze's: that was reported, and says more.
             report is JourneyTimer.SlowJourney && frozeAt in report.startedAt..report.endedAt -> Unit
             // Counted only once it's going: one dropped while reports are off, or as a freeze's, isn't.
             !to.cap.take(settings) -> Unit
             else -> Sentry.captureEvent(HandledEvents.of(report))
+        }
+    }
+
+    /**
+     * Whether [report]'s failure, on the screen open now, was already sent in this process, by the
+     * viewer or by Settee: Settee doesn't send it again, and the error says it went.
+     */
+    fun hasSent(report: ErrorReport): Boolean = sameFailure(report) in sentErrors
+
+    // The failures sent in this process, so Settee sends each once however often it's drawn: an error
+    // is composed again on every recomposition, every time its screen comes back, and a Source's saved
+    // refresh failure on every launch. Keyed on the screen, the kind of Source and the detail line,
+    // which together are what the triage reads; the sentence adds nothing (it's chosen by the detail)
+    // and a Source's name or id would be identifying. Per process rather than saved: a launch that
+    // still shows the failure is one more viewer seeing it, which is worth one more event, and the
+    // daily cap bounds the rest. Nothing about the failure is written to the device for it.
+    private val sentErrors = Collections.synchronizedSet(HashSet<String>())
+
+    private fun sameFailure(report: ErrorReport) = listOf(screen, report.source?.tag, report.detail).joinToString("\u001F")
+
+    private fun reportError(report: ErrorReport) {
+        if (!available) return
+        when (report.sentBy) {
+            // The viewer was heard even over the day's cap: the error still says it went.
+            ErrorReport.SentBy.VIEWER -> {
+                sentErrors += sameFailure(report)
+                if (to.cap.take(settings)) send(Outgoing.Viewer(report, screen))
+            }
+            ErrorReport.SentBy.SETTEE -> if (reporting && sentErrors.add(sameFailure(report)) && to.cap.take(settings)) {
+                Sentry.captureEvent(HandledEvents.of(report))
+            }
         }
     }
 

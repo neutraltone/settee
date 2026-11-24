@@ -183,7 +183,7 @@ class ErrorReportsTest {
         awaitSent(1)
 
         val report = sentEnvelopes().single()
-        assertThat(report).contains("VIEWER_REPORT")
+        assertThat(report).contains("ERROR_REPORT")
         assertThat(report).contains(""""error-detail":"HTTP 503"""")
         assertThat(report).contains(""""source-kind":"xtream"""")
         assertThat(report).contains(""""screen":"main"""")

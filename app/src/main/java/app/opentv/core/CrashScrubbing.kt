@@ -46,6 +46,9 @@ internal object CrashScrubbing {
     /** An Error Report's detail line (code · status · format), scrubbed. */
     const val ERROR_DETAIL_TAG = "error-detail"
 
+    /** Who sent an Error Report: `settee`, on its own with Crash Reports on, or `viewer`. */
+    const val SENT_BY_TAG = "sent-by"
+
     /** The kind of Source a report is about: `xtream`, `m3u`, `stalker` or `stremio`, never which one. */
     const val SOURCE_KIND_TAG = "source-kind"
 
@@ -59,6 +62,7 @@ internal object CrashScrubbing {
         NETWORK_WAIT_TAG,
         ERROR_KIND_TAG,
         ERROR_DETAIL_TAG,
+        SENT_BY_TAG,
         SOURCE_KIND_TAG,
     )
 

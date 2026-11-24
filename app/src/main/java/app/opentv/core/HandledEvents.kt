@@ -20,7 +20,7 @@ internal object HandledEvents {
 
     /** The titles of the kinds that aren't an exception's: Sentry groups each by its title. */
     const val SLOW_JOURNEY = "SLOW_JOURNEY"
-    const val VIEWER_REPORT = "VIEWER_REPORT"
+    const val ERROR_REPORT = "ERROR_REPORT"
 
     fun of(report: HandledReport): SentryEvent = when (report) {
         is CaughtError -> SentryEvent(HandledError.of(report.kind, report.error))
@@ -55,14 +55,15 @@ internal object HandledEvents {
     }
 
     /**
-     * An Error Report: a message naming its kind, with the kind and the detail line as tags the
-     * scrubber lets through (scrubbing the detail).
+     * An Error Report: a message naming its kind, with the kind, the detail line and who sent it as
+     * tags the scrubber lets through (scrubbing the detail).
      */
     private fun errorReport(report: ErrorReport) = SentryEvent().apply {
-        message = Message().apply { formatted = "$VIEWER_REPORT: ${report.kind}" }
+        message = Message().apply { formatted = "$ERROR_REPORT: ${report.kind}" }
         level = SentryLevel.ERROR
         setTag(CrashScrubbing.ERROR_KIND_TAG, report.kind)
         setTag(CrashScrubbing.ERROR_DETAIL_TAG, report.detail)
+        setTag(CrashScrubbing.SENT_BY_TAG, report.sentBy.tag)
         report.source?.let { setTag(CrashScrubbing.SOURCE_KIND_TAG, it.tag) }
     }
 

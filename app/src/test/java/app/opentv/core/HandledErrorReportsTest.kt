@@ -44,6 +44,8 @@ class HandledErrorReportsTest {
         ),
         release = "1.4.0",
         environment = "test",
+        // An Error Report the viewer sends goes at once, so a test can see what follows it.
+        background = Runnable::run,
     ).also { it.start(app) }
 
     private fun sentEvents() = synchronized(sent) { sent.toList() }
@@ -217,11 +219,66 @@ class HandledErrorReportsTest {
             start(JourneyTimer.Journey.COLD_START, at = -60_000)
             end(JourneyTimer.Journey.COLD_START)
         }
-        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U))
+        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.VIEWER))
+        blank.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.SETTEE))
         blank.close()
 
         assertThat(blank.available).isFalse()
         assertThat(sentEvents()).isEmpty()
+    }
+
+    private fun shown(detail: String = "HTTP 503", source: ReportedSource? = ReportedSource.M3U) =
+        ErrorReport(detail, source, ErrorReport.SentBy.SETTEE)
+
+    @Test
+    fun `an error shown while crash reports are on is sent by Settee once, however often it's drawn again`() {
+        reports.setOn(true)
+        reports.screenOpened("main")
+
+        repeat(3) { reports.report(shown()) }
+
+        val event = sentEvents().single()
+        assertThat(event).contains("ERROR_REPORT: HTTP 503")
+        assertThat(event).contains(""""sent-by":"settee"""")
+        assertThat(event).contains(""""source-kind":"m3u"""")
+        assertThat(event).contains(""""screen":"main"""")
+    }
+
+    @Test
+    fun `the same error on another screen or from another kind of source, or another error, is sent again`() {
+        reports.setOn(true)
+        reports.screenOpened("main")
+        reports.report(shown())
+
+        reports.report(shown(source = ReportedSource.XTREAM))
+        reports.report(shown(detail = "HTTP 500"))
+        reports.screenOpened("settings")
+        reports.report(shown())
+
+        assertThat(sentEvents()).hasSize(4)
+    }
+
+    @Test
+    fun `with crash reports off, Settee never sends an error on its own`() {
+        reports.screenOpened("main")
+
+        reports.report(shown())
+
+        assertThat(sentEvents()).isEmpty()
+        assertThat(reports.hasSent(shown())).isFalse()
+    }
+
+    @Test
+    fun `an error the viewer sent says so, and Settee doesn't send it again once reports are on`() {
+        reports.screenOpened("main")
+        reports.report(ErrorReport("HTTP 503", ReportedSource.M3U, ErrorReport.SentBy.VIEWER))
+
+        reports.setOn(true)
+        reports.report(shown())
+
+        val event = sentEvents().single()
+        assertThat(event).contains(""""sent-by":"viewer"""")
+        assertThat(reports.hasSent(shown())).isTrue()
     }
 
     private companion object {

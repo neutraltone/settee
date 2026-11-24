@@ -7,16 +7,16 @@ package app.opentv.core
 
 /**
  * What [CrashReports.report] sends (ADRs 0009 and 0010): failures Settee's own code, keys or requests
- * can cause, a journey that was clearly too slow, and the one failure a viewer chose to send. Sealed,
+ * can cause, a journey that was clearly too slow, and an error on screen that could be Settee's. Sealed,
  * so the list is closed on purpose: a Provider's failures (HTTP errors, dead streams, web pages
- * instead of video) and playback errors leave the device only as an [ErrorReport] the viewer pressed
- * Send report for. Each kind carries only what its event needs, and its type alone decides how it's
+ * instead of video) and playback errors leave the device only as an [ErrorReport] of what the viewer
+ * saw. Each kind carries only what its event needs, and its type alone decides how it's
  * sent and what it's sent as, so nothing pairs a kind with the wrong payload.
  *
  * - [CaughtError]: an error Settee caught rather than crashing (ADR 0009).
  * - [ServiceFailure]: one of Settee's own services turning down Settee's request.
  * - [JourneyTimer.SlowJourney]: Settee's own part of a journey clearly too slow, sent with no error at all.
- * - [ErrorReport]: a failure on screen the viewer pressed Send report for, sent whatever their choice.
+ * - [ErrorReport]: a failure on screen, sent by Settee with Crash Reports on, or by the viewer's choice.
  */
 sealed interface HandledReport
 

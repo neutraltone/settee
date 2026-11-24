@@ -32,7 +32,7 @@ fun sendReportFor(error: ViewerError?, source: ReportedSource?): ReportOffer? {
     val sent = stringResource(R.string.report_sent)
     return remember(error, source, crashReports, note, send, sent) {
         error?.takeIf { crashReports.available && ErrorReport.offeredFor(it) }?.let { shown ->
-            ReportOffer(note, send, sent) { crashReports.report(ErrorReport(shown.detail, source)) }
+            ReportOffer(note, send, sent) { crashReports.report(ErrorReport(shown.detail, source, ErrorReport.SentBy.VIEWER)) }
         }
     }
 }
