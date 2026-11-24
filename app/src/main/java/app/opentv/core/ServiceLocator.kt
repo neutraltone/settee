@@ -140,7 +140,8 @@ object ServiceLocator {
         /** How Settee's own services report turning down Settee's request (ADR 0010): each names itself. */
         private val reportServiceFailure: (ServiceFailure) -> Unit = { crashReports.report(it) }
 
-        // Every client is built from this one, so each marks its calls as network wait for the journeys.
+        // Every client is built from this one, so each marks its calls as network wait for the journeys:
+        // the players' and recordings' as [streamingHttpClient]'s, which only a start of playback waits on.
         val httpClient: OkHttpClient by lazy {
             (
                 http ?: OkHttpClient.Builder()
@@ -172,6 +173,7 @@ object ServiceLocator {
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .retryOnConnectionFailure(true)
+                // A stream is the wait only for the start of playback that asked for it (ADR 0010).
                 .eventListenerFactory(journeys.streaming)
                 .build()
         }

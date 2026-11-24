@@ -12,16 +12,20 @@ import okhttp3.EventListener
 
 /**
  * Times the journeys that matter (ADR 0010, Slow Journeys): when each starts and ends, and how long the
- * network kept it waiting meanwhile, which the HTTP client marks through [network]. Settee's own time is
- * the total less that wait, so a slow Provider or connection never makes a journey count as slow. When
- * Settee's own time passes the journey's threshold, [slow] hears of it, once per journey per process.
+ * network kept it waiting meanwhile, which the HTTP clients mark through [network] and [streaming].
+ * Settee's own time is the total less that wait, so a slow Provider or connection never makes a journey
+ * count as slow. When Settee's own time passes the journey's threshold, [slow] hears of it, once per
+ * journey per process.
  *
- * Starting, ending and the network marks are a clock read and a few array writes under a lock: nothing is
- * allocated until a journey has been slow. Knows nothing of Sentry: [CrashReports] decides what's sent.
+ * A journey's wait is only the calls that started while it ran: one already going when it started, such
+ * as a guide download or a recording, isn't the journey's. And a stream, which the players and
+ * recordings read through [streaming] and which can stay open for hours, is only the wait of the start
+ * of playback that asked for it: a Live Preview playing on Home never hides a slow Movies.
  *
- * The network wait is the time any call was in flight, not only the journey's own calls: telling them
- * apart would mean tagging every call with its journey. So a journey that overlaps another's downloads,
- * or a live stream playing, counts that time as waiting too, which can only make it report less.
+ * Starting, ending and the network marks are a clock read and a few array writes under a lock. Nothing
+ * is allocated until a journey has been slow, but for the one small listener per HTTP call that
+ * remembers when the call started (OkHttp makes one per call however it's given). Knows nothing of
+ * Sentry: [CrashReports] decides what's sent.
  */
 class JourneyTimer(
     private val now: () -> Long = SystemClock::elapsedRealtime,
@@ -29,11 +33,14 @@ class JourneyTimer(
 ) {
     /**
      * The journeys timed, by the [tag] events name them with, each with its threshold for Settee's own
-     * time: about 2–3× the stick's median in docs/PERFORMANCE.md. ADR 0010's table lists the same
-     * numbers, and changes with them.
+     * time: about 2–3× the stick's median in docs/PERFORMANCE.md, where the stick has one. The ones
+     * marked provisional are cautious guesses until the stick measures them (`tools/perf/stick_baseline.py`,
+     * which measures only cold start so far: the others need it to learn to), when each becomes 2–3× that
+     * median. ADR 0010's table lists the same numbers, and changes with them. [waitsOnStream]: whether a
+     * stream's calls are this journey's wait.
      */
-    enum class Journey(val tag: String, val thresholdMillis: Long) {
-        /** Process start to Home's first row drawn with its cards (stick median 2.2 s). */
+    enum class Journey(val tag: String, val thresholdMillis: Long, val waitsOnStream: Boolean = false) {
+        /** Process start to Home's first row drawn with its cards (stick median 2.2 s, measured). */
         COLD_START("cold-start", thresholdMillis = 6_000),
 
         /** Movies selected to its first row drawn. Provisional: no median measured from selecting the tab. */
@@ -45,8 +52,8 @@ class JourneyTimer(
         /** A refresh of every provider started to its catalogue written. Provisional: none measured. */
         CATALOGUE_REFRESH("catalogue-refresh", thresholdMillis = 60_000),
 
-        /** Asked to play to the first frame drawn. Provisional: none measured. */
-        PLAYBACK_START("playback-start", thresholdMillis = 4_000),
+        /** Asked to play to the first frame drawn, which waits on the stream. Provisional: none measured. */
+        PLAYBACK_START("playback-start", thresholdMillis = 4_000, waitsOnStream = true),
     }
 
     /**
@@ -66,16 +73,25 @@ class JourneyTimer(
     private val lock = Any()
     private val journeys = Journey.entries
     private val startedAt = LongArray(journeys.size) { NOT_RUNNING }
-    private val waitedAtStart = LongArray(journeys.size)
     private val reported = BooleanArray(journeys.size)
-    private var inFlight = 0
-    private var inFlightSince = 0L
-    private var waitedBefore = 0L
+
+    // Each start and each call gets the next number, so a call can tell whether it started after a
+    // journey did, even within one tick of the clock, and after the journey's latest start.
+    private var counter = 0L
+    private val startedAs = LongArray(journeys.size)
+
+    // Each journey's own calls in flight, since when, and how long they kept it waiting before that.
+    private val inFlight = IntArray(journeys.size)
+    private val inFlightSince = LongArray(journeys.size)
+    private val waited = LongArray(journeys.size)
 
     /** Starts timing [journey], again if it's running, [at] a time on this timer's clock: now, unless earlier. */
     fun start(journey: Journey, at: Long = now()) = synchronized(lock) {
-        startedAt[journey.ordinal] = at
-        waitedAtStart[journey.ordinal] = waited(now())
+        val i = journey.ordinal
+        startedAt[i] = at
+        startedAs[i] = ++counter
+        inFlight[i] = 0
+        waited[i] = 0
     }
 
     /** Stops timing [journey] without an end, as when the viewer leaves before it's done. */
@@ -97,7 +113,7 @@ class JourneyTimer(
             if (started == NOT_RUNNING) return
             startedAt[i] = NOT_RUNNING
             val ended = now()
-            val network = waited(ended) - waitedAtStart[i]
+            val network = waited[i] + if (inFlight[i] > 0) ended - inFlightSince[i] else 0
             val own = (ended - started - network).coerceAtLeast(0)
             if (own <= journey.thresholdMillis || reported[i]) return
             reported[i] = true
@@ -106,31 +122,45 @@ class JourneyTimer(
         slow(slowOne)
     }
 
-    /** Marks the network waits: one call in flight or more is waiting. Given to every HTTP client. */
-    val network: EventListener.Factory = EventListener.Factory { listener }
+    /** Marks the network waits of every call but a stream's. Given to every HTTP client. */
+    val network: EventListener.Factory = EventListener.Factory { CallWait(streaming = false) }
 
-    /** Marks the players' and recordings' calls. */
-    val streaming: EventListener.Factory = EventListener.Factory { listener }
+    /** Marks a stream's calls, the players' and recordings', which only a start of playback waits on. */
+    val streaming: EventListener.Factory = EventListener.Factory { CallWait(streaming = true) }
 
-    private val listener = object : EventListener() {
+    private fun waitsOn(i: Int, streaming: Boolean) =
+        startedAt[i] != NOT_RUNNING && (!streaming || journeys[i].waitsOnStream)
+
+    /** One call: the journeys running when it started are waiting on it until it ends. */
+    private inner class CallWait(private val streaming: Boolean) : EventListener() {
+        private var startedAs = NOT_STARTED
+
         override fun callStart(call: Call) = synchronized(lock) {
-            if (inFlight++ == 0) inFlightSince = now()
+            startedAs = ++counter
+            val at = now()
+            for (i in journeys.indices) {
+                if (waitsOn(i, streaming) && inFlight[i]++ == 0) inFlightSince[i] = at
+            }
         }
 
         override fun callEnd(call: Call) = ended()
 
         override fun callFailed(call: Call, ioe: IOException) = ended()
-    }
 
-    private fun ended() = synchronized(lock) {
-        if (inFlight == 0) return
-        if (--inFlight == 0) waitedBefore += now() - inFlightSince
+        private fun ended() = synchronized(lock) {
+            if (startedAs == NOT_STARTED) return
+            val at = now()
+            for (i in journeys.indices) {
+                // Only a journey it was counted for: still the same run, started before this call.
+                val counted = waitsOn(i, streaming) && this@JourneyTimer.startedAs[i] < startedAs && inFlight[i] > 0
+                if (counted && --inFlight[i] == 0) waited[i] += at - inFlightSince[i]
+            }
+            startedAs = NOT_STARTED
+        }
     }
-
-    /** How long, all told, a call has been in flight up to [at]. */
-    private fun waited(at: Long): Long = waitedBefore + if (inFlight > 0) at - inFlightSince else 0
 
     companion object {
         private const val NOT_RUNNING = Long.MIN_VALUE
+        private const val NOT_STARTED = Long.MIN_VALUE
     }
 }

@@ -137,6 +137,44 @@ class SlowJourneyReportsTest {
     }
 
     @Test
+    fun `a stream playing throughout doesn't hide a slow journey`() {
+        reports.setOn(true)
+        // The Live Preview's stream, open before Movies is picked and still open after.
+        val stream = timer.streaming.create(CALL).apply { callStart(CALL) }
+
+        run(Journey.OPEN_MOVIES, millis = 9_000)
+        stream.callEnd(CALL)
+
+        assertThat(sentEvents().single()).contains("\"journey\":\"open-movies\"")
+    }
+
+    @Test
+    fun `a call that started before the journey isn't its wait`() {
+        reports.setOn(true)
+        // A guide download already going when Shows is picked, and still going once its row is drawn.
+        val download = timer.network.create(CALL).apply { callStart(CALL) }
+
+        run(Journey.OPEN_SHOWS, millis = 9_000)
+        download.callEnd(CALL)
+
+        assertThat(sentEvents().single()).contains("\"own-ms\":\"9000\"")
+    }
+
+    @Test
+    fun `the stream a start of playback waits for is its network wait`() {
+        reports.setOn(true)
+
+        timer.start(Journey.PLAYBACK_START)
+        val stream = timer.streaming.create(CALL).apply { callStart(CALL) }
+        clock += 9_000
+        stream.callEnd(CALL)
+        clock += 1_000
+        timer.end(Journey.PLAYBACK_START)
+
+        assertThat(sentEvents()).isEmpty()
+    }
+
+    @Test
     fun `a second slow run of the same journey in one process sends nothing more`() {
         reports.setOn(true)
 
