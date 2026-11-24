@@ -263,10 +263,22 @@ class TmdbClient(
     }
 }
 
-/** Strips a trailing "(2023)"/year and collapses whitespace so the title searches cleanly. */
-private fun searchTitle(raw: String): String = raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
-    .replace(Regex("""\s+"""), " ")
-    .trim()
+/**
+ * [raw] as TMDB is searched for it: a trailing "(1995)" goes, but a bare trailing year stays unless it
+ * is the film's own [year], because it is often part of the name ("Blade Runner 2049", "1917"). If
+ * leaving the year out would leave nothing ("1917" from 1917), the whole name is searched for.
+ */
+private fun searchTitle(raw: String, year: Int?): String {
+    val cleaned = raw.replace(WHITESPACE, " ").trim()
+    val withoutYear = BRACKETED_YEAR.find(cleaned)?.let { cleaned.removeRange(it.range) }
+        ?: BARE_YEAR.find(cleaned)?.takeIf { year != null && it.groupValues[1] == year.toString() }
+            ?.let { cleaned.removeRange(it.range) }
+    return withoutYear?.trim()?.takeIf { it.isNotEmpty() } ?: cleaned
+}
+
+private val WHITESPACE = Regex("""\s+""")
+private val BRACKETED_YEAR = Regex("""\s*\((?:19|20)\d{2}\)$""")
+private val BARE_YEAR = Regex("""(?:^|\s)((?:19|20)\d{2})$""")
 
 /**
  * Whether [key] is TMDB's "API Read Access Token" (v4) rather than its "API Key" (v3): the token is
@@ -286,7 +298,7 @@ private const val JWT_PARTS = 3
  */
 private data class TmdbTitle(val isMovie: Boolean, val title: String, val year: Int?, val providersId: String?) {
     val tmdbId: String? get() = knownTmdbId(providersId)
-    val query: String get() = searchTitle(title)
+    val query: String get() = searchTitle(title, year)
 }
 
 /** The built-in TMDB Key, with which kind it is worked out once for every request a look-up makes. */
