@@ -44,6 +44,7 @@ object M3uParser {
     fun parse(reader: BufferedReader, sourceId: Long): Result {
         val channels = ArrayList<Channel>()
         val seenStreamIds = HashSet<String>()
+        val repeatIds = RepeatIds()
         var declaredEpgUrl: String? = null
         var skipped = 0
 
@@ -83,14 +84,15 @@ object M3uParser {
                         // Films and episodes are left out before the dedupe and sortIndex, so the
                         // channels' positions stay consecutive.
                         val attributes = pendingAttributes
-                        val streamId = attributes["tvg-id"]
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { "tvg:$it" }
-                            ?: "url:${stableHash(line)}"
+                        val tvgId = attributes["tvg-id"]?.takeIf { it.isNotBlank() }
+                        val streamId = when {
+                            tvgId == null -> "url:${stableHash(line)}"
+                            "tvg:$tvgId" !in seenStreamIds -> "tvg:$tvgId"
+                            else -> repeatIds.next(tvgId, name)
+                        }
 
-                        // Providers repeat the same tvg-id across quality variants. Keep the
-                        // first and drop later duplicates rather than letting them collide on
-                        // the unique index and abort the whole import.
+                        // A URL listed twice with no tvg-id is one channel: keep the first rather
+                        // than let the second collide on the unique index and abort the import.
                         if (seenStreamIds.add(streamId)) {
                             channels += channelOf(sourceId, streamId, name, attributes, pendingNumber, line, index++)
                         }
@@ -103,6 +105,30 @@ object M3uParser {
         }
 
         return Result(channels, declaredEpgUrl, skipped)
+    }
+
+    /**
+     * Ids for the channels listed after the first with the same tvg-id: regional variants
+     * ("BBC One London", "BBC One Wales") and playlists that put a placeholder such as `0` on
+     * every channel. The first keeps `tvg:<tvg-id>`, the id it always had, because favourites,
+     * custom names, hidden flags, order and guide overrides are all keyed by streamId and the
+     * repeats, dropped before #500, carry none of those. Keying every channel on tvg-id plus
+     * name was rejected for that reason: it would have moved every one of them.
+     *
+     * Built from the tvg-id and name rather than the URL, so a rotating token doesn't change
+     * it, plus the repeat's ordinal when the name repeats too. Hashed under its own prefix so
+     * no tvg-id or URL can produce the same id, whatever characters the tvg-id holds.
+     */
+    private class RepeatIds {
+        /** How many repeats of each tvg-id and name have been listed so far. */
+        private val seen = HashMap<String, Int>()
+
+        fun next(tvgId: String, name: String): String {
+            // A newline can't occur in either part: both come from one line of the playlist.
+            val key = "$tvgId\n$name"
+            val ordinal = seen.merge(key, 1, Int::plus) ?: 1
+            return "tvgrepeat:" + stableHash(if (ordinal == 1) key else "$key\n$ordinal")
+        }
     }
 
     @Suppress("LongParameterList") // One entry's parts, as parse has gathered them.

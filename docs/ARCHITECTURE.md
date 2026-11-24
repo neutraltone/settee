@@ -186,8 +186,8 @@ channels (`ChannelUserState`: the row id, `hidden`, `sortIndex`, custom name and
 names or URLs, so a large catalogue isn't held twice while it merges), carries those across to the
 incoming rows by `streamId`, updates the rows it matched and inserts the rest (not Room's `@Upsert`,
 whose failed INSERT a row was most of a refresh's work; see `updateOrInsert`), and only then
-deletes channels the provider no longer lists. A `streamId` listed twice is saved once, as its last
-listing. Movies and series save the same way (`VodLists`): each saved title is stamped with the
+deletes channels the provider no longer lists. A `streamId` handed to it twice is saved once, as its
+last listing; `M3uParser` never hands it one twice (see below). Movies and series save the same way (`VodLists`): each saved title is stamped with the
 refresh, in the same transaction, and once a whole list is saved `RetiredTitles` deletes the source's
 titles with an older stamp, and a deleted series' episodes. A list that fails or is cut off throws
 before anything is saved, and an empty one deletes nothing. A series' episodes are matched the same way
@@ -206,10 +206,22 @@ that arrives with no stored row. Series links and reminders record their channel
 one whose channel is still missing stays listed and books nothing until it returns. Keeping deleted
 rows marked gone was rejected: every channel query would need to leave them out.
 
-This is why `M3uParser` works so hard to produce a **stable** `streamId` for playlists with no
-`tvg-id` — an FNV-1a hash of the URL rather than `String.hashCode()`. An unstable id means
-every refresh looks like a completely new set of channels, and the user's hidden channels and
-ordering silently vanish.
+This is why `M3uParser` works so hard to produce a **stable** `streamId`. A channel with a
+`tvg-id` is `tvg:<tvg-id>`; one without is `url:` plus an FNV-1a hash of its whole URL rather than
+`String.hashCode()`, and a URL listed twice is kept once, as its first listing. An unstable id
+means every refresh looks like a completely new set of channels, and the user's favourites, hidden
+channels, custom names and ordering silently vanish.
+
+Channels that share a `tvg-id` (regional variants, or a playlist that puts `0` on every channel)
+are all kept (#500). The first listed keeps `tvg:<tvg-id>`, exactly the id it had when the parser
+dropped the rest, so nothing a viewer set on it moves; each later one gets `tvgrepeat:` plus a hash
+of the `tvg-id` and its name, and its ordinal among repeats when the name repeats too, so a rotating
+URL token doesn't change it. Every one keeps the shared `tvg-id` as its `epgChannelId`, so they all
+match the guide. Giving every channel a `tvg-id`-plus-name id was rejected: it would have moved the
+id of every channel already stored. The cost is that if a provider reorders its repeats, a
+different one becomes "first" and the two swap what the viewer set on them. Hashing the URL
+without its query string, which would survive rotating tokens, was rejected for the same reason:
+it would move every stored no-`tvg-id` channel whose URL has a query.
 
 ### Episodes load lazily, with two exceptions
 
