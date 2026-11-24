@@ -9,11 +9,13 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -27,6 +29,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsSection
+import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -47,22 +50,25 @@ class SettingsRoutesTest {
 
     private val compose = createComposeRule()
 
+    /** A panel answering a playlist, for the tests that save a provider. */
+    private val panel = FakePanel("" to "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n")
+
     @get:Rule
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(compose, http = panel.http)
 
     private lateinit var nav: NavHostController
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
     private val app = testGraph.app
 
-    private fun setApp(memory: SettingsMemory) {
+    private fun setApp(memory: SettingsMemory, start: String = Routes.SETTINGS) {
         val sources = testGraph.viewModel { SourcesViewModel(app, testGraph.graph) }
         compose.setTvContent {
             view = LocalView.current
             nav = rememberNavController()
-            NavHost(nav, startDestination = Routes.SETTINGS) {
+            NavHost(nav, startDestination = start) {
                 settingsRoutes(nav, memory)
-                providerRoutes(nav, sources)
+                providerRoutes(nav, sources, onAdded = memory::providerAdded)
                 composable(Routes.CHANNELS) { Text("Channel manager", SetteeType.Body) }
                 composable(Routes.MAIN) { Text("Main", SetteeType.Body) }
             }
@@ -95,6 +101,49 @@ class SettingsRoutesTest {
         compose.onNodeWithText("Add your provider").assertExists()
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
         backReturnsTo("Add a provider")
+    }
+
+    /** Saves a playlist from the add page, as the viewer would on the TV. */
+    private fun savePlaylist() {
+        compose.onNodeWithText("M3U playlist").performClick()
+        device.type("http://example.com/list.m3u", device.box(1))
+        compose.onNodeWithText("Save and load").performClick()
+        compose.waitForIdle()
+    }
+
+    /** Settings is showing with the Highlight on the Providers section, not inside its pane. */
+    private fun onProvidersSection() {
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        compose.onNode(hasTestTag(SettingsTags.SECTION) and isFocused()).assertTextContains("Providers")
+    }
+
+    @Test
+    fun `a provider added from Settings comes back to Settings on its sections, and Back leaves Settings`() {
+        runBlocking { testGraph.graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        setApp(SettingsMemory(SettingsSection.Providers), start = Routes.MAIN)
+        compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
+
+        openFrom("Add a provider")
+        savePlaylist()
+
+        onProvidersSection()
+        captureScreen("settings_after_adding_provider")
+        Espresso.pressBack()
+        assertThat(route()).isEqualTo(Routes.MAIN)
+    }
+
+    @Test
+    fun `a first provider added from Settings comes back to Settings after Setup, and Back leaves Settings`() {
+        setApp(SettingsMemory(SettingsSection.Providers), start = Routes.MAIN)
+        compose.runOnIdle { nav.navigate(Routes.SETTINGS) }
+
+        openFrom("Add a provider")
+        savePlaylist()
+        compose.onAllNodes(hasText("Take me to Settee")).onFirst().performClick()
+
+        onProvidersSection()
+        Espresso.pressBack()
+        assertThat(route()).isEqualTo(Routes.MAIN)
     }
 
     @Test

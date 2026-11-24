@@ -15,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
@@ -91,11 +93,16 @@ internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
         onClick = { settings.setGuidePreviewSound(!previewSound) },
         switch = previewSound,
     )
+    // Not a screen of its own, but a language change makes the activity again: the row takes the
+    // Highlight back the same way, once changeLanguage has named it, not on opening its panel, which
+    // can close with nothing chosen.
+    val languageRow = rememberReturningRow(LANGUAGE_ROW)
     ListRow(
         stringResource(R.string.settings_row_language),
         onClick = { choosing = Choice.Language },
         value = OpenTvLanguages.firstOrNull { it.first == language }?.second
             ?: stringResource(R.string.settings_language_system),
+        modifier = Modifier.focusRequester(languageRow),
     )
     ListRow(stringResource(R.string.nav_live_tv), onClick = {
         settings.setLiveEnabled(!liveEnabled)
@@ -122,6 +129,7 @@ private fun ChoicePanel(choice: Choice, subtitlesOn: Boolean, sleeping: Boolean,
     val settings = remember { AppSettings.get(context) }
     val graph = remember { ServiceLocator.get(context) }
     val scope = rememberCoroutineScope()
+    val memory = LocalSettingsMemory.current
     val on = stringResource(R.string.settings_row_on)
     val off = stringResource(R.string.settings_row_off)
     SidePanel(onBack = close) {
@@ -147,13 +155,13 @@ private fun ChoicePanel(choice: Choice, subtitlesOn: Boolean, sleeping: Boolean,
             Choice.Language -> {
                 PanelRow(stringResource(R.string.settings_language_system), ticked = language.isBlank(), onClick = {
                     close()
-                    changeLanguage(context, settings, "")
+                    changeLanguage(context, settings, "", memory)
                 })
                 // Each language is listed in its own name (endonym), the convention users expect.
                 OpenTvLanguages.forEach { (tag, name) ->
                     PanelRow(name, ticked = language == tag, onClick = {
                         close()
-                        changeLanguage(context, settings, tag)
+                        changeLanguage(context, settings, tag, memory)
                     })
                 }
             }
@@ -232,11 +240,17 @@ private fun rememberSleepMinutesLeft(): Int? {
     return remember(deadline, minutePassed) { SleepTimer.minutesRemaining() }
 }
 
-/** Persist the chosen language and recreate the activity so the whole UI reloads translated. */
-private fun changeLanguage(context: Context, settings: AppSettings, tag: String) {
+/**
+ * Persist the chosen language and recreate the activity so the whole UI reloads translated. Settings
+ * comes back on Language ([memory] is saved state), so the viewer can check or undo it (#443).
+ */
+private fun changeLanguage(context: Context, settings: AppSettings, tag: String, memory: SettingsMemory?) {
     if (settings.languageTag.value == tag) return
     settings.setLanguageTag(tag)
+    memory?.openedRow = LANGUAGE_ROW
     context.findActivity()?.recreate()
 }
+
+private const val LANGUAGE_ROW = "language"
 
 private const val MINUTE_MILLIS = 60_000L

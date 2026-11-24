@@ -31,6 +31,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
@@ -39,12 +40,15 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import app.opentv.core.StatusBus
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Recording
+import app.opentv.data.model.RecordingStatus
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
@@ -52,6 +56,8 @@ import app.opentv.ui.HomeContent
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.design.ScreenFrame
+import app.opentv.ui.recordings.RecordingsContent
+import app.opentv.ui.recordings.recordingsSections
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieShelves
 import com.google.common.truth.Truth.assertThat
@@ -318,6 +324,91 @@ class MainShellTest {
     }
 
     @Test
+    fun `deleting the only recording puts the highlight on the rail's Recordings item`() {
+        var recordings by mutableStateOf(listOf(recording(1)))
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = Tab.RECORDINGS,
+                onSelect = {},
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            ) { _, _, onNothingToShow ->
+                RecordingsContent(
+                    sections = recordingsSections(recordings, emptyList(), emptyList(), NOW),
+                    profileNames = emptyMap(),
+                    onPlay = {},
+                    onRetry = {},
+                    onChoose = { _, _ -> },
+                    onEmptied = onNothingToShow,
+                    now = { NOW },
+                )
+            }
+        }
+        compose.onNode(hasText("Recording 1", substring = true) and hasClickAction()).requestFocus()
+        compose.waitForIdle()
+
+        press(Key.Menu)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        recordings = emptyList()
+        compose.waitForIdle()
+
+        railItem("Recordings").assertIsFocused()
+        captureScreen("recordings_empty_after_delete")
+    }
+
+    @Test
+    fun `on Recordings, Right from the rail goes back to the row the highlight left`() {
+        // Ids 11 to 20, so no title is a substring of another's.
+        val recordings = (11L..20L).map { recording(it) }
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = Tab.RECORDINGS,
+                onSelect = {},
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            ) { _, _, onNothingToShow ->
+                RecordingsContent(
+                    sections = recordingsSections(recordings, emptyList(), emptyList(), NOW),
+                    profileNames = emptyMap(),
+                    onPlay = {},
+                    onRetry = {},
+                    onChoose = { _, _ -> },
+                    onEmptied = onNothingToShow,
+                    now = { NOW },
+                )
+            }
+        }
+        fun row(id: Int) = compose.onNode(hasText("Recording $id", substring = true) and hasClickAction())
+        row(11).requestFocus()
+        compose.waitForIdle()
+
+        press(Key.DirectionLeft)
+        railItem("Recordings").assertIsFocused()
+        press(Key.DirectionRight)
+        row(11).assertIsFocused()
+
+        press(Key.DirectionDown, times = 6)
+        row(17).assertIsFocused()
+        press(Key.DirectionLeft)
+        railItem("Recordings").assertIsFocused()
+        press(Key.DirectionRight)
+        row(17).assertIsFocused()
+    }
+
+    @Test
     fun `OK on another tab opens it and moves the highlight onto its first title`() {
         setShellWithTitles()
         press(Key.DirectionLeft)
@@ -551,6 +642,21 @@ class MainShellTest {
         assertThat(selected).isEqualTo(Tab.HOME)
     }
 
+    @Test
+    fun `Back from the open rail on another tab puts the highlight on Home, not the tab it left`() {
+        setShellWithTitles(start = Tab.SHOWS)
+        press(Key.DirectionLeft)
+        railItem("Shows").assertIsFocused()
+
+        pressBack()
+        compose.mainClock.advanceTimeBy(ENTRY_WAIT_MILLIS)
+        compose.waitForIdle()
+
+        railItem("Shows").assertIsNotFocused()
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Home 1")
+    }
+
     private fun pressBack() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
@@ -626,7 +732,23 @@ class MainShellTest {
 
         /** About a second of frames: longer than any slide. */
         const val SETTLE_FRAMES = 60
+
+        const val NOW = 1_800_000_000_000L
+        const val HOUR = 3_600_000L
     }
+
+    private fun recording(id: Long) = Recording(
+        id = id,
+        channelId = id,
+        sourceId = 1,
+        channelName = "Channel $id",
+        title = "Recording $id",
+        filePath = "/rec/$id.ts",
+        streamUrl = "",
+        startedAtMillis = NOW - id * HOUR,
+        endedAtMillis = NOW - id * HOUR + HOUR / 2,
+        status = RecordingStatus.COMPLETED,
+    )
 
     private fun movie(id: Long, name: String) = Movie(
         id = id,

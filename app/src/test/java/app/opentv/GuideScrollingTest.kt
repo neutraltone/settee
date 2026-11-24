@@ -94,6 +94,8 @@ class GuideScrollingTest {
     private fun builtCells(name: String) =
         compose.onAllNodes(hasText("$name ", substring = true) and hasClickAction()).fetchSemanticsNodes().size
 
+    private val noInformation = hasText("No guide information yet") and hasClickAction()
+
     private fun exists(matcher: SemanticsMatcher) = compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
 
     @Test
@@ -192,6 +194,48 @@ class GuideScrollingTest {
         press(Key.DirectionDown)
 
         compose.onNode(programme("B 12")).assertIsFocused()
+    }
+
+    @Test
+    fun `Down or Up from a programme hours along the day stops on a channel with no guide`() {
+        val rows = listOf(row(1, halfHours("A", 0)), row(2, emptyList()), row(3, halfHours("C", 0)))
+        compose.setTvContent { GuideGrid(rows = rows, windowStartMillis = 0, onWatch = {}, dayOffset = 1) }
+
+        press(Key.DirectionRight, times = 4)
+        compose.onNode(programme("A 3")).assertIsFocused()
+        press(Key.DirectionDown)
+
+        compose.onNode(noInformation).assertIsFocused()
+        captureScreen("guide_no_information_highlighted")
+
+        press(Key.DirectionDown)
+        compose.onNode(programme("C 3")).assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNode(noInformation).assertIsFocused()
+    }
+
+    @Test
+    fun `OK on a channel's No information plays it, and Right pages to the next day`() {
+        val watched = mutableListOf<Long>()
+        val nextDayFor = mutableListOf<Long>()
+        val rows = listOf(row(1, halfHours("A", 0)), row(2, emptyList()))
+        compose.setTvContent {
+            GuideGrid(
+                rows = rows,
+                windowStartMillis = 0,
+                onWatch = { watched += it.primary.id },
+                onNextDay = { nextDayFor += it.primary.id },
+            )
+        }
+        compose.onNode(noInformation).requestFocus()
+
+        press(Key.DirectionCenter)
+        press(Key.DirectionRight)
+
+        compose.runOnIdle {
+            assertThat(watched).containsExactly(2L)
+            assertThat(nextDayFor).containsExactly(2L)
+        }
     }
 
     @Test

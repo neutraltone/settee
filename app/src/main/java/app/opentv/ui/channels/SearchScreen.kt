@@ -315,7 +315,7 @@ private fun SearchResults(
 ) {
     val listState = rememberLazyListState()
     // The rows start after the section's header.
-    val highlight = rememberRowHighlight(channelResults, listState, firstRowItem = 1) { it.key }
+    val highlight = rememberRowHighlight(channelResults, listState, itemIndex = { 1 + it }) { it.key }
     val returnRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         val index = returnTo?.let { itemIndexOf(it, channelResults, movieResults, seriesResults) }

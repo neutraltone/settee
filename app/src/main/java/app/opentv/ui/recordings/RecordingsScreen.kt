@@ -12,8 +12,12 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.data.model.Recording
 
+/**
+ * [onNothingToShow] is called when the last thing listed goes while it has the Highlight, so it lands
+ * on Recordings in the rail rather than wherever Android puts a Highlight with nowhere to go (#444).
+ */
 @Composable
-fun RecordingsScreen(onPlay: (Recording) -> Unit) {
+fun RecordingsScreen(onPlay: (Recording) -> Unit, onNothingToShow: () -> Unit = {}) {
     val viewModel: RecordingsViewModel = viewModel()
     val recordings by viewModel.recordings.collectAsState()
     val reminders by viewModel.reminders.collectAsState()
@@ -32,5 +36,6 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
         onChoose = viewModel::choose,
         deleteFailure = deleteFailure,
         onDismissFailure = viewModel::dismissDeleteFailure,
+        onEmptied = onNothingToShow,
     )
 }

@@ -41,9 +41,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -101,7 +105,43 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
 
     /** The row that opened a screen of its own, which takes the Highlight back on return. */
     internal var openedRow: String? = null
+
+    /**
+     * A provider was added from the add page, by itself or through Setup. Settings opens next on its
+     * sections, where the first Back leaves it (#442): the Add row was done with, and left named it
+     * would catch a later, unrelated visit when Setup went to Live TV instead.
+     */
+    fun providerAdded() {
+        openedRow = null
+    }
+
+    /**
+     * The Highlight is on [section]'s name, so it's the open one. Not while a row is waiting to take
+     * the Highlight back: Android making the activity again (a language change) gives the window
+     * focus, and Compose puts it on the first section, which would open Providers before the row
+     * could (#443).
+     */
+    internal fun highlightSection(section: SettingsSection) {
+        if (openedRow == null) this.section = section
+    }
+
+    companion object {
+        /** The section and opened row by name, so the row takes the Highlight back in the new activity. */
+        val Saver: Saver<SettingsMemory, Any> = listSaver(
+            save = { listOf(it.section.name, it.openedRow.orEmpty()) },
+            restore = { saved ->
+                SettingsMemory(SettingsSection.valueOf(saved[0])).apply { openedRow = saved[1].ifEmpty { null } }
+            },
+        )
+    }
 }
+
+/**
+ * The app's [SettingsMemory], kept in saved state: changing the language makes the activity again,
+ * and a plain remember came back on Providers instead of the section the viewer was on (#443).
+ */
+@Composable
+fun rememberSettingsMemory(): SettingsMemory = rememberSaveable(saver = SettingsMemory.Saver) { SettingsMemory() }
 
 /**
  * Where the Highlight goes when Compose starts again from the top of Settings: into the pane if it
@@ -215,18 +255,21 @@ fun SettingsScreen(
                 SectionRow(
                     section = section,
                     isCurrent = section == memory.section,
-                    onHighlighted = { memory.section = section },
+                    onHighlighted = { memory.highlightSection(section) },
                     onClick = { runCatching { pane.requestFocus() } },
                     modifier = (if (section == memory.section) Modifier.focusRequester(current) else Modifier)
                         .focusProperties { right = pane },
                 )
             }
         }
+        // One scroll per section (#441): a single one carried a long section's offset into the
+        // next, which opened scrolled past its title with nothing above its first row to bring it back.
+        val paneScroll = key(memory.section) { rememberScrollState() }
         Column(
             Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(paneScroll)
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .onFocusChanged {
                     inPane = it.hasFocus
