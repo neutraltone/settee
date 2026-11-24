@@ -101,6 +101,9 @@ internal fun ChannelList(
                 leadingLabel = stringResource(R.string.player_last),
                 onClick = { onPick(lastItem) },
                 onOptions = { onOptions(lastItem) },
+                // Hidden while highlighted, it hands the highlight to the channel that's on rather
+                // than leave the list answering nothing (#453). Its key can't clash with a row's id.
+                modifier = highlight.outside(key = LAST_ROW_KEY, fallback = queue.getOrNull(currentIndex)?.id),
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -167,5 +170,6 @@ private fun ChannelListRow(
 }
 
 private const val REFRESH_MILLIS = 60_000L
+private const val LAST_ROW_KEY = "last"
 private val PANEL_WIDTH = 400.dp
 private val LOGO_SIZE = 40.dp
