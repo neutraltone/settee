@@ -53,11 +53,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.opentv.R
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
@@ -398,20 +396,17 @@ private fun GuideRow(
             highlight = highlight,
             index = index,
         )
-        Row(Modifier.horizontalScroll(scroll)) {
-            if (shown.isEmpty()) {
-                Box(
-                    Modifier.width(widthFor(window.first, window.last)).fillMaxHeight(),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        stringResource(R.string.guide_no_info),
-                        SetteeType.Body,
-                        color = SetteeColors.QuietText,
-                        modifier = Modifier.padding(start = CELL_PADDING),
-                    )
-                }
-            } else {
+        if (shown.isEmpty()) {
+            NoInformationCell(
+                onWatch = onWatch,
+                onHighlight = { onHighlight(null) },
+                onNextDay = onNextDay,
+                onPrevDay = onPrevDay,
+                railFallback = channel,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Row(Modifier.horizontalScroll(scroll)) {
                 ProgrammeCells(
                     shown = shown,
                     spans = spans,
@@ -647,8 +642,8 @@ internal val CHANNEL_COLUMN = 220.dp
 internal val ROW_HEIGHT = 56.dp
 internal val HEADER_HEIGHT = 32.dp
 private val LOGO = 32.dp
-private val CELL_PADDING = 10.dp
-private val RULE = 1.dp
+internal val CELL_PADDING = 10.dp
+internal val RULE = 1.dp
 private val STRONG_RULE = 2.dp
 internal val HALF_HOUR_WIDTH: Dp = (30 * MINUTE_DP).dp
 
