@@ -266,25 +266,24 @@ class CrashReports(
      */
     fun report(kind: Handled, error: Throwable) {
         if (!available || !on.value || !Sentry.isEnabled()) return
-        if (error is TooSlow) {
-            // A journey that froze is the freeze's: that was reported, and says more.
-            val slow = error.journey
-            if (frozeAt !in slow.startedAt..slow.endedAt) Sentry.captureEvent(SlowJourneyEvent.of(slow))
-            return
-        }
         val service = kind.service
         val failure = error as? ServiceFailure
-        if (service == null || failure == null) {
-            Sentry.captureException(HandledError.of(kind, error))
-            return
-        }
-        // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
-        // stack that shows which client asked. The request and the reply were never in it.
-        val sent = HandledError("${kind.name} ${failure.message}", null).apply { stackTrace = failure.stackTrace }
-        Sentry.captureException(sent) { scope ->
-            scope.setTag(CrashScrubbing.SERVICE_TAG, service)
-            scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
-            scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
+        when {
+            // A journey that froze is the freeze's: that was reported, and says more.
+            error is TooSlow -> error.journey.takeIf { frozeAt !in it.startedAt..it.endedAt }
+                ?.let { Sentry.captureEvent(SlowJourneyEvent.of(it)) }
+            // One of Settee's own services (ADR 0010): `KIND operation status`, the three as tags, and the
+            // stack that shows which client asked. The request and the reply were never in it.
+            service != null && failure != null -> {
+                val sent = HandledError("${kind.name} ${failure.message}", null)
+                sent.stackTrace = failure.stackTrace
+                Sentry.captureException(sent) { scope ->
+                    scope.setTag(CrashScrubbing.SERVICE_TAG, service)
+                    scope.setTag(CrashScrubbing.OPERATION_TAG, failure.operation.tag)
+                    scope.setTag(CrashScrubbing.STATUS_TAG, failure.status)
+                }
+            }
+            else -> Sentry.captureException(HandledError.of(kind, error))
         }
     }
 
