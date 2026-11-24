@@ -214,6 +214,27 @@ class PlayerChannelOptionsTest {
         assertThat(played).isEmpty()
     }
 
+    @Test
+    fun `hiding the Last channel leaves the highlight on the channel that's on, and the list still moves`() {
+        previous = TWELVE
+        showPlayer()
+        openChannelList()
+        compose.onNodeWithText("Last").requestFocus()
+        press(Key.Menu)
+
+        queue = CHANNELS.filterNot { TWELVE in it.qualityIds }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Last").assertDoesNotExist()
+        compose.onNodeWithText("Two").assertIsFocused()
+        captureScreen("player_channel_list_after_hiding_last")
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("One").assertIsFocused()
+        assertThat(played).isEmpty()
+    }
+
     private companion object {
         const val FOCUS_MILLIS = 100L
         const val TWO = 11L
