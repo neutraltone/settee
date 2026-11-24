@@ -346,6 +346,7 @@
     <string name="error_opensubtitles_unreachable_tv">Kan ikke nå OpenSubtitles. Tjek, at dette tv er online, og prøv igen.</string>
     <string name="error_opensubtitles_unreachable_device">Kan ikke nå OpenSubtitles. Tjek, at denne enhed er online, og prøv igen.</string>
     <string name="error_opensubtitles_trouble">OpenSubtitles har problemer. Det er i deres ende, så prøv igen senere.</string>
+    <string name="error_opensubtitles_key_rejected">OpenSubtitles accepterer ikke Settee lige nu. Din konto er i orden: Settee skal opdateres.</string>
     <string name="error_opensubtitles_limit_anonymous">Dagens 5 gratis undertekster er brugt. Log ind på OpenSubtitles under Indstillinger for at få flere.</string>
     <string name="error_opensubtitles_limit_account">Dagens downloads fra OpenSubtitles er brugt. Flere fra %1$s.</string>
     <string name="error_opensubtitles_limit_account_unknown">Dagens downloads fra OpenSubtitles er brugt. Flere i morgen.</string>

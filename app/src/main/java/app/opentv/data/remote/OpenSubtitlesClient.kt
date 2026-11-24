@@ -74,6 +74,12 @@ sealed class OpenSubtitlesFailure(message: String, cause: Throwable? = null) : I
 
     /** The saved token is expired or invalid. */
     class TokenRejected : OpenSubtitlesFailure("OpenSubtitles no longer accepts the sign-in")
+
+    /**
+     * OpenSubtitles turned down Settee's own key, before it looked at any account. Retrying never helps
+     * and the viewer can't fix it: only a Settee with a key OpenSubtitles accepts can.
+     */
+    class KeyRejected : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
 }
 
 /**
@@ -234,6 +240,10 @@ class OpenSubtitlesClient(
     /** What an answer of [status] means; a success that isn't JSON is OpenSubtitles' trouble too. */
     private fun failureFor(status: Int, answer: JsonObject?, request: Request, download: Boolean) = when {
         status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.TokenRejected()
+        // Told by its message too: Cloudflare answers 403 with a challenge page, which is passing trouble.
+        // The same contains-match as the release check, tools/keys/check_keys.py: change both together.
+        status == HTTP_FORBIDDEN && answer?.string("message")?.contains(KEY_REFUSED) == true ->
+            OpenSubtitlesFailure.KeyRejected()
         status == HTTP_NOT_ACCEPTABLE && download -> OpenSubtitlesFailure.DownloadLimit(
             signedIn = request.header("Authorization") != null,
             resetsAt = resetTime(answer),
@@ -246,6 +256,8 @@ class OpenSubtitlesClient(
         val JSON_TYPE = "application/json".toMediaType()
         val HTTP_SUCCESS = 200..299
         const val HTTP_UNAUTHORISED = 401
+        const val HTTP_FORBIDDEN = 403
+        const val KEY_REFUSED = "You cannot consume this service"
         const val HTTP_NOT_ACCEPTABLE = 406
     }
 }
