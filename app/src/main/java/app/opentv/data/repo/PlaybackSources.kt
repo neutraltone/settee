@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import app.opentv.core.ErrorWording
 import app.opentv.core.ReportedSource
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
@@ -115,13 +116,18 @@ sealed interface Playable {
 
     /**
      * [app.opentv.player.PlaybackErrors] says what went wrong and what to try. [title] is what
-     * [key] is called, when it got far enough to know; empty otherwise.
+     * [key] is called, when it got far enough to know; empty otherwise. [cause] is the network
+     * failure behind [Failure.UNREACHABLE], which decides its sentence; null for anything else.
      */
-    data class Failed(val key: MediaKey, val failure: Failure, val title: String = "") : Playable
+    data class Failed(val key: MediaKey, val failure: Failure, val title: String = "", val cause: Throwable? = null) :
+        Playable
 
     enum class Failure {
-        /** The Stalker portal answered create_link with nothing, or not at all. */
+        /** The Stalker portal answered create_link with nothing, or turned the MAC down. */
         LINK_REFUSED,
+
+        /** The Stalker portal couldn't be reached, or stopped responding, when asked for a link (#468). */
+        UNREACHABLE,
 
         /** Only Xtream panels have an archive; playlists and portals don't. */
         NO_CATCHUP,
@@ -204,7 +210,7 @@ class PlaybackSources(
         // The marker a Stalker channel stores is never playable, so a refused mint is a failure:
         // handing the marker on would show a player error that says nothing about the portal.
         val url = if (source?.kind == SourceKind.STALKER) {
-            stalkerApi.mint(source, channel) ?: throw Unplayable(Failure.LINK_REFUSED, channel.shownName)
+            stalkerApi.mint(source, channel)
         } else {
             channel.streamUrl
         }
@@ -315,12 +321,21 @@ private suspend fun ChannelLineup.capturedFor(recording: Recording, db: OpenTvDa
         ?: picked
 }
 
-/** A portal that won't take the MAC throws rather than answering; to the viewer that's the same refusal. */
-private suspend fun StalkerApi.mint(source: Source, channel: Channel): String? = try {
-    createLink(source, channel.cmd.orEmpty())
-} catch (e: StalkerApi.StalkerException) {
-    Log.w(TAG, "The portal refused a link", e)
-    null
+/**
+ * [channel]'s link, minted now. A portal that won't take the MAC throws rather than answering; to the
+ * viewer that's the same refusal. One that couldn't be reached refused nothing, so it isn't worded as one.
+ */
+private suspend fun StalkerApi.mint(source: Source, channel: Channel): String {
+    val link = try {
+        createLink(source, channel.cmd.orEmpty())
+    } catch (e: StalkerApi.StalkerException) {
+        // The exception's kind only: an UnknownHostException's message is the portal's host.
+        Log.w(TAG, "No link from the portal: ${ErrorWording.codeOf(e.cause ?: e)}")
+        val network = e.cause?.takeIf { ErrorWording.networkSentenceOf(it, onTelevision = false) != null }
+        if (network != null) throw Unplayable(Failure.UNREACHABLE, channel.shownName, network)
+        null
+    }
+    return link ?: throw Unplayable(Failure.LINK_REFUSED, channel.shownName)
 }
 
 /**
@@ -338,14 +353,14 @@ private fun isGrowing(recording: Recording, now: Long): Boolean {
 }
 
 /** Why a title can't be played, thrown from deep in a lookup and turned into [Playable.Failed]. */
-private class Unplayable(val failure: Failure, val title: String = "") : Exception()
+private class Unplayable(val failure: Failure, val title: String = "", val reason: Throwable? = null) : Exception()
 
 private fun <T : Any> T?.or(failure: Failure): T = this ?: throw Unplayable(failure)
 
 private inline fun resolving(key: MediaKey, resolve: () -> Playable.Ready): Playable = try {
     resolve()
 } catch (e: Unplayable) {
-    Playable.Failed(key, e.failure, e.title)
+    Playable.Failed(key, e.failure, e.title, e.reason)
 }
 
 /**

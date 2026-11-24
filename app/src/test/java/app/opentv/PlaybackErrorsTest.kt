@@ -31,6 +31,7 @@ import com.hierynomus.mserref.NtStatus
 import com.hierynomus.mssmb2.SMB2MessageCommandCode
 import com.hierynomus.mssmb2.SMBApiException
 import java.io.FileNotFoundException
+import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
@@ -282,6 +283,28 @@ class PlaybackErrorsTest {
             shown.sentence,
         ).isEqualTo("Your provider stopped responding. It may be busy, so try again in a moment.")
         assertThat(shown.detail).isEqualTo("IO network connection timeout")
+    }
+
+    /** docs/ERRORS.md lists these triggers; the exception's type decides, whatever Media3's code says (#489). */
+    @Test
+    fun `a refused connection or no route reads as can't reach, like an unknown host`() {
+        listOf(ConnectException("Connection refused"), NoRouteToHostException("No route to host")).forEach { cause ->
+            val error = ExoPlaybackException.createForSource(cause, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
+
+            assertThat(PlaybackErrors.describe(context, error, onTelevision = true).sentence)
+                .isEqualTo("Can't reach your provider. Check this TV is online and the address is right.")
+        }
+    }
+
+    @Test
+    fun `any interrupted read, not only a socket timeout, reads as stopped responding`() {
+        val error = ExoPlaybackException.createForSource(
+            InterruptedIOException("interrupted"),
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+        )
+
+        assertThat(PlaybackErrors.describe(context, error, onTelevision = true).sentence)
+            .isEqualTo("Your provider stopped responding. It may be busy, so try again in a moment.")
     }
 
     @Test

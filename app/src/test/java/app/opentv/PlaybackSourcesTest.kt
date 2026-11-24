@@ -101,6 +101,35 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `a portal that can't be reached for a link says so, not that the link was refused`() = testing {
+        db.sources().insert(STALKER_SOURCE)
+        test.panel.replies["handshake"] = "!host"
+        val key = MediaKey.Live(channel(streamUrl = "stalker://2/9", sourceId = STALKER_SOURCE.id, cmd = "ffmpeg x"))
+
+        val playable = sources.forWatching(key) as Playable.Failed
+
+        assertThat(playable.failure).isEqualTo(Playable.Failure.UNREACHABLE)
+        assertThat(playable.title).isEqualTo("BBC One")
+        val shown = PlaybackErrors.describe(context, playable.failure, onTelevision = true, playable.cause)
+        val cantReach = "Can't reach your provider. Check this TV is online and the address is right."
+        assertThat(shown.sentence).isEqualTo(cantReach)
+        assertThat(shown.detail).isEqualTo("UnknownHost")
+    }
+
+    @Test
+    fun `a portal that stops responding when asked for a link says so`() = testing {
+        db.sources().insert(STALKER_SOURCE)
+        test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
+        test.panel.replies["create_link"] = "!timeout"
+        val key = MediaKey.Live(channel(streamUrl = "stalker://2/9", sourceId = STALKER_SOURCE.id, cmd = "ffmpeg x"))
+
+        val playable = sources.forWatching(key) as Playable.Failed
+
+        assertThat(PlaybackErrors.describe(context, playable.failure, onTelevision = true, playable.cause).sentence)
+            .isEqualTo("Your provider stopped responding. It may be busy, so try again in a moment.")
+    }
+
+    @Test
     fun `a movie plays with its source's user agent, not the app's`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.movies().upsertAll(listOf(movie()))
@@ -521,7 +550,8 @@ class PlaybackSourcesTest {
         assertThat(sources.isGrowing(MediaKey.Recording(finished))).isFalse()
     }
 
-    private fun message(failure: Playable.Failure) = PlaybackErrors.describe(context, failure).sentence
+    private fun message(failure: Playable.Failure) =
+        PlaybackErrors.describe(context, failure, onTelevision = false).sentence
 
     private fun news() = Programme(
         feedId = 1,

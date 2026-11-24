@@ -65,9 +65,14 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
      * Only for the provider: "can't reach your provider" would be wrong about a NAS or a free guide.
      */
     fun ofProvider(error: Throwable, @StringRes fallback: Int): ViewerError {
-        if (error is ProviderException) return ofProvider(error, fallback)
-        val sentence = networkSentenceOf(error, onTelevision) ?: fallback
-        return ViewerError(resources.getString(sentence), ViewerError.detailOf(codeOf(error)))
+        // A provider that couldn't be reached at all, as a Stalker portal's client reports it: the
+        // network failure it carries is what to word (#468).
+        val failure = (error as? ProviderException)?.takeIf { it.problem == Problem.BAD_REPLY }?.cause
+            ?.takeIf { networkSentenceOf(it, onTelevision) != null }
+            ?: error
+        if (failure is ProviderException) return ofProvider(failure, fallback)
+        val sentence = networkSentenceOf(failure, onTelevision) ?: fallback
+        return ViewerError(resources.getString(sentence), ViewerError.detailOf(codeOf(failure)))
     }
 
     /** Anything else's [error]: always [sentence], with what went wrong on the detail line. */

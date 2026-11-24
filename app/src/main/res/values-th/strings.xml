@@ -335,10 +335,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">ทีวีนี้เล่น %1$s ไม่ได้</string>
     <string name="vod_cant_play_device">อุปกรณ์นี้เล่น %1$s ไม่ได้</string>
+    <string name="player_no_sound_tv">ทีวีเครื่องนี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นั้นอาจช่วยได้</string>
+    <string name="player_no_sound_device">อุปกรณ์นี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นี้อาจช่วยได้</string>
     <string name="player_stepped_down_tv">ทีวีนี้เล่น %1$s ไม่ได้ กำลังเล่น %2$s แทน</string>
     <string name="player_stepped_down_device">อุปกรณ์นี้เล่น %1$s ไม่ได้ กำลังเล่น %2$s แทน</string>
     <string name="player_stepped_down_lower_tv">ทีวีนี้เล่น %1$s ไม่ได้ กำลังเล่นคุณภาพที่ต่ำกว่าแทน</string>
     <string name="player_stepped_down_lower_device">อุปกรณ์นี้เล่น %1$s ไม่ได้ กำลังเล่นคุณภาพที่ต่ำกว่าแทน</string>
+    <string name="player_stepped_down_for_sound_tv">ทีวีเครื่องนี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) กำลังเล่นเวอร์ชันอื่นแทน หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นั้นอาจช่วยได้</string>
+    <string name="player_stepped_down_for_sound_device">อุปกรณ์นี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) กำลังเล่นเวอร์ชันอื่นแทน หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นี้อาจช่วยได้</string>
     <string name="player_stepped_down_unnamed_tv">ทีวีนี้เล่นคุณภาพนั้นไม่ได้ กำลังเล่นคุณภาพอื่นแทน</string>
     <string name="player_stepped_down_unnamed_device">อุปกรณ์นี้เล่นคุณภาพนั้นไม่ได้ กำลังเล่นคุณภาพอื่นแทน</string>
     <string name="vod_language_title">ที่นี่มีแค่ภาษา%1$s</string>

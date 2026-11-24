@@ -22,6 +22,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
+import app.opentv.isRunningOnTelevision
 import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
@@ -167,7 +168,12 @@ class RecordingService : Service() {
             // As playback words a refusal, so a recording and the channel it's of say the same thing.
             is StreamCapture.Ending.Refused ->
                 ViewerError(PlaybackErrors.describeHttpStatus(this, ending.status), "HTTP ${ending.status}")
-            is StreamCapture.Ending.NoLink -> PlaybackErrors.describe(this, ending.failure)
+            is StreamCapture.Ending.NoLink -> PlaybackErrors.describe(
+                this,
+                ending.failure,
+                isRunningOnTelevision(this),
+                ending.cause,
+            )
             StreamCapture.Ending.StreamStopped -> channelStopped()
         }
 

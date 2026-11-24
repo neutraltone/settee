@@ -338,10 +338,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Tato televize nedokáže přehrát %1$s</string>
     <string name="vod_cant_play_device">Toto zařízení nedokáže přehrát %1$s</string>
+    <string name="player_no_sound_tv">Tato televize neumí přehrát tento formát zvuku (%1$s). Pokud to vaše televize nebo soundbar podporuje, může pomoct zapnout prostorový zvuk v jejich nastavení.</string>
+    <string name="player_no_sound_device">Toto zařízení neumí přehrát tento formát zvuku (%1$s). Pokud to vaše televize nebo soundbar podporuje, může pomoct zapnout prostorový zvuk v nastavení tohoto zařízení.</string>
     <string name="player_stepped_down_tv">Tato televize nedokáže přehrát %1$s. Místo toho se přehrává %2$s.</string>
     <string name="player_stepped_down_device">Toto zařízení nedokáže přehrát %1$s. Místo toho se přehrává %2$s.</string>
     <string name="player_stepped_down_lower_tv">Tato televize nedokáže přehrát %1$s. Místo toho se přehrává nižší kvalita.</string>
     <string name="player_stepped_down_lower_device">Toto zařízení nedokáže přehrát %1$s. Místo toho se přehrává nižší kvalita.</string>
+    <string name="player_stepped_down_for_sound_tv">Tato televize neumí přehrát tento formát zvuku (%1$s). Místo toho se přehrává jiná verze. Pokud to vaše televize nebo soundbar podporuje, může pomoct zapnout prostorový zvuk v jejich nastavení.</string>
+    <string name="player_stepped_down_for_sound_device">Toto zařízení neumí přehrát tento formát zvuku (%1$s). Místo toho se přehrává jiná verze. Pokud to vaše televize nebo soundbar podporuje, může pomoct zapnout prostorový zvuk v nastavení tohoto zařízení.</string>
     <string name="player_stepped_down_unnamed_tv">Tato televize nedokáže přehrát tuto kvalitu. Místo toho se přehrává jiná.</string>
     <string name="player_stepped_down_unnamed_device">Toto zařízení nedokáže přehrát tuto kvalitu. Místo toho se přehrává jiná.</string>
     <string name="vod_language_title">Zde jen v jazyce %1$s</string>

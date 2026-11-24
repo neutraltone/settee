@@ -55,8 +55,8 @@ class StreamCapture(
         /** The provider answered, and then sent nothing, again and again: the channel stopped. */
         data object StreamStopped : Ending
 
-        /** There was no link to connect to, for [failure]. */
-        data class NoLink(val failure: Playable.Failure) : Ending
+        /** There was no link to connect to, for [failure]; [cause] is [Playable.Failed]'s. */
+        data class NoLink(val failure: Playable.Failure, val cause: Throwable? = null) : Ending
     }
 
     /** Written so far; read by a capture that was stopped part-way, which never gets its [Outcome]. */
@@ -124,7 +124,7 @@ class StreamCapture(
         suspend fun connect(): Long {
             refusal = null
             return when (val playable = resolve()) {
-                is Playable.Failed -> 0L.also { refusal = Ending.NoLink(playable.failure) }
+                is Playable.Failed -> 0L.also { refusal = Ending.NoLink(playable.failure, playable.cause) }
                 is Playable.Ready -> copy(playable)
             }
         }

@@ -337,10 +337,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Ovaj televizor ne može reproducirati %1$s</string>
     <string name="vod_cant_play_device">Ovaj uređaj ne može reproducirati %1$s</string>
+    <string name="player_no_sound_tv">Ovaj TV ne može reproducirati ovaj format zvuka (%1$s). Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u njegovim postavkama.</string>
+    <string name="player_no_sound_device">Ovaj uređaj ne može reproducirati ovaj format zvuka (%1$s). Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u postavkama ovog uređaja.</string>
     <string name="player_stepped_down_tv">Ovaj televizor ne može reproducirati %1$s. Umjesto toga reproducira se %2$s.</string>
     <string name="player_stepped_down_device">Ovaj uređaj ne može reproducirati %1$s. Umjesto toga reproducira se %2$s.</string>
     <string name="player_stepped_down_lower_tv">Ovaj televizor ne može reproducirati %1$s. Umjesto toga reproducira se niža kvaliteta.</string>
     <string name="player_stepped_down_lower_device">Ovaj uređaj ne može reproducirati %1$s. Umjesto toga reproducira se niža kvaliteta.</string>
+    <string name="player_stepped_down_for_sound_tv">Ovaj TV ne može reproducirati ovaj format zvuka (%1$s). Umjesto toga reproducira se druga verzija. Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u njegovim postavkama.</string>
+    <string name="player_stepped_down_for_sound_device">Ovaj uređaj ne može reproducirati ovaj format zvuka (%1$s). Umjesto toga reproducira se druga verzija. Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u postavkama ovog uređaja.</string>
     <string name="player_stepped_down_unnamed_tv">Ovaj televizor ne može reproducirati tu kvalitetu. Umjesto toga reproducira se druga.</string>
     <string name="player_stepped_down_unnamed_device">Ovaj uređaj ne može reproducirati tu kvalitetu. Umjesto toga reproducira se druga.</string>
     <string name="vod_language_title">Ovdje samo na jeziku %1$s</string>

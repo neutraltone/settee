@@ -12,6 +12,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
 import app.opentv.data.remote.ProviderException.Problem
+import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.withContext
@@ -61,8 +62,16 @@ class StalkerApi(
     private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
 
-    class StalkerException(message: String, cause: Throwable? = null, problem: Problem = Problem.BAD_REPLY) :
-        ProviderException(message, cause, problem)
+    /**
+     * Every failure this client throws. One that couldn't reach the portal at all carries the
+     * [IOException] as its cause, so it can be worded as the network failure it was (#468).
+     */
+    class StalkerException(
+        message: String,
+        cause: Throwable? = null,
+        problem: Problem = Problem.BAD_REPLY,
+        status: Int? = null,
+    ) : ProviderException(message, cause, problem, status)
 
     private data class Session(val token: String, val endpoint: HttpUrl, val expiresAt: Long)
 
@@ -77,7 +86,12 @@ class StalkerApi(
 
     /** Live categories ("genres") for the guide's rail. */
     suspend fun liveCategories(source: Source): List<Category> = withContext(dispatchers.io) {
-        val arr = callRetrying(source, type = "itv", action = "get_genres", read = ::js) as? JsonArray
+        // A portal that can't be reached, or won't take the MAC, says so here. Genres themselves are
+        // only the rail's grouping: a portal failing just this call still has its channels to give.
+        session(source)
+        val arr = runCatching { callRetrying(source, type = "itv", action = "get_genres", read = ::js) }
+            .throwingErrors()
+            .getOrNull() as? JsonArray
             ?: return@withContext emptyList()
         arr.mapIndexedNotNull { index, element ->
             val o = element as? JsonObject ?: return@mapIndexedNotNull null
@@ -97,11 +111,14 @@ class StalkerApi(
      *
      * A big portal's list can be more than a Fire TV Stick's heap will hold as one string, a JSON
      * tree and the channels at once, so it's read one channel at a time, as Xtream's lists are.
+     *
+     * A reply that couldn't be read throws rather than coming back empty: an empty list would be
+     * worded as an account with no channels, sending the viewer to their provider for nothing.
      */
     suspend fun liveChannels(source: Source): List<Channel> = withContext(dispatchers.io) {
         val s = session(source)
         callRetrying(source, type = "itv", action = "get_all_channels", read = { channels(it, source, s.endpoint) })
-            .orEmpty()
+            ?: throw StalkerException("The portal's channel list couldn't be read.")
     }
 
     /**
@@ -170,12 +187,14 @@ class StalkerApi(
         if (mac.isEmpty()) {
             throw StalkerException("This portal needs a MAC address.", problem = Problem.DEVICE_REFUSED)
         }
-        var lastError: Throwable? = null
+        val refusals = Refusals()
         for (endpoint in endpoints(source)) {
-            val hs = runCatching { handshake(source, endpoint) }
-                .throwingErrors()
-                .onFailure { lastError = it }
-                .getOrNull()
+            val hs = try {
+                handshake(source, endpoint).also { refusals.answered = true }
+            } catch (e: StalkerException) {
+                refusals.add(e)
+                null
+            }
             if (hs != null) {
                 // Many portals won't serve itv data until get_profile is called with a full MAG
                 // identity (device_id/signature) — that's what unlocks the ones that authenticate the
@@ -184,11 +203,33 @@ class StalkerApi(
                 return Session(hs.token, endpoint, now + TOKEN_TTL_MILLIS).also { sessions[source.id] = it }
             }
         }
-        throw StalkerException(
-            "The portal didn't accept this MAC address, or the URL is wrong.",
-            lastError,
-            Problem.DEVICE_REFUSED,
-        )
+        throw refusals.failure()
+    }
+
+    /**
+     * Why no endpoint gave a token, which decides the sentence: one that answered without one refused
+     * the MAC, but a portal that answered none of them, or only with server trouble, refused nothing.
+     */
+    private class Refusals {
+        /** An endpoint answered the handshake, with or without a token. */
+        var answered = false
+        private var replied = false
+        private var serverTrouble: StalkerException? = null
+        private var unreachable: StalkerException? = null
+
+        fun add(failure: StalkerException) {
+            val status = failure.status
+            if (status == null) unreachable = failure else replied = true
+            if (status == TOO_MANY_REQUESTS || status in SERVER_ERRORS) serverTrouble = failure
+        }
+
+        fun failure(): StalkerException = serverTrouble?.takeUnless { answered }
+            ?: unreachable?.takeUnless { answered || replied }
+            // Paths that 404 are the usual shape of a wrong URL, which this sentence covers too.
+            ?: StalkerException(
+                "The portal didn't accept this MAC address, or the URL is wrong.",
+                problem = Problem.DEVICE_REFUSED,
+            )
     }
 
     private data class Handshake(val token: String, val random: String)
@@ -286,7 +327,8 @@ class StalkerApi(
      * then comes back null. Re-handshake once for a fresh token and try again, so an intermittent
      * "sometimes just rejected" becomes a silent retry instead of an empty channel list or a channel
      * that won't tune. Running out of memory isn't a null: it's thrown, never retried, since a second
-     * download would land in the heap that just ran out.
+     * download would land in the heap that just ran out. A second failure is thrown as it came, so
+     * the viewer hears whether the portal couldn't be reached or answered with an error status.
      */
     private fun <T : Any> callRetrying(
         source: Source,
@@ -296,12 +338,14 @@ class StalkerApi(
         extra: (HttpUrl.Builder) -> Unit = {},
     ): T? {
         fun call(session: Session) = execute(source, session.url(type, action, extra), session.token, read)
-        return call(session(source)) ?: call(session(source, force = true))
+        val first = session(source)
+        return runCatching { call(first) }.throwingErrors().getOrNull() ?: call(session(source, force = true))
     }
 
     /**
-     * A request's reply, by [read]; null when the portal refused it, or it couldn't be fetched or
-     * read. Only exceptions mean that: an [Error] such as [OutOfMemoryError] is thrown on.
+     * A request's reply, by [read]; null when the portal answered with something [read] couldn't
+     * make out. A portal that couldn't be reached, or answered with an error status, throws a
+     * [StalkerException] saying which; an [Error] such as [OutOfMemoryError] is thrown on.
      */
     private fun <T : Any> execute(source: Source, url: HttpUrl, token: String?, read: (BufferedSource) -> T?): T? {
         val mac = source.macAddress?.trim().orEmpty()
@@ -323,14 +367,29 @@ class StalkerApi(
             .header("Cookie", cookie)
             .apply { if (token != null) header("Authorization", "Bearer $token") }
             .build()
-        return runCatching {
+        return try {
             http.newCall(request).execute().use { response ->
-                if (response.isSuccessful) read(response.body.source()) else null
+                if (!response.isSuccessful) {
+                    throw StalkerException(
+                        "The portal answered HTTP ${response.code}.",
+                        problem = Problem.HTTP_STATUS,
+                        status = response.code,
+                    )
+                }
+                // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions; a reply
+                // that breaks off as it's read is an IOException, caught below with the rest.
+                try {
+                    read(response.body.source())
+                } catch (e: IllegalArgumentException) {
+                    Log.w(TAG, "Stalker reply unreadable: ${e.javaClass.simpleName}")
+                    null
+                }
             }
+        } catch (e: IOException) {
+            // The exception's kind only: an UnknownHostException's message is the portal's host.
+            Log.w(TAG, "Stalker request failed: ${e.javaClass.simpleName}")
+            throw StalkerException("The portal couldn't be reached.", e)
         }
-            .throwingErrors()
-            .onFailure { Log.w(TAG, "Stalker request failed", it) }
-            .getOrNull()
     }
 
     /** Candidate API endpoints for a portal URL, most common first. First that handshakes wins. */
@@ -370,6 +429,8 @@ class StalkerApi(
     private companion object {
         const val TAG = "StalkerApi"
         const val TOKEN_TTL_MILLIS = 4 * 60 * 1000L // handshake tokens are short-lived; re-mint often
+        const val TOO_MANY_REQUESTS = 429
+        val SERVER_ERRORS = 500..599
         const val DEFAULT_STB_UA =
             "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) " +
                 "MAG200 stbapp ver: 2 rev: 250 Safari/533.3"

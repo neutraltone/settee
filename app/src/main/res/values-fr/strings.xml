@@ -337,10 +337,14 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Cette TV ne peut pas lire la %1$s</string>
     <string name="vod_cant_play_device">Cet appareil ne peut pas lire la %1$s</string>
+    <string name="player_no_sound_tv">Cette télévision ne peut pas lire ce format audio (%1$s). Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans ses réglages peut aider.</string>
+    <string name="player_no_sound_device">Cet appareil ne peut pas lire ce format audio (%1$s). Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans les réglages de cet appareil peut aider.</string>
     <string name="player_stepped_down_tv">Cette TV ne peut pas lire la %1$s. Lecture en %2$s à la place.</string>
     <string name="player_stepped_down_device">Cet appareil ne peut pas lire la %1$s. Lecture en %2$s à la place.</string>
     <string name="player_stepped_down_lower_tv">Cette TV ne peut pas lire la %1$s. Lecture dans une qualité inférieure à la place.</string>
     <string name="player_stepped_down_lower_device">Cet appareil ne peut pas lire la %1$s. Lecture dans une qualité inférieure à la place.</string>
+    <string name="player_stepped_down_for_sound_tv">Cette télévision ne peut pas lire ce format audio (%1$s). Une autre version est lue à la place. Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans ses réglages peut aider.</string>
+    <string name="player_stepped_down_for_sound_device">Cet appareil ne peut pas lire ce format audio (%1$s). Une autre version est lue à la place. Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans les réglages de cet appareil peut aider.</string>
     <string name="player_stepped_down_unnamed_tv">Cette TV ne peut pas lire cette qualité. Lecture dans une autre qualité à la place.</string>
     <string name="player_stepped_down_unnamed_device">Cet appareil ne peut pas lire cette qualité. Lecture dans une autre qualité à la place.</string>
     <string name="vod_language_title">Seulement en %1$s ici</string>

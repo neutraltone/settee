@@ -481,7 +481,8 @@ class PlayerController(
                     // offered under the sentence mustn't be the last stream's.
                     _tracks.value = Tracks.EMPTY
                     val title = resolved.title.ifEmpty { _title.value }
-                    states.publish(State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true))
+                    val reason = PlaybackErrors.describe(strings, resolved.failure, onTelevision, resolved.cause)
+                    states.publish(State.Error(title, reason, true))
                     return@launch
                 }
             }

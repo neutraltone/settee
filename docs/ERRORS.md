@@ -103,8 +103,8 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | HTTP 429 | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | code · HTTP 429 · format | Provider's rate limit |
 | HTTP 451 | `error_http_451` | Your provider can't show this where you are. | code · HTTP 451 · format | Provider's: blocked in this region |
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | code · HTTP 5xx · format | Provider's server |
-| `UnknownHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
-| `SocketTimeoutException`, `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
+| `UnknownHostException`, `ConnectException`, `NoRouteToHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
+| `InterruptedIOException` (`SocketTimeoutException` among them), `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
 | `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, `ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED`, `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` (not raised today: the player checks no content type) | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: an expired account or blocked channel answering 200 with an HTML page, which won't parse as a TS container or HLS manifest; or a captive page |
 | `ERROR_CODE_PARSING_CONTAINER_MALFORMED`, `ERROR_CODE_PARSING_MANIFEST_MALFORMED` | `error_damaged` | This video is damaged and won't play. That's at your provider's end, so try something else. | code · format | Provider's: broken stream |
 | `ERROR_CODE_BEHIND_LIVE_WINDOW` | `error_behind_live` | This channel fell too far behind live. Try again to catch up. | code · format | Neither: a slow connection or a short live window |
@@ -122,7 +122,8 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | A finished recording's file isn't on this device (`ERROR_CODE_IO_FILE_NOT_FOUND`). No Try again, no restart by itself, and the load isn't retried (#475) | `error_recording_missing` | This recording's file isn't there any more. | code · format | Deleted |
 | A finished recording's file isn't on the USB drive (`ERROR_CODE_IO_FILE_NOT_FOUND`). Try again, since plugging the drive back in fixes it, but no restart by itself, and the load isn't retried (#475) | `error_recording_usb_missing` | Can't find this recording on your USB drive. Check it's plugged in, then try again. | code · format | Viewer's: the drive is unplugged, or the file was deleted |
 | Any other Media3 code | `error_anything_else` | This didn't play. Try again, or pick something else. | code · format | Unknown |
-| `Playable.Failure.LINK_REFUSED` | `playback_link_refused` | Your provider didn't give a link for this channel. Try refreshing your provider in Settings. | LinkRefused | Provider's portal |
+| `Playable.Failure.LINK_REFUSED`: the Stalker portal answered `create_link` with no link, with an error status, or turned the MAC down | `playback_link_refused` | Your provider didn't give a link for this channel. Try refreshing your provider in Settings. | LinkRefused | Provider's portal |
+| `Playable.Failure.UNREACHABLE`: the Stalker portal couldn't be reached (`UnknownHostException`, `ConnectException`, `NoRouteToHostException`) or stopped responding (`InterruptedIOException`) when asked for a link, worded by `ErrorWording.networkSentenceOf` (#468) | `error_cant_reach_tv` / `_device`, `error_timed_out` | Can't reach your provider. Check this TV is online and the address is right. / Your provider stopped responding. It may be busy, so try again in a moment. | exception type | Viewer's network, a wrong address, or the portal down |
 | `Playable.Failure.NO_CATCHUP` | `playback_no_catchup` | Your provider doesn't offer catch-up, so past programmes can't be played. | NoCatchup | Provider's: playlists and portals have no catch-up |
 | `Playable.Failure.GONE` | `error_gone` | This isn't on your provider any more. Try refreshing your provider in Settings. | Gone | Provider's: removed from the catalogue |
 | `Playable.Failure.BAD_ADDRESS`: a catch-up whose provider address no longer parses, so no archive URL can be built (#497) | `error_bad_address` | That address doesn't look right. Check your provider's details in Settings. | BadAddress | Viewer's setup |
@@ -139,7 +140,7 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | Recording, Failed or Cut short: the NAS unreachable (as above, writing to the NAS) | `rec_error_nas_unreachable` | Couldn't reach your NAS. Check it's on and connected to your network. | NasUnreachable | The NAS, or the network |
 | Recording, Failed or Cut short: this device's storage failing a write for anything but room | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | The device's storage |
 | Recording, Failed or Cut short: refused, five connections in a row getting nothing and one of them refused with HTTP 401, 403, 404, 429, 451 or 5xx, the last such status counting (`StreamCapture.Ending.Refused`); worded as playback words the status (`PlaybackErrors.describeHttpStatus`) | `error_http_401`, `error_http_403`, `error_gone`, `error_http_429`, `error_http_451`, `error_http_5xx`, `error_anything_else` | As the HTTP rows above | HTTP n | As the HTTP rows above |
-| Recording, Failed or Cut short: no link, the last of five connections getting nothing having had none to connect to (`StreamCapture.Ending.NoLink`) | As the `Playable.Failure` rows above | As the `Playable.Failure` rows above | LinkRefused, Gone | As the `Playable.Failure` rows above |
+| Recording, Failed or Cut short: no link, the last of five connections getting nothing having had none to connect to (`StreamCapture.Ending.NoLink`) | As the `Playable.Failure` rows above | As the `Playable.Failure` rows above | LinkRefused, Gone, or the exception type for an unreachable portal | As the `Playable.Failure` rows above |
 | Recording, Failed or Cut short: the channel stopped, five connections in a row answered and sent nothing (`StreamCapture.Ending.StreamStopped`), or its end came with nothing written; also one failed before reasons were stored | `rec_error_channel_stopped` | The channel stopped sending video, which is usually at your provider's end. Check it plays in Live TV. | ChannelStopped (none for one from before) | Provider's stream, usually |
 | Recording, Failed: stopped by hand (or by Android stopping the service) before anything came; one stopped after something came is plain Recorded, with no reason | `rec_error_stopped_early` | This was stopped before anything was recorded. | Stopped | Viewer's: stopped it |
 | Recordings: deleting a NAS recording failed (unreachable, wrong login, refused); the row stays | `rec_delete_failed_nas` | Couldn't delete this from your NAS. Check it's on, then try deleting it again. | exception type | The NAS, or the network |
@@ -157,6 +158,23 @@ aren't `ErrorMessage`s and have no detail line.
 |---|---|---|---|
 | None of the title's Versions plays here (only 4K ones on a 1080p Stick) | `vod_cant_play_tv` / `_device` | This TV can't play 4K | This hardware: Play is off |
 | Only Versions in another language play here | `vod_language_title`, `vod_language_body_tv` / `_device` | Only in German here. This TV can't play a version in your language. | This hardware, or the provider's shelves: Play asks first |
+
+### Notices over the picture
+
+`StreamGuard` says these over the picture in both players when playback hit a limit of this hardware
+but carries on, so they aren't `ErrorMessage`s: no detail line, nothing to press, and gone after 5 s
+(`StreamGuard.NOTICE_MILLIS`), or sooner when an error takes their place or the viewer moves on. With no
+other Quality to move to, the video failures end in the error rows above instead (`error_too_big_tv`,
+`error_no_first_frame_tv`). Each Quality's name is the provider's or Settee's label
+for it, as the Quality picker shows it.
+
+| Trigger | String key | Sentence | Whose end, likely cause |
+|---|---|---|---|
+| A Quality this hardware can't play (`DecoderList` refuses its video, or no first frame comes) moves down to the next (`StreamGuard.steppedDown`); or a film or episode starts on a lower Version because this hardware can't play the one asked for (`VodQualities`) | `player_stepped_down_tv` / `_device` | This TV can't play 4K. Playing 1080p instead. | This hardware |
+| As above, the Quality moved to has no name | `player_stepped_down_lower_tv` / `_device` | This TV can't play 4K. Playing a lower quality instead. | This hardware |
+| As above, the Quality moved from has no name | `player_stepped_down_unnamed_tv` / `_device` | This TV can't play that quality. Playing another instead. | This hardware |
+| No audio track this hardware can play, while the player has sound on (not the muted previews), on a film or episode with a lower Quality to move to (`PlayerController.Request.stepsForSound`; a channel keeps its picture instead) | `player_stepped_down_for_sound_tv` / `_device` | This TV can't play this audio format (E-AC-3), so another version is playing. If your TV or soundbar supports it, turning on surround sound in its settings may help. | This hardware, or surround sound off on the TV or soundbar |
+| As above, on a channel or with no lower Quality: the picture plays on without sound, said once per stream | `player_no_sound_tv` / `_device` | This TV can't play this audio format (E-AC-3). If your TV or soundbar supports it, turning on surround sound in its settings may help. | This hardware, or surround sound off on the TV or soundbar |
 
 ## Film and show pages
 
@@ -199,16 +217,16 @@ both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
-| `UnknownHostException`, `ConnectException`, `NoRouteToHostException` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | exception type | Viewer's network, or a wrong address |
-| `InterruptedIOException` (timeouts) | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | exception type | Provider's |
+| `UnknownHostException`, `ConnectException`, `NoRouteToHostException`; for a Stalker portal, from any request, the handshake included when no address of the portal answered at all (a `StalkerException` carrying it as its cause, #468) | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | exception type | Viewer's network, or a wrong address |
+| `InterruptedIOException` (timeouts), Stalker's as above | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | exception type | Provider's |
 | Xtream `auth: 0` (`Problem.LOGIN_REJECTED`), HTTP 401 or 403 | `error_login` | Your provider didn't accept your login. Check your provider's details in Settings. | LoginRejected, or HTTP 401/403 | Viewer's login |
 | Xtream account not Active (`Problem.ACCOUNT_INACTIVE`) | `error_account_inactive` | Your provider says this account isn't active. Check with them, then try again. | AccountInactive | Provider's: expired or disabled |
 | Not a valid address (`Problem.BAD_ADDRESS`) | `error_bad_address` | That address doesn't look right. Check your provider's details in Settings. | BadAddress | Viewer's setup |
 | Xtream address answered with a web page, or 404 for `player_api.php` (`Problem.NOT_A_PANEL`): the provider's website, the wrong port, or a Wi-Fi sign-in page | `error_not_a_panel` | That address didn't answer like an IPTV provider. Check the address and port in your provider's details, or sign in to your Wi-Fi if it asks. | NotAPanel, or NotAPanel · HTTP 404 | Viewer's setup, or the network |
-| Portal refused the MAC, or none set (`Problem.DEVICE_REFUSED`) | `error_device_refused` | Your provider didn't accept these details. Check your provider's details in Settings. | DeviceRefused | Viewer's setup, or the portal |
-| HTTP 429 | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | HTTP 429 | Provider's rate limit |
-| HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | HTTP 5xx | Provider's server |
-| Provider answered with no channels | `error_no_channels` | Your provider sent no channels. Your account may not have any yet, so check with them. | NoChannels | Provider's: no package |
+| Portal refused the MAC, or none set (`Problem.DEVICE_REFUSED`): an address of the portal answered the handshake without a token, or every address answered with a status that isn't 429 or 5xx (404s: a wrong URL) | `error_device_refused` | Your provider didn't accept these details. Check your provider's details in Settings. | DeviceRefused | Viewer's setup, or the portal |
+| HTTP 429; for a Stalker portal, also when no address answered the handshake but one answered 429, or the channel list did after a second handshake | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | HTTP 429 | Provider's rate limit |
+| HTTP 5xx, Stalker's as for 429 (#468) | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | HTTP 5xx | Provider's server |
+| Provider answered with no channels (for a Stalker portal, a channel list it sent empty; one that couldn't be read is Anything else) | `error_no_channels` | Your provider sent no channels. Your account may not have any yet, so check with them. | NoChannels | Provider's: no package |
 | Channel list too big for memory (`OutOfMemoryError` while syncing) | `error_channel_list_memory_tv` / `_device` | Your provider's channel list needs more memory than this TV has. | OutOfMemory | This hardware: list too big |
 | Playlist with no channels | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup |
 | Test finding no `#EXTM3U` or `#EXTINF` at the start of the address's answer (`Problem.NOT_A_PLAYLIST`) | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NotAPlaylist | Viewer's setup: a web page or the wrong link |
