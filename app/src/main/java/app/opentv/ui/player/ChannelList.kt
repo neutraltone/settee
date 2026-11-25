@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -147,14 +148,21 @@ private fun ChannelListRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // A "Last" tag, or the channel's number if the provider gives one, in a fixed-width slot
-            // so the logos and names line up down the list.
+            // The channel's number if the provider gives one, in a fixed-width slot so the logos and
+            // names line up down the list. The "Last" tag takes that slot at least, and more where its
+            // word needs it ("Předchozí", "Τελευταίο"): cut to fit, it no longer said what it was (#507).
             Text(
                 leadingLabel ?: item.number?.toString().orEmpty(),
                 SetteeType.Body,
                 color = quiet,
                 maxLines = 1,
-                modifier = Modifier.width(44.dp),
+                modifier = if (leadingLabel !=
+                    null
+                ) {
+                    Modifier.widthIn(min = NUMBER_WIDTH)
+                } else {
+                    Modifier.width(NUMBER_WIDTH)
+                },
             )
             AsyncImage(
                 model = item.logoUrl,
@@ -172,6 +180,7 @@ private fun ChannelListRow(
 private const val REFRESH_MILLIS = 60_000L
 private val PANEL_WIDTH = 400.dp
 private val LOGO_SIZE = 40.dp
+private val NUMBER_WIDTH = 44.dp
 
 /** The Last row's highlight key: an object of its own, so no channel id can ever equal it. */
 private object LastRowKey

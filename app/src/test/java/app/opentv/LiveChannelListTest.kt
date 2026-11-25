@@ -167,6 +167,19 @@ class LiveChannelListTest {
     }
 
     @Test
+    @Config(qualifiers = "+cs")
+    fun `in Czech the Last tag is shown whole`() {
+        previous = 12L
+        showPlayer(current = 11L)
+
+        press(Key.DirectionLeft)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+
+        compose.onNodeWithText("Předchozí", useUnmergedTree = true).assertShownWhole()
+        captureScreen("player_channel_list_last_cs")
+    }
+
+    @Test
     fun `what's on in the channel list moves on while the list stays open`() {
         onNow = mapOf(12L to "Darts")
         showPlayer(current = 11L)
