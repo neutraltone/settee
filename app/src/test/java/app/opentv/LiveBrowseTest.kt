@@ -488,7 +488,7 @@ class LiveBrowseTest {
         viewModel.nudgeGuideDay(2)
 
         compose.onAllNodes(programme("Monday's first on 1")).onFirst().assertExists()
-        compose.onAllNodes(hasText("Mon 27 Oct")).onFirst().assertExists()
+        compose.onAllNodes(hasText("Mon, Oct 27")).onFirst().assertExists()
         compose.onAllNodes(programme("Sunday's last on 1")).assertCountEquals(0)
         captureScreen("guide_later_day_clock_change")
     }

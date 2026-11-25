@@ -48,8 +48,15 @@ class ErrorWording(
     private val onTelevision: Boolean,
     internal val zone: () -> ZoneId = ZoneId::systemDefault,
 ) {
+    /** Times in a sentence: in its language, the viewer's zone and the device's clock setting. */
+    internal val clock = ViewerClock(
+        locale = { resources.configuration.locales[0] },
+        zone = zone,
+        is24Hour = { ViewerClock.deviceIs24Hour(context) },
+    )
+
     /** What Test connection says when it passes, in the same language as its failures. */
-    val tests = TestOutcomeWording({ resources }, zone)
+    val tests = TestOutcomeWording({ resources }, clock)
 
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     internal val resources get() = LocaleUtils.wrap(context).resources

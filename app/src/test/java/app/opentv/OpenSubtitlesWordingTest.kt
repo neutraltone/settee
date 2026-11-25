@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ErrorWording
 import app.opentv.core.LocaleUtils
@@ -80,24 +81,46 @@ class OpenSubtitlesWordingTest {
         assertThat(error.detail).isEqualTo("DownloadLimit · HTTP 406")
     }
 
-    @Test
-    fun `the daily limit when signed in says when the counter resets, in the viewer's zone and the app's language`() {
+    /**
+     * The daily-limit sentence for an account whose counter resets at midnight UTC, with the app in
+     * British English and the device's clock setting [deviceClock] ("12", "24", or null for none).
+     */
+    private fun limitSentenceInBritishEnglish(deviceClock: String?): String {
         val locale = java.util.Locale.getDefault()
         try {
+            val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+            Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, deviceClock)
             // The app in British English, as MainActivity's attachBaseContext puts its chosen language on
             // every context. Not through AppSettings.get: that's one per process, and may still hold an
             // earlier test's application, whose settings this test's context never reads.
-            val british = LocaleUtils.wrap(ApplicationProvider.getApplicationContext(), "en-GB")
+            val british = LocaleUtils.wrap(app, "en-GB")
             val midnightUtc = java.time.Instant.parse("2026-11-14T00:00:00Z").toEpochMilli()
             // The graph's zone, not the JVM's: Tokyo is nine hours on from UTC.
-            val error = ErrorWording(british, onTelevision = true) { ZoneId.of("Asia/Tokyo") }.ofOpenSubtitles(
+            return ErrorWording(british, onTelevision = true) { ZoneId.of("Asia/Tokyo") }.ofOpenSubtitles(
                 OpenSubtitlesFailure.DownloadLimit(signedIn = true, resetsAt = midnightUtc),
-            )
-
-            assertThat(error.sentence).isEqualTo("That's today's OpenSubtitles downloads used. More from 09:00.")
+            ).sentence
         } finally {
             java.util.Locale.setDefault(locale)
         }
+    }
+
+    @Test
+    fun `the daily limit when signed in says when the counter resets, in the viewer's zone and the app's language`() {
+        assertThat(limitSentenceInBritishEnglish(deviceClock = "24"))
+            .isEqualTo("That's today's OpenSubtitles downloads used. More from 09:00.")
+    }
+
+    @Test
+    fun `the time the counter resets follows the device's 12-hour clock, in the app's language`() {
+        assertThat(limitSentenceInBritishEnglish(deviceClock = "12"))
+            .isEqualTo("That's today's OpenSubtitles downloads used. More from 9:00 am.")
+    }
+
+    @Test
+    fun `with no clock chosen, the device's own language decides 12 or 24 hours, not the app's`() {
+        // The device is in American English, which keeps a 12-hour clock; the app's British English doesn't.
+        assertThat(limitSentenceInBritishEnglish(deviceClock = null))
+            .isEqualTo("That's today's OpenSubtitles downloads used. More from 9:00 am.")
     }
 
     @Test
