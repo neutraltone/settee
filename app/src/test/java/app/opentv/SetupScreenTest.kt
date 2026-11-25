@@ -171,14 +171,15 @@ class SetupScreenTest {
         finished = true,
     )
 
+    private val summary =
+        "1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."
+
     @Test
     fun `once finished it sums up the library, and Take me to Settee has the highlight`() {
         setScreen(finished())
 
         compose.onNodeWithText("You're all set.").assertIsDisplayed()
-        compose.onNodeWithText(
-            "1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch.",
-        ).assertIsDisplayed()
+        compose.onNodeWithText(summary).assertIsDisplayed()
         compose.onNodeWithText("Watch live TV now").assertDoesNotExist()
         compose.onNodeWithText("Take me to Settee").assertIsFocused()
         compose.onNodeWithContentDescription("Loading your library").assertDoesNotExist()
@@ -200,9 +201,6 @@ class SetupScreenTest {
     }
 
     private fun topOf(text: String) = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.top
-
-    private val summary =
-        "1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."
 
     @Test
     fun `when setup finishes in front of the viewer, You're all set rises in, with the summary just behind`() {
