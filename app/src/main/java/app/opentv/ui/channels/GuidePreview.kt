@@ -44,6 +44,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -121,10 +122,9 @@ internal fun ScreenFrameScope.GuideBand(
                 return@Column
             }
             Text(programme.title, SetteeType.Section, maxLines = 2)
+            val times = "${clockTime(programme.startUtcMillis)}–${clockTime(programme.endUtcMillis)}"
             Text(
-                "${formatTime(
-                    programme.startUtcMillis,
-                )}–${formatTime(programme.endUtcMillis)}  ·  ${row.primary.shownName}",
+                "$times  ·  ${row.primary.shownName}",
                 SetteeType.Body,
                 color = SetteeColors.QuietText,
                 maxLines = 1,
