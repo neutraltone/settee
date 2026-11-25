@@ -387,11 +387,13 @@ private fun SectionRow(
         ) {
             Icon(section.icon, contentDescription = null, tint = colour, modifier = Modifier.size(ICON_SIZE))
             Spacer(Modifier.width(SECTION_PADDING))
+            // Two lines, not one: a longer language's title ("Gérer depuis un téléphone ou un
+            // ordinateur"), or a larger font size, runs past the column's width (#507).
             Text(
                 stringResource(section.title),
                 SetteeType.Synopsis,
                 color = colour,
-                maxLines = 1,
+                maxLines = 2,
             )
         }
     }

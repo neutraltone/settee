@@ -129,6 +129,25 @@ class SettingsSectionsScrollTest {
     }
 
     @Test
+    fun `at a larger font size every section's title is shown in full, on two lines where it needs them`() {
+        compose.setTvContent {
+            AtFontScale(1.3f) { SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = null) }
+        }
+
+        // French would be longer still ("Gérer depuis un téléphone ou un ordinateur"), but the
+        // section titles aren't translated yet; a larger font size runs English past one line too.
+        val text = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
+        val titles = compose.onAllNodes(
+            hasAnyAncestor(hasTestTag(SettingsTags.SECTION)) and text,
+            useUnmergedTree = true,
+        )
+        val count = titles.fetchSemanticsNodes().size
+        assertThat(count).isEqualTo(compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes().size)
+        repeat(count) { titles[it].assertShownWhole() }
+        captureScreen("settings_sections_font_1_3")
+    }
+
+    @Test
     fun `a long network drive folder is cut short rather than the label beside it`() {
         val folder = "settee/live/from the sitting room/the big telly in the corner"
         testGraph.graph.settings.setRecordingTarget(AppSettings.RecordingTarget.SMB)
