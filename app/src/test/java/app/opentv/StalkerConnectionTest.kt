@@ -102,6 +102,7 @@ class StalkerConnectionTest {
             XtreamApi(test.panel.http, dispatchers = dispatchers),
             StalkerApi(test.panel.http, dispatchers = dispatchers),
             test.panel.http,
+            test.settings,
             dispatchers,
         )
 

@@ -27,7 +27,13 @@ class SourceNamesTest {
 
     private val test = TestCatalog(ApplicationProvider.getApplicationContext<Application>())
     private val sources =
-        SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http)
+        SourceRepository(
+            test.db.sources(),
+            XtreamApi(test.panel.http),
+            StalkerApi(test.panel.http),
+            test.panel.http,
+            test.settings,
+        )
 
     private fun source(name: String, id: Long = 0) =
         Source(id = id, name = name, kind = SourceKind.M3U, url = "http://example.com/list.m3u")
@@ -53,6 +59,22 @@ class SourceNamesTest {
         sources.save(source("Provider", id))
 
         assertThat(names()).containsExactly("Provider")
+    }
+
+    @Test
+    fun `a name is saved without the spaces around it`() = testing {
+        sources.save(source("  Sky "))
+
+        assertThat(names()).containsExactly("Sky")
+    }
+
+    @Test
+    fun `a name taken but for its capitals gets its own`() = testing {
+        sources.save(source("Sky"))
+        sources.save(source("sky "))
+        sources.save(source("SKY 2"))
+
+        assertThat(names()).containsExactly("Sky", "sky 2", "SKY 2 2")
     }
 
     @Test

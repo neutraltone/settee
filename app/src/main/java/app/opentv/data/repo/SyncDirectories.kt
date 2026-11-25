@@ -11,6 +11,7 @@ import app.opentv.data.db.ProfileDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
+import app.opentv.sync.SyncProviderRename
 import kotlinx.coroutines.flow.first
 
 /**
@@ -84,14 +85,32 @@ internal fun isNewerChange(incoming: Long, here: Long?, ceiling: ArrivalCeiling 
     }
 }
 
-/** This device's sources by id and by name, which [SourceRepository] keeps unique (ADR 0004). */
-internal class SourceDirectory(sources: List<Source>) {
+/**
+ * This device's sources by id and by name, which [SourceRepository] keeps unique ignoring case and
+ * surrounding spaces (ADR 0004). A name another device sends matches the same way, so "Sky " there is
+ * "sky" here. One that matches nothing is followed through the provider [renames] this device knows,
+ * oldest first, so an item from a device that hasn't heard of a rename still finds the provider.
+ */
+internal class SourceDirectory(private val sources: List<Source>, renames: List<SyncProviderRename> = emptyList()) {
     private val namesById = sources.associate { it.id to it.name }
-    private val idsByName = sources.associate { it.name to it.id }
+    private val renamesInOrder = renames.sortedBy { it.atMillis }
 
     fun name(id: Long): String? = namesById[id]
 
-    fun id(name: String): Long? = idsByName[name]
+    fun id(name: String): Long? = matching(name) ?: matching(renamed(name))
+
+    /**
+     * The name this device keeps [label]'s items under: its own provider's exact name when one
+     * matches, else where the renames lead, for a provider this device may add later.
+     */
+    fun currentName(label: String): String = id(label)?.let(::name) ?: renamed(label)
+
+    private fun matching(name: String) = sources.firstOrNull { SourceRepository.sameName(it.name, name) }?.id
+
+    private fun renamed(label: String): String = renamesInOrder.fold(label.trim()) { name, rename ->
+        if (SourceRepository.sameName(rename.from, name)) rename.to.trim() else name
+    }
 }
 
-internal suspend fun SourceDao.directory() = SourceDirectory(observeAll().first())
+internal suspend fun SourceDao.directory(renames: List<SyncProviderRename> = emptyList()) =
+    SourceDirectory(observeAll().first(), renames)

@@ -117,6 +117,7 @@ class TestCatalog(
             XtreamApi(panel.http, dispatchers = dispatchers),
             StalkerApi(panel.http, dispatchers = dispatchers),
             panel.http,
+            settings,
             dispatchers,
         ),
         guide = guide,

@@ -51,7 +51,13 @@ class RecordingDeleteTest {
     private val engine = RecordingEngine(
         context,
         recordings,
-        SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http),
+        SourceRepository(
+            test.db.sources(),
+            XtreamApi(test.panel.http),
+            StalkerApi(test.panel.http),
+            test.panel.http,
+            test.settings,
+        ),
         settings,
         EpgRepository(
             programmeDao = test.db.programmes(),

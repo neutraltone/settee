@@ -182,6 +182,13 @@ internal class SyncDevice(private val rowIdOffset: Long) {
 
     suspend fun awaitEpisodes() = graph.waitingProgress.awaitBackground()
 
+    /** Renames this device's provider the way its edit screen saves one. */
+    suspend fun renameProvider(to: String) {
+        graph.sourceRepository.save(checkNotNull(db.sources().byId(sourceId)).copy(name = to))
+    }
+
+    suspend fun providerName(): String = checkNotNull(db.sources().byId(sourceId)).name
+
     suspend fun rename(from: String, to: String) = assertThat(graph.profiles.rename(profileId(from), to)).isTrue()
 
     suspend fun profileNames(): List<String> = graph.profiles.all().map { it.name }

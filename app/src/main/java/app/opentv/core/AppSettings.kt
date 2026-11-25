@@ -16,6 +16,7 @@ import app.opentv.data.repo.isNewerChange
 import app.opentv.sync.SyncCategoryLock
 import app.opentv.sync.SyncProfileAdd
 import app.opentv.sync.SyncProfileRename
+import app.opentv.sync.SyncProviderRename
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -80,6 +81,12 @@ class AppSettings private constructor(context: Context, fileName: String = "open
 
     fun setProfileAdds(adds: List<SyncProfileAdd>) =
         prefs.edit { putString(KEY_PROFILE_ADDS, addonJson.encodeToString(adds)) }
+
+    /** Every provider rename this device has made or received, kept like [profileRenames] (ADR 0004). */
+    fun providerRenames(): List<SyncProviderRename> = readJsonList(KEY_PROVIDER_RENAMES)
+
+    fun setProviderRenames(renames: List<SyncProviderRename>) =
+        prefs.edit { putString(KEY_PROVIDER_RENAMES, addonJson.encodeToString(renames)) }
 
     private inline fun <reified T> readJsonList(key: String): List<T> = runCatching {
         prefs.getString(key, null)?.let { addonJson.decodeFromString<List<T>>(it) }
@@ -718,6 +725,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_PROFILE_RENAMES = "profile_renames"
         private const val KEY_PROFILE_ADDS = "profile_adds"
+        private const val KEY_PROVIDER_RENAMES = "provider_renames"
         private const val KEY_LIVE_PREVIEW_HOME_BEFORE = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_SKIP_INTROS_CREDITS = "skip_intros_and_credits"

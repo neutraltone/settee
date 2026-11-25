@@ -29,6 +29,9 @@ import kotlinx.serialization.Serializable
  *    unstarring and unhiding spread too. A time of zero means the bundle had none, and counts as the oldest possible.
  *  - **Profile Renames and adds** are dated records every device keeps and passes on, applied once
  *    each in time order, and anything labelled with an old name lands on the new one (ADR 0005).
+ *  - **Provider Renames** are dated records kept and passed on the same way. Each device renames its
+ *    provider to match, and an item labelled with an old name, or a different capital or space, lands
+ *    on the provider this device knows by it (ADR 0004).
  *  - **Recordings** are additive: NAS recordings from a peer are merged in without removing anything.
  *
  * Every field defaults to empty and the reader ignores unknown keys, so a positions-only device
@@ -36,7 +39,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 7,
+    val version: Int = 8,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing and haven't removed. */
     val profiles: List<String> = emptyList(),
@@ -44,6 +47,8 @@ data class SyncBundle(
     val profileRenames: List<SyncProfileRename> = emptyList(),
     /** Every Profile the peer has added deliberately or heard of, which decides who owns a reused name. */
     val profileAdds: List<SyncProfileAdd> = emptyList(),
+    /** Every provider rename the peer has made or heard of; older bundles have none. */
+    val providerRenames: List<SyncProviderRename> = emptyList(),
     /**
      * Two-way, newest-wins resume points. A new key, not `positions`, whose items were keyed by
      * stream URL: a peer's file that fails to decode is skipped whole, so reusing the key would
@@ -73,6 +78,10 @@ data class SyncBundle(
 /** "[from] became [to] at this time." */
 @Serializable
 data class SyncProfileRename(val from: String, val to: String, val atMillis: Long)
+
+/** "The provider called [from] became [to] at this time", as a viewer renamed it on some device. */
+@Serializable
+data class SyncProviderRename(val from: String, val to: String, val atMillis: Long)
 
 /** A viewer added a Profile called [name] at this time. */
 @Serializable

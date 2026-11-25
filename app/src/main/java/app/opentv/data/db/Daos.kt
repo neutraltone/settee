@@ -114,7 +114,75 @@ interface SourceDao {
         val stored = byId(source.id)
         val samePanel = stored != null && stored.url == source.url && stored.kind == source.kind
         update(source.copy(serverTimeZone = stored?.serverTimeZone?.takeIf { samePanel }))
+        if (stored != null && stored.name != source.name) carryName(stored.name, source.name)
     }
+
+    /** Renames a source as a rename from another device does, taking what's kept by its name along. */
+    @Transaction
+    suspend fun rename(id: Long, name: String) {
+        val stored = byId(id) ?: return
+        setName(id, name)
+        carryName(stored.name, name)
+    }
+
+    @Query("UPDATE sources SET name = :name WHERE id = :id")
+    suspend fun setName(id: Long, name: String)
+
+    /**
+     * Moves everything kept by a source's name (ADR 0004) from [from] to [to], so a rename keeps its
+     * Favourites, hides, channel edits, Live Preview, series rules and reminders. Where a row is
+     * already kept under [to], as sync can leave one, the newer change stays. Call in a transaction.
+     */
+    suspend fun carryName(from: String, to: String) {
+        dropOlderFavourites(from, to)
+        moveFavourites(from, to)
+        dropOlderHiddenChanges(from, to)
+        moveHiddenChanges(from, to)
+        moveChannelEdits(from, to)
+        moveLivePlayback(from, to)
+        moveSeriesRules(from, to)
+        moveReminders(from, to)
+    }
+
+    @Query(
+        """
+        DELETE FROM favourites WHERE source = :from AND EXISTS (
+            SELECT 1 FROM favourites kept WHERE kept.source = :to AND kept.profileId = favourites.profileId
+                AND kept.kind = favourites.kind AND kept.itemId = favourites.itemId
+                AND kept.changedAtMillis >= favourites.changedAtMillis
+        )
+        """,
+    )
+    suspend fun dropOlderFavourites(from: String, to: String)
+
+    @Query("UPDATE OR REPLACE favourites SET source = :to WHERE source = :from")
+    suspend fun moveFavourites(from: String, to: String)
+
+    @Query(
+        """
+        DELETE FROM channel_hidden_changes WHERE source = :from AND EXISTS (
+            SELECT 1 FROM channel_hidden_changes kept WHERE kept.source = :to
+                AND kept.streamId = channel_hidden_changes.streamId
+                AND kept.changedAtMillis >= channel_hidden_changes.changedAtMillis
+        )
+        """,
+    )
+    suspend fun dropOlderHiddenChanges(from: String, to: String)
+
+    @Query("UPDATE OR REPLACE channel_hidden_changes SET source = :to WHERE source = :from")
+    suspend fun moveHiddenChanges(from: String, to: String)
+
+    @Query("UPDATE OR REPLACE channel_edits SET source = :to WHERE source = :from")
+    suspend fun moveChannelEdits(from: String, to: String)
+
+    @Query("UPDATE live_playback SET source = :to WHERE source = :from")
+    suspend fun moveLivePlayback(from: String, to: String)
+
+    @Query("UPDATE series_rules SET source = :to WHERE source = :from")
+    suspend fun moveSeriesRules(from: String, to: String)
+
+    @Query("UPDATE reminders SET source = :to WHERE source = :from")
+    suspend fun moveReminders(from: String, to: String)
 
     /** Only the failure, so a refresh doesn't put back what an edit changed meanwhile. */
     @Query("UPDATE sources SET lastRefreshFailure = :stored WHERE id = :id")
