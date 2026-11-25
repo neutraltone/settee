@@ -788,6 +788,12 @@
     <string name="pairing_phone_opensubtitles_saved_title">Signed in</string>
     <string name="pairing_phone_opensubtitles_skipped_body">You can sign in later in Settings › OpenSubtitles. Carry on on your TV.</string>
     <string name="pairing_phone_opensubtitles_saved_body">Your TV is signed in to OpenSubtitles. You can put your phone down.</string>
+    <string name="pairing_phone_addon_title">Add an add-on</string>
+    <string name="pairing_phone_addon_body">Paste its address and your TV checks it and adds it. Add as many as you like, then choose Done.</string>
+    <string name="pairing_phone_addon_add">Add</string>
+    <string name="pairing_phone_addon_done_title">All done</string>
+    <string name="pairing_phone_addon_done_body">Your add-ons are on your TV. You can put your phone down.</string>
+    <string name="addons_phone_qr_desc">QR code for adding add-ons from your phone</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>

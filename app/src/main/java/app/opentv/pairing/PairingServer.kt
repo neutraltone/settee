@@ -16,7 +16,9 @@ import java.net.Socket
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,12 +63,14 @@ class PairingServer(
     /** The app's strings, in its language, for everything the phone's page says. */
     private val resources: () -> Resources,
     sessionTimeoutMillis: Long = TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES),
+    /** What the session's time runs on: a test's own scheduler, so it never waits real time. */
+    timerDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
 
     private val text: (Int) -> String = { resources().getString(it) }
 
     /** Ends a session left listening, so a code on screen isn't left open on the network for ever. */
-    private val timer = SessionTimer(scope, sessionTimeoutMillis) {
+    private val timer = SessionTimer(scope, sessionTimeoutMillis, timerDispatcher) {
         if (running && _state.value is State.Listening) {
             stop(State.Failed(ServerProblem.TIMED_OUT))
         }
@@ -82,6 +86,9 @@ class PairingServer(
 
         /** Signing the TV in to OpenSubtitles; [onboarding] adds Not now, for Setup's step. */
         data class OpenSubtitles(val onboarding: Boolean = false) : Mode
+
+        /** Adding Stremio add-ons, one address a submission, as many as the viewer likes, until Done. */
+        data object Addon : Mode
     }
 
     data class Session(
@@ -132,6 +139,25 @@ class PairingServer(
             }
         }
 
+        /**
+         * The phone sent an add-on's [address], as typed. The UI checks it and answers: the phone waits,
+         * so it can say the add-on was added or why not, and then take another.
+         */
+        class AddonReceived(val address: String, private val reply: CompletableDeferred<Reply>) : State {
+            /** The add-on is in the list, as [name]. */
+            fun accept(name: String) {
+                reply.complete(Reply.AddonAdded(name))
+            }
+
+            /** It wasn't added, and [problem] is why, in the TV's words. */
+            fun refuse(problem: ViewerError) {
+                reply.complete(Reply.AddonRefused(problem))
+            }
+        }
+
+        /** The phone chose Done after adding add-ons: the session is over. */
+        data object AddonsDone : State
+
         /** The phone chose Skip for now (or Not now) on a Setup page: the TV carries on without it. */
         data object KeySkipped : State
 
@@ -151,6 +177,10 @@ class PairingServer(
         data object KeySaved : Reply
 
         data class KeyTurnedDown(val problem: ViewerError) : Reply
+
+        data class AddonAdded(val name: String) : Reply
+
+        data class AddonRefused(val problem: ViewerError) : Reply
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -172,6 +202,9 @@ class PairingServer(
     /** What the phone is filling in. */
     @Volatile private var mode: Mode = Mode.Provider()
 
+    /** The add-ons accepted from the phone this session, for its page to list. */
+    private val addonsAdded = java.util.Collections.synchronizedList(mutableListOf<String>())
+
     /** What the phone waiting on the TV will be told; null when none is waiting. */
     @Volatile private var pending: CompletableDeferred<Reply>? = null
 
@@ -181,9 +214,10 @@ class PairingServer(
      */
     fun start(mode: Mode = Mode.Provider()) {
         this.mode = mode
+        addonsAdded.clear()
         if (!running) {
             open()
-        } else if (mode is Mode.OpenSubtitles) {
+        } else if (mode !is Mode.Provider) {
             timer.arm()
         }
     }
@@ -300,9 +334,19 @@ class PairingServer(
         val asked = mode
 
         when {
-            method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
+            method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(fonts, path.removePrefix(FONTS_PATH)))
 
-            method == "GET" -> output.write(html(phonePage(token, null, asked, text)))
+            method == "GET" -> output.write(html(phonePage(token, null, asked, text, addonsAdded.toList())))
+
+            method == "POST" && path.startsWith("/addon") && asked == Mode.Addon -> handleAddon(output, body)
+
+            method == "POST" && path.startsWith("/done") && asked == Mode.Addon ->
+                end(
+                    output,
+                    State.AddonsDone,
+                    R.string.pairing_phone_addon_done_title,
+                    R.string.pairing_phone_addon_done_body,
+                )
 
             method == "POST" && path.startsWith("/submit") && asked is Mode.Provider ->
                 handleSubmit(output, body, asked)
@@ -310,17 +354,18 @@ class PairingServer(
             method == "POST" && answersAt(asked, path) -> handleAnswered(output, body, asked)
 
             // Only Setup's pages have Skip: in Settings there's nothing to carry on to.
-            method == "POST" && path.startsWith("/skip") && asked.isSetupStep() -> handleSkip(output)
+            method == "POST" && path.startsWith("/skip") && asked.isSetupStep() ->
+                end(
+                    output,
+                    State.KeySkipped,
+                    R.string.pairing_phone_skipped_title,
+                    R.string.pairing_phone_opensubtitles_skipped_body,
+                )
 
             else -> output.write(
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
             )
         }
-    }
-
-    private fun font(name: String): ByteArray {
-        val bytes = fonts.open(name) ?: return PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found.")
-        return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
     private fun handleSubmit(output: java.io.OutputStream, body: String, asked: Mode.Provider) {
@@ -429,16 +474,57 @@ class PairingServer(
         finish(output, afterAnswer(answer, text))
     }
 
-    private fun handleSkip(output: java.io.OutputStream) {
-        _state.value = State.KeySkipped
-        // The TV hears the skip (KeySkipped) and moves on.
-        finish(
-            output,
-            PairingPage.message(
-                text(R.string.pairing_phone_skipped_title),
-                text(R.string.pairing_phone_opensubtitles_skipped_body),
-            ),
-        )
+    /**
+     * An add-on's address from the phone: handed on for the TV to check, the phone waiting for its answer.
+     * Either way the page comes back for the next one, listing what's been added, or with the refused
+     * address still in its box to correct. Each one starts the time left again: a viewer adding several
+     * is using the session, not leaving it open.
+     */
+    private fun handleAddon(output: java.io.OutputStream, body: String) {
+        val token = address?.token.orEmpty()
+        val typed = PairingHttp.parseFormEncoded(body)["url"].orEmpty().trim()
+        if (typed.isEmpty()) {
+            output.write(html(phonePage(token, null, Mode.Addon, text, addonsAdded.toList())))
+            return
+        }
+        timer.arm()
+        val reply = CompletableDeferred<Reply>()
+        pending = reply
+        _state.value = State.AddonReceived(typed, reply)
+        // An add-on answers in a second or two; the wait is only for a TV that never answers.
+        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
+        pending = null
+        if (answer == null || answer == Reply.Stopped) {
+            finish(output, afterAnswer(answer, text))
+            return
+        }
+        timer.arm()
+        session?.let { _state.value = State.Listening(it) }
+        val page = when (answer) {
+            is Reply.AddonAdded -> {
+                addonsAdded += answer.name
+                phonePage(token, null, Mode.Addon, text, addonsAdded.toList())
+            }
+            is Reply.AddonRefused -> PairingPage.addon(
+                token,
+                text,
+                PairingPage.Error(answer.problem.sentence, answer.problem.detail),
+                addonsAdded.toList(),
+                typed = typed,
+            )
+            else -> phonePage(token, null, Mode.Addon, text, addonsAdded.toList())
+        }
+        output.write(html(page))
+    }
+
+    /**
+     * The phone has ended the session, with a Setup page's Skip ([State.KeySkipped]) or Done after adding
+     * add-ons ([State.AddonsDone]): the TV hears [ended] and moves on, and the phone gets [title] and [body].
+     */
+    private fun end(output: java.io.OutputStream, ended: State, title: Int, body: Int) {
+        timer.cancel()
+        _state.value = ended
+        finish(output, PairingPage.message(text(title), text(body)))
     }
 
     private companion object {
@@ -452,6 +538,12 @@ class PairingServer(
         // Fonts take the full token too, as every route does, so they only load for the form.
         const val FONTS_PATH = "/fonts/"
     }
+}
+
+/** The font [name] from [fonts], as the phone's page asks for it. */
+private fun font(fonts: PairingFonts, name: String): ByteArray {
+    val bytes = fonts.open(name) ?: return PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found.")
+    return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
 }
 
 /** [page] as the phone gets it. */
@@ -497,27 +589,33 @@ private fun afterProvider(answer: PairingServer.Reply?, text: (Int) -> String): 
 }
 
 /** The page the QR code opens for [asked], with why the TV turned the last try down when it did. */
-private fun phonePage(token: String, problem: ViewerError?, asked: PairingServer.Mode, text: (Int) -> String) =
-    when (asked) {
-        is PairingServer.Mode.Provider -> PairingPage.form(token, text, null)
-        is PairingServer.Mode.OpenSubtitles -> PairingPage.openSubtitles(
-            token,
-            text,
-            problem?.let { PairingPage.Error(it.sentence, it.detail) },
-            asked.onboarding,
-        )
-    }
+private fun phonePage(
+    token: String,
+    problem: ViewerError?,
+    asked: PairingServer.Mode,
+    text: (Int) -> String,
+    addonsAdded: List<String> = emptyList(),
+) = when (asked) {
+    is PairingServer.Mode.Provider -> PairingPage.form(token, text, null)
+    is PairingServer.Mode.OpenSubtitles -> PairingPage.openSubtitles(
+        token,
+        text,
+        problem?.let { PairingPage.Error(it.sentence, it.detail) },
+        asked.onboarding,
+    )
+    PairingServer.Mode.Addon -> PairingPage.addon(token, text, null, addonsAdded)
+}
 
 /** Whether a POST to [path] is what [asked]'s page sends for the TV to check. */
 private fun answersAt(asked: PairingServer.Mode, path: String): Boolean = when (asked) {
     is PairingServer.Mode.OpenSubtitles -> path.startsWith("/signin")
-    is PairingServer.Mode.Provider -> false
+    is PairingServer.Mode.Provider, PairingServer.Mode.Addon -> false
 }
 
 /** Whether [this] is one of Setup's optional steps, whose page has Skip. */
 private fun PairingServer.Mode.isSetupStep(): Boolean = when (this) {
     is PairingServer.Mode.OpenSubtitles -> onboarding
-    is PairingServer.Mode.Provider -> false
+    is PairingServer.Mode.Provider, PairingServer.Mode.Addon -> false
 }
 
 /** What the TV is handed from [form], or null when the form left out what it needs. */
@@ -537,7 +635,7 @@ private fun receivedFrom(
             PairingServer.State.SignInReceived(username, password, reply)
         }
     }
-    is PairingServer.Mode.Provider -> null
+    is PairingServer.Mode.Provider, PairingServer.Mode.Addon -> null
 }
 
 /** What the phone is told once the TV has answered: saved, or the TV left before it did. */

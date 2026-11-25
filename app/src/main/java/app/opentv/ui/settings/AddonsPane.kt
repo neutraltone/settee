@@ -108,6 +108,12 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
                 viewModel.clearStatus()
             },
             error = failed?.let { it.error.sentence to it.error.detail },
+            beside = {
+                AddonsFromPhone(onDone = {
+                    adding = false
+                    viewModel.clearStatus()
+                })
+            },
         )
     }
 }

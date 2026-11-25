@@ -381,7 +381,8 @@ see Settings and Provider connection.
 Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` (or, for an address, `AddonRepository`)
 throws. In Settings › Add-ons, inside the address window, which stays open with what was typed, when an
 address couldn't be added (a `stremio://` link or an address without a scheme is read as `https://`, and
-`manifest.json` is added when it's missing); and in a film's Add-on sources picker, drawn by
+`manifest.json` is added when it's missing); on the phone's page from that window's QR code, where the same
+sentence and detail sit above the refused address, left in its box to correct; and in a film's Add-on sources picker, drawn by
 `AddonStreamPicker` from `AddonStreams`, which asks each add-on on its own and lists streams as they arrive.
 Once every add-on has answered with no stream, the picker shows the first failure with a Try again that asks
 them again if any add-on couldn't be reached, or else says "No streams found from your add-ons for this title."

@@ -36,11 +36,16 @@ import app.opentv.ui.onboarding.describePairingFailure
  * can't start and Try again says why in its place.
  */
 @Composable
-internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
+internal fun PhoneQrPanel(
+    phone: PairingServer.State,
+    onRetry: () -> Unit,
+    wording: ErrorWording,
+    description: String = stringResource(R.string.opensubtitles_qr_desc),
+) {
     Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) {
         when (phone) {
             is PairingServer.State.Listening -> {
-                PhoneQrCode(phone.session.url, stringResource(R.string.opensubtitles_qr_desc), QR_PANEL_WIDTH)
+                PhoneQrCode(phone.session.url, description, QR_PANEL_WIDTH)
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.pairing_camera_fail), SetteeType.Body, color = SetteeColors.QuietText)
                 Spacer(Modifier.height(4.dp))
@@ -62,15 +67,16 @@ internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wordi
 
 /**
  * What the QR code shows for [phone]: the server's state, except that while it hears from the phone (a
- * sign-in to check, a skip) it keeps showing what it was. Those states carry no address, and the code
- * vanished each time a sign-in was checked.
+ * sign-in or an add-on to check, a skip, Done) it keeps showing what it was. Those states carry no
+ * address, and the code vanished each time a sign-in was checked.
  */
 @Composable
 internal fun codeShown(phone: PairingServer.State): PairingServer.State {
     var shown by remember { mutableStateOf(phone) }
     LaunchedEffect(phone) {
-        val hearing = phone is PairingServer.State.SignInReceived
-        if (!hearing && phone != PairingServer.State.KeySkipped) shown = phone
+        val hearing = phone is PairingServer.State.SignInReceived || phone is PairingServer.State.AddonReceived
+        val ending = phone == PairingServer.State.KeySkipped || phone == PairingServer.State.AddonsDone
+        if (!hearing && !ending) shown = phone
     }
     return shown
 }
