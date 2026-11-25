@@ -24,6 +24,7 @@ enum class ReportedSource(val tag: String) {
             SourceKind.XTREAM -> XTREAM
             SourceKind.M3U -> M3U
             SourceKind.STALKER -> STALKER
+            SourceKind.ADDONS -> STREMIO
             null -> null
         }
     }

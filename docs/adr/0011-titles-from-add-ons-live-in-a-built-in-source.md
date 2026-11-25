@@ -1,0 +1,15 @@
+# Titles from add-ons live in a built-in source, not a table of their own
+
+Once a viewer has a Stremio add-on, Search offers films the Provider doesn't carry, found through TMDB (#671). Opening one has to keep it somewhere: its page, its progress, Watched, Continue Watching and its star all need a row to hang on, and so do the viewer's other devices. We keep it as an ordinary film row of a built-in **Add-ons source**, a source of kind `ADDONS` named `Add-ons`, with the film's IMDb id as its provider id and its TMDB id filled in. There's one such source, created the first time a title is kept. It has no address and no Catalogue Refresh, `SourceDao`'s Provider lists leave it out, so it's never shown, refreshed or counted as a Provider, and `SourceRepository` never gives a Provider its name.
+
+The obvious design is an add-on titles table beside `movies` and `series`. We rejected it because everything that already works by source name and provider id would need a second path to work at all: resume points are `movie:<localId>` on a `movies` row; Favourites are source name plus `streamId` (ADR 0001); sync carries source name plus provider id (ADR 0004); and Versions are grouped from `movies` and `series` by TMDB id (ADR 0007). As rows of a source, add-on films get all of that unchanged, a Provider's copy and the add-on copy show as one title with two Versions, and no schema change was needed: the kind is stored by name, and the rows fit the existing columns, with an empty stream URL.
+
+The name is fixed and never translated, since sync matches a title by its source's name: a Favourite starred on an add-on film on one device lands on the same film on another. IMDb ids are what add-ons are asked by, and are the same everywhere, so they make the provider id.
+
+## Consequences
+
+- A film of the Add-ons source has no stream URL. Play on its page opens the add-on stream picker, and with no add-on set up it can't play. When a Provider carries the same film, Play and the Quality pill stand for the Provider's copies, and the add-on copy is reached through Add-on sources.
+- Anything that walks the Providers, a Catalogue Refresh, Setup, the phone manager, the guide, must keep using `SourceDao`'s Provider lists. Only sync's directory of names (`everySource`) and look-ups by id see the Add-ons source.
+- Removing every add-on leaves its titles, progress and Favourites in place; they're only left out of Search's add-on section until an add-on is set up again.
+- A Provider already named "Add-ons" before this change shares the name with the Add-ons source, and sync can't tell their titles apart. A Provider saved from now on with that name gets a number added, as any taken name does.
+- An older build reads the `ADDONS` kind as an M3U playlist with no address.

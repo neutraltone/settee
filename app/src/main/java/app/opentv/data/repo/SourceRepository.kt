@@ -58,10 +58,11 @@ class SourceRepository(
     // Sync matches a title by its source's name (ADR 0004), and provider ids repeat across providers,
     // so two sources sharing a name would swap progress and hidden channels. Leaving the name blank
     // gives every source the same default, so this has to resolve a clash rather than refuse it.
-    // Names match as another device matches them (SourceDirectory.sameName).
+    // Names match as another device matches them (SourceDirectory.sameName). The Add-ons source's name
+    // is always taken, whether or not this device has one yet: another device's may arrive by sync.
     private suspend fun uniqueName(source: Source): String {
         val wanted = source.name.trim()
-        val taken = dao.all().filter { it.id != source.id }.map { it.name }
+        val taken = dao.all().filter { it.id != source.id }.map { it.name } + Source.ADDONS_NAME
         fun isTaken(name: String) = taken.any { SourceDirectory.sameName(it, name) }
         if (!isTaken(wanted)) return wanted
         return generateSequence(2) { it + 1 }.map { "$wanted $it" }.first { !isTaken(it) }
@@ -83,6 +84,8 @@ class SourceRepository(
                     stalkerApi.handshakeTest(normalised)
                     TestOutcome.StalkerAccepted
                 }
+                // Never offered: the Add-ons source isn't a Provider and has nothing to sign in to.
+                SourceKind.ADDONS -> error("The Add-ons source has nothing to test")
             }
         }
     }

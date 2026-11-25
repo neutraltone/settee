@@ -36,6 +36,14 @@ enum class SourceKind {
      * carry a [Channel.cmd] resolved to a real URL on demand at play time.
      */
     STALKER,
+
+    /**
+     * The built-in Add-ons source (ADR 0011): not a Provider but where titles found through add-ons are
+     * kept once opened, so watch state, Favourites and sync treat them as any other. There's only ever
+     * one, named [Source.ADDONS_NAME], with no address and no Catalogue Refresh, and it's never listed
+     * with the Providers. An older build reads the kind as M3U, a playlist with no address.
+     */
+    ADDONS,
     ;
 
     /** Only an Xtream panel has a movies and shows API; the others bring live channels alone. */
@@ -98,6 +106,12 @@ data class Source(
 ) {
     companion object {
         const val DEFAULT_USER_AGENT: String = "OpenTV/0.1 (Android)"
+
+        /**
+         * The Add-ons source's name, the same on every device and in every language, since sync matches
+         * titles by their source's name (ADR 0004). No Provider is given it.
+         */
+        const val ADDONS_NAME: String = "Add-ons"
     }
 }
 

@@ -74,6 +74,18 @@ _Avoid_: Token, API key (except when pointing at the field of that name on TMDB'
 One of a provider's copies of a Movie or Series, such as its Netflix copy and its 4K copy. A title shows once however many Versions it has. A Version may differ from the others in Quality, language, subtitles, sound, or in being a cam copy; Settee never switches to a Version in another language on its own. On screen, choosing between them is the Quality pill; the word Version isn't shown.
 _Avoid_: Copy, variant, duplicate
 
+**Add-on**:
+A Stremio add-on the viewer adds by its address. It supplies streams for films and episodes, asked for by their IMDb id, and never a catalogue Settee refreshes or syncs. Once one is set up, Search also shows titles the Provider doesn't carry, which play only through add-ons.
+_Avoid_: Plugin, extension, source
+
+**Add-ons source**:
+Where a title found through an Add-on is kept once it's opened: a built-in source, named Add-ons on every device, with no address and no Catalogue Refresh, never listed with the Providers. Its titles are kept by IMDb id and behave like a Provider's: progress, Watched, Continue Watching, Favourites and sync all work, and when a Provider carries the same title, the Add-ons source's copy is one more Version of it. Removing every Add-on leaves its titles in place.
+_Avoid_: Add-on provider, Stremio provider, virtual provider
+
+**Torrents**:
+The switch in the Add-ons settings that lets torrent streams from Add-ons play. Off until the viewer turns it on, after being told that everyone sharing the file can see this box's internet address. It belongs to the box, not a Profile, and isn't synced.
+_Avoid_: P2P, BitTorrent setting, seeding
+
 ## Live TV
 
 **Channel**:

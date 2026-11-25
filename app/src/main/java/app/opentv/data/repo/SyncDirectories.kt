@@ -12,7 +12,6 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
 import app.opentv.sync.SyncProviderRename
-import kotlinx.coroutines.flow.first
 
 /**
  * This device's Profiles by id and by name. Sync items name their Profile, since row ids differ
@@ -155,4 +154,4 @@ internal class SourceDirectory(private val sources: List<Source>, renames: List<
 }
 
 internal suspend fun SourceDao.directory(renames: List<SyncProviderRename> = emptyList()) =
-    SourceDirectory(observeAll().first(), renames)
+    SourceDirectory(everySource(), renames)
