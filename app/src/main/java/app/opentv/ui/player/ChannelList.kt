@@ -151,18 +151,13 @@ private fun ChannelListRow(
             // The channel's number if the provider gives one, in a fixed-width slot so the logos and
             // names line up down the list. The "Last" tag takes that slot at least, and more where its
             // word needs it ("Předchozí", "Τελευταίο"): cut to fit, it no longer said what it was (#507).
+            val slot = if (leadingLabel != null) Modifier.widthIn(min = NUMBER_WIDTH) else Modifier.width(NUMBER_WIDTH)
             Text(
                 leadingLabel ?: item.number?.toString().orEmpty(),
                 SetteeType.Body,
                 color = quiet,
                 maxLines = 1,
-                modifier = if (leadingLabel !=
-                    null
-                ) {
-                    Modifier.widthIn(min = NUMBER_WIDTH)
-                } else {
-                    Modifier.width(NUMBER_WIDTH)
-                },
+                modifier = slot,
             )
             AsyncImage(
                 model = item.logoUrl,

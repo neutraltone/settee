@@ -293,7 +293,8 @@ internal fun PlayerControlBar(
             Spacer(Modifier.height(16.dp))
             // Kept at the pills' height while they're away, so the row above doesn't move as they come.
             // Their label's line grows with the font size, so the space for them does too.
-            val pillRowHeight = PillRowHeight - PillLabelLine + rememberTextHeight(SetteeType.Body, 1)
+            val pillRowHeight = PillRowHeight - rememberTextHeight(SetteeType.Body, 1, atUsualSize = true) +
+                rememberTextHeight(SetteeType.Body, 1)
             Box(Modifier.height(pillRowHeight)) {
                 if (pillsUp) {
                     PillRow(pills, firstPill = firstPill, up = subtitles) { pill ->
@@ -460,10 +461,14 @@ private fun PillRow(
         Row(horizontalArrangement = Arrangement.spacedBy(PillGap)) {
             pills.forEachIndexed { index, pill ->
                 val fit = fits[index]
-                val cut = fit?.takeIf { width -> width < natural[index] }
+                val label = when {
+                    fit == null -> PillLabel.IconOnly
+                    fit < natural[index] -> PillLabel.Cut(with(density) { fit.toDp() })
+                    else -> PillLabel.Whole
+                }
                 Pill(
                     pill,
-                    label = if (fit == null) null else PillLabel(cutTo = cut?.let { with(density) { it.toDp() } }),
+                    label = label,
                     modifier = each(pill)
                         .then(if (index == 0) Modifier.focusRequester(firstPill) else Modifier)
                         .focusProperties {
@@ -478,8 +483,16 @@ private fun PillRow(
     }
 }
 
-/** How a pill shows its label: whole, or cut to [cutTo] with an ellipsis. */
-private class PillLabel(val cutTo: Dp?)
+/** How a pill shows its label. */
+private sealed interface PillLabel {
+    /** No label: the icon alone, which then names the pill. */
+    data object IconOnly : PillLabel
+
+    data object Whole : PillLabel
+
+    /** Cut to [width] with an ellipsis. */
+    data class Cut(val width: Dp) : PillLabel
+}
 
 /**
  * How wide each pill's label may be, in pixels, given the labels' [natural] widths and the [room]
@@ -547,9 +560,9 @@ private fun IconAction(icon: ImageVector, label: String, onClick: () -> Unit, mo
     }
 }
 
-/** A pill: its icon and [label], or its icon alone where [label] is null, which then names it. */
+/** A pill: its icon and its label, shown as [label] says. */
 @Composable
-private fun Pill(pill: PlayerPill, label: PillLabel?, modifier: Modifier = Modifier) {
+private fun Pill(pill: PlayerPill, label: PillLabel, modifier: Modifier = Modifier) {
     HighlightSurface(onClick = pill.onClick, style = HighlightStyle.Button, modifier = modifier) { highlighted ->
         val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
         Row(
@@ -558,18 +571,18 @@ private fun Pill(pill: PlayerPill, label: PillLabel?, modifier: Modifier = Modif
         ) {
             Icon(
                 pill.icon,
-                contentDescription = pill.label.takeIf { label == null },
+                contentDescription = pill.label.takeIf { label == PillLabel.IconOnly },
                 tint = colour,
                 modifier = Modifier.size(PillIcon),
             )
-            if (label != null) {
+            if (label != PillLabel.IconOnly) {
                 Spacer(Modifier.width(PillIconGap))
                 Text(
                     pill.label,
                     SetteeType.Body,
                     color = colour,
                     maxLines = 1,
-                    modifier = label.cutTo?.let { Modifier.widthIn(max = it) } ?: Modifier,
+                    modifier = if (label is PillLabel.Cut) Modifier.widthIn(max = label.width) else Modifier,
                 )
             }
         }
@@ -584,10 +597,8 @@ private val PillGap = 10.dp
 /** The least of a label worth showing, about four letters and an ellipsis; any less and it's the icon alone. */
 private val MinPillLabel = 44.dp
 
+/** The pills' row at the usual font size; it grows by as much as their label's line does. */
 private val PillRowHeight = 42.dp
-
-/** A label's line at the usual font size, which [PillRowHeight] has room for. */
-private val PillLabelLine = 21.dp
 
 /** The rest of the row while the bar is picked up, so the eye stays on the thumb. */
 private const val DIMMED_ALPHA = 0.35f
