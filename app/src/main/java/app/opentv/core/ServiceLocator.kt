@@ -128,7 +128,7 @@ object ServiceLocator {
     ) {
         private val appContext = context.applicationContext
 
-        /** The viewer's time zone, which [ViewerTime] draws every local day and clock time in. */
+        /** The viewer's time zone, which [ViewerTime] and [ViewerClock] draw every local day and clock time in. */
         val zone: StateFlow<ZoneId> by lazy { zoneOverride ?: DeviceZone(appContext).zone }
 
         val settings: AppSettings by lazy {

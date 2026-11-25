@@ -5,6 +5,8 @@
  */
 package app.opentv
 
+import android.app.Application
+import android.provider.Settings
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -28,6 +30,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.repo.LineupChannel
@@ -454,6 +457,35 @@ class GuideScrollingTest {
         compose.waitForIdle()
 
         compose.onNode(programme("News 1")).assertIsFocused()
+    }
+
+    @Test
+    fun `on a 12-hour clock the times along the top show whole, AM or PM and all`() {
+        Settings.System.putString(
+            ApplicationProvider.getApplicationContext<Application>().contentResolver,
+            Settings.System.TIME_12_24,
+            "12",
+        )
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(row(1, halfHours("News", EIGHT_PM))),
+                windowStartMillis = EIGHT_PM,
+                onWatch = {},
+            )
+        }
+
+        // "8:30 PM" is wider than "20:30", and a half hour's slot is a fixed width.
+        val halfHours = compose.onAllNodes(
+            hasText(":30", substring = true) and !hasClickAction(),
+            useUnmergedTree = true,
+        )
+        val labels = halfHours.fetchSemanticsNodes()
+        assertThat(labels).isNotEmpty()
+        labels.indices.forEach { i ->
+            val label = halfHours[i].assertShownWhole().assertOnOneLine().textLayout().layoutInput.text.text
+            assertThat(label.lowercase()).containsMatch("\\d:30[\\s\\u00a0\\u202f](am|pm)$")
+        }
+        captureScreen("guide_header_12_hour")
     }
 
     private fun List<String>.dropConsecutiveRepeats() = filterIndexed { i, title -> i == 0 || this[i - 1] != title }

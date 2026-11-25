@@ -17,12 +17,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 
 /**
@@ -64,6 +69,7 @@ fun ListRow(
             .fillMaxWidth()
             .semantics { if (switch != null) toggleableState = ToggleableState(switch) },
     ) { focused ->
+        val valueWidth = value?.let { rememberValueRoom(label, opens = opens, switch = switch != null) }
         // A lifted row keeps its Raised fill, where coral's On accent text would be too dark to read.
         val highlighted = focused && !lifted
         val text = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
@@ -93,7 +99,7 @@ fun ListRow(
             }
             value?.let {
                 Spacer(Modifier.width(SIDE))
-                Text(it, SetteeType.Body, color = quiet, maxLines = 1)
+                Text(it, SetteeType.Body, color = quiet, maxLines = 1, modifier = valueWidth ?: Modifier)
             }
             if (opens) {
                 Spacer(Modifier.width(GAP))
@@ -104,6 +110,43 @@ fun ListRow(
                 Switch(on = it, highlighted = highlighted)
             }
         }
+    }
+}
+
+/**
+ * The width a value may take: all it needs where [label] fits on one line beside it, otherwise at
+ * least half the room, so a long value (a network drive's path) is cut short rather than the label.
+ * The Row measures the value before the label, which has the weight, so left alone a value could
+ * take all but a letter of the label's room; held to half everywhere, a long value beside a short
+ * label was cut with room to spare (#507). [opens] and [switch] say what comes after the value,
+ * which is measured after it and needs its room kept.
+ */
+@Composable
+private fun rememberValueRoom(label: String, opens: Boolean, switch: Boolean): Modifier {
+    val measurer = rememberTextMeasurer()
+    val locale = LocalConfiguration.current.locales[0]
+    val density = LocalDensity.current
+    val (labelPx, afterPx) = remember(label, opens, switch, locale, density, measurer) {
+        val labelStyle = SetteeType.RowTitle.forText(label, locale)
+        val labelPx = measurer.measure(label, labelStyle, maxLines = 1, softWrap = false).size.width
+        val chevronPx = if (opens) {
+            measurer.measure(CHEVRON, SetteeType.RowTitle.forLocale(locale)).size.width +
+                with(density) { GAP.roundToPx() }
+        } else {
+            0
+        }
+        val switchPx = if (switch) with(density) { (SIDE + TRACK_WIDTH).roundToPx() } else 0
+        labelPx to chevronPx + switchPx
+    }
+    return Modifier.layout { measurable, constraints ->
+        val limited = if (constraints.hasBoundedWidth) {
+            val room = (constraints.maxWidth - afterPx).coerceAtLeast(0)
+            constraints.copy(minWidth = 0, maxWidth = maxOf(room / 2, room - labelPx - ROUNDING_PX))
+        } else {
+            constraints
+        }
+        val placeable = measurable.measure(limited)
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
 }
 
@@ -148,3 +191,6 @@ private val TRACK_WIDTH = 44.dp
 private val TRACK_HEIGHT = 24.dp
 private val THUMB_INSET = 3.dp
 private const val CHEVRON = "›"
+
+// A pixel in hand, so rounding between the label's measure and the Row's never wraps the label.
+private const val ROUNDING_PX = 1

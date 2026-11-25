@@ -9,7 +9,6 @@ import app.opentv.core.ViewerTime
 import com.google.common.truth.Truth.assertThat
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.Locale
 import org.junit.Test
 
 /** The viewer's local day and clock time, worked out in a zone the test names, never the JVM's. */
@@ -71,25 +70,5 @@ class ViewerTimeTest {
         val window = ViewerTime.guideWindow(now, dayOffset = 0, zone = kathmandu)
 
         assertThat(window.startUtcMillis).isEqualTo(at(kathmandu, "2026-03-28T21:30"))
-    }
-
-    @Test
-    fun `a localised time and date are in the locale given, and the zone`() {
-        val instant = at(london, "2026-07-04T21:30")
-
-        assertThat(ViewerTime.localTime(instant, london, Locale.UK)).isEqualTo("21:30")
-        assertThat(ViewerTime.localTime(instant, ZoneId.of("Asia/Tokyo"), Locale.UK)).isEqualTo("05:30")
-        assertThat(ViewerTime.localDate(instant, london, Locale.UK)).isEqualTo("4 Jul 2026")
-        assertThat(ViewerTime.localDate(instant, ZoneId.of("Asia/Tokyo"), Locale.UK)).isEqualTo("5 Jul 2026")
-    }
-
-    @Test
-    fun `a clock time and a day label are the instant's in the zone given`() {
-        val instant = at(london, "2026-07-04T00:15")
-
-        assertThat(ViewerTime.clockTime(instant, london)).isEqualTo("00:15")
-        assertThat(ViewerTime.dayLabel(instant, london)).isEqualTo("Sat 4 Jul")
-        assertThat(ViewerTime.clockTime(instant, ZoneId.of("America/New_York"))).isEqualTo("19:15")
-        assertThat(ViewerTime.dayLabel(instant, ZoneId.of("America/New_York"))).isEqualTo("Fri 3 Jul")
     }
 }

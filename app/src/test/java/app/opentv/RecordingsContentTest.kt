@@ -5,7 +5,9 @@
  */
 package app.opentv
 
+import android.app.Application
 import android.content.Context
+import android.provider.Settings
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -53,6 +55,8 @@ import app.opentv.ui.recordings.RecordingsContent
 import app.opentv.ui.recordings.RecordingsRow
 import app.opentv.ui.recordings.recordingsSections
 import com.google.common.truth.Truth.assertThat
+import java.time.ZoneId
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,8 +71,11 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class RecordingsContentTest {
 
+    private val compose = createComposeRule()
+
+    // The viewer's zone, fixed so the times on screen don't depend on the machine running the test.
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, zone = MutableStateFlow(ZoneId.of("Europe/London")))
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -580,6 +587,20 @@ class RecordingsContentTest {
         val mine = completed(1).copy(profileId = 7)
         show(recordings = listOf(mine), profileNames = mapOf(7L to "Sam", 8L to "Alex"))
         row("Recorded 1").assert(hasText("For Sam", substring = true))
+    }
+
+    @Test
+    fun `a booking's day and time follow the device's 12-hour clock`() {
+        Settings.System.putString(
+            ApplicationProvider.getApplicationContext<Application>().contentResolver,
+            Settings.System.TIME_12_24,
+            "12",
+        )
+
+        // Booking 1 starts at 9am on Friday 15 January 2027 in London.
+        show(recordings = listOf(booking(1)))
+
+        row("Booking 1").assert(hasText("Fri, Jan 15, 9:00 AM", substring = true))
     }
 
     @Test

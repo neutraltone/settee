@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -167,7 +168,7 @@ private fun ProfileCard(profile: Profile, still: String?, modifier: Modifier, on
                     // frame for the Display-size letter to keep 4:1.
                     Box(Modifier.fillMaxSize().background(StillShade))
                 }
-                Text(profile.name.take(1).uppercase(), style = SetteeType.Display)
+                Text(profileInitial(profile.name, LocalConfiguration.current.locales[0]), style = SetteeType.Display)
             }
         }
         Spacer(Modifier.height(NAME_GAP))

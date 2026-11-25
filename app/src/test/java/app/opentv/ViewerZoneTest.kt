@@ -8,10 +8,11 @@ package app.opentv
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.DeviceZone
-import app.opentv.core.ViewerTime
+import app.opentv.core.ViewerClock
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -34,12 +35,13 @@ class ViewerZoneTest {
     @Test
     fun `the same instant reads differently once the graph's zone changes`() {
         val instant = ZonedDateTime.of(2026, 7, 4, 21, 30, 0, 0, london).toInstant().toEpochMilli()
-        val before = ViewerTime.clockTime(instant, testGraph.graph.zone.value)
+        val clock = ViewerClock({ Locale.UK }, { testGraph.graph.zone.value }, { true })
+        val before = clock.formatTime(instant)
 
         zone.value = tokyo
 
         assertThat(before).isEqualTo("21:30")
-        assertThat(ViewerTime.clockTime(instant, testGraph.graph.zone.value)).isEqualTo("05:30")
+        assertThat(clock.formatTime(instant)).isEqualTo("05:30")
     }
 
     @Test

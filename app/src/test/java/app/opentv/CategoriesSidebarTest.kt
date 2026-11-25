@@ -51,7 +51,7 @@ class CategoriesSidebarTest {
 
     private val pinned = listOf(SidebarEntry("home", "For you"))
 
-    private val entries = listOf(
+    private var entries = listOf(
         SidebarEntry("action", "Action"),
         SidebarEntry("comedy", "Comedy"),
         SidebarEntry("drama", "Drama"),
@@ -106,6 +106,26 @@ class CategoriesSidebarTest {
     }
 
     @Test
+    fun `a long name too wide for the sidebar reads in full once highlighted, and the one beside it stays cut`() {
+        entries = listOf(
+            SidebarEntry("hd", "UK | SKY SPORTS FOOTBALL HD"),
+            SidebarEntry("uhd", "UK | SKY SPORTS FOOTBALL UHD"),
+        )
+        setSidebar()
+
+        compose.onNodeWithText("For you").requestFocus()
+        compose.onNodeWithText("For you").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText("UK | SKY SPORTS FOOTBALL HD").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText("UK | SKY SPORTS FOOTBALL UHD").assertIsFocused()
+        compose.mainClock.advanceTimeBy(MARQUEE_START_MILLIS)
+
+        compose.onNodeWithText("UK | SKY SPORTS FOOTBALL UHD", useUnmergedTree = true).assertShownWhole()
+        val rest = compose.onNodeWithText("UK | SKY SPORTS FOOTBALL HD", useUnmergedTree = true).textLayout()
+        assertThat(rest.isLineEllipsized(0)).isTrue()
+        captureScreen("categories_long_name_highlighted")
+    }
+
+    @Test
     fun `typing in Find a category narrows the list and counts what's showing`() {
         setSidebar()
         compose.onNodeWithTag("find").performTextInput("co")
@@ -116,5 +136,10 @@ class CategoriesSidebarTest {
         // For you isn't a category: always there, and not counted.
         compose.onNodeWithText("For you").assertExists()
         compose.onNodeWithText("1 of 3").assertExists()
+    }
+
+    private companion object {
+        // The marquee waits a moment before it moves, as ArtCard's does.
+        const val MARQUEE_START_MILLIS = 2_000L
     }
 }
