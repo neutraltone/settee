@@ -40,7 +40,13 @@ class ManagerAddSourceTest {
         scope,
         test.catalog,
         test.settings,
-        SourceRepository(test.db.sources(), XtreamApi(panel.http), StalkerApi(panel.http), panel.http),
+        SourceRepository(
+            test.db.sources(),
+            XtreamApi(panel.http),
+            StalkerApi(panel.http),
+            panel.http,
+            test.providerRenames,
+        ),
         test.lineup,
         test.refresh { panel.asked += RESCAN },
     )

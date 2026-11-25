@@ -6,6 +6,8 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.ArrivalClock
+import app.opentv.data.repo.SyncArrival
 import kotlinx.serialization.json.Json
 
 /**
@@ -45,10 +47,11 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         profiles = graph.profiles.export(),
         profileRenames = graph.profiles.history.renames,
         profileAdds = graph.profiles.history.adds,
+        providerRenames = graph.providerRenames.all(),
         progress = graph.viewerLibrary.syncedProgress.export(),
         dismissals = graph.viewerLibrary.syncedDismissals.export(),
         favourites = graph.viewerLibrary.favourites.export(),
-        hiddenStreams = graph.catalogRepository.exportHiddenChannels(),
+        hiddenStreams = graph.syncedHiddenChannels.export(),
         hiddenCategories = graph.settings.hiddenCategories.value.toList(),
         categoryLocks = graph.settings.exportCategoryLocks(),
         recordings = graph.recordingRepository.export(),
@@ -71,22 +74,27 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     }
 
     private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
-        // First: everything else lands on a Profile by name, and these decide what the names are now.
-        graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds)
-        val history = graph.profiles.history
+        // One per bundle, handed to every store; this merges nothing itself.
+        val clock = ArrivalClock.of(graph.clock(), bundle.generatedAtMillis)
+        // First: everything else lands on a Profile, and a provider, by name, and these decide what
+        // the names are now.
+        graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds, clock)
+        graph.providerRenames.import(bundle.providerRenames, clock)
+        val arrival = SyncArrival(graph.profiles.history, clock, graph.providerRenames.all())
         graph.profiles.import(bundle.profiles, bundle.generatedAtMillis)
-        graph.settings.importCategoryLocks(
+        graph.syncedCategoryLocks.import(
             bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },
+            arrival,
         )
-        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, history)
+        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, arrival)
         waiting += progress.waiting
         return MergeResult(
             // Counted with positions: both are where a Profile is with its titles.
-            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, history),
-            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, history),
-            hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams),
+            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, arrival),
+            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, arrival),
+            hidden = graph.syncedHiddenChannels.import(bundle.hiddenStreams, arrival),
             recordings = graph.recordingRepository.import(bundle.recordings),
-            settings = graph.profileSettings.import(bundle.profileSettings, history),
+            settings = graph.profileSettings.import(bundle.profileSettings, arrival),
         )
     }
 }

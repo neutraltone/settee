@@ -8,6 +8,7 @@ package app.opentv
 import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
 import app.opentv.data.repo.Profiles
+import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncBundle
 import app.opentv.sync.SyncCategoryLock
 import app.opentv.sync.SyncDismissal
@@ -276,6 +277,8 @@ class SyncSpreadsChangesTest {
         deviceB.now = 3_000
         deviceB.favourite("Tom", 1)
         deviceB.sync.apply(unstarred)
+        // Not still 2 000: A's clock reading earlier than B's change would cap it there (#341).
+        deviceA.now = 4_000
         deviceA.sync.apply(deviceA.sync.decode(deviceB.sync.encode(deviceB.sync.gather())))
 
         assertThat(deviceB.favouriteNames("Tom")).contains("Movie 1")
@@ -463,6 +466,7 @@ class SyncSpreadsChangesTest {
         deviceA.rename("Tom", "Thomas")
         deviceA.now = 3_000
         deviceA.rename("Thomas", "Tommy")
+        deviceB.now = 3_000
 
         syncAToB()
 
@@ -539,6 +543,7 @@ class SyncSpreadsChangesTest {
         checkNotNull(deviceA.graph.profiles.create("Tom"))
         deviceA.now = 4_000
         deviceA.play("Tom", deviceA.movieKey, 300_000, MOVIE_MILLIS)
+        deviceB.now = 4_000
 
         syncAToB()
         deviceB.sync.apply(oldFile)
@@ -696,7 +701,27 @@ class SyncSpreadsChangesTest {
         assertThat(settings.hiddenCategories.value.intersect(keys.toSet())).isEmpty()
     }
 
+    @Test
+    fun `a mark this version doesn't know isn't passed on as no mark, so the real one still lands`() = testing {
+        deviceB.seed("Tom")
+        deviceC.seed("Tom")
+        // A newer device's Episode 1 at 100 000 of 2 400 000, with a hand mark this version doesn't have.
+        fun fromNewerDevice(mark: String) = SyncBundle(
+            progress = listOf(
+                SyncPosition("Tom", "Provider", "ep", "1-1", "s", 100_000, EPISODE_MILLIS, MARKED_AT, mark),
+            ),
+        )
+
+        deviceB.sync.apply(fromNewerDevice("SOMETHING_NEW"))
+        deviceC.syncFrom(deviceB)
+        deviceC.sync.apply(fromNewerDevice("WATCHED"))
+
+        assertThat(deviceB.db.positions().all()).isEmpty()
+        assertThat(deviceC.statusOf("Tom", deviceC.episode.id)).isEqualTo(WatchStatus.Watched)
+    }
+
     private companion object {
+        const val MARKED_AT = 5_000L
         const val RACE_ITEMS = 3_000
         const val LOCK_RACE_KEYS = 300
     }

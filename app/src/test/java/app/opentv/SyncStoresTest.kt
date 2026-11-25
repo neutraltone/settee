@@ -263,12 +263,12 @@ class SyncStoresTest {
         deviceA.seedChannel()
         deviceB.seedChannel()
         deviceA.graph.catalogRepository.setChannelHidden(1, true)
-        val exported = deviceA.graph.catalogRepository.exportHiddenChannels()
+        val exported = deviceA.graph.syncedHiddenChannels.export()
 
         assertThat(exported.map { it.source to it.id }).containsExactly("Provider" to "c1")
         assertThat(exported.single().hidden).isTrue()
-        assertThat(deviceB.graph.catalogRepository.importHiddenChannels(exported)).isEqualTo(1)
-        assertThat(deviceB.graph.catalogRepository.importHiddenChannels(exported)).isEqualTo(0)
+        assertThat(deviceB.graph.syncedHiddenChannels.import(exported)).isEqualTo(1)
+        assertThat(deviceB.graph.syncedHiddenChannels.import(exported)).isEqualTo(0)
         assertThat(deviceB.db.channels().byId(101)?.hidden).isTrue()
     }
 
@@ -277,7 +277,7 @@ class SyncStoresTest {
         deviceA.seedSource()
         deviceA.seedChannel(hidden = true)
 
-        assertThat(deviceA.graph.catalogRepository.exportHiddenChannels()).isEmpty()
+        assertThat(deviceA.graph.syncedHiddenChannels.export()).isEmpty()
     }
 
     @Test
@@ -285,12 +285,12 @@ class SyncStoresTest {
         deviceA.seedSource()
         deviceA.seedChannel()
         deviceA.graph.catalogRepository.setChannelHidden(1, true)
-        val before = deviceA.graph.catalogRepository.exportHiddenChannels().single()
+        val before = deviceA.graph.syncedHiddenChannels.export().single()
 
         val incoming = deviceA.db.channels().forSource(1).map { it.copy(hidden = false) }
         deviceA.db.channels().replaceCatalogue(1, incoming, syncStamp = 2)
 
-        assertThat(deviceA.graph.catalogRepository.exportHiddenChannels()).containsExactly(before)
+        assertThat(deviceA.graph.syncedHiddenChannels.export()).containsExactly(before)
     }
 
     @Test
@@ -298,7 +298,7 @@ class SyncStoresTest {
         deviceB.seedSource()
         deviceB.seedChannel()
 
-        val hidden = deviceB.graph.catalogRepository.importHiddenChannels(listOf(SyncHiddenChannel("Other", "c1")))
+        val hidden = deviceB.graph.syncedHiddenChannels.import(listOf(SyncHiddenChannel("Other", "c1")))
 
         assertThat(hidden).isEqualTo(0)
         assertThat(deviceB.db.channels().byId(101)?.hidden).isFalse()

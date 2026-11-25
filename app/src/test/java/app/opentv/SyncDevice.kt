@@ -6,6 +6,7 @@
 package app.opentv
 
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -14,6 +15,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.WatchStatus
 import app.opentv.data.repo.movies
@@ -181,6 +183,26 @@ internal class SyncDevice(private val rowIdOffset: Long) {
     fun seriesFetches() = panel.asked.count { it.startsWith("get_series_info") }
 
     suspend fun awaitEpisodes() = graph.waitingProgress.awaitBackground()
+
+    /** Renames this device's provider the way its edit screen saves one. */
+    suspend fun renameProvider(to: String) {
+        graph.sourceRepository.save(checkNotNull(db.sources().byId(sourceId)).copy(name = to))
+    }
+
+    /** Stores one of the provider's live categories, as a catalogue refresh does. */
+    suspend fun addLiveCategory(id: String, name: String) =
+        db.categories().upsertAll(listOf(Category(id = id, sourceId = sourceId, name = name, kind = StreamKind.LIVE)))
+
+    /** Locks the provider's live category [id] the way Locked categories' switch does. */
+    suspend fun lockCategory(id: String, at: Long) {
+        val group = graph.channelLineup.categoryGroups(includeLocked = true).first().single { id in it.ids }
+        graph.settings.setCategoryLocked(group.key, locked = true, names = group.names, now = at)
+    }
+
+    /** The provider category ids Live lists, the Parental Lock applied. */
+    suspend fun shownCategoryIds(): List<String> = graph.channelLineup.categoryGroups().first().flatMap { it.ids }
+
+    suspend fun providerName(): String = checkNotNull(db.sources().byId(sourceId)).name
 
     suspend fun rename(from: String, to: String) = assertThat(graph.profiles.rename(profileId(from), to)).isTrue()
 

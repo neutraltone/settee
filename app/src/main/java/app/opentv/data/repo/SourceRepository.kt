@@ -14,7 +14,6 @@ import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,6 +24,7 @@ class SourceRepository(
     private val api: XtreamApi,
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
+    private val renames: ProviderRenames,
     private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     fun observeAll(): Flow<List<Source>> = dao.observeAll()
@@ -39,23 +39,32 @@ class SourceRepository(
     suspend fun saveRefreshResult(sourceId: Long, failure: ViewerError?) =
         dao.setRefreshFailure(sourceId, failure?.stored())
 
+    /**
+     * Saves a provider, its name trimmed and made unique. A new name for an existing one takes along
+     * everything kept by its name, and is recorded so the other devices rename theirs (ADR 0004).
+     */
     suspend fun save(source: Source): Long = withContext(dispatchers.io) {
-        val normalised = source.copy(url = normaliseUrl(source.url, source.kind), name = uniqueName(source))
-        if (source.id == 0L) {
-            dao.insert(normalised)
-        } else {
-            dao.updateEdit(normalised)
-            source.id
+        renames.naming {
+            val normalised = source.copy(url = normaliseUrl(source.url, source.kind), name = uniqueName(source))
+            if (source.id == 0L) {
+                dao.insert(normalised).also { renames.added() }
+            } else {
+                renames.edited(normalised)
+                source.id
+            }
         }
     }
 
     // Sync matches a title by its source's name (ADR 0004), and provider ids repeat across providers,
     // so two sources sharing a name would swap progress and hidden channels. Leaving the name blank
     // gives every source the same default, so this has to resolve a clash rather than refuse it.
+    // Names match as another device matches them (SourceDirectory.sameName).
     private suspend fun uniqueName(source: Source): String {
-        val taken = dao.observeAll().first().filter { it.id != source.id }.map { it.name }.toSet()
-        if (source.name !in taken) return source.name
-        return generateSequence(2) { it + 1 }.map { "${source.name} $it" }.first { it !in taken }
+        val wanted = source.name.trim()
+        val taken = dao.all().filter { it.id != source.id }.map { it.name }
+        fun isTaken(name: String) = taken.any { SourceDirectory.sameName(it, name) }
+        if (!isTaken(wanted)) return wanted
+        return generateSequence(2) { it + 1 }.map { "$wanted $it" }.first { !isTaken(it) }
     }
 
     /** Checks the details work before the user is committed to them. */

@@ -18,7 +18,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
-import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.CoverRow
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
@@ -39,7 +38,6 @@ import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
-import app.opentv.sync.SyncHiddenChannel
 import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
@@ -736,30 +734,6 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    /** The channels a viewer hid or showed on this device, for sync. */
-    suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
-
-    /**
-     * Merges another device's hides and unhides, newest change wins. A dated change is kept even if
-     * the provider isn't listing that channel right now. Returns how many channels it changed here.
-     */
-    suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
-        val sources = sourceDao.directory()
-        return items.count { item ->
-            val sourceId = sources.id(item.source) ?: return@count false
-            val here = channelDao.hiddenChange(item.source, item.id)?.changedAtMillis
-            if (!isNewerChange(item.changedAtMillis, here)) return@count false
-            if (item.changedAtMillis > 0) {
-                channelDao.upsertHiddenChange(
-                    ChannelHiddenChange(item.source, item.id, item.hidden, item.changedAtMillis),
-                )
-            }
-            val wasHidden = channelDao.isHidden(sourceId, item.id)
-            channelDao.setHidden(sourceId, item.id, item.hidden)
-            wasHidden != null && wasHidden != item.hidden
-        }
-    }
-
     /**
      * Series episodes are fetched lazily — panels are slow and most series are never opened.
      * Episodes not stored before are stamped as first seen at [nowUtcMillis]. Returns false when the
@@ -1165,6 +1139,7 @@ class CatalogRepository(
         database.withTransaction {
             channelDao.deleteForSource(sourceId)
             categoryDao.deleteForSource(sourceId)
+            viewerLibrary.retired.sourceRemoved(sourceId)
             movieDao.deleteForSource(sourceId)
             seriesDao.deleteForSource(sourceId)
             episodeDao.deleteForSource(sourceId)
@@ -1193,6 +1168,11 @@ class CatalogRepository(
          * Bump this whenever the normaliser changes in a way that should re-process
          * already-imported channels. The app compares it against a stored value on launch
          * and runs [renormalizeAll] once when it moves.
+         *
+         * Parental Lock keys categories by the normaliser's group key too, worked out on every
+         * read, so a change that moves a category's key lifts its lock unless this moves:
+         * [CategoryLockCarry.carry] then re-keys every lock from the category names it kept.
+         * A change that alters any category's key without a bump shows locked ones with no PIN.
          */
         const val NORMALIZER_VERSION = 4
     }

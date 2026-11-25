@@ -47,6 +47,7 @@ import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.KeyedCategories
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -54,10 +55,10 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ShowEpisodes
+import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
-import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
@@ -997,9 +998,17 @@ class VodViewModel @JvmOverloads constructor(
 
     private fun viewableCategories(kind: StreamKind): Flow<List<Category>> = combine(
         graph.catalogRepository.observeCategories(kind),
+        graph.sourceRepository.observeAll(),
         settings.hiddenCategories,
         settings.hiddenUnlocked,
-    ) { raw, locked, unlocked -> if (unlocked) raw else raw.filter { categoryGroupKey(it) !in locked } }
+    ) { raw, sources, locked, unlocked ->
+        if (unlocked) {
+            raw
+        } else {
+            val keyed = KeyedCategories(raw, sources)
+            raw.filter { keyed.keyOf(it) !in locked }
+        }
+    }
 
     private companion object {
         /** As long as the tab's other flows: through a quick trip to a title's page and back. */
@@ -2210,7 +2219,7 @@ class ProfilesViewModel @JvmOverloads constructor(
     val stills: StateFlow<Map<Long, String>> =
         combine(graph.profiles.observeAll(), settings.hiddenCategories) { profiles, locked -> profiles to locked }
             .mapLatest { (profiles, locked) ->
-                val lockedCheck = LockedTitles(graph.catalogRepository, locked)
+                val lockedCheck = LockedTitles(graph.catalogRepository, graph.sourceRepository, locked)
                 profiles.mapNotNull { profile -> stillFor(profile.id, lockedCheck)?.let { profile.id to it } }.toMap()
             }
             .flowOn(graph.dispatchers.io)
@@ -2262,13 +2271,20 @@ class ProfilesViewModel @JvmOverloads constructor(
  * Whether a title is in one of the [locked] category groups. Each kind's categories are read once,
  * and only when something is locked.
  */
-private class LockedTitles(private val catalog: CatalogRepository, private val locked: Set<String>) {
+private class LockedTitles(
+    private val catalog: CatalogRepository,
+    private val providers: SourceRepository,
+    private val locked: Set<String>,
+) {
     private val keys = mutableMapOf<StreamKind, Map<Pair<Long, String>, String>>()
+    private var sources: List<Source>? = null
 
     suspend fun has(kind: StreamKind, sourceId: Long, categoryId: String?): Boolean {
         if (locked.isEmpty() || categoryId == null) return false
+        val known = sources ?: providers.all().also { sources = it }
         val byId = keys.getOrPut(kind) {
-            catalog.observeCategories(kind).first().associate { (it.sourceId to it.id) to categoryGroupKey(it) }
+            val keyed = KeyedCategories(catalog.observeCategories(kind).first(), known)
+            keyed.categories.associate { (it.sourceId to it.id) to keyed.keyOf(it) }
         }
         return byId[sourceId to categoryId] in locked
     }

@@ -21,6 +21,7 @@ import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.LookupPace
+import app.opentv.data.repo.ProviderRenames
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodTitle
@@ -92,6 +93,9 @@ class TestCatalog(
 
     val settings: AppSettings = AppSettings.get(context)
 
+    /** Renames this catalogue's providers, as [SourceRepository] saves them. */
+    val providerRenames = ProviderRenames(db, settings, clock)
+
     /** Where [lineup] keeps its folds; cancelled with the database. */
     private val sharing = CoroutineScope(SupervisorJob() + dispatchers.default)
 
@@ -117,6 +121,7 @@ class TestCatalog(
             XtreamApi(panel.http, dispatchers = dispatchers),
             StalkerApi(panel.http, dispatchers = dispatchers),
             panel.http,
+            providerRenames,
             dispatchers,
         ),
         guide = guide,

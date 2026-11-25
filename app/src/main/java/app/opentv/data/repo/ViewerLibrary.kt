@@ -224,7 +224,7 @@ class ViewerLibrary(
      */
     internal suspend fun mergeSynced(position: PlaybackPosition): Boolean {
         val existing = positions.get(position.profileId, position.mediaKey)
-        if (existing != null && position.updatedAtMillis <= existing.updatedAtMillis) return false
+        if (!isNewerChange(position.updatedAtMillis, existing?.updatedAtMillis)) return false
         positions.upsert(position)
         return true
     }
@@ -670,7 +670,7 @@ class HandMarks internal constructor(
      */
     internal suspend fun mergeSynced(dismissal: SeriesDismissal): Boolean {
         val existing = dismissals.get(dismissal.profileId, dismissal.sourceId, dismissal.seriesId)
-        if (existing != null && dismissal.dismissedAtMillis <= existing.dismissedAtMillis) return false
+        if (!isNewerChange(dismissal.dismissedAtMillis, existing?.dismissedAtMillis)) return false
         dismissals.upsert(dismissal)
         return true
     }

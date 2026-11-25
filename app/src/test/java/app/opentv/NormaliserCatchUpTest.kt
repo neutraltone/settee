@@ -81,6 +81,22 @@ class NormaliserCatchUpTest {
     }
 
     @Test
+    fun `with the normaliser unchanged, locks remember their categories' names instead of being carried`() = runTest {
+        prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
+        val steps = mutableListOf<String>()
+        val upToDate = NormaliserCatchUp(
+            app,
+            renormalise = { steps += "clean" },
+            carryLocks = { steps += "carry" },
+            rememberLocks = { steps += "remember" },
+        )
+
+        upToDate()
+
+        assertThat(steps).containsExactly("remember")
+    }
+
+    @Test
     fun `a clean that fails is tried again on the next launch`() = runTest {
         val failing = NormaliserCatchUp(app, renormalise = { error("database unavailable") })
 

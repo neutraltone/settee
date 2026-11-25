@@ -9,6 +9,7 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.SourceDirectory
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.ui.VodViewModel
@@ -63,7 +64,7 @@ class VodCategoriesTest {
                 Category("4", 1, "Drama", StreamKind.SERIES),
             ),
         )
-        graph.settings.setCategoryLocked(categoryGroupKey(adult), locked = true)
+        graph.settings.setCategoryLocked(categoryGroupKey(adult, SourceDirectory(emptyList())), locked = true)
 
         assertThat(viewModel.movieCategories.names(Category::name) { it.isNotEmpty() }).containsExactly("Action")
         assertThat(viewModel.seriesCategories.names(Category::name) { it.isNotEmpty() }).containsExactly("Drama")
@@ -154,7 +155,7 @@ class VodCategoriesTest {
             graph.database.categories().upsertAll(listOf(films))
             graph.database.movies().upsertAll(listOf(movie(1, "Heat 1995")))
         }
-        graph.settings.setCategoryLocked(categoryGroupKey(films), locked = true)
+        graph.settings.setCategoryLocked(categoryGroupKey(films, SourceDirectory(emptyList())), locked = true)
         viewModel.selectMovieCategory(films.browseKey)
 
         assertThat(viewModel.movieGrid.names(TitleCover::title) { true }).isEmpty()

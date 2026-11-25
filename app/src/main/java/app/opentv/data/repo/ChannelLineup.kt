@@ -10,6 +10,7 @@ import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.player.DecoderList
@@ -119,25 +120,88 @@ data class LineupChannel(
  * HD/RAW' and 'UK| GENERAL hevc' are the same shelf twice), so they fold by normalised name and
  * filter across every underlying id at once.
  */
-data class CategoryGroup(val key: String, val label: String, val ids: List<String>)
+data class CategoryGroup(
+    val key: String,
+    val label: String,
+    val ids: List<String>,
+    /** The categories' names as the provider sends them, which a lock keeps (see [CategoryLockCarry]). */
+    val names: List<String> = emptyList(),
+)
 
 /**
  * The key a category is grouped and locked by: categories whose names differ only by decoration
  * or region (`UK| ADULT`, `US| Adult`) share one, so locking one locks them all, the safer mistake
- * for a lock. One with no name to normalise is keyed by its source too, as provider category ids
- * are only unique within a provider.
+ * for a lock. One with no name to normalise is keyed by its provider's name, from [sources], and its
+ * id there ([NamelessCategory]): provider category ids are only unique within a provider, and a
+ * lock travels to devices where the provider has another row id (#338).
  */
-fun categoryGroupKey(category: Category): String =
-    ChannelNameNormalizer.normalize(category.name).groupKey.ifEmpty { "${category.sourceId}:${category.id}" }
+internal fun categoryGroupKey(category: Category, sources: SourceDirectory): String =
+    ChannelNameNormalizer.normalize(category.name).groupKey.ifEmpty {
+        sources.name(category.sourceId)?.let { NamelessCategory.key(it, category.id) }
+            // A category whose provider has gone is only ever shown until its rows follow it.
+            ?: NamelessCategory.legacyKey(category.sourceId, category.id)
+    }
+
+/**
+ * The key of a category whose name normalises to nothing: its provider's name and its id there.
+ * Normalised keys hold only letters and digits, so the mark can't be mistaken for one. The name's
+ * length goes first because a provider's name and a category id can hold any character.
+ */
+internal object NamelessCategory {
+    private const val MARK = '@'
+
+    fun key(sourceName: String, categoryId: String): String = "$MARK${sourceName.length}:$sourceName:$categoryId"
+
+    /** What [categoryGroupKey] gave a nameless category before #338: the provider's row id here. */
+    fun legacyKey(sourceId: Long, categoryId: String): String = "$sourceId:$categoryId"
+
+    /** A nameless category's provider, by name, and its id there. */
+    data class Parts(val sourceName: String, val categoryId: String)
+
+    /** What [key] is made of, or null when it isn't a nameless category's. */
+    fun parse(key: String): Parts? {
+        val colon = key.indexOf(':')
+        val length = if (key.firstOrNull() == MARK && colon > 1) key.substring(1, colon).toIntOrNull() else null
+        val end = length?.let { colon + 1 + it }
+        return if (end != null && end < key.length && key[end] == ':') {
+            Parts(key.substring(colon + 1, end), key.substring(end + 1))
+        } else {
+            null
+        }
+    }
+
+    /** [key] with its provider named by [rename], as another device or a rename names it; others as they are. */
+    fun relabelled(key: String, rename: (String) -> String): String =
+        parse(key)?.let { key(rename(it.sourceName), it.categoryId) } ?: key
+}
+
+/** Categories with the providers they belong to, which a nameless one's key is made from. */
+internal data class KeyedCategories(val categories: List<Category>, val sources: List<Source>) {
+    /** [sources] by id and name, for [categoryGroupKey]. */
+    val directory by lazy { SourceDirectory(sources) }
+
+    fun keyOf(category: Category): String = categoryGroupKey(category, directory)
+}
+
+private fun List<Source>.namesById() = map { it.id to it.name }
 
 /** Folds [categories] into one [CategoryGroup] per [categoryGroupKey], in their order. */
-fun foldCategories(categories: List<Category>): List<CategoryGroup> {
-    val groups = LinkedHashMap<String, Pair<String, MutableList<String>>>()
+internal fun foldCategories(categories: List<Category>, sources: SourceDirectory): List<CategoryGroup> {
+    val groups = LinkedHashMap<String, GroupBeingFolded>()
     for (category in categories) {
-        val label = ChannelNameNormalizer.normalize(category.name).baseName
-        groups.getOrPut(categoryGroupKey(category)) { label to mutableListOf() }.second += category.id
+        val group = groups.getOrPut(categoryGroupKey(category, sources)) {
+            GroupBeingFolded(ChannelNameNormalizer.normalize(category.name).baseName)
+        }
+        group.ids += category.id
+        if (category.name !in group.names) group.names += category.name
     }
-    return groups.map { (key, value) -> CategoryGroup(key, value.first, value.second) }
+    return groups.map { (key, group) -> CategoryGroup(key, group.label, group.ids, group.names) }
+}
+
+/** A [CategoryGroup] as [foldCategories] gathers it: labelled by its first category. */
+private class GroupBeingFolded(val label: String) {
+    val ids = mutableListOf<String>()
+    val names = mutableListOf<String>()
 }
 
 /**
@@ -157,18 +221,24 @@ constructor(
     private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default),
     private val channelDao: ChannelDao = db.channels(),
 ) {
-    private val categories = db.categories().observe(StreamKind.LIVE)
+    private val categories: Flow<KeyedCategories> =
+        combine(
+            db.categories().observe(StreamKind.LIVE),
+            // Only a name or id changes a key; a refresh rewrites each provider's row with its result.
+            db.sources().observeAll().distinctUntilChanged { old, new -> old.namesById() == new.namesById() },
+            ::KeyedCategories,
+        )
 
     /**
      * The categories the Parental Lock is hiding right now, as (source, category id): none once
      * the session is unlocked. Category ids are only unique within a provider.
      */
     private val locked: Flow<Set<Pair<Long, String>>> =
-        combine(categories, lockedKeys, unlocked) { categories, keys, unlocked ->
+        combine(categories, lockedKeys, unlocked) { keyed, keys, unlocked ->
             if (unlocked || keys.isEmpty()) {
                 emptySet()
             } else {
-                categories.filter { categoryGroupKey(it) in keys }.mapTo(HashSet()) { it.sourceId to it.id }
+                keyed.categories.filter { keyed.keyOf(it) in keys }.mapTo(HashSet()) { it.sourceId to it.id }
             }
         }
 
@@ -178,10 +248,10 @@ constructor(
      * shows, and normalising hundreds of names for every showing was the cost #267 took off that pane.
      */
     private val categoryKeys: Flow<Set<String>> = run {
-        var last: Pair<List<Category>, Set<String>>? = null
-        categories.map { list ->
-            last?.takeIf { it.first == list }?.second
-                ?: list.mapTo(HashSet(), ::categoryGroupKey).also { last = list to it }
+        var last: Pair<KeyedCategories, Set<String>>? = null
+        categories.map { keyed ->
+            last?.takeIf { it.first == keyed }?.second
+                ?: keyed.categories.mapTo(HashSet(), keyed::keyOf).also { last = keyed to it }
         }
             .flowOn(dispatchers.default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
@@ -241,11 +311,12 @@ constructor(
 
     /** The categories' rail, folded by [categoryGroupKey]; locked ones are left out unless [includeLocked]. */
     fun categoryGroups(sourceId: Long? = null, includeLocked: Boolean = false): Flow<List<CategoryGroup>> =
-        combine(categories, lockedKeys, unlocked) { categories, keys, unlocked ->
+        combine(categories, lockedKeys, unlocked) { keyed, keys, unlocked ->
             // Provider by provider, as providers are listed: the categories come ordered by each
             // provider's own index, which interleaves two providers' lists row by row.
             val groups = foldCategories(
-                categories.filter { sourceId == null || it.sourceId == sourceId }.sortedBy { it.sourceId },
+                keyed.categories.filter { sourceId == null || it.sourceId == sourceId }.sortedBy { it.sourceId },
+                keyed.directory,
             )
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }
@@ -427,7 +498,7 @@ constructor(
 
 /** The rows [scope] shows, in its order, before they're folded into Channels. */
 @OptIn(ExperimentalCoroutinesApi::class)
-private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<List<Category>>): Flow<List<Channel>> =
+private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<KeyedCategories>): Flow<List<Channel>> =
     when (scope) {
         is LineupScope.All -> error("All is listed from the catalogue's rows: see ChannelLineup.channels")
         // Folded from their names' rows instead: see ChannelLineup.channels.
@@ -447,12 +518,12 @@ private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<
  * belongs to another group (#350), and what comes back is matched on provider too.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-private fun Flow<List<Category>>.rowsInGroup(
+private fun Flow<KeyedCategories>.rowsInGroup(
     key: String,
     sourceId: Long?,
     query: (categoryIds: List<String>) -> Flow<List<Channel>>,
-): Flow<List<Channel>> = map { categories ->
-    categories.filter { (sourceId == null || it.sourceId == sourceId) && categoryGroupKey(it) == key }
+): Flow<List<Channel>> = map { keyed ->
+    keyed.categories.filter { (sourceId == null || it.sourceId == sourceId) && keyed.keyOf(it) == key }
         .groupBy(Category::sourceId, Category::id)
         .mapValues { (_, ids) -> ids.toSet() }
 }.flatMapLatest { group ->

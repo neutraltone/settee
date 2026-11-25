@@ -15,10 +15,7 @@ import app.opentv.core.JourneyTimer
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.core.carryLivePreviewFromBefore
-import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.CatalogueRefresh
-import app.opentv.data.repo.LAST_ASCII_KEY_NORMALIZER
-import app.opentv.data.repo.carriedCategoryLocks
 import app.opentv.data.work.SyncWorker
 import app.opentv.recording.RecordingEngine
 import coil.ImageLoader
@@ -143,6 +140,7 @@ open class OpenTvApp :
         // Now, so the titles are grouped while the viewer picks a Profile rather than after Home first
         // asks for them (#582). Off the main thread: making the index makes the database.
         appScope.launch { graph.titleIndex.start() }
+        val lockCarry = graph.categoryLockCarry
         val catchUpNormaliser = NormaliserCatchUp(
             this,
             renormalise = {
@@ -152,14 +150,8 @@ open class OpenTvApp :
                 graph.catalogRepository.renormalizeAll()
                 graph.epgRepository.runMatcher()
             },
-            carryLocks = { from ->
-                if (from <= LAST_ASCII_KEY_NORMALIZER) {
-                    val categories = StreamKind.entries.flatMap { graph.database.categories().allByKind(it) }
-                    graph.settings.importCategoryLocks(
-                        carriedCategoryLocks(categories, graph.settings.exportCategoryLocks()),
-                    )
-                }
-            },
+            carryLocks = lockCarry::carry,
+            rememberLocks = lockCarry::remember,
         )
         val work = FirstOpenWork(
             nasAutoSync = graph.settings.nasAutoSync.value,

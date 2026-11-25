@@ -114,7 +114,60 @@ interface SourceDao {
         val stored = byId(source.id)
         val samePanel = stored != null && stored.url == source.url && stored.kind == source.kind
         update(source.copy(serverTimeZone = stored?.serverTimeZone?.takeIf { samePanel }))
+        if (stored != null && stored.name != source.name) carryName(stored.name, source.name)
     }
+
+    /** Renames a source as a rename from another device does, taking what's kept by its name along. */
+    @Transaction
+    suspend fun rename(id: Long, name: String) {
+        val stored = byId(id) ?: return
+        setName(id, name)
+        carryName(stored.name, name)
+    }
+
+    @Query("UPDATE sources SET name = :name WHERE id = :id")
+    suspend fun setName(id: Long, name: String)
+
+    /**
+     * Moves the device's own rows kept by a source's name (ADR 0004) from [from] to [to], so a rename
+     * keeps its hides, channel edits, Live Preview, series rules and reminders. Where a hide is
+     * already kept under [to], as sync can leave one, the newer change stays. Favourites are
+     * `Favourites.sourceRenamed`'s to move. Call in a transaction.
+     */
+    suspend fun carryName(from: String, to: String) {
+        dropOlderHiddenChanges(from, to)
+        moveHiddenChanges(from, to)
+        moveChannelEdits(from, to)
+        moveLivePlayback(from, to)
+        moveSeriesRules(from, to)
+        moveReminders(from, to)
+    }
+
+    @Query(
+        """
+        DELETE FROM channel_hidden_changes WHERE source = :from AND EXISTS (
+            SELECT 1 FROM channel_hidden_changes kept WHERE kept.source = :to
+                AND kept.streamId = channel_hidden_changes.streamId
+                AND kept.changedAtMillis >= channel_hidden_changes.changedAtMillis
+        )
+        """,
+    )
+    suspend fun dropOlderHiddenChanges(from: String, to: String)
+
+    @Query("UPDATE OR REPLACE channel_hidden_changes SET source = :to WHERE source = :from")
+    suspend fun moveHiddenChanges(from: String, to: String)
+
+    @Query("UPDATE OR REPLACE channel_edits SET source = :to WHERE source = :from")
+    suspend fun moveChannelEdits(from: String, to: String)
+
+    @Query("UPDATE live_playback SET source = :to WHERE source = :from")
+    suspend fun moveLivePlayback(from: String, to: String)
+
+    @Query("UPDATE series_rules SET source = :to WHERE source = :from")
+    suspend fun moveSeriesRules(from: String, to: String)
+
+    @Query("UPDATE reminders SET source = :to WHERE source = :from")
+    suspend fun moveReminders(from: String, to: String)
 
     /** Only the failure, so a refresh doesn't put back what an edit changed meanwhile. */
     @Query("UPDATE sources SET lastRefreshFailure = :stored WHERE id = :id")
@@ -704,6 +757,10 @@ private fun mergedOver(
 
 @Dao
 interface CategoryDao {
+    /** How many categories every provider lists, of every kind: a cheap sign the catalogue changed. */
+    @Query("SELECT COUNT(*) FROM categories")
+    suspend fun count(): Int
+
     @Query("SELECT * FROM categories WHERE kind = :kind ORDER BY sortIndex, name")
     fun observe(kind: StreamKind): Flow<List<Category>>
 
@@ -1597,6 +1654,22 @@ interface PlaybackPositionDao {
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
+
+    /**
+     * Deletes every Profile's positions on [sourceId]'s films and episodes, for removing that source
+     * (#337). Run before its titles go, since afterwards nothing says which keys were its. A subquery
+     * rather than a list of ids, which a big catalogue would push past SQLite's bound-variable limit.
+     */
+    @Query(
+        """
+        DELETE FROM playback_positions WHERE
+          (substr(mediaKey, 1, 6) = 'movie:'
+            AND CAST(substr(mediaKey, 7) AS INTEGER) IN (SELECT id FROM movies WHERE sourceId = :sourceId))
+          OR (substr(mediaKey, 1, 3) = 'ep:'
+            AND CAST(substr(mediaKey, 4) AS INTEGER) IN (SELECT id FROM episodes WHERE sourceId = :sourceId))
+        """,
+    )
+    suspend fun deleteForSource(sourceId: Long)
 }
 
 @Dao
@@ -1716,15 +1789,9 @@ interface RecentSearchDao {
 
 @Dao
 interface FavouriteDao {
-    @Query(
-        """
-        SELECT EXISTS(
-          SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-            AND removed = 0 AND source = (SELECT name FROM sources WHERE id = :sourceId)
-        )
-        """,
-    )
-    suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
+    /** Moves Favourites to another source name, replacing any already kept under it. */
+    @Query("UPDATE OR REPLACE favourites SET source = :to WHERE source = :from")
+    suspend fun moveSource(from: String, to: String)
 
     /** Whether a profile has a Favourite of [kind]: Home's quick check for a Favourites row. */
     @Query("SELECT EXISTS(SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND removed = 0)")

@@ -13,9 +13,10 @@ import kotlinx.serialization.Serializable
  * Nothing here is keyed by a local database id — those differ from one install to the next. An
  * item is identified by something stable for the same provider: a watch position, hidden channel
  * or Favourite by its **source name and provider id** (ADR 0004), a profile by its **name**, a
- * category by its **group key**, a NAS recording by its **smb:// locator**. So a bundle from one
- * device makes sense on another. A stream URL never travels: an Xtream one holds the account's
- * username and password, and this bundle is left as a plain file on the NAS.
+ * category by its **group key** (one with no name by its source name and provider category id), a NAS
+ * recording by its **smb:// locator**. So a bundle from one device makes sense on another. A stream
+ * URL never travels: an Xtream one holds the account's username and password, and this bundle is
+ * left as a plain file on the NAS.
  *
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
@@ -29,6 +30,9 @@ import kotlinx.serialization.Serializable
  *    unstarring and unhiding spread too. A time of zero means the bundle had none, and counts as the oldest possible.
  *  - **Profile Renames and adds** are dated records every device keeps and passes on, applied once
  *    each in time order, and anything labelled with an old name lands on the new one (ADR 0005).
+ *  - **Provider Renames** are dated records kept and passed on the same way. Each device renames its
+ *    provider to match, and an item labelled with an old name, or a different capital or space, lands
+ *    on the provider this device knows by it (ADR 0004).
  *  - **Recordings** are additive: NAS recordings from a peer are merged in without removing anything.
  *
  * Every field defaults to empty and the reader ignores unknown keys, so a positions-only device
@@ -36,7 +40,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 7,
+    val version: Int = 8,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing and haven't removed. */
     val profiles: List<String> = emptyList(),
@@ -44,6 +48,8 @@ data class SyncBundle(
     val profileRenames: List<SyncProfileRename> = emptyList(),
     /** Every Profile the peer has added deliberately or heard of, which decides who owns a reused name. */
     val profileAdds: List<SyncProfileAdd> = emptyList(),
+    /** Every provider rename the peer has made or heard of; older bundles have none. */
+    val providerRenames: List<SyncProviderRename> = emptyList(),
     /**
      * Two-way, newest-wins resume points. A new key, not `positions`, whose items were keyed by
      * stream URL: a peer's file that fails to decode is skipped whole, so reusing the key would
@@ -74,13 +80,22 @@ data class SyncBundle(
 @Serializable
 data class SyncProfileRename(val from: String, val to: String, val atMillis: Long)
 
+/** "The provider called [from] became [to] at this time", as a viewer renamed it on some device. */
+@Serializable
+data class SyncProviderRename(val from: String, val to: String, val atMillis: Long)
+
 /** A viewer added a Profile called [name] at this time. */
 @Serializable
 data class SyncProfileAdd(val name: String, val atMillis: Long)
 
 /** A locked category: [key] is its group key, [lockedAtMillis] when the lock was first made. */
 @Serializable
-data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
+data class SyncCategoryLock(
+    val key: String,
+    val lockedAtMillis: Long,
+    /** The categories' names as the provider sends them, so a device whose normaliser changes can move the lock. */
+    val names: List<String> = emptyList(),
+)
 
 /** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
 @Serializable

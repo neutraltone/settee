@@ -9,11 +9,14 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.repo.ArrivalClock
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.data.repo.isNewerChange
 import app.opentv.sync.SyncCategoryLock
 import app.opentv.sync.SyncProfileAdd
 import app.opentv.sync.SyncProfileRename
+import app.opentv.sync.SyncProviderRename
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -78,6 +81,21 @@ class AppSettings private constructor(context: Context, fileName: String = "open
 
     fun setProfileAdds(adds: List<SyncProfileAdd>) =
         prefs.edit { putString(KEY_PROFILE_ADDS, addonJson.encodeToString(adds)) }
+
+    /** Every provider rename this device has made or received, kept like [profileRenames] (ADR 0004). */
+    fun providerRenames(): List<SyncProviderRename> = readJsonList(KEY_PROVIDER_RENAMES)
+
+    fun setProviderRenames(renames: List<SyncProviderRename>) =
+        prefs.edit { putString(KEY_PROVIDER_RENAMES, addonJson.encodeToString(renames)) }
+
+    /**
+     * Provider renames received that couldn't apply yet, because no provider here had the old name or
+     * another already had the new one: tried again with each sync and each provider added.
+     */
+    fun pendingProviderRenames(): List<SyncProviderRename> = readJsonList(KEY_PENDING_PROVIDER_RENAMES)
+
+    fun setPendingProviderRenames(renames: List<SyncProviderRename>) =
+        prefs.edit { putString(KEY_PENDING_PROVIDER_RENAMES, addonJson.encodeToString(renames)) }
 
     private inline fun <reified T> readJsonList(key: String): List<T> = runCatching {
         prefs.getString(key, null)?.let { addonJson.decodeFromString<List<T>>(it) }
@@ -162,41 +180,94 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     /**
      * The viewer locked or unlocked a category here. The only thing that records a time: a lock that
      * arrived from another device keeps the time it was first made, or an old lock passed around
-     * would look new and re-lock a device that has since unlocked (ADR 0005).
+     * would look new and re-lock a device that has since unlocked (ADR 0005). A lock keeps [names], the
+     * categories' names as the provider sends them, so a new normaliser can move it (`CategoryLockCarry`).
      */
-    fun setCategoryLocked(key: String, locked: Boolean, now: Long = System.currentTimeMillis()) =
-        synchronized(lockChanges) {
-            val times = categoryLockTimes()
-            val previous = times[key] ?: CategoryLockTimes()
-            val updated = if (locked) previous.copy(lockedAt = now) else previous.copy(unlockedAt = now)
-            storeCategoryLockTimes(times + (key to updated))
-            setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+    fun setCategoryLocked(
+        key: String,
+        locked: Boolean,
+        names: Collection<String> = emptyList(),
+        now: Long = System.currentTimeMillis(),
+    ) = synchronized(lockChanges) {
+        val times = categoryLockTimes()
+        val previous = times[key] ?: CategoryLockTimes()
+        val updated = if (locked) {
+            previous.copy(lockedAt = now, names = previous.names + names)
+        } else {
+            previous.copy(unlockedAt = now)
         }
+        storeCategoryLockTimes(times + (key to updated))
+        setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+    }
 
     /** The locks in force here, each with the time it was made, as they travel to the other side. */
     fun exportCategoryLocks(): List<SyncCategoryLock> {
         val times = categoryLockTimes()
-        return hiddenCategories.value.map { SyncCategoryLock(it, times[it]?.lockedAt ?: 0) }
+        return hiddenCategories.value.map {
+            SyncCategoryLock(it, times[it]?.lockedAt ?: 0, times[it]?.names?.toList().orEmpty())
+        }
     }
 
     /**
      * Takes each lock from another device unless it's no newer than this device's last unlock of that
      * category. An undated lock counts as the oldest possible, so only a category never unlocked
      * here takes one. Keeps the newest time, so a deliberate new lock travels on through this device.
+     * Each time is compared on this device's clock ([arrival]).
      */
-    fun importCategoryLocks(locks: List<SyncCategoryLock>) = synchronized(lockChanges) {
-        val times = categoryLockTimes().toMutableMap()
-        val taken = locks.filter { lock ->
-            val previous = times[lock.key] ?: CategoryLockTimes()
-            val unlockedAt = previous.unlockedAt
-            val takes = unlockedAt == null || lock.lockedAtMillis > unlockedAt
-            if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lock.lockedAtMillis))
-            takes
+    fun importCategoryLocks(locks: List<SyncCategoryLock>, arrival: ArrivalClock = ArrivalClock.NONE) =
+        synchronized(lockChanges) {
+            val times = categoryLockTimes().toMutableMap()
+            val taken = locks.filter { lock ->
+                val previous = times[lock.key] ?: CategoryLockTimes()
+                val lockedAt = arrival.corrected(lock.lockedAtMillis)
+                val takes = isNewerChange(lockedAt, previous.unlockedAt)
+                if (takes) {
+                    times[lock.key] = previous.copy(
+                        lockedAt = maxOf(previous.lockedAt, lockedAt),
+                        names = previous.names + lock.names,
+                    )
+                }
+                takes
+            }
+            if (taken.isEmpty()) return@synchronized
+            storeCategoryLockTimes(times)
+            setHiddenCategories(hiddenCategories.value + taken.map { it.key })
         }
-        if (taken.isEmpty()) return@synchronized
-        storeCategoryLockTimes(times)
-        setHiddenCategories(hiddenCategories.value + taken.map { it.key })
+
+    /**
+     * Moves every lock, and its unlock, to the key [newKey] gives it, as a provider rename moves a
+     * nameless category's (`NamelessCategory`). A key that lands on one already here keeps the newer
+     * of each time, and stays locked if either was.
+     */
+    fun rekeyCategoryLocks(newKey: (String) -> String) = synchronized(lockChanges) {
+        val times = categoryLockTimes()
+        val moved = mutableMapOf<String, CategoryLockTimes>()
+        for ((key, time) in times) {
+            val target = newKey(key)
+            val there = moved[target]
+            moved[target] = if (there == null) {
+                time
+            } else {
+                CategoryLockTimes(
+                    lockedAt = maxOf(there.lockedAt, time.lockedAt),
+                    unlockedAt = listOfNotNull(there.unlockedAt, time.unlockedAt).maxOrNull(),
+                    names = there.names + time.names,
+                )
+            }
+        }
+        val hidden = hiddenCategories.value.mapTo(HashSet(), newKey)
+        if (moved == times && hidden == hiddenCategories.value) return@synchronized
+        storeCategoryLockTimes(moved)
+        setHiddenCategories(hidden)
     }
+
+    /**
+     * What `CategoryLockCarry.remember` last looked for names with and didn't find them all: the locks
+     * still without names and the catalogue it searched, so it doesn't search the same one again.
+     */
+    var lockNamesSearched: String?
+        get() = prefs.getString(KEY_LOCK_NAMES_SEARCHED, null)
+        set(value) = prefs.edit { putString(KEY_LOCK_NAMES_SEARCHED, value) }
 
     private fun categoryLockTimes(): Map<String, CategoryLockTimes> = runCatching {
         prefs.getString(KEY_CATEGORY_LOCK_TIMES, null)?.let {
@@ -208,7 +279,11 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { putString(KEY_CATEGORY_LOCK_TIMES, addonJson.encodeToString(times)) }
 
     @Serializable
-    private data class CategoryLockTimes(val lockedAt: Long = 0, val unlockedAt: Long? = null)
+    private data class CategoryLockTimes(
+        val lockedAt: Long = 0,
+        val unlockedAt: Long? = null,
+        val names: Set<String> = emptySet(),
+    )
 
     fun setHiddenUnlocked(unlocked: Boolean) {
         _hiddenUnlocked.value = unlocked
@@ -504,8 +579,10 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     /** Episodes a provider's answer left out, so sync stops asking it for them; see [WaitingProgress]. */
     fun syncEpisodesNotFound(): Set<String> = prefs.getStringSet(KEY_SYNC_EPISODES_NOT_FOUND, emptySet())!!.toSet()
 
-    fun addSyncEpisodesNotFound(keys: List<String>) {
-        prefs.edit { putStringSet(KEY_SYNC_EPISODES_NOT_FOUND, syncEpisodesNotFound() + keys) }
+    fun addSyncEpisodesNotFound(keys: List<String>) = setSyncEpisodesNotFound(syncEpisodesNotFound() + keys)
+
+    fun setSyncEpisodesNotFound(keys: Set<String>) {
+        prefs.edit { putStringSet(KEY_SYNC_EPISODES_NOT_FOUND, keys) }
     }
 
     /** Whether to run a NAS sync automatically each time the app is opened. Off by default. */
@@ -710,10 +787,13 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_PIN_HASH = "parental_pin_hash"
         private const val KEY_HIDDEN_CATS = "hidden_categories"
         private const val KEY_CATEGORY_LOCK_TIMES = "category_lock_times"
+        private const val KEY_LOCK_NAMES_SEARCHED = "lock_names_searched"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_PROFILE_RENAMES = "profile_renames"
         private const val KEY_PROFILE_ADDS = "profile_adds"
+        private const val KEY_PROVIDER_RENAMES = "provider_renames"
+        private const val KEY_PENDING_PROVIDER_RENAMES = "pending_provider_renames"
         private const val KEY_LIVE_PREVIEW_HOME_BEFORE = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_SKIP_INTROS_CREDITS = "skip_intros_and_credits"
