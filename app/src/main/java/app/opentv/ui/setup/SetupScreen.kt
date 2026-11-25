@@ -43,6 +43,8 @@ import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.arriving
+import app.opentv.ui.design.rememberArrival
 import app.opentv.update.startsFocused
 import java.text.NumberFormat
 import kotlinx.coroutines.delay
@@ -64,6 +66,10 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     // opening: only a step finishing while the screen is up.
     var justDone by remember { mutableStateOf<StepDone?>(null) }
     var seen by remember { mutableIntStateOf(setup.done.size) }
+    // Like the counts: the finish rises only when it happens in front of the viewer, not on opening.
+    // Neither this nor [seen] is keyed: a Setup carries no id (every run has the same steps), and each
+    // run opens its own Setup destination, so a new run is a new composition and starts them afresh.
+    val openedFinished = remember { setup.finished }
     LaunchedEffect(setup.done.size) {
         if (setup.done.size <= seen) return@LaunchedEffect
         seen = setup.done.size
@@ -77,7 +83,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                 SetupIcon(setup.finished)
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
-                    Finished(setup)
+                    Finished(setup, rises = !openedFinished)
                 } else {
                     Text(stringResource(R.string.setup_wordplay), SetteeType.Hero)
                     Spacer(Modifier.height(12.dp))
@@ -121,16 +127,28 @@ private fun SetupIcon(finished: Boolean) {
     }
 }
 
+/**
+ * "You're all set." and the summary, rising in two beats when setup finishes with the screen up
+ * (docs/LOOK.md, Setting up). The button below isn't part of it: it keeps the Highlight and acts at once.
+ */
 @Composable
-private fun Finished(setup: Setup) {
-    Text(stringResource(R.string.setup_finished_title), SetteeType.Hero)
+private fun Finished(setup: Setup, rises: Boolean) {
+    val title = rememberArrival(FINISH_RISE_MILLIS, arrived = !rises)
+    val secondBeat = rememberArrival(FINISH_RISE_MILLIS, delayMillis = FINISH_SECOND_BEAT_MILLIS, arrived = !rises)
+    Text(
+        stringResource(R.string.setup_finished_title),
+        SetteeType.Hero,
+        modifier = Modifier.arriving(title, rise = FINISH_RISE),
+    )
     Spacer(Modifier.height(12.dp))
-    Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-    setup.done.filter { it.failed }.forEach { done ->
-        // Why, where it's known; otherwise the step's own sentence, which still says what happens next.
-        val failure = done.failure ?: done.step.failure?.let { ViewerError(stringResource(it)) } ?: return@forEach
-        Spacer(Modifier.height(16.dp))
-        ErrorMessage(failure.sentence, failure.detail)
+    Column(Modifier.arriving(secondBeat, rise = FINISH_RISE), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+        setup.done.filter { it.failed }.forEach { done ->
+            // Why, where it's known; otherwise the step's own sentence, which still says what happens next.
+            val failure = done.failure ?: done.step.failure?.let { ViewerError(stringResource(it)) } ?: return@forEach
+            Spacer(Modifier.height(16.dp))
+            ErrorMessage(failure.sentence, failure.detail)
+        }
     }
 }
 
@@ -187,6 +205,13 @@ private fun runningLine(step: SetupStep, found: Int): String {
 
 /** How long a step's count stays up once it's done. */
 private const val COUNT_MILLIS = 2_000L
+
+// Longer than the 250 ms of an overlay's arrival: it's seen once per install, and it's the whole
+// screen's news rather than something over the picture. If it misses the frame budget on the Stick,
+// these go to 0, never longer or softer.
+private const val FINISH_RISE_MILLIS = 400
+private const val FINISH_SECOND_BEAT_MILLIS = 80
+private val FINISH_RISE = 12.dp
 
 @Composable
 private fun countLine(done: StepDone): String? {
