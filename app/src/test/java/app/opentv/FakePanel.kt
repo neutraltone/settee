@@ -39,8 +39,10 @@ val PANEL_SOURCE =
  * `"!host"` fails it as an address that can't be found, with the request's own address, login and a
  * MAC in the exception's message, as some clients put them there. `"!503"`
  * (any three digits) answers with that HTTP status, and `"!oom"` with a body that runs out of memory
- * as it's read, as a list too big for the device would. A reply keyed `<username>/<action>` answers
- * only that login's requests, so two providers on one panel can be told apart.
+ * as it's read, as a list too big for the device would; `"!crash"` with a body that throws an
+ * [IllegalStateException] as it's read, as a reply the client trips over would. A reply keyed
+ * `<username>/<action>` answers only that login's requests, so two providers on one panel can be told
+ * apart.
  */
 class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
@@ -120,6 +122,8 @@ class FakePanel(vararg initial: Pair<String, String>) {
                 body.encoded(gzip = action in gzipped).let { sized ->
                     if (body == "!oom") {
                         OutOfMemorySource().buffer().asResponseBody("application/json".toMediaType())
+                    } else if (body == "!crash") {
+                        CrashingSource().buffer().asResponseBody("application/json".toMediaType())
                     } else if (action !in unsized) {
                         sized
                     } else {
@@ -140,6 +144,15 @@ class FakePanel(vararg initial: Pair<String, String>) {
 /** A body that runs out of memory the first time anything reads it. */
 private class OutOfMemorySource : okio.Source {
     override fun read(sink: Buffer, byteCount: Long): Long = throw OutOfMemoryError("Fake portal's list")
+
+    override fun timeout(): Timeout = Timeout.NONE
+
+    override fun close() = Unit
+}
+
+/** A body that throws something other than an [java.io.IOException] the first time anything reads it. */
+private class CrashingSource : okio.Source {
+    override fun read(sink: Buffer, byteCount: Long): Long = error("Fake reply")
 
     override fun timeout(): Timeout = Timeout.NONE
 

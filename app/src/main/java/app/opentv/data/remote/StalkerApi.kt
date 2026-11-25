@@ -189,12 +189,13 @@ class StalkerApi(
         }
         val refusals = Refusals()
         for (endpoint in endpoints(source)) {
-            val hs = try {
-                handshake(source, endpoint).also { refusals.answered = true }
-            } catch (e: StalkerException) {
-                refusals.add(e)
-                null
-            }
+            // Anything else thrown (a header OkHttp won't send, say) isn't a failure this client words,
+            // but the next address may still answer, so it's tried, as it was before #468.
+            val hs = runCatching { handshake(source, endpoint) }
+                .throwingErrors()
+                .onSuccess { refusals.answered() }
+                .onFailure { if (it is StalkerException) refusals.add(it) }
+                .getOrNull()
             if (hs != null) {
                 // Many portals won't serve itv data until get_profile is called with a full MAG
                 // identity (device_id/signature) — that's what unlocks the ones that authenticate the
@@ -212,10 +213,14 @@ class StalkerApi(
      */
     private class Refusals {
         /** An endpoint answered the handshake, with or without a token. */
-        var answered = false
+        private var answered = false
         private var replied = false
         private var serverTrouble: StalkerException? = null
         private var unreachable: StalkerException? = null
+
+        fun answered() {
+            answered = true
+        }
 
         fun add(failure: StalkerException) {
             val status = failure.status
@@ -376,14 +381,7 @@ class StalkerApi(
                         status = response.code,
                     )
                 }
-                // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions; a reply
-                // that breaks off as it's read is an IOException, caught below with the rest.
-                try {
-                    read(response.body.source())
-                } catch (e: IllegalArgumentException) {
-                    Log.w(TAG, "Stalker reply unreadable: ${e.javaClass.simpleName}")
-                    null
-                }
+                readOrNull(response.body.source(), read)
             }
         } catch (e: IOException) {
             // The exception's kind only: an UnknownHostException's message is the portal's host.
@@ -391,6 +389,21 @@ class StalkerApi(
             throw StalkerException("The portal couldn't be reached.", e)
         }
     }
+
+    /**
+     * [body] by [read], or null when it couldn't be made out. A reply that breaks off as it's read is
+     * an IOException, thrown on to be worded as the portal not being reached. Anything else thrown
+     * (a decoding failure, a field of the wrong type) is a reply that couldn't be made out: one
+     * address's odd answer mustn't stop the others being tried, or fail a sync.
+     */
+    private fun <T : Any> readOrNull(body: BufferedSource, read: (BufferedSource) -> T?): T? =
+        runCatching { read(body) }
+            .throwingErrors()
+            .onFailure { if (it is IOException) throw it }
+            .getOrElse {
+                Log.w(TAG, "Stalker reply unreadable: ${it.javaClass.simpleName}")
+                null
+            }
 
     /** Candidate API endpoints for a portal URL, most common first. First that handshakes wins. */
     private fun endpoints(source: Source): List<HttpUrl> {
