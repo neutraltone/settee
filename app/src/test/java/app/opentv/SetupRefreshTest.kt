@@ -398,6 +398,29 @@ class SetupRefreshTest {
     }
 
     @Test
+    fun `movies another refresh was fetching that fail keep setup's own sentence, not the tab's`() = testing {
+        panel.replies["get_vod_streams"] = "!"
+        val guide = panel.hold("xmltv.php")
+        val vod = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        withContext(catalogueThreads) {
+            refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+            val opened = during(guide) { async { refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows) } }
+            during(vod) {
+                guide.release()
+                settle()
+                vod.release()
+            }
+            opened.await()
+        }
+        test.awaitRefresh()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        // Settee tries again by itself after Setup, so not the Movies tab's "try again in a moment".
+        assertThat(movies.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.setup_failed_movies), "IO"))
+    }
+
+    @Test
     fun `while the guide arrives, setup counts its programmes so far`() = testing {
         panel.unsized += "xmltv.php"
         panel.replies["xmltv.php"] = buildString {

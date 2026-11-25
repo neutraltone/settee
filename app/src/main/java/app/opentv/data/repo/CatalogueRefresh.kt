@@ -143,9 +143,29 @@ class CatalogueRefresh(
     data class VodFailures(
         val movies: Map<Long, ViewerError> = emptyMap(),
         val shows: Map<Long, ViewerError> = emptyMap(),
+        /**
+         * What each failed list was worded from, for Setup sharing the download, which words it with
+         * its own step's sentence rather than the tab's.
+         */
+        private val movieCauses: Map<Long, Throwable> = emptyMap(),
+        private val showCauses: Map<Long, Throwable> = emptyMap(),
     ) {
-        fun after(sourceId: Long, vod: VodFetch) =
-            VodFailures(movies.after(sourceId, vod.movies), shows.after(sourceId, vod.shows))
+        fun after(sourceId: Long, vod: VodFetch) = VodFailures(
+            movies.after(sourceId, vod.movies),
+            shows.after(sourceId, vod.shows),
+            movieCauses.causesAfter(sourceId, vod.movies),
+            showCauses.causesAfter(sourceId, vod.shows),
+        )
+
+        /** The cause of [sourceId]'s failed [step] list, where there is one. */
+        fun causeOf(sourceId: Long, step: SetupStep): Throwable? =
+            (if (step == SetupStep.MOVIES) movieCauses else showCauses)[sourceId]
+
+        private fun Map<Long, Throwable>.causesAfter(sourceId: Long, list: ListFetch?) = when {
+            list == null -> this
+            list.cause == null -> this - sourceId
+            else -> this + (sourceId to list.cause)
+        }
 
         private fun Map<Long, ViewerError>.after(sourceId: Long, list: ListFetch?) = when {
             list == null -> this
@@ -416,9 +436,10 @@ class CatalogueRefresh(
                 .filter { step -> step in steps && _state.value.setup?.done?.none { it.step == step } == true }
             for (step in missing) {
                 val failed = vodIsStale(source)
-                // The shared download's own words: only its outcome reached here, not what it threw.
+                // Worded again from what the shared download threw, with this step's own sentence.
                 val failures = _state.value.vodFailures
                 val failure = (if (step == SetupStep.MOVIES) failures.movies else failures.shows)[source.id]
+                    ?.let { worded -> failures.causeOf(source.id, step)?.let { setupFailure(it, step) } ?: worded }
                 stepDone(StepDone(step, catalog.storedCount(source.id, step), failed = failed, failure = failure))
             }
         }
