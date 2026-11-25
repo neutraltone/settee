@@ -472,7 +472,7 @@ object ServiceLocator {
         }
 
         val profileSettings: ProfileSettings by lazy {
-            ProfileSettings(database, settings.activeProfileId)
+            ProfileSettings(database, settings.activeProfileId, clock)
         }
 
         val profiles: Profiles by lazy {

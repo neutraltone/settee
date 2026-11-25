@@ -66,6 +66,16 @@ value class ArrivalCeiling(val millis: Long) {
     companion object {
         /** No limit: a change keeps the time it came with. Also for merges that aren't a sync, such as two Profiles. */
         val NONE = ArrivalCeiling(Long.MAX_VALUE)
+
+        /**
+         * The ceiling for a bundle made at [generatedAtMillis] arriving when this device's clock reads
+         * [now] (ADR 0005). Nothing in a bundle can be newer than the bundle itself, so its own time
+         * caps it, but only when that's believable: a bundle dated after [now] came from a clock set
+         * ahead, and zero is an old bundle without a time. Either way [now] caps it, so a TV whose clock
+         * is ahead can't date a change after everything the other TVs do from here on.
+         */
+        fun of(now: Long, generatedAtMillis: Long): ArrivalCeiling =
+            ArrivalCeiling(if (generatedAtMillis in 1..now) generatedAtMillis else now)
     }
 }
 

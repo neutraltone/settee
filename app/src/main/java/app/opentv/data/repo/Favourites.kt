@@ -140,7 +140,7 @@ class Favourites internal constructor(
         val placed = items.mapNotNull { item ->
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@mapNotNull null
             val changedAt = ceiling.clamp(item.changedAtMillis)
-            val profileId = names.id(history.currentName(item.profile, changedAt)) ?: return@mapNotNull null
+            val profileId = names.id(history.currentName(item.profile, item.changedAtMillis)) ?: return@mapNotNull null
             Favourite(profileId, kind, item.source, item.id, changedAt, item.removed)
         }
         return db.mergeForProfiles(placed, { it.profileId }) { fav ->

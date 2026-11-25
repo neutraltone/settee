@@ -76,8 +76,13 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
 
     private suspend fun applyOne(received: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
         // One per bundle, handed to every store that decides newest-wins; this merges nothing itself.
-        val ceiling = ArrivalCeiling.NONE
+        val ceiling = ArrivalCeiling.of(graph.clock(), received.generatedAtMillis)
         // First: everything else lands on a Profile by name, and these decide what the names are now.
+        // Rename and add records, Profiles' and providers', keep the times they came with: each applies
+        // once, matched on its time, and a time clamped differently on every sync would make the same
+        // record new again. So the stores look an item's Profile up by its own time too, on the clock
+        // those records share, and clamp it only to compare and store: a clamped time on a TV whose
+        // clock is behind would file a new Tom's progress under the Tom who became Thomas.
         graph.profiles.importChanges(received.profileRenames, received.profileAdds)
         // Then the providers' names, so each item below carries the exact name its provider has here.
         graph.sourceRepository.importRenames(received.providerRenames)
