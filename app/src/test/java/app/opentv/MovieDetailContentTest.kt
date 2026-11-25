@@ -164,6 +164,14 @@ class MovieDetailContentTest {
     }
 
     @Test
+    fun `a film named in Cyrillic draws its title in one face on an English interface`() {
+        show(film.copy(name = "Бриллиантовая рука"))
+
+        compose.onNodeWithText("Бриллиантовая рука").assertIsDisplayed()
+        captureScreen("movie_detail_cyrillic_title")
+    }
+
+    @Test
     fun `the hero says who is in the film, its first three billed, and who directed it`() {
         show()
 

@@ -5,10 +5,14 @@
  */
 package app.opentv
 
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.CoverStatus
+import app.opentv.ui.Backdrop
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.vod.BackdropText
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -17,14 +21,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
-/** What Movies' and Shows' backdrop shows for a title (#161). */
+/** What Movies' and Shows' backdrop shows for a title (#161), and that its text fits (#507). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class VodBackdropTest {
 
     @get:Rule
     val testGraph = TestGraph()
+
+    @get:Rule
+    val compose = createComposeRule()
 
     private val app = testGraph.app
     private val graph = testGraph.graph
@@ -89,5 +97,35 @@ class VodBackdropTest {
         assertThat(shown?.year).isEqualTo(1995)
         assertThat(shown?.genres).containsExactly("Crime", "Drama").inOrder()
         assertThat(shown?.runtimeSeconds).isEqualTo(10_200)
+    }
+
+    @Test
+    @Config(qualifiers = TV_1080P)
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `at a larger font size the backdrop's synopsis shows all three of its lines`() {
+        val backdrop = Backdrop(
+            title = "Heat",
+            imageUrl = null,
+            status = null,
+            synopsis = SYNOPSIS,
+            year = 1995,
+            genres = listOf("Crime", "Drama"),
+            runtimeSeconds = 10_200,
+        )
+        compose.setTvContent { AtFontScale(1.3f) { BackdropText(backdrop) } }
+        compose.mainClock.advanceTimeBy(FADE_MILLIS)
+
+        // All three of the synopsis's lines: squeezed for height, it ends its last whole line early.
+        val synopsis = compose.onNodeWithText(SYNOPSIS, useUnmergedTree = true).assertNoLineCut()
+        assertThat(synopsis.textLayout().lineCount).isEqualTo(SYNOPSIS_LINES)
+        captureScreen("resting_backdrop_font_1_3")
+    }
+
+    private companion object {
+        const val SYNOPSIS_LINES = 3
+        const val FADE_MILLIS = 1_000L
+        const val SYNOPSIS = "A group of professional bank robbers start to feel the heat from police when they " +
+            "unknowingly leave a clue at their latest heist, and a detective who has given everything to the " +
+            "job sets out to catch the one man as driven as he is, across a long summer in Los Angeles."
     }
 }

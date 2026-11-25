@@ -10,8 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +42,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
@@ -149,7 +152,7 @@ private fun NextEpisodeCardView(
                 )
             }
         }
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(CARD_PADDING)) {
             Text(stringResource(R.string.player_next_episode_label), SetteeType.Body, color = SetteeColors.Accent)
             Spacer(Modifier.height(4.dp))
             Text(
@@ -169,13 +172,36 @@ private fun NextEpisodeCardView(
                 color = SetteeColors.QuietText,
             )
             Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OverlayButton(stringResource(R.string.player_play_now), onPlay, Modifier.focusRequester(focus))
-                // With the credits over there is nothing to watch: the same press leaves the player.
-                val leave = if (showing.atEnd) R.string.common_back else R.string.player_watch_credits
-                OverlayButton(stringResource(leave), onCancel)
-            }
+            // With the credits over there is nothing to watch: the same press leaves the player.
+            val leave = if (showing.atEnd) R.string.common_back else R.string.player_watch_credits
+            NextEpisodeButtons(
+                stringResource(R.string.player_play_now),
+                stringResource(leave),
+                onPlay,
+                onCancel,
+                playModifier = Modifier.focusRequester(focus),
+            )
         }
+    }
+}
+
+/**
+ * The Next Episode card's Play now and Watch credits (or Back), side by side, sharing the card's
+ * width evenly at one height. Left to their own widths, the first took what it wanted and a longer
+ * second ("Regarder le générique") wrapped in what was left, a button taller than its neighbour;
+ * now a label too long for its half wraps inside it, and both buttons grow together (#507).
+ */
+@Composable
+internal fun NextEpisodeButtons(
+    play: String,
+    leave: String,
+    onPlay: () -> Unit,
+    onLeave: () -> Unit,
+    playModifier: Modifier = Modifier,
+) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OverlayButton(play, onPlay, playModifier.weight(1f).fillMaxHeight())
+        OverlayButton(leave, onLeave, Modifier.weight(1f).fillMaxHeight())
     }
 }
 
@@ -220,16 +246,22 @@ private fun StillWatchingPrompt(onContinue: () -> Unit, onStop: () -> Unit) {
 @Composable
 internal fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     HighlightSurface(onClick = onClick, style = HighlightStyle.Button, modifier = modifier) { highlighted ->
+        // Centred, for a button stretched wider or taller than its label.
         Text(
             label,
             SetteeType.RowTitle,
             color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 20.dp, vertical = 10.dp),
         )
     }
 }
 
 private val CARD_WIDTH = 340.dp
+private val CARD_PADDING = 16.dp
+
+/** How wide the Next Episode card's buttons have to fit: its width inside its padding. */
+internal val NEXT_EPISODE_BUTTONS_WIDTH = CARD_WIDTH - CARD_PADDING * 2
 
 /** The Next Episode card, for tests to measure. */
 internal const val NEXT_EPISODE_CARD_TAG = "next_episode_card"

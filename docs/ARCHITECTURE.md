@@ -124,15 +124,20 @@ device zone, and converts to local time only at draw time. `XmltvTimeTest` chang
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
 
-`core/ViewerTime` is the one place a UTC millis becomes a local day or clock time: the guide's day
-windows (later days midnight to midnight as calendar dates, so a clock-change day is 23 or 25 hours),
-the guide, Search and Recordings times (through `ui/LocalTimes`), and the times and dates in error
-and Test connection sentences. It never reads the JVM's zone: callers pass the graph's
-`ServiceLocator.Graph.zone`, which `DeviceZone` keeps up to date from Android's time-zone broadcast,
-so travelling or changing zone redraws without a restart, and a test passes its own zone to the graph
-(`zoneOverride`) instead of changing the JVM's default. `ViewerTimeTest` pins the windows around
-both clock changes and in a 45-minute-offset zone; `ViewerZoneTest` the broadcast; `GuideDaysTest`
-and `LiveBrowseTest` the guide's days end to end.
+`core/ViewerTime` is the one place a UTC millis becomes a local day: the guide's day windows (later
+days midnight to midnight as calendar dates, so a clock-change day is 23 or 25 hours). `core/ViewerClock`
+is the one place one becomes words: every clock time and day label on screen (the guide, its header
+and preview, Search, the Live day label and Recordings, through `ui/LocalTimes`) and in error and Test
+connection sentences. It reads the app's current language, the zone and the 12/24-hour choice each
+time it draws, since a language change recreates the activity but not the process. Day labels come
+from a skeleton (`EEEdMMM`) the language orders itself, never a fixed `"EEE d MMM"`. The device's
+clock setting decides 12 or 24 hours everywhere, error sentences included, and with none chosen the
+device's own language does, not the app's (#645). Neither reads the JVM's zone: callers pass the
+graph's `ServiceLocator.Graph.zone`, which `DeviceZone` keeps up to date from Android's time-zone
+broadcast, so travelling or changing zone redraws without a restart, and a test passes its own zone
+to the graph (`zoneOverride`) instead of changing the JVM's default. `ViewerTimeTest` pins the windows
+around both clock changes and in a 45-minute-offset zone; `ViewerClockTest` the language, order and
+clock; `ViewerZoneTest` the broadcast; `GuideDaysTest` and `LiveBrowseTest` the guide's days end to end.
 
 ### Channels meet their guide by name
 

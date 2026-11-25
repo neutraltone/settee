@@ -9,7 +9,9 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -17,6 +19,7 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
@@ -36,8 +39,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings' sections scroll when there are more than a 1080p TV has room for (#386), and each
- * section's pane opens at its top (#441).
+ * Settings' sections scroll when there are more than a 1080p TV has room for (#386), each section's
+ * pane opens at its top (#441), and longer words fit its titles and rows (#507). Beside
+ * SettingsScreenTest, which is already as long as a class may be.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
@@ -122,6 +126,52 @@ class SettingsSectionsScrollTest {
 
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         assertThat(paneTitleShowing()).isEqualTo(paneTitleHeight())
+    }
+
+    @Test
+    fun `at a larger font size every section's title is shown in full, on two lines where it needs them`() {
+        compose.setTvContent {
+            AtFontScale(1.3f) { SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = null) }
+        }
+
+        // French would be longer still ("Gérer depuis un téléphone ou un ordinateur"), but the
+        // section titles aren't translated yet; a larger font size runs English past one line too.
+        val text = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
+        val titles = compose.onAllNodes(
+            hasAnyAncestor(hasTestTag(SettingsTags.SECTION)) and text,
+            useUnmergedTree = true,
+        )
+        val count = titles.fetchSemanticsNodes().size
+        assertThat(count).isEqualTo(compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes().size)
+        repeat(count) { titles[it].assertShownWhole() }
+        captureScreen("settings_sections_font_1_3")
+    }
+
+    @Test
+    fun `a long network drive folder is cut short rather than the label beside it`() {
+        val folder = "settee/live/from the sitting room/the big telly in the corner"
+        testGraph.graph.settings.setRecordingTarget(AppSettings.RecordingTarget.SMB)
+        testGraph.graph.settings.setSmbConfig("192.168.1.20", "recordings", folder, user = "", password = "")
+        compose.setTvContent {
+            SettingsScreen(memory = SettingsMemory(SettingsSection.Recording), onBack = {}, openSubtitles = null)
+        }
+
+        compose.onNodeWithText("Folder inside it", useUnmergedTree = true).assertShownWhole().assertOnOneLine()
+        captureScreen("settings_recording_nas_path")
+    }
+
+    @Test
+    fun `a value longer than half the row shows whole when its label leaves room for it`() {
+        // Wider than half the pane's rows, but with room to spare beside "Shared folder".
+        val share = "recordings-from-the-big-telly-in-the-corner"
+        testGraph.graph.settings.setRecordingTarget(AppSettings.RecordingTarget.SMB)
+        testGraph.graph.settings.setSmbConfig("192.168.1.20", share, "", user = "", password = "")
+        compose.setTvContent {
+            SettingsScreen(memory = SettingsMemory(SettingsSection.Recording), onBack = {}, openSubtitles = null)
+        }
+
+        compose.onNodeWithText(share, useUnmergedTree = true).assertShownWhole()
+        compose.onNodeWithText("Shared folder", useUnmergedTree = true).assertShownWhole().assertOnOneLine()
     }
 
     private fun paneTitle() = compose.onNodeWithTag(SettingsTags.PANE_TITLE).fetchSemanticsNode()
