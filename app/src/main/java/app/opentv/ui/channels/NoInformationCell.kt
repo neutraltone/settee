@@ -68,8 +68,8 @@ internal fun NoInformationCell(
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionRight -> onNextDay?.invoke() != null
-                    Key.DirectionLeft -> onPrevDay?.invoke() != null
+                    Key.DirectionRight -> onNextDay?.unlessHeld(event) != null
+                    Key.DirectionLeft -> onPrevDay?.unlessHeld(event) != null
                     else -> false
                 }
             }

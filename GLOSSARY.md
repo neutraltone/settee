@@ -98,9 +98,13 @@ _Avoid_: Hidden channels (that's the channel manager's per-channel hide), parent
 
 ## Watch progress
 
+**Movie**:
+A single film from the provider, played on its own rather than as part of a Series.
+_Also_: Film, in conversation; the app always says Movie
+
 **Series**:
 A whole show from the provider, made up of its seasons and their episodes.
-_Avoid_: Show (in the app's own wording, though the tab is called Shows), programme (that's a live TV listing)
+_Avoid_: Show (in the app's own wording, though the tab is called Shows), programme (that's what's on a Channel in the Guide)
 
 **Season**:
 One numbered part of a series, holding its episodes in order. On screen it is always "Season", including counts such as "2 seasons".
@@ -214,3 +218,31 @@ _Avoid_: Dialog, popup, modal
 **Categories Sidebar**:
 The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category. The channel manager shows it always open.
 _Avoid_: Sidebar on its own, filter, chips
+
+**Movie Listings**:
+The Movies tab: a Hero over rows of covers of every Movie there is to watch, where the viewer picks one to open. With Series Listings, these are the Listings.
+_Avoid_: Listings Page, browse, catalogue screen, grid (that's one category's covers)
+
+**Series Listings**:
+The tab labelled Shows: a Hero over rows of covers of every Series there is to watch, where the viewer picks one to open.
+_Avoid_: TV Series Listing, Shows tab, Listings Page
+
+**Movie Details**:
+What a Movie opens on, from the Listings, Home or Search: its Hero, then its people and More like this. With Series Details, these are the Details.
+_Avoid_: Details Page, detail screen, info page, a film's page
+
+**Series Details**:
+What a Series opens on: its Hero, then its season pills and the Episode List. Episodes have no page of their own.
+_Avoid_: Details Page, series listing (that's Series Listings), a show's page
+
+**Episode List**:
+The list of one Season's episodes on Series Details, carrying on into the next Season.
+_Avoid_: Episode Listing (Listings are whole tabs)
+
+**Hero**:
+The top of the Listings and the Details: the backdrop, with the title, status and synopsis over it. On the Listings it shows whichever title has the Highlight.
+_Avoid_: Backdrop (that's the picture itself), banner, billboard, spotlight
+
+**Title Logo**:
+A Movie's or Series' name drawn as artwork, from TMDB, shown in a Hero in place of the written title.
+_Avoid_: Logo on its own (channels have logos), wordmark, clear logo

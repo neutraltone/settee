@@ -63,6 +63,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.activityViewModelStoreOwner
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -76,9 +77,6 @@ import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.delay
 
 /**
@@ -477,7 +475,7 @@ private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit, mod
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                row.now?.let { "${searchTime(it.startUtcMillis)}  ${it.title}" }
+                row.now?.let { "${clockTime(it.startUtcMillis)}  ${it.title}" }
                     ?: stringResource(R.string.guide_no_info),
                 style = SetteeType.Body,
                 color = SetteeColors.QuietText,
@@ -487,9 +485,6 @@ private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit, mod
         }
     }
 }
-
-private val searchTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-private fun searchTime(utcMillis: Long): String = searchTimeFormat.format(Date(utcMillis))
 
 /** The longest search either search box takes, the Search screen's or the Channel manager's. */
 internal const val MAX_SEARCH_LENGTH = 40

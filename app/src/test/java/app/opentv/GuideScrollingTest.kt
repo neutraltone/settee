@@ -141,7 +141,10 @@ class GuideScrollingTest {
                 windowEndMillis = 24 * 60 * MINUTE_MS,
                 onWatch = {},
                 onHighlight = { _, programme -> programme?.let { highlighted += it.title } },
-                onNextDay = { nextDay++ },
+                onNextDay = {
+                    nextDay++
+                    true
+                },
                 nowMillis = noon + 10 * MINUTE_MS,
             )
         }
@@ -169,6 +172,7 @@ class GuideScrollingTest {
                 onPrevDay = { row ->
                     day -= 1
                     landOnRow = row.key
+                    true
                 },
                 landOnRow = landOnRow,
                 landAtEnd = landOnRow != null,
@@ -179,6 +183,54 @@ class GuideScrollingTest {
         press(Key.DirectionRight)
         compose.onNode(programme("D1 0")).assertIsFocused()
         press(Key.DirectionLeft)
+
+        compose.onNode(programme("D0 47")).assertIsFocused()
+    }
+
+    @Test
+    fun `Right past a last programme ending at midnight holds the Highlight on the channel until the next day comes`() {
+        var day by mutableIntStateOf(0)
+        var rowsDay by mutableIntStateOf(0)
+        var landOnRow by mutableStateOf<Any?>(null)
+        compose.setTvContent {
+            GuideGrid(
+                // The day's rows come after its window, as they do from the guide's index.
+                rows = listOf(row(1, halfHours("D$rowsDay", rowsDay * DAY_MS))),
+                windowStartMillis = day * DAY_MS,
+                onWatch = {},
+                dayOffset = day,
+                onNextDay = { row ->
+                    day += 1
+                    landOnRow = row.key
+                    true
+                },
+                landOnRow = landOnRow,
+                onLanded = { landOnRow = null },
+            )
+        }
+        compose.onNode(programme("D0 47")).requestFocus()
+
+        press(Key.DirectionRight)
+
+        compose.onNode(hasText("Channel 1") and hasClickAction()).assertIsFocused()
+        rowsDay = 1
+        compose.onNode(programme("D1 0")).assertIsFocused()
+        assertThat(day).isEqualTo(1)
+    }
+
+    @Test
+    fun `Right past the last programme, when the guide won't page just then, leaves the Highlight on it`() {
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(row(1, halfHours("D0", 0))),
+                windowStartMillis = 0,
+                onWatch = {},
+                onNextDay = { false },
+            )
+        }
+        compose.onNode(programme("D0 47")).requestFocus()
+
+        press(Key.DirectionRight)
 
         compose.onNode(programme("D0 47")).assertIsFocused()
     }
@@ -224,7 +276,7 @@ class GuideScrollingTest {
                 rows = rows,
                 windowStartMillis = 0,
                 onWatch = { watched += it.primary.id },
-                onNextDay = { nextDayFor += it.primary.id },
+                onNextDay = { nextDayFor.add(it.primary.id) },
             )
         }
         compose.onNode(noInformation).requestFocus()

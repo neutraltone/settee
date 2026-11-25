@@ -20,8 +20,7 @@ import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.NoRouteToHostException
 import java.net.UnknownHostException
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -43,20 +42,17 @@ interface HttpStatus {
 
 // Each function is a kind of failure. A service with failures of its own is worded in its own file
 // (OpenSubtitlesWording.kt), from the same resources, rather than growing this class past a screenful.
-class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
+// [zone] is the viewer's, the graph's [ServiceLocator.Graph.zone], which times in a sentence are drawn in.
+class ErrorWording(
+    private val context: Context,
+    private val onTelevision: Boolean,
+    internal val zone: () -> ZoneId = ZoneId::systemDefault,
+) {
     /** What Test connection says when it passes, in the same language as its failures. */
-    val tests = TestOutcomeWording { resources }
+    val tests = TestOutcomeWording({ resources }, zone)
 
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     internal val resources get() = LocaleUtils.wrap(context).resources
-
-    // The app's own language decides 12 or 24 hours, as it does the words around it. Android's DateFormat
-    // goes by the device's setting instead, which would say "12:00 AM" in a British sentence.
-    internal val timeFormat get() = java.time.format.DateTimeFormatter.ofLocalizedTime(
-        java.time.format.FormatStyle.SHORT,
-    )
-        .withLocale(resources.configuration.locales[0])
-        .withZone(java.time.ZoneId.systemDefault())
 
     /**
      * A provider's [error] in words, or [fallback] when its type says nothing a viewer could act on.

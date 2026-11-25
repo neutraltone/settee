@@ -73,8 +73,8 @@ private fun ErrorWording.ofOpenSubtitlesLimit(error: OpenSubtitlesFailure.Downlo
         !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
         resetsAt != null -> resources.getString(
             R.string.error_opensubtitles_limit_account,
-            // In the app's language, as the sentence around it is, not the device's.
-            timeFormat.format(java.time.Instant.ofEpochMilli(resetsAt)),
+            // In the app's language, as the sentence around it is, not the device's, and in the viewer's zone.
+            ViewerTime.localTime(resetsAt, zone(), resources.configuration.locales[0]),
         )
         else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
     }

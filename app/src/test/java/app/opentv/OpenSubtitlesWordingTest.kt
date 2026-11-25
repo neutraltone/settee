@@ -11,7 +11,7 @@ import app.opentv.core.LocaleUtils
 import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
-import java.util.TimeZone
+import java.time.ZoneId
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -81,9 +81,7 @@ class OpenSubtitlesWordingTest {
     }
 
     @Test
-    fun `the daily limit when signed in says when the counter resets, in local time and the app's language`() {
-        val zone = TimeZone.getDefault()
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/London"))
+    fun `the daily limit when signed in says when the counter resets, in the viewer's zone and the app's language`() {
         val locale = java.util.Locale.getDefault()
         try {
             // The app in British English, as MainActivity's attachBaseContext puts its chosen language on
@@ -91,13 +89,13 @@ class OpenSubtitlesWordingTest {
             // earlier test's application, whose settings this test's context never reads.
             val british = LocaleUtils.wrap(ApplicationProvider.getApplicationContext(), "en-GB")
             val midnightUtc = java.time.Instant.parse("2026-11-14T00:00:00Z").toEpochMilli()
-            val error = ErrorWording(british, onTelevision = true).ofOpenSubtitles(
+            // The graph's zone, not the JVM's: Tokyo is nine hours on from UTC.
+            val error = ErrorWording(british, onTelevision = true) { ZoneId.of("Asia/Tokyo") }.ofOpenSubtitles(
                 OpenSubtitlesFailure.DownloadLimit(signedIn = true, resetsAt = midnightUtc),
             )
 
-            assertThat(error.sentence).isEqualTo("That's today's OpenSubtitles downloads used. More from 00:00.")
+            assertThat(error.sentence).isEqualTo("That's today's OpenSubtitles downloads used. More from 09:00.")
         } finally {
-            TimeZone.setDefault(zone)
             java.util.Locale.setDefault(locale)
         }
     }
