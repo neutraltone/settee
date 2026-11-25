@@ -58,8 +58,8 @@ class NextEpisodeOverlayTest {
     private val app = testGraph.app
     private val graph = testGraph.graph
     private val playback = FakePlayback()
-    private var now = 0L
-    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph, clock = { now }) } }
+    private var clockMillis = 0L
+    private val vm by lazy { testGraph.viewModel { VodPlayerViewModel(app, graph, clock = { clockMillis }) } }
     private var stopped = false
 
     @After
@@ -364,7 +364,7 @@ class NextEpisodeOverlayTest {
         assertThat(midway).isLessThan(settled)
 
         // Five minutes on, the provider connection is let go, which changes the prompt in place.
-        now += 5 * 60_000
+        clockMillis += 5 * 60_000
         runBlocking { vm.poll() }
         compose.mainClock.advanceTimeByFrame()
         assertThat(playback.stopped).isTrue()

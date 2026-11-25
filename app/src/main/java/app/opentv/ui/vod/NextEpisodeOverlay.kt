@@ -6,8 +6,6 @@
 package app.opentv.ui.vod
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,7 +48,6 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeMotion
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -189,8 +186,8 @@ private fun StillWatchingPrompt(onContinue: () -> Unit, onStop: () -> Unit) {
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     // Whoever this is for is likely half-asleep, and the room going dark in one frame is the harshest
     // way to ask. Keyed to the prompt arriving, not to the stream being let go, which changes it in place.
-    val fade = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { fade.animateTo(1f, tween(STILL_WATCHING_FADE_MILLIS, easing = SetteeMotion.Arrive)) }
+    // Faded only, not risen: it fills the screen, so there's no place for it to rise into.
+    val fade = rememberArrival(millis = STILL_WATCHING_FADE_MILLIS)
     Box(
         Modifier
             .fillMaxSize()
@@ -237,6 +234,9 @@ private val CARD_WIDTH = 340.dp
 /** The Next Episode card, for tests to measure. */
 internal const val NEXT_EPISODE_CARD_TAG = "next_episode_card"
 
+// A touch longer than an overlay's 250 ms arrival: the whole picture dims, not a corner of it, and a
+// dim that lands too quickly reads as a cut to someone half-asleep. If a frame of it misses on a Stick,
+// it goes to 0, never longer (docs/LOOK.md, Motion and cost).
 private const val STILL_WATCHING_FADE_MILLIS = 300
 private const val COUNTDOWN_SECONDS = 15f
 
