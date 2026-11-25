@@ -33,8 +33,8 @@ class LaunchNasSyncTest {
 
     private suspend fun launch(store: LastNasSync, result: NasSync.Result) = FirstOpenWork(
         nasAutoSync = true,
-        syncNas = { result },
-        nasSynced = store::record,
+        // As OpenTvApp wires it: the sync's result recorded as it comes back.
+        syncNas = { result.also(store::record) },
         catchUpNormaliser = {},
         launchRefresh = {},
         syncingNas = "Syncing with your other devices",

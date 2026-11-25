@@ -21,15 +21,9 @@ import kotlinx.coroutines.supervisorScope
  * catch-up remembers its version only on success, it did so again on every launch, before the
  * updater that could deliver a fix ever got to run.
  */
-@Suppress("LongParameterList") // One per step and its reporting, so tests need no SMB share or provider.
 internal class FirstOpenWork(
     private val nasAutoSync: Boolean,
     private val syncNas: suspend () -> NasSync.Result,
-    /**
-     * Where the sync's result goes, so Your devices can say it failed (#484). NasSync returns its
-     * failures rather than throwing them, so without this one at launch went nowhere at all.
-     */
-    private val nasSynced: (NasSync.Result) -> Unit = {},
     private val catchUpNormaliser: suspend () -> Unit,
     private val launchRefresh: suspend () -> Unit,
     private val failed: (step: String, cause: Throwable) -> Unit = { _, _ -> },
@@ -40,7 +34,7 @@ internal class FirstOpenWork(
     // half-way through writing this device's bundle. Running the catalogue in the scope's own
     // block instead would: a supervisor still cancels its children when its block throws.
     suspend fun run() = supervisorScope {
-        if (nasAutoSync) launch { step("NAS sync") { StatusBus.during(syncingNas) { syncNasAndKeep() } } }
+        if (nasAutoSync) launch { step("NAS sync") { StatusBus.during(syncingNas) { syncNasAndLog() } } }
         launch {
             // A catch-up that fails still leaves the refresh to run: it brings fresh rows, normalised
             // as they're saved, and the catch-up is tried again on the next launch.
@@ -49,9 +43,8 @@ internal class FirstOpenWork(
         }
     }
 
-    private suspend fun syncNasAndKeep() {
+    private suspend fun syncNasAndLog() {
         val result = syncNas()
-        nasSynced(result)
         if (result is NasSync.Result.Failed) failed("NAS sync", result.cause)
     }
 

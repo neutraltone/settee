@@ -89,21 +89,17 @@ class FirstOpenWorkTest {
     }
 
     @Test
-    fun `a NAS sync that fails at launch hands its failure on rather than dropping it`() = runTest {
-        val kept = mutableListOf<NasSync.Result>()
+    fun `a NAS sync that fails at launch is logged rather than dropped`() = runTest {
         val logged = mutableListOf<String>()
-        val failure = NasSync.Result.Failed(ConnectException())
         FirstOpenWork(
             nasAutoSync = true,
-            syncNas = { failure },
-            nasSynced = { kept += it },
+            syncNas = { NasSync.Result.Failed(ConnectException()) },
             catchUpNormaliser = {},
             launchRefresh = {},
             failed = { step, _ -> logged += step },
             syncingNas = SYNCING,
         ).run()
 
-        assertThat(kept).containsExactly(failure)
         assertThat(logged).containsExactly("NAS sync")
     }
 
