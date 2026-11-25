@@ -66,7 +66,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.forLocale
+import app.opentv.ui.design.forText
 import app.opentv.ui.design.rememberTextHeight
 import app.opentv.ui.formatPlaybackTime
 
@@ -438,10 +438,13 @@ private fun PillRow(
     each: (PlayerPill) -> Modifier,
 ) {
     val measurer = rememberTextMeasurer()
-    val style = SetteeType.Body.forLocale(LocalConfiguration.current.locales[0])
+    val locale = LocalConfiguration.current.locales[0]
     val labels = pills.map { it.label }
-    val natural = remember(labels, style, measurer) {
-        labels.map { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width }
+    // In the face Text will draw each in, so these are the widths the Row will find.
+    val natural = remember(labels, locale, measurer) {
+        labels.map { label ->
+            measurer.measure(label, SetteeType.Body.forText(label, locale), maxLines = 1, softWrap = false).size.width
+        }
     }
     BoxWithConstraints {
         val density = LocalDensity.current
