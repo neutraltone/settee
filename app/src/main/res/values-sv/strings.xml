@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Byt namn på profil</string>
     <string name="profiles_title">Vem tittar?</string>
     <string name="recset_save_to">Spara inspelningar till</string>
-    <string name="recset_usb_no_picker">Ingen mappväljare är tillgänglig på den här enheten.</string>
+    <string name="recset_usb_no_picker_tv">Den här TV:n kan inte välja en mapp på ett USB-minne. Spela in på den här TV:n eller din NAS i stället.</string>
+    <string name="recset_usb_no_picker_device">Den här enheten kan inte välja en mapp på ett USB-minne. Spela in på den här enheten eller din NAS i stället.</string>
+    <string name="recset_usb_not_kept">Det gick inte att behålla åtkomsten till den mappen. Välj den igen, eller välj en annan mapp på ditt USB-minne.</string>
     <string name="recset_field_username">Användarnamn</string>
     <string name="recset_field_password">Lösenord</string>
     <string name="recset_status_testing">Testar…</string>

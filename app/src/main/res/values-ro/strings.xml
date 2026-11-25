@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Redenumește profilul</string>
     <string name="profiles_title">Cine urmărește?</string>
     <string name="recset_save_to">Salvează înregistrările în</string>
-    <string name="recset_usb_no_picker">Nu există niciun selector de foldere disponibil pe acest dispozitiv.</string>
+    <string name="recset_usb_no_picker_tv">Acest televizor nu poate alege un folder de pe o unitate USB. Înregistrează în schimb pe acest televizor sau pe NAS.</string>
+    <string name="recset_usb_no_picker_device">Acest dispozitiv nu poate alege un folder de pe o unitate USB. Înregistrează în schimb pe acest dispozitiv sau pe NAS.</string>
+    <string name="recset_usb_not_kept">Accesul la acel folder nu a putut fi păstrat. Alege-l din nou sau alege alt folder de pe unitatea USB.</string>
     <string name="recset_field_username">Nume utilizator</string>
     <string name="recset_field_password">Parolă</string>
     <string name="recset_status_testing">Se testează…</string>

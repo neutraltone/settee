@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">เปลี่ยนชื่อโปรไฟล์</string>
     <string name="profiles_title">ใครกำลังดูอยู่?</string>
     <string name="recset_save_to">บันทึกการบันทึกไปที่</string>
-    <string name="recset_usb_no_picker">ไม่มีตัวเลือกโฟลเดอร์ในอุปกรณ์นี้</string>
+    <string name="recset_usb_no_picker_tv">ทีวีเครื่องนี้เลือกโฟลเดอร์ในไดรฟ์ USB ไม่ได้ ให้บันทึกลงทีวีเครื่องนี้หรือ NAS ของคุณแทน</string>
+    <string name="recset_usb_no_picker_device">อุปกรณ์นี้เลือกโฟลเดอร์ในไดรฟ์ USB ไม่ได้ ให้บันทึกลงอุปกรณ์นี้หรือ NAS ของคุณแทน</string>
+    <string name="recset_usb_not_kept">ไม่สามารถคงสิทธิ์เข้าถึงโฟลเดอร์นั้นไว้ได้ เลือกอีกครั้ง หรือเลือกโฟลเดอร์อื่นในไดรฟ์ USB ของคุณ</string>
     <string name="recset_field_username">ชื่อผู้ใช้</string>
     <string name="recset_field_password">รหัสผ่าน</string>
     <string name="recset_status_testing">กำลังทดสอบ…</string>

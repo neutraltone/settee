@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profil umbenennen</string>
     <string name="profiles_title">Wer schaut zu?</string>
     <string name="recset_save_to">Aufnahmen speichern auf</string>
-    <string name="recset_usb_no_picker">Auf diesem Gerät ist keine Ordnerauswahl verfügbar.</string>
+    <string name="recset_usb_no_picker_tv">Dieser Fernseher kann keinen Ordner auf einem USB-Laufwerk auswählen. Nimm stattdessen auf diesem Fernseher oder deinem NAS auf.</string>
+    <string name="recset_usb_no_picker_device">Dieses Gerät kann keinen Ordner auf einem USB-Laufwerk auswählen. Nimm stattdessen auf diesem Gerät oder deinem NAS auf.</string>
+    <string name="recset_usb_not_kept">Der Zugriff auf diesen Ordner konnte nicht behalten werden. Wähle ihn erneut oder einen anderen Ordner auf deinem USB-Laufwerk.</string>
     <string name="recset_field_username">Benutzername</string>
     <string name="recset_field_password">Passwort</string>
     <string name="recset_status_testing">Wird getestet…</string>

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">تغییر نام پروفایل</string>
     <string name="profiles_title">چه کسی تماشا می‌کند؟</string>
     <string name="recset_save_to">ذخیره ضبط‌ها در</string>
-    <string name="recset_usb_no_picker">هیچ ابزار انتخاب پوشه‌ای روی این دستگاه موجود نیست.</string>
+    <string name="recset_usb_no_picker_tv">این تلویزیون نمی‌تواند پوشه‌ای روی درایو USB انتخاب کند. به‌جای آن روی همین تلویزیون یا NAS خود ضبط کنید.</string>
+    <string name="recset_usb_no_picker_device">این دستگاه نمی‌تواند پوشه‌ای روی درایو USB انتخاب کند. به‌جای آن روی همین دستگاه یا NAS خود ضبط کنید.</string>
+    <string name="recset_usb_not_kept">دسترسی به آن پوشه حفظ نشد. دوباره انتخابش کنید یا پوشه دیگری روی درایو USB خود انتخاب کنید.</string>
     <string name="recset_field_username">نام کاربری</string>
     <string name="recset_field_password">گذرواژه</string>
     <string name="recset_status_testing">در حال آزمایش…</string>

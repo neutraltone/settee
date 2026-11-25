@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Cambiar nombre del perfil</string>
     <string name="profiles_title">¿Quién está viendo?</string>
     <string name="recset_save_to">Guardar grabaciones en</string>
-    <string name="recset_usb_no_picker">No hay ningún selector de carpetas disponible en este dispositivo.</string>
+    <string name="recset_usb_no_picker_tv">Este televisor no puede elegir una carpeta en una unidad USB. Graba en este televisor o en tu NAS.</string>
+    <string name="recset_usb_no_picker_device">Este dispositivo no puede elegir una carpeta en una unidad USB. Graba en este dispositivo o en tu NAS.</string>
+    <string name="recset_usb_not_kept">No se pudo mantener el acceso a esa carpeta. Elígela de nuevo o elige otra carpeta en tu unidad USB.</string>
     <string name="recset_field_username">Usuario</string>
     <string name="recset_field_password">Contraseña</string>
     <string name="recset_status_testing">Probando…</string>

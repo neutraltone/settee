@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Ganti nama profil</string>
     <string name="profiles_title">Siapa yang menonton?</string>
     <string name="recset_save_to">Simpan rekaman ke</string>
-    <string name="recset_usb_no_picker">Tidak ada pemilih folder yang tersedia di perangkat ini.</string>
+    <string name="recset_usb_no_picker_tv">TV ini tidak dapat memilih folder di drive USB. Rekam ke TV ini atau NAS Anda saja.</string>
+    <string name="recset_usb_no_picker_device">Perangkat ini tidak dapat memilih folder di drive USB. Rekam ke perangkat ini atau NAS Anda saja.</string>
+    <string name="recset_usb_not_kept">Tidak dapat mempertahankan akses ke folder itu. Pilih lagi, atau pilih folder lain di drive USB Anda.</string>
     <string name="recset_field_username">Nama pengguna</string>
     <string name="recset_field_password">Kata sandi</string>
     <string name="recset_status_testing">Menguji…</string>

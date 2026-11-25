@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profil átnevezése</string>
     <string name="profiles_title">Ki nézi most?</string>
     <string name="recset_save_to">Felvételek mentése ide</string>
-    <string name="recset_usb_no_picker">Ezen az eszközön nem érhető el mappaválasztó.</string>
+    <string name="recset_usb_no_picker_tv">Ez a TV nem tud mappát választani USB-meghajtón. Rögzítsen inkább erre a TV-re vagy a NAS-ra.</string>
+    <string name="recset_usb_no_picker_device">Ez az eszköz nem tud mappát választani USB-meghajtón. Rögzítsen inkább erre az eszközre vagy a NAS-ra.</string>
+    <string name="recset_usb_not_kept">Nem sikerült megtartani a hozzáférést a mappához. Válassza ki újra, vagy válasszon másik mappát az USB-meghajtón.</string>
     <string name="recset_field_username">Felhasználónév</string>
     <string name="recset_field_password">Jelszó</string>
     <string name="recset_status_testing">Tesztelés…</string>

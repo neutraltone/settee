@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Μετονομασία προφίλ</string>
     <string name="profiles_title">Ποιος παρακολουθεί;</string>
     <string name="recset_save_to">Αποθήκευση εγγραφών σε</string>
-    <string name="recset_usb_no_picker">Δεν υπάρχει διαθέσιμο εργαλείο επιλογής φακέλου σε αυτή τη συσκευή.</string>
+    <string name="recset_usb_no_picker_tv">Αυτή η τηλεόραση δεν μπορεί να επιλέξει φάκελο σε δίσκο USB. Κάντε εγγραφή σε αυτή την τηλεόραση ή στο NAS σας.</string>
+    <string name="recset_usb_no_picker_device">Αυτή η συσκευή δεν μπορεί να επιλέξει φάκελο σε δίσκο USB. Κάντε εγγραφή σε αυτή τη συσκευή ή στο NAS σας.</string>
+    <string name="recset_usb_not_kept">Δεν ήταν δυνατή η διατήρηση της πρόσβασης σε αυτόν τον φάκελο. Επιλέξτε τον ξανά ή επιλέξτε άλλο φάκελο στον δίσκο USB σας.</string>
     <string name="recset_field_username">Όνομα χρήστη</string>
     <string name="recset_field_password">Κωδικός πρόσβασης</string>
     <string name="recset_status_testing">Έλεγχος…</string>
