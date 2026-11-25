@@ -50,6 +50,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.rememberTextHeight
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +104,14 @@ internal fun ScreenFrameScope.GuideBand(
     inFull: suspend (GuideProgramme) -> Programme?,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier.fillMaxWidth().height(BAND_HEIGHT)) {
+    // Tall enough for its tallest text, which grows with the font size: at a fixed 150 dp, the
+    // synopsis lost its last line from about 1.1 times the usual size (#507).
+    val height = maxOf(
+        BAND_HEIGHT,
+        rememberTextHeight(SetteeType.Section, TITLE_LINES) + rememberTextHeight(SetteeType.Body, 1) +
+            BAND_LINE_GAP + rememberTextHeight(SetteeType.Synopsis, SYNOPSIS_LINES),
+    )
+    Row(modifier.fillMaxWidth().height(height)) {
         // Nothing highlighted (no Favourites yet, say): an empty band, not an empty black box.
         if (row == null) return@Row
         VideoArea(Modifier.fillMaxHeight().aspectRatio(16f / 9f).clip(SetteeShapes.Cell).background(Color.Black)) {
@@ -121,7 +129,7 @@ internal fun ScreenFrameScope.GuideBand(
                 Text(stringResource(R.string.guide_no_info_channel), SetteeType.Body, color = SetteeColors.QuietText)
                 return@Column
             }
-            Text(programme.title, SetteeType.Section, maxLines = 2)
+            Text(programme.title, SetteeType.Section, maxLines = TITLE_LINES)
             val times = "${clockTime(programme.startUtcMillis)}–${clockTime(programme.endUtcMillis)}"
             Text(
                 "$times  ·  ${row.primary.shownName}",
@@ -167,6 +175,7 @@ private val BAND_HEIGHT = 150.dp
 private val BAND_GAP = 18.dp
 private val BAND_LINE_GAP = 6.dp
 private const val SYNOPSIS_LINES = 3
+private const val TITLE_LINES = 2
 
 /** Shorter than the preview player's 350 ms switch, so the synopsis isn't the last thing to arrive. */
 private const val SYNOPSIS_SETTLE_MILLIS = 200L
