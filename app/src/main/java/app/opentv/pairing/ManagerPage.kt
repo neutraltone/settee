@@ -30,14 +30,20 @@ object ManagerPage {
     /** What the page's script calls each failure it can show, and the string that words it. */
     private val WORDS = linkedMapOf(
         // Fetch rejected: nothing answered, which is also what a closed manager looks like, since
-        // its socket goes with it, so this one can't blame the wifi alone.
+        // its socket goes with it, so this one can't blame the wifi alone. Both it and "closed" send
+        // the viewer back to the TV for a new code: each opening has a new token, so reloading this
+        // page would only be refused again.
         "unreachable" to R.string.manager_page_unreachable,
-        // 403 or 404 for a request carrying a token: a page this manager no longer serves.
+        // 403: a token this manager didn't hand out, from a page left open before it was reopened.
         "closed" to R.string.manager_page_closed,
+        // Any other status: the TV answered, so the manager is open, but this request failed.
         "notSaved" to R.string.manager_page_not_saved,
         "notLoaded" to R.string.manager_page_not_loaded,
+        "notTested" to R.string.manager_page_not_tested,
         "nasRequired" to R.string.manager_page_nas_required,
-        "providerRequired" to R.string.manager_page_provider_required,
+        "urlRequired" to R.string.manager_page_url_required,
+        "loginRequired" to R.string.manager_page_login_required,
+        "macRequired" to R.string.manager_page_mac_required,
         // Only when the TV's answer leaves its own sentence out, which it doesn't today.
         "nasFailed" to R.string.recset_status_failed,
         "testFailed" to R.string.error_test_failed,
@@ -261,17 +267,19 @@ object ManagerPage {
               body: JSON.stringify(bodyObj)
             });
           }
-          // The sentence for a failed request; a change that didn't save and a list that didn't load
-          // differ only once the TV has answered.
-          function failedSentence(e, saving){
+          // The sentence for a failed request: answered is what to say once the TV has answered with
+          // anything but a refused token (S.notSaved, S.notLoaded or S.notTested).
+          function failedSentence(e, answered){
             var status = e && e.status;
             if (!status) return S.unreachable;
-            if (status === 403 || status === 404) return S.closed;
-            return saving ? S.notSaved : S.notLoaded;
+            if (status === 403) return S.closed;
+            return answered;
           }
-          function showSaveFailure(e){
-            setStatus(failedSentence(e, true), 'err', e && e.status ? 'HTTP ' + e.status : null);
+          function showFailure(e, answered){
+            setStatus(failedSentence(e, answered), 'err', e && e.status ? 'HTTP ' + e.status : null);
           }
+          function showSaveFailure(e){ showFailure(e, S.notSaved); }
+          function showTestFailure(e){ showFailure(e, S.notTested); }
 
           // ---- Categories --------------------------------------------------------------------
           async function loadMeta(){
@@ -281,7 +289,7 @@ object ManagerPage {
               renderCategories();
             } catch (e) {
               el('catList').innerHTML = '';
-              var d = el('catEmpty'); d.hidden = false; d.textContent = failedSentence(e, false);
+              var d = el('catEmpty'); d.hidden = false; d.textContent = failedSentence(e, S.notLoaded);
             }
           }
 
@@ -343,7 +351,7 @@ object ManagerPage {
               channels = await getJson('/channels?cat=' + encodeURIComponent(cat.id) + '&source=' + cat.sourceId);
               renderChannels();
             } catch (e) {
-              empty.hidden = false; empty.textContent = failedSentence(e, false);
+              empty.hidden = false; empty.textContent = failedSentence(e, S.notLoaded);
             }
           }
 
@@ -548,7 +556,7 @@ object ManagerPage {
             setStatus('Testing…');
             post('/recording/test', smbBody())
               .then(showTest)
-              .catch(showSaveFailure);
+              .catch(showTestFailure);
           };
 
           // ---- Add a provider ----------------------------------------------------------------
@@ -570,15 +578,17 @@ object ManagerPage {
                      username: el('provUser').value.trim(), password: el('provPass').value, mac: el('provMac').value.trim() };
           }
           function provInvalid(b){
-            var missing = !b.url || (b.kind === 'xtream' && (!b.username || !b.password)) || (b.kind === 'stalker' && !b.mac);
-            return missing ? S.providerRequired : null;
+            if (!b.url) return S.urlRequired;
+            if (b.kind === 'xtream' && (!b.username || !b.password)) return S.loginRequired;
+            if (b.kind === 'stalker' && !b.mac) return S.macRequired;
+            return null;
           }
           el('provTest').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
             setStatus('Testing…');
             post('/source/test', b)
               .then(function(r){ if (r && r.ok) setStatus(r.message || 'Looks good.', 'ok'); else setStatus((r && r.error) || S.testFailed, 'err', r && r.detail); })
-              .catch(showSaveFailure);
+              .catch(showTestFailure);
           };
           el('provSave').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }

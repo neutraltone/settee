@@ -257,8 +257,14 @@ class ManagerServerTest {
             R.string.manager_page_not_saved,
             R.string.manager_page_not_loaded,
             R.string.manager_page_nas_required,
-            R.string.manager_page_provider_required,
+            R.string.manager_page_not_tested,
+            R.string.manager_page_url_required,
+            R.string.manager_page_login_required,
+            R.string.manager_page_mac_required,
         ).forEach { assertThat(page).contains(context.getString(it)) }
+        // Every opening of the manager has a new code, so reloading an old page only gets refused again.
+        assertThat(context.getString(R.string.manager_page_closed)).contains("scan the new code")
+        assertThat(context.getString(R.string.manager_page_unreachable)).contains("scan the new code")
         assertThat(page).doesNotContain("Is it still on the same wifi?")
         assertThat(page).doesNotContain("Couldn't save the name.")
         assertThat(page).doesNotContain("Server and share are required.")

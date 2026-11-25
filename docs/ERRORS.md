@@ -354,16 +354,22 @@ shown on the page as a toast (or in place of a list that didn't load), with the 
 line. The page tells a request nothing answered (the browser's fetch rejected) from one the TV answered
 with something other than OK. A manager the TV closed, after 30 minutes unused or when the viewer left
 the pane, takes its socket with it, so the page sees nothing answer, and its sentence covers both that and
-the wifi. A change the TV failed with an exception is answered 500 rather than dropped (#488).
+the wifi. Each opening of the manager has a new code (token), so reloading an old page only gets refused:
+both sentences send the viewer back to the TV for a new code. A change the TV failed with an exception is
+answered 500 rather than dropped (#488).
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
-| Nothing answered: the manager closed on the TV, the TV is off, or the phone is on another network | `manager_page_unreachable` | Couldn't reach the TV. Check Manage on phone or laptop is still open on it and you're on the same Wi-Fi, then reload this page. | none | The manager closed, or the network |
-| HTTP 403 (a token that isn't this session's, from a page left open before the manager was opened again) or 404 (the manager closing as the request came in) | `manager_page_closed` | The TV closed the channel manager. Open Manage on phone or laptop on the TV again, then reload this page. | HTTP 403 or 404 | The manager closed |
-| A change (favourite, hide, rename, reorder, NAS details, adding a provider) answered 400 or 500 | `manager_page_not_saved` | The TV didn't save that change. Try again. | HTTP 400 or 500 | The TV, or a request cut off |
-| Categories or a category's channels answered 400 or 500 | `manager_page_not_loaded` | The TV couldn't send this list. Reload this page to try again. | HTTP status | The TV |
+| Nothing answered: the manager closed on the TV, the TV is off, or the phone is on another network | `manager_page_unreachable` | Couldn't reach the TV. Check you're on the same Wi-Fi. If the channel manager closed, open Manage on phone or laptop on the TV again and scan the new code. | none | The manager closed, or the network |
+| HTTP 403: a token that isn't this session's, from a page left open before the manager was opened again | `manager_page_closed` | The TV closed the channel manager. Open Manage on phone or laptop on the TV again and scan the new code. | HTTP 403 | The manager closed |
+| A change (favourite, hide, rename, reorder, saving NAS details, adding a provider) answered with any other status (400, 404, 500) | `manager_page_not_saved` | The TV didn't save that change. Try again. | HTTP status | The TV, or a request cut off |
+| Recording's or a provider's Test answered with any status but 403 (nothing is saved by a test) | `manager_page_not_tested` | The TV couldn't run that test. Try again. | HTTP status | The TV, or a request cut off |
+| Categories or a category's channels answered with any status but 403 | `manager_page_not_loaded` | The TV couldn't send this list. Reload this page to try again. | HTTP status | The TV |
 | Recording: Save without the NAS's address or share | `manager_page_nas_required` | Add your NAS's address and share, then save again. | none | Viewer's typing |
-| Add a provider or Test: a detail its kind needs left out, checked on the page and again on the TV | `manager_page_provider_required` | Fill in every detail this kind of provider needs, then try again. | none | Viewer's typing |
+| Add a provider or Test, checked on the page: no address | `manager_page_url_required` | Enter the provider's address. | none | Viewer's typing |
+| Add a provider or Test, checked on the page: an Xtream login without its username or password | `manager_page_login_required` | Enter the username and password. | none | Viewer's typing |
+| Add a provider or Test, checked on the page: a Stalker portal without its MAC address | `manager_page_mac_required` | Enter the device address your provider gave you for this portal. | none | Viewer's typing |
+| Add a provider or Test: a detail its kind needs left out, checked again on the TV | `manager_page_provider_required` | Fill in every detail this kind of provider needs, then try again. | none | Viewer's typing |
 | Recording's Test connection failing, when the TV's answer leaves out its sentence | `recset_status_failed` | As Settings | none | As Settings |
 | A provider's Test failing, when the TV's answer leaves out its sentence | `error_test_failed` | As Provider connection | none | As Provider connection |
 
