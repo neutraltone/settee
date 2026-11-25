@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.repo.OpenSubtitlesAccount

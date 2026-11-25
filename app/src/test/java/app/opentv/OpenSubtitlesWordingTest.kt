@@ -8,6 +8,7 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ErrorWording
 import app.opentv.core.LocaleUtils
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
 import java.util.TimeZone
@@ -132,7 +133,9 @@ class OpenSubtitlesWordingTest {
 
     @Test
     fun `a subtitle this TV couldn't keep for any other reason doesn't send the viewer to free up space`() {
-        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(java.io.IOException("Subtitle bigger than the cap")))
+        val error = wording.ofOpenSubtitles(
+            OpenSubtitlesFailure.NotSaved(java.io.IOException("Subtitle bigger than the cap")),
+        )
 
         assertThat(error.sentence).isEqualTo("This TV couldn't keep that subtitle. Try again, or pick a different one.")
         assertThat(error.detail).isEqualTo("NotSaved · IO")

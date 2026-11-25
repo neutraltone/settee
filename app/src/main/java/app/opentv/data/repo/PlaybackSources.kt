@@ -331,7 +331,7 @@ private suspend fun StalkerApi.mint(source: Source, channel: Channel): String {
     } catch (e: StalkerApi.StalkerException) {
         // The exception's kind only: an UnknownHostException's message is the portal's host.
         Log.w(TAG, "No link from the portal: ${ErrorWording.codeOf(e.cause ?: e)}")
-        val network = e.cause?.takeIf { ErrorWording.networkSentenceOf(it, onTelevision = false) != null }
+        val network = e.cause?.takeIf(ErrorWording::isNetworkFailure)
         if (network != null) throw Unplayable(Failure.UNREACHABLE, channel.shownName, network)
         null
     }

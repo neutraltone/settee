@@ -62,7 +62,7 @@ object PlaybackErrors {
         val cause = error.cause
     ) {
         is HttpDataSource.InvalidResponseCodeException -> describeHttpStatus(context, cause.responseCode)
-        else if ErrorWording.networkSentenceOf(cause, onTelevision) != null ->
+        else if ErrorWording.isNetworkFailure(cause) ->
             context.getString(ErrorWording.networkSentenceOf(cause, onTelevision)!!)
         // Checked before the error code: Media3 reports it as a source error with an IO code,
         // which would read as a network fault when the stream is simply too big for this device.

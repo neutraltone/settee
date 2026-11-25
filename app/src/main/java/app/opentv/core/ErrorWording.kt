@@ -13,7 +13,6 @@ import app.opentv.data.parser.NotAGuideException
 import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.GuideAddressException
 import app.opentv.data.remote.GuideDownloadException
-import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.InterruptedIOException
@@ -42,19 +41,18 @@ interface HttpStatus {
     val status: Int?
 }
 
-// The one place failures outside playback are worded: each function is a kind of failure, so it
-// grows with them rather than splitting the sentences across classes.
-@Suppress("TooManyFunctions")
+// Each function is a kind of failure. A service with failures of its own is worded in its own file
+// (OpenSubtitlesWording.kt), from the same resources, rather than growing this class past a screenful.
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
     /** What Test connection says when it passes, in the same language as its failures. */
     val tests = TestOutcomeWording { resources }
 
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
-    private val resources get() = LocaleUtils.wrap(context).resources
+    internal val resources get() = LocaleUtils.wrap(context).resources
 
     // The app's own language decides 12 or 24 hours, as it does the words around it. Android's DateFormat
     // goes by the device's setting instead, which would say "12:00 AM" in a British sentence.
-    private val timeFormat get() = java.time.format.DateTimeFormatter.ofLocalizedTime(
+    internal val timeFormat get() = java.time.format.DateTimeFormatter.ofLocalizedTime(
         java.time.format.FormatStyle.SHORT,
     )
         .withLocale(resources.configuration.locales[0])
@@ -68,7 +66,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         // A provider that couldn't be reached at all, as a Stalker portal's client reports it: the
         // network failure it carries is what to word (#468).
         val failure = (error as? ProviderException)?.takeIf { it.problem == Problem.BAD_REPLY }?.cause
-            ?.takeIf { networkSentenceOf(it, onTelevision) != null }
+            ?.takeIf(::isNetworkFailure)
             ?: error
         if (failure is ProviderException) return ofProvider(failure, fallback)
         val sentence = networkSentenceOf(failure, onTelevision) ?: fallback
@@ -187,50 +185,6 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         }
     }
 
-    /** What went wrong with OpenSubtitles: finding, downloading or signing in. */
-    fun ofOpenSubtitles(error: Throwable): ViewerError = when (error) {
-        is OpenSubtitlesFailure.NoResults -> of(R.string.error_opensubtitles_none, "NoResults")
-        is OpenSubtitlesFailure.DownloadLimit -> ofOpenSubtitlesLimit(error, resources, timeFormat)
-        is OpenSubtitlesFailure.SignInRejected ->
-            ViewerError(
-                resources.getString(R.string.error_opensubtitles_sign_in),
-                ViewerError.detailOf("SignInRejected", "HTTP 401"),
-            )
-        is OpenSubtitlesFailure.KeyRejected ->
-            ViewerError(
-                resources.getString(R.string.error_opensubtitles_key_rejected),
-                ViewerError.detailOf("KeyRejected", "HTTP ${error.status}"),
-            )
-        is OpenSubtitlesFailure.TokenRejected ->
-            ofHardware(
-                R.string.error_opensubtitles_token_tv,
-                R.string.error_opensubtitles_token_device,
-                "TokenRejected",
-            )
-        is OpenSubtitlesFailure.NotSaved ->
-            ofHardware(
-                if (error.noRoom) R.string.error_opensubtitles_not_saved_tv else R.string.error_opensubtitles_not_kept_tv,
-                if (error.noRoom) {
-                    R.string.error_opensubtitles_not_saved_device
-                } else {
-                    R.string.error_opensubtitles_not_kept_device
-                },
-                ViewerError.detailOf("NotSaved", codeOf(error.cause ?: error)),
-            )
-        is OpenSubtitlesFailure.SignInNotSaved ->
-            ofHardware(
-                R.string.error_opensubtitles_sign_in_not_saved_tv,
-                R.string.error_opensubtitles_sign_in_not_saved_device,
-                ViewerError.detailOf("SignInNotSaved", codeOf(error.cause ?: error)),
-            )
-        is OpenSubtitlesFailure.Unreachable -> ofOpenSubtitlesUnreachable(error)
-        else -> ofHardware(
-            R.string.error_opensubtitles_unreachable_tv,
-            R.string.error_opensubtitles_unreachable_device,
-            codeOf(error),
-        )
-    }
-
     companion object {
         private const val TOO_MANY_REQUESTS = 429
         private val SERVER_ERRORS = 500..599
@@ -266,38 +220,8 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             is InterruptedIOException -> R.string.error_timed_out
             else -> null
         }
-    }
-}
 
-/** No answer from OpenSubtitles, or trouble at their end ([OpenSubtitlesFailure.Unreachable.status]). */
-private fun ErrorWording.ofOpenSubtitlesUnreachable(error: OpenSubtitlesFailure.Unreachable): ViewerError {
-    val status = error.status
-    return if (status != null) {
-        of(R.string.error_opensubtitles_trouble, "HTTP $status")
-    } else {
-        ofHardware(
-            R.string.error_opensubtitles_unreachable_tv,
-            R.string.error_opensubtitles_unreachable_device,
-            ErrorWording.codeOf(error.cause ?: error),
-        )
+        /** Whether [error] is a provider that couldn't be reached or stopped answering: [networkSentenceOf]'s. */
+        fun isNetworkFailure(error: Throwable?): Boolean = networkSentenceOf(error, onTelevision = false) != null
     }
-}
-
-/** Today's downloads used up, saying when more come where OpenSubtitles said, in [timeFormat]. */
-private fun ofOpenSubtitlesLimit(
-    error: OpenSubtitlesFailure.DownloadLimit,
-    resources: android.content.res.Resources,
-    timeFormat: java.time.format.DateTimeFormatter,
-): ViewerError {
-    val resetsAt = error.resetsAt
-    val sentence = when {
-        !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
-        resetsAt != null -> resources.getString(
-            R.string.error_opensubtitles_limit_account,
-            // In the app's language, as the sentence around it is, not the device's.
-            timeFormat.format(java.time.Instant.ofEpochMilli(resetsAt)),
-        )
-        else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
-    }
-    return ViewerError(sentence, ViewerError.detailOf("DownloadLimit", "HTTP 406"))
 }

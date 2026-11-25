@@ -29,6 +29,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.repo.DownloadedSubtitle
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.player.PlayerController
