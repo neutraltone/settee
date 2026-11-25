@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.design
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -79,7 +80,12 @@ fun CategoriesSidebar(
                             else -> SetteeColors.Text
                         },
                         maxLines = 1,
-                        modifier = Modifier.padding(ROW_PADDING),
+                        // Cut off at rest, so "UK | SKY SPORTS FOOTBALL HD" and "… UHD" read the same;
+                        // highlighted, the name scrolls so the whole of it can be read (#507), as a
+                        // card's title does. Only there: the Highlight is where the eye is.
+                        modifier = Modifier
+                            .padding(ROW_PADDING)
+                            .then(if (highlighted) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier),
                     )
                 }
             }

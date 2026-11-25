@@ -186,7 +186,7 @@ On Live TV, Movies and Shows. Tucked away until Left from the leftmost item open
 - **Always open:** the channel manager shows the sidebar open all the time, with Search for channels as its pinned row and the locked categories included, since Parental Lock doesn't hide them from managing.
 - **Picking a category** leaves the Highlight on it. Right then moves into the content and closes the sidebar.
 - **Sliding:** each tab has to pass the budget when it's built. Movies and Shows are built like Home, so a push should pass. The old guide couldn't: moving it cost about 25 ms a frame. The rebuilt guide pushes too, drawn as a layer while it moves, until it's measured on the Stick. If it misses the budget, the sidebar slides over the guide there instead of pushing it.
-- **Size:** 214 dp, with solid coral rows when highlighted and the current category in coral otherwise.
+- **Size:** 214 dp, with solid coral rows when highlighted and the current category in coral otherwise. A name too long for one line is cut off at rest and scrolls on the highlighted row, so "UK | SKY SPORTS FOOTBALL HD" and "… UHD" can be told apart.
 - **Find a category:** a text field at the top. Up from the first row reaches it, and Down returns to the list. Like every text box, the keyboard stays shut until OK. Typing a few letters narrows the list, and it shows how many of how many are showing, counting only categories the viewer can see.
 - **To fix:** Right lands on the nearest row, not the one the viewer left.
 
