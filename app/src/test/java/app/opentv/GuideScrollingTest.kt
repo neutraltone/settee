@@ -141,7 +141,10 @@ class GuideScrollingTest {
                 windowEndMillis = 24 * 60 * MINUTE_MS,
                 onWatch = {},
                 onHighlight = { _, programme -> programme?.let { highlighted += it.title } },
-                onNextDay = { nextDay++ },
+                onNextDay = {
+                    nextDay++
+                    true
+                },
                 nowMillis = noon + 10 * MINUTE_MS,
             )
         }
@@ -169,6 +172,7 @@ class GuideScrollingTest {
                 onPrevDay = { row ->
                     day -= 1
                     landOnRow = row.key
+                    true
                 },
                 landOnRow = landOnRow,
                 landAtEnd = landOnRow != null,
@@ -198,6 +202,7 @@ class GuideScrollingTest {
                 onNextDay = { row ->
                     day += 1
                     landOnRow = row.key
+                    true
                 },
                 landOnRow = landOnRow,
                 onLanded = { landOnRow = null },
@@ -211,6 +216,23 @@ class GuideScrollingTest {
         rowsDay = 1
         compose.onNode(programme("D1 0")).assertIsFocused()
         assertThat(day).isEqualTo(1)
+    }
+
+    @Test
+    fun `Right past the last programme, when the guide won't page just then, leaves the Highlight on it`() {
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(row(1, halfHours("D0", 0))),
+                windowStartMillis = 0,
+                onWatch = {},
+                onNextDay = { false },
+            )
+        }
+        compose.onNode(programme("D0 47")).requestFocus()
+
+        press(Key.DirectionRight)
+
+        compose.onNode(programme("D0 47")).assertIsFocused()
     }
 
     @Test
@@ -254,7 +276,7 @@ class GuideScrollingTest {
                 rows = rows,
                 windowStartMillis = 0,
                 onWatch = { watched += it.primary.id },
-                onNextDay = { nextDayFor += it.primary.id },
+                onNextDay = { nextDayFor.add(it.primary.id) },
             )
         }
         compose.onNode(noInformation).requestFocus()

@@ -410,7 +410,7 @@ class LiveBrowseTest {
         onTomorrowsLastProgramme()
 
         // Both straight into the window, with nothing composed in between.
-        compose.runOnIdle { repeat(2) { view.pressRight() } }
+        compose.runOnIdle { repeat(2) { view.press(KeyEvent.KEYCODE_DPAD_RIGHT) } }
         compose.mainClock.autoAdvance = false
         compose.mainClock.advanceTimeByFrame()
         channelCell("Channel One").assertIsFocused()
@@ -426,9 +426,23 @@ class LiveBrowseTest {
         press(Key.DirectionRight)
         assertOnTheDayAftersFirstProgramme()
 
-        compose.runOnIdle { view.pressRight(repeatCount = 1) }
+        compose.runOnIdle { view.press(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 1) }
 
         assertOnTheDayAftersFirstProgramme()
+    }
+
+    @Test
+    fun `Left back to now before the next day lands leaves the Highlight on the channel, and Right pages again`() {
+        onTomorrowsLastProgramme()
+
+        compose.runOnIdle { view.press(KeyEvent.KEYCODE_DPAD_RIGHT).press(KeyEvent.KEYCODE_DPAD_LEFT) }
+        compose.onAllNodes(programme("Now on 1")).onFirst().assertExists()
+        compose.waitForIdle()
+        channelCell("Channel One").assertIsFocused()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+
+        press(Key.DirectionRight, times = 3)
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(1)
     }
 
     private fun assertOnTheDayAftersFirstProgramme() {
@@ -790,11 +804,15 @@ class LiveBrowseTest {
     }
 }
 
-/** Right on the remote, through the window; a [repeatCount] above 0 is it held, and sends no key up. */
-private fun View.pressRight(repeatCount: Int = 0) {
+/**
+ * [keyCode] on the remote, through the window, and on to the next. A [repeatCount] above 0 is the key
+ * held, and sends no key up; so does [release] false, the first key down of a hold.
+ */
+private fun View.press(keyCode: Int, repeatCount: Int = 0, release: Boolean = repeatCount == 0): View {
     val at = android.os.SystemClock.uptimeMillis()
-    dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount))
-    if (repeatCount == 0) dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
+    dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, repeatCount))
+    if (release) dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_UP, keyCode, 0))
+    return this
 }
 
 /** A programme on channel [id]'s guide, as the library's channels name their guides, from [airs]' start to end. */

@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -118,8 +119,8 @@ fun GuideGrid(
     onProgramme: (ChannelsViewModel.Row, GuideProgramme) -> Unit = { _, _ -> },
     dayLabel: String = "",
     dayOffset: Int = 0,
-    onNextDay: ((ChannelsViewModel.Row) -> Unit)? = null,
-    onPrevDay: ((ChannelsViewModel.Row) -> Unit)? = null,
+    onNextDay: ((ChannelsViewModel.Row) -> Boolean)? = null,
+    onPrevDay: ((ChannelsViewModel.Row) -> Boolean)? = null,
     returnToChannelId: Long? = null,
     takeFocus: Boolean = true,
     onReturnToRow: (ChannelsViewModel.Row) -> Unit = {},
@@ -330,8 +331,8 @@ private fun GuideRow(
     onWatch: () -> Unit,
     onHighlight: (GuideProgramme?) -> Unit,
     onProgramme: (GuideProgramme) -> Unit,
-    onNextDay: (() -> Unit)?,
-    onPrevDay: (() -> Unit)?,
+    onNextDay: (() -> Boolean)?,
+    onPrevDay: (() -> Boolean)?,
     focusRequester: FocusRequester?,
     onLeft: () -> Boolean,
     highlight: RowHighlight,
@@ -357,7 +358,7 @@ private fun GuideRow(
             onLanded()
         }
     }
-    if (land == null) landing.paging = false
+    SideEffect { if (land == null) landing.paging = false }
     // Paging from a programme, the Highlight waits on the channel: the cell it was on can leave with
     // the old day (one ending at midnight) or stay until the new rows come, and a second Right from
     // it paged again, two days on (#448).
@@ -397,7 +398,7 @@ private fun GuideRow(
             self = channel,
             // With nothing on this day there's no last programme to page on from, so the channel does,
             // as it does while the day it paged to loads (where a day's landing in progress stops it).
-            onRight = onNextDay,
+            onRight = pageNext,
             pagesRight = { shown.isEmpty() || landing.paging },
             onLeft = onLeft,
             highlight = highlight,
@@ -407,8 +408,8 @@ private fun GuideRow(
             NoInformationCell(
                 onWatch = onWatch,
                 onHighlight = { onHighlight(null) },
-                onNextDay = onNextDay,
-                onPrevDay = onPrevDay,
+                onNextDay = pageNext,
+                onPrevDay = pagePrev,
                 railFallback = channel,
                 modifier = Modifier.weight(1f),
             )
@@ -572,11 +573,15 @@ private class RowLanding {
     /** Whether this row has paged a day and not landed yet. Plain: read when a key comes, not drawn. */
     var paging = false
 
-    /** Pages a day with [turn], the Highlight on the channel until the new day's cells come. */
-    fun page(turn: () -> Unit) {
+    /**
+     * Pages a day with [turn], the Highlight on the channel until the new day's cells come. Only when
+     * [turn] says it paged: the guide turns it down while another day's landing is still to happen,
+     * and the Highlight stays where it was.
+     */
+    fun page(turn: () -> Boolean) {
+        if (!turn()) return
         paging = true
         runCatching { channel.requestFocus() }
-        turn()
     }
 
     fun target(shown: List<GuideProgramme>, land: Land): FocusRequester = when {

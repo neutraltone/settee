@@ -81,6 +81,9 @@ import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.vod.rememberSidebarSlide
 import kotlinx.coroutines.delay
 
+/** Where the Highlight lands on the guide's [day], once paged there: [row]'s last cell with [atEnd], else its first. */
+private data class DayLanding(val row: Any, val atEnd: Boolean, val day: Int)
+
 /**
  * Live TV (docs/LOOK.md, Live TV): the preview band above the guide, with the Categories Sidebar
  * tucked away to the guide's left. Left from the guide's first column opens it, as on Movies and
@@ -225,10 +228,20 @@ fun LiveScreen(
 
     // The guide's day pages: where the Highlight lands on the new day, a row's first or last cell.
     // Cleared once it has, so the row coming back into view later doesn't take the Highlight again.
-    var landOn by remember { mutableStateOf<Pair<Any, Boolean>?>(null) }
+    var landOn by remember { mutableStateOf<DayLanding?>(null) }
     // A day's landing still to happen ignores further pages, or a second Right before it lands pages
-    // again (#448). A category without that row would never land, so a new one drops it.
+    // again (#448). One that can no longer happen is dropped, or it would stop paging for good: a
+    // category without that row, the day moved some other way first (Left back to now), or the
+    // viewer moved to another row, which may scroll this one away before it lands.
     LaunchedEffect(guideRows.scope) { landOn = null }
+    LaunchedEffect(guideDayOffset) { if (landOn?.day != guideDayOffset) landOn = null }
+    // Pages [by] days from [row], unless a landing is still to happen; says whether it paged.
+    fun pageDay(row: ChannelsViewModel.Row, by: Int): Boolean {
+        if (landOn != null) return false
+        viewModel.nudgeGuideDay(by)
+        landOn = DayLanding(row.key, atEnd = by < 0, day = viewModel.guideDayOffset.value)
+        return true
+    }
 
     val current = when {
         favouritesOnly -> FAVOURITES
@@ -295,27 +308,21 @@ fun LiveScreen(
                         rowsFor = guideRows.scope,
                         onToNow = { viewModel.guideToNow() },
                         onWatch = { row -> requestLive(row.primary) },
-                        onHighlight = { row, programme -> highlighted = row to programme },
+                        onHighlight = { row, programme ->
+                            highlighted = row to programme
+                            if (landOn?.row != row.key) landOn = null
+                        },
                         onProgramme = { row, programme -> details = row to programme },
                         dayLabel = dayLabel,
                         dayOffset = guideDayOffset,
-                        onNextDay = { row: ChannelsViewModel.Row ->
-                            if (landOn == null) {
-                                landOn = row.key to false
-                                viewModel.nudgeGuideDay(1)
-                            }
-                        }.takeIf { guideDayOffset < ChannelsViewModel.GUIDE_MAX_DAYS },
-                        onPrevDay = { row: ChannelsViewModel.Row ->
-                            if (landOn == null) {
-                                landOn = row.key to true
-                                viewModel.nudgeGuideDay(-1)
-                            }
-                        }.takeIf { guideDayOffset > 0 },
+                        onNextDay = { row: ChannelsViewModel.Row -> pageDay(row, 1) }
+                            .takeIf { guideDayOffset < ChannelsViewModel.GUIDE_MAX_DAYS },
+                        onPrevDay = { row: ChannelsViewModel.Row -> pageDay(row, -1) }.takeIf { guideDayOffset > 0 },
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus || opening.held,
                         onReturnToRow = { highlighted = it to null },
-                        landOnRow = landOn?.first,
-                        landAtEnd = landOn?.second == true,
+                        landOnRow = landOn?.row,
+                        landAtEnd = landOn?.atEnd == true,
                         onLanded = { landOn = null },
                         nowMillis = nowMillis,
                     )
