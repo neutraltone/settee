@@ -421,13 +421,16 @@ class LiveBrowseTest {
     }
 
     @Test
-    fun `holding Right stops at the day's end, so a repeat past the new day's last programme stays put`() {
+    fun `holding Right from a row's last programme moves one day, and stops at that day's end`() {
         onTomorrowsLastProgramme()
-        press(Key.DirectionRight)
+
+        // The key going down and the remote repeating it, with nothing composed in between.
+        compose.runOnIdle {
+            view.press(KeyEvent.KEYCODE_DPAD_RIGHT, release = false).press(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 1)
+        }
         assertOnTheDayAftersFirstProgramme()
 
         compose.runOnIdle { view.press(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 1) }
-
         assertOnTheDayAftersFirstProgramme()
     }
 
