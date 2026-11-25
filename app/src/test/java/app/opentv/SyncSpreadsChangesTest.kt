@@ -8,6 +8,7 @@ package app.opentv
 import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
 import app.opentv.data.repo.Profiles
+import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncBundle
 import app.opentv.sync.SyncCategoryLock
 import app.opentv.sync.SyncDismissal
@@ -696,7 +697,27 @@ class SyncSpreadsChangesTest {
         assertThat(settings.hiddenCategories.value.intersect(keys.toSet())).isEmpty()
     }
 
+    @Test
+    fun `a mark this version doesn't know isn't passed on as no mark, so the real one still lands`() = testing {
+        deviceB.seed("Tom")
+        deviceC.seed("Tom")
+        // A newer device's Episode 1 at 100 000 of 2 400 000, with a hand mark this version doesn't have.
+        fun fromNewerDevice(mark: String) = SyncBundle(
+            progress = listOf(
+                SyncPosition("Tom", "Provider", "ep", "1-1", "s", 100_000, EPISODE_MILLIS, MARKED_AT, mark),
+            ),
+        )
+
+        deviceB.sync.apply(fromNewerDevice("SOMETHING_NEW"))
+        deviceC.syncFrom(deviceB)
+        deviceC.sync.apply(fromNewerDevice("WATCHED"))
+
+        assertThat(deviceB.db.positions().all()).isEmpty()
+        assertThat(deviceC.statusOf("Tom", deviceC.episode.id)).isEqualTo(WatchStatus.Watched)
+    }
+
     private companion object {
+        const val MARKED_AT = 5_000L
         const val RACE_ITEMS = 3_000
         const val LOCK_RACE_KEYS = 300
     }
