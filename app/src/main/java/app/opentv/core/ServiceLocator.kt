@@ -55,6 +55,7 @@ import app.opentv.recording.RecordingStorage
 import app.opentv.recording.StreamCapture
 import app.opentv.ui.HomeSnapshots
 import app.opentv.update.UpdateChecker
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
 import okhttp3.OkHttpClient
 
@@ -95,7 +97,8 @@ object ServiceLocator {
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
      * [settingsFile] gives it settings of its own, which are otherwise one per process, and [clock]
-     * lets a test say which of two devices changed something last. [openRecordingFile] replaces where
+     * lets a test say which of two devices changed something last, as [zoneOverride] lets it say which
+     * zone the viewer is in rather than changing the JVM's default. [openRecordingFile] replaces where
      * a recording's bytes go, so a test can fill the storage, and [captureReconnectMillis] how long a
      * recording waits before connecting again, so one whose stream has gone ends without waiting.
      * [dispatchers] are the threads repositories and view models run their background work on, so a
@@ -108,6 +111,7 @@ object ServiceLocator {
         http: OkHttpClient? = null,
         settingsFile: String? = null,
         val clock: () -> Long = System::currentTimeMillis,
+        zoneOverride: StateFlow<ZoneId>? = null,
         val dispatchers: AppDispatchers = AppDispatchers(),
         val decoders: DecoderList = DeviceDecoders(),
         private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
@@ -117,6 +121,9 @@ object ServiceLocator {
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
         private val appContext = context.applicationContext
+
+        /** The viewer's time zone, which [ViewerTime] draws every local day and clock time in. */
+        val zone: StateFlow<ZoneId> by lazy { zoneOverride ?: DeviceZone(appContext).zone }
 
         val settings: AppSettings by lazy {
             settingsFile?.let { AppSettings.separate(appContext, it) } ?: AppSettings.get(appContext)
@@ -402,7 +409,9 @@ object ServiceLocator {
         }
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
-        val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }
+        val errorWording: ErrorWording by lazy {
+            ErrorWording(appContext, isRunningOnTelevision(appContext)) { zone.value }
+        }
 
         /** The last opens and errors, in files of their own so they're readable when the database isn't. */
         val diagnosticsLog: DiagnosticsLog by lazy {

@@ -22,7 +22,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
-import app.opentv.ui.channels.formatTime
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
 import app.opentv.ui.design.SidePanel
@@ -135,5 +135,5 @@ private fun ItemOption.ChannelAction.label(): String = when (this) {
     ItemOption.StopRecording -> stringResource(R.string.rec_stop_recording)
     is ItemOption.RecordWholeSeries -> stringResource(R.string.rec_record_series_named, programme.title)
     ItemOption.ScheduleLater -> stringResource(R.string.options_schedule_later)
-    is ItemOption.LaterProgramme -> "${formatTime(programme.startUtcMillis)}   ${programme.title}"
+    is ItemOption.LaterProgramme -> "${clockTime(programme.startUtcMillis)}   ${programme.title}"
 }

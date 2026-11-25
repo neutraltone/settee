@@ -14,6 +14,7 @@ import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
 import app.opentv.core.ViewerError
+import app.opentv.core.ViewerTime
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -510,37 +511,21 @@ class ChannelsViewModel @JvmOverloads constructor(
      * Each day ends where the next starts, so paging Right past today's last programme carries on
      * from midnight rather than going back over the morning. One flow, so the two never disagree.
      */
-    private val guideWindow: StateFlow<Pair<Long, Long>> =
-        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset, ::guideWindowOf)
+    private val guideWindow: StateFlow<ViewerTime.Window> =
+        combine(nowTick, _guideDayOffset, graph.zone, ViewerTime::guideWindow)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                guideWindowOf(now().let { it - it % HALF_HOUR_MILLIS }, 0),
+                ViewerTime.guideWindow(now(), 0, graph.zone.value),
             )
 
-    private fun guideWindowOf(halfHour: Long, day: Int): Pair<Long, Long> {
-        val midnight = startOfLocalDay(halfHour)
-        val start = if (day <= 0) halfHour else midnight + day * DAY_MILLIS
-        return start to midnight + (day.coerceAtLeast(0) + 1) * DAY_MILLIS
-    }
-
     /** The guide's left edge, where programme cells are measured from. */
-    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.first }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.first)
+    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.startUtcMillis }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.startUtcMillis)
 
     /** Where the guide's day ends: today's at midnight, where tomorrow's starts. */
-    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
-
-    private fun startOfLocalDay(millis: Long): Long {
-        val cal = java.util.Calendar.getInstance()
-        cal.timeInMillis = millis
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        cal.set(java.util.Calendar.MINUTE, 0)
-        cal.set(java.util.Calendar.SECOND, 0)
-        cal.set(java.util.Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
+    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.endUtcMillis }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.endUtcMillis)
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
@@ -605,6 +590,9 @@ class ChannelsViewModel @JvmOverloads constructor(
     @androidx.compose.runtime.Immutable
     data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
 
+    /** What [guideRows] were last built from, so coming back to Live TV doesn't build them twice. */
+    private val guideBuilt = GuideBuildMemory<Pair<LineupScope, List<LineupChannel>>>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val guideRows: StateFlow<GuideRows> =
         guideScope
@@ -620,9 +608,12 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // a guide sync doesn't keep a slow build running back to back (#257).
                 // Building the guide is the screen being built, which its skeleton rows show; the
                 // main screen's corner is for background work (#581, #583).
-                lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
-                    GuideRows(scope, buildRows(channels, byEpgChannel, now()))
-                }
+                // The scope goes in with the channels it remembers, so a category whose channels
+                // match the last one's still builds, with its own scope (#374).
+                lineup.channels(scope).map { scope to it }
+                    .guideBuilds(programmeIndex, guideBuilt) { (_, channels), byEpgChannel ->
+                        GuideRows(scope, buildRows(channels, byEpgChannel, now()))
+                    }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
             // enough to freeze the UI for a big provider — a category tap that took minutes. Run the
@@ -797,8 +788,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     companion object {
         /** How many days ahead the guide goes: up to a week out, matching typical XMLTV depth. */
         const val GUIDE_MAX_DAYS = 6
-        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        private const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }
 }
 

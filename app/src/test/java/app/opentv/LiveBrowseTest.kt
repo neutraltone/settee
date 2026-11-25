@@ -41,6 +41,9 @@ import app.opentv.ui.Tab
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.visibleTabs
 import com.google.common.truth.Truth.assertThat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -74,8 +77,11 @@ class LiveBrowseTest {
         set(2026, java.util.Calendar.JUNE, 15, 12, 0)
     }.timeInMillis
 
+    /** This device's zone, which a test may set to see the guide's days around a clock change. */
+    private val zone = MutableStateFlow(ZoneId.systemDefault())
+
     @get:Rule
-    val testGraph = TestGraph(compose, clock = { now })
+    val testGraph = TestGraph(compose, clock = { now }, zone = zone)
 
     private val graph = testGraph.graph
     private val viewModel by lazy { testGraph.viewModel { ChannelsViewModel(app, graph) } }
@@ -111,7 +117,7 @@ class LiveBrowseTest {
     )
 
     /** News from the first provider, Sport from the second, and what's on each channel now and next. */
-    private fun library() = runBlocking {
+    private fun library(extra: (feed: Long) -> List<Programme> = { emptyList() }) = runBlocking {
         val db = graph.database
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"))
         db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "https://example.org"))
@@ -132,60 +138,26 @@ class LiveBrowseTest {
         )
         db.channels().replaceCatalogue(2, listOf(channel(4, "Sport Four", 2, "20")), syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
-        guide()
+        guide(extra)
     }
 
-    /** Each channel's programmes: on now, later today, and two tomorrow and one the day after. */
-    private suspend fun guide() {
+    /**
+     * Each channel's programmes: on now, later today, and two tomorrow and one the day after, plus
+     * whatever [extra] lists from the feed.
+     */
+    private suspend fun guide(extra: (feed: Long) -> List<Programme>) {
         val db = graph.database
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
         db.programmes().insertOrReplace(
             (1L..4L).flatMap { id ->
                 listOf(
-                    Programme(
-                        feedId = feed,
-                        epgChannelId = "epg$id",
-                        startUtcMillis = now - HOUR,
-                        endUtcMillis =
-                        now + HOUR,
-                        title = "Now on $id",
-                        description = "What's on $id now.",
-                    ),
-                    Programme(
-                        feedId = feed,
-                        epgChannelId = "epg$id",
-                        startUtcMillis = now + HOUR,
-                        endUtcMillis =
-                        now + 2 * HOUR,
-                        title = "Later on $id",
-                        description = "What's on $id later.",
-                    ),
-                    Programme(
-                        feedId = feed,
-                        epgChannelId = "epg$id",
-                        startUtcMillis = tomorrow + 9 * HOUR,
-                        endUtcMillis =
-                        tomorrow + 10 * HOUR,
-                        title = "Morning on $id",
-                    ),
-                    Programme(
-                        feedId = feed,
-                        epgChannelId = "epg$id",
-                        startUtcMillis = tomorrow + 20 * HOUR,
-                        endUtcMillis =
-                        tomorrow + 21 * HOUR,
-                        title = "Evening on $id",
-                    ),
-                    Programme(
-                        feedId = feed,
-                        epgChannelId = "epg$id",
-                        startUtcMillis = tomorrow + DAY + 9 * HOUR,
-                        endUtcMillis =
-                        tomorrow + DAY + 10 * HOUR,
-                        title = "Day after on $id",
-                    ),
+                    listing(feed, id, now - HOUR..now + HOUR, "Now on $id", "What's on $id now."),
+                    listing(feed, id, now + HOUR..now + 2 * HOUR, "Later on $id", "What's on $id later."),
+                    listing(feed, id, tomorrow + 9 * HOUR..tomorrow + 10 * HOUR, "Morning on $id"),
+                    listing(feed, id, tomorrow + 20 * HOUR..tomorrow + 21 * HOUR, "Evening on $id"),
+                    listing(feed, id, tomorrow + DAY + 9 * HOUR..tomorrow + DAY + 10 * HOUR, "Day after on $id"),
                 )
-            },
+            } + extra(feed),
         )
     }
 
@@ -428,12 +400,59 @@ class LiveBrowseTest {
         onTomorrowsLastProgramme()
 
         press(Key.DirectionRight)
+
+        assertOnTheDayAftersFirstProgramme()
+        captureScreen("live_next_day")
+    }
+
+    @Test
+    fun `two quick Rights past a row's last programme move one day, the channel highlighted while it loads`() {
+        onTomorrowsLastProgramme()
+
+        // Both straight into the window, with nothing composed in between.
+        compose.runOnIdle { repeat(2) { view.press(KeyEvent.KEYCODE_DPAD_RIGHT) } }
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeByFrame()
+        channelCell("Channel One").assertIsFocused()
+        captureScreen("guide_next_day_loading")
+        compose.mainClock.autoAdvance = true
+
+        assertOnTheDayAftersFirstProgramme()
+    }
+
+    @Test
+    fun `holding Right from a row's last programme moves one day, and stops at that day's end`() {
+        onTomorrowsLastProgramme()
+
+        // The key going down and the remote repeating it, with nothing composed in between.
+        compose.runOnIdle {
+            view.press(KeyEvent.KEYCODE_DPAD_RIGHT, release = false).press(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 1)
+        }
+        assertOnTheDayAftersFirstProgramme()
+
+        compose.runOnIdle { view.press(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 1) }
+        assertOnTheDayAftersFirstProgramme()
+    }
+
+    @Test
+    fun `Left back to now before the next day lands leaves the Highlight on the channel, and Right pages again`() {
+        onTomorrowsLastProgramme()
+
+        compose.runOnIdle { view.press(KeyEvent.KEYCODE_DPAD_RIGHT).press(KeyEvent.KEYCODE_DPAD_LEFT) }
+        compose.onAllNodes(programme("Now on 1")).onFirst().assertExists()
+        compose.waitForIdle()
+        channelCell("Channel One").assertIsFocused()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+
+        press(Key.DirectionRight, times = 3)
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(1)
+    }
+
+    private fun assertOnTheDayAftersFirstProgramme() {
         compose.onAllNodes(programme("Day after on 1")).onFirst().assertExists()
         compose.waitForIdle()
-
         programmeCell("Day after on 1").assertIsFocused()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(2)
-        captureScreen("live_next_day")
     }
 
     @Test
@@ -449,6 +468,29 @@ class LiveBrowseTest {
 
         programmeCell("Evening on 1").assertIsFocused()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(1)
+    }
+
+    @Test
+    fun `two days on from the Saturday the clocks go back, the guide shows Monday from midnight, labelled Monday`() {
+        zone.value = ZoneId.of("Europe/London")
+        fun local(at: String) = LocalDateTime.parse(at).atZone(zone.value).toInstant().toEpochMilli()
+        now = local("2025-10-25T12:00")
+        library { feed ->
+            listOf(
+                listing(feed, 1, local("2025-10-26T23:00")..local("2025-10-27T00:00"), "Sunday's last on 1"),
+                listing(feed, 1, local("2025-10-27T00:00")..local("2025-10-27T01:00"), "Monday's first on 1"),
+            )
+        }
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+
+        viewModel.nudgeGuideDay(2)
+
+        compose.onAllNodes(programme("Monday's first on 1")).onFirst().assertExists()
+        compose.onAllNodes(hasText("Mon 27 Oct")).onFirst().assertExists()
+        compose.onAllNodes(programme("Sunday's last on 1")).assertCountEquals(0)
+        captureScreen("guide_later_day_clock_change")
     }
 
     @Test
@@ -680,20 +722,12 @@ class LiveBrowseTest {
         )
         graph.catalogRepository.renormalizeAll()
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
-        fun programme(id: Long, start: Long, end: Long, title: String, description: String) = Programme(
-            feedId = feed,
-            epgChannelId = "epg$id",
-            startUtcMillis = start,
-            endUtcMillis = end,
-            title = title,
-            description = description,
-        )
         db.programmes().insertOrReplace(
             listOf(
-                programme(1, now - HOUR, now + 10 * MINUTE, "Short news", "The short news."),
-                programme(1, now + 10 * MINUTE, now + 2 * HOUR, "Afternoon film", "The afternoon film."),
-                programme(2, now - HOUR, now + 10 * MINUTE, "Quiz", "The quiz."),
-                programme(2, now + HOUR, now + 2 * HOUR, "Drama", "The drama."),
+                listing(feed, 1, now - HOUR..now + 10 * MINUTE, "Short news", "The short news."),
+                listing(feed, 1, now + 10 * MINUTE..now + 2 * HOUR, "Afternoon film", "The afternoon film."),
+                listing(feed, 2, now - HOUR..now + 10 * MINUTE, "Quiz", "The quiz."),
+                listing(feed, 2, now + HOUR..now + 2 * HOUR, "Drama", "The drama."),
             ),
         )
     }
@@ -772,3 +806,24 @@ class LiveBrowseTest {
         const val BAND_SETTLE_MILLIS = 200L
     }
 }
+
+/**
+ * [keyCode] on the remote, through the window, and on to the next. A [repeatCount] above 0 is the key
+ * held, and sends no key up; so does [release] false, the first key down of a hold.
+ */
+private fun View.press(keyCode: Int, repeatCount: Int = 0, release: Boolean = repeatCount == 0): View {
+    val at = android.os.SystemClock.uptimeMillis()
+    dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_DOWN, keyCode, repeatCount))
+    if (release) dispatchKeyEvent(KeyEvent(at, at, KeyEvent.ACTION_UP, keyCode, 0))
+    return this
+}
+
+/** A programme on channel [id]'s guide, as the library's channels name their guides, from [airs]' start to end. */
+private fun listing(feed: Long, id: Long, airs: LongRange, title: String, description: String? = null) = Programme(
+    feedId = feed,
+    epgChannelId = "epg$id",
+    startUtcMillis = airs.first,
+    endUtcMillis = airs.last,
+    title = title,
+    description = description,
+)
