@@ -8,13 +8,16 @@ package app.opentv.core
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The only place a UTC epoch millis becomes the viewer's local day or clock time. Everything is
  * stored in UTC; the zone is passed in (the graph's [ServiceLocator.Graph.zone]), never read from the
- * JVM's default here, so it follows the device when it changes and a test can name its own.
+ * JVM's default here, so it follows the device when it changes and a test can name its own. The locale
+ * defaults to the JVM's; wording that follows the app's own language passes that instead.
  */
 object ViewerTime {
 
@@ -23,7 +26,8 @@ object ViewerTime {
 
     /**
      * The guide's day [dayOffset] days from [nowUtcMillis]'s: today from the current half hour, so
-     * live is on screen; a later day from its local midnight. Each ends at the next calendar day's
+     * live is on screen (the local half hour, which in a zone 45 minutes off UTC, such as Kathmandu's,
+     * isn't UTC's); a later day from its local midnight. Each ends at the next calendar day's
      * local midnight, stepped as dates rather than 24 hours, which a day the clocks change isn't.
      */
     fun guideWindow(nowUtcMillis: Long, dayOffset: Int, zone: ZoneId): Window {
@@ -38,17 +42,35 @@ object ViewerTime {
         return Window(start.toInstant().toEpochMilli(), end.toInstant().toEpochMilli())
     }
 
-    // Built on each call rather than held: a formatter fixes its zone and locale when it's made, so
-    // one captured at the top of a file goes on drawing the old zone after the device's changes.
-
     /** [utcMillis] as a clock time in [zone], such as `21:30`. */
-    fun clockTime(utcMillis: Long, zone: ZoneId): String = format("HH:mm", utcMillis, zone)
+    fun clockTime(utcMillis: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+        format(utcMillis, zone, locale, "HH:mm") { DateTimeFormatter.ofPattern(it, locale) }
 
     /** [utcMillis]'s day in [zone], such as `Sat 4 Jul`. */
-    fun dayLabel(utcMillis: Long, zone: ZoneId): String = format("EEE d MMM", utcMillis, zone)
+    fun dayLabel(utcMillis: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+        format(utcMillis, zone, locale, "EEE d MMM") { DateTimeFormatter.ofPattern(it, locale) }
 
-    private fun format(pattern: String, utcMillis: Long, zone: ZoneId): String =
-        DateTimeFormatter.ofPattern(pattern, Locale.getDefault()).format(Instant.ofEpochMilli(utcMillis).atZone(zone))
+    /** [utcMillis] as [locale] writes a short clock time, `21:30` or `9:30 PM`, in [zone]. */
+    fun localTime(utcMillis: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+        format(utcMillis, zone, locale, "time:SHORT") { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
+
+    /** [utcMillis]'s date as [locale] writes it, such as `4 Jul 2026`, in [zone]. */
+    fun localDate(utcMillis: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+        format(utcMillis, zone, locale, "date:MEDIUM") { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
+
+    // A formatter holds a pattern and a locale but no zone (the zone is the instant's, given on each
+    // call), so one per pattern and locale serves every zone. Kept rather than built per call because
+    // the guide's cells ask on every recomposition.
+    private val formatters = ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
+
+    private fun format(
+        utcMillis: Long,
+        zone: ZoneId,
+        locale: Locale,
+        pattern: String,
+        build: (String) -> DateTimeFormatter,
+    ): String = formatters.getOrPut(pattern to locale) { build(pattern).withLocale(locale) }
+        .format(Instant.ofEpochMilli(utcMillis).atZone(zone))
 
     private const val HALF_HOUR_MINUTES = 30
 }

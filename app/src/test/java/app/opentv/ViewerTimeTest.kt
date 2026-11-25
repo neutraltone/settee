@@ -9,6 +9,7 @@ import app.opentv.core.ViewerTime
 import com.google.common.truth.Truth.assertThat
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import org.junit.Test
 
 /** The viewer's local day and clock time, worked out in a zone the test names, never the JVM's. */
@@ -40,6 +41,16 @@ class ViewerTimeTest {
         assertThat(window.startUtcMillis).isEqualTo(at(london, "2026-03-29T00:00"))
         assertThat(window.endUtcMillis).isEqualTo(at(london, "2026-03-30T00:00"))
         assertThat(window.endUtcMillis - window.startUtcMillis).isEqualTo(23 * 60 * 60 * 1000L)
+    }
+
+    @Test
+    fun `a localised time and date are in the locale given, and the zone`() {
+        val instant = at(london, "2026-07-04T21:30")
+
+        assertThat(ViewerTime.localTime(instant, london, Locale.UK)).isEqualTo("21:30")
+        assertThat(ViewerTime.localTime(instant, ZoneId.of("Asia/Tokyo"), Locale.UK)).isEqualTo("05:30")
+        assertThat(ViewerTime.localDate(instant, london, Locale.UK)).isEqualTo("4 Jul 2026")
+        assertThat(ViewerTime.localDate(instant, ZoneId.of("Asia/Tokyo"), Locale.UK)).isEqualTo("5 Jul 2026")
     }
 
     @Test
