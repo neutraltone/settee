@@ -69,7 +69,8 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     suspend fun apply(vararg bundles: SyncBundle): MergeResult {
         val waiting = mutableListOf<SyncPosition>()
         val merged = bundles.fold(MergeResult()) { merged, bundle -> merged + applyOne(bundle, waiting) }
-        graph.waitingProgress.fetchFor(waiting)
+        // Favourites are placed already; a title kept from an add-on may still need keeping here.
+        graph.waitingProgress.fetchFor(waiting, bundles.flatMap { it.favourites })
         return merged
     }
 

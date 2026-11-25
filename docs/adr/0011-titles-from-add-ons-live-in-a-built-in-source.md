@@ -14,3 +14,4 @@ The name is fixed and never translated, since sync matches a title by its source
 - A Provider already named "Add-ons" before this change shares the name with the Add-ons source, and sync can't tell their titles apart. A Provider saved from now on with that name gets a number added, as any taken name does.
 - An older build reads the `ADDONS` kind as an M3U playlist with no address.
 - Shows are kept the same way (#672): a series row keyed by IMDb id, whose episodes TMDB lists as it's opened, each keyed by the IMDb id plus season and episode (`tt…:1:3`), stored as a Provider's are, so progress, Up Next and Continue Watching work unchanged. Their episodes have no stream URL either, and OK on one opens the add-on picker.
+- Sync needs no new keys (#673): a title travels as `Add-ons` plus its IMDb id. A device that never kept it keeps it from TMDB by that id in the background, with or without add-ons of its own, then places its progress and Favourite.

@@ -91,6 +91,8 @@ data class TmdbEpisode(
  * detail back-fill) is already inside `withContext(Dispatchers.IO)`, matching how the Xtream client
  * is used, so there is no value in another coroutine hop here.
  */
+// One method per thing Settee asks TMDB, each reading its own reply: split up, they'd only be scattered.
+@Suppress("TooManyFunctions")
 class TmdbClient(
     private val http: OkHttpClient,
     /** The built-in TMDB Key; blank in a build that has none. */
@@ -164,6 +166,26 @@ class TmdbClient(
         results.orEmpty().mapNotNull { result ->
             (result as? JsonObject)?.let { hitOf(it)?.withArt(IMG_POSTER, IMG_BACKDROP) }
         }
+    }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+
+    /**
+     * The film (or, when not [isMovie], the show) TMDB knows by the IMDb id [imdbId], for a title kept
+     * from an add-on on another device, which arrives by sync as no more than that id. Null with no key or
+     * no match; a failure when TMDB didn't answer.
+     */
+    fun titleByImdbId(imdbId: String, isMovie: Boolean): Result<TmdbHit?> = runCatching {
+        val key = credential ?: return@runCatching null
+        val url = TMDB_BASE.newBuilder()
+            .addPathSegment("find")
+            .addPathSegment(imdbId)
+            .addQueryParameter("external_source", "imdb_id")
+            .build()
+        val found = fetch(url, key, Operation.DETAILS)?.jsonObject
+            ?.get(if (isMovie) "movie_results" else "tv_results") as? JsonArray
+        // A look-up's results don't always say what they are, which hitOf goes by: it's whichever was asked.
+        val mediaType = JsonPrimitive(if (isMovie) "movie" else "tv")
+        (found?.firstOrNull() as? JsonObject)
+            ?.let { hitOf(JsonObject(it + ("media_type" to mediaType)))?.withArt(IMG_POSTER, IMG_BACKDROP) }
     }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
 
     /**

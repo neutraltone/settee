@@ -14,10 +14,11 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.SeriesDismissal
+import app.opentv.data.model.Source
 import app.opentv.sync.SyncDismissal
 import app.opentv.sync.SyncPosition
 
-/** What [SyncedProgress.import] did: [taken] positions merged, [waiting] for their episodes to be fetched. */
+/** What [SyncedProgress.import] did: [taken] positions merged, [waiting] for their titles to be fetched. */
 data class ProgressImport(val taken: Int, val waiting: List<SyncPosition>)
 
 /**
@@ -43,9 +44,9 @@ class SyncedProgress internal constructor(
 
     /**
      * Merges progress from another device, newest wins, each placed by [arrival]. An episode this
-     * device hasn't fetched comes back in [ProgressImport.waiting], labelled with the Profile's name
-     * and the provider's name here now; anything else it can't place is dropped, as is a position with
-     * a mark this version doesn't know.
+     * device hasn't fetched, or a film kept from an add-on that it hasn't kept, comes back in
+     * [ProgressImport.waiting], labelled with the Profile's name and the provider's name here now;
+     * anything else it can't place is dropped, as is a position with a mark this version doesn't know.
      */
     suspend fun import(items: List<SyncPosition>, arrival: SyncArrival = SyncArrival.NONE): ProgressImport {
         val names = profiles.directory()
@@ -60,10 +61,14 @@ class SyncedProgress internal constructor(
             val item = arrived.copy(profile = profile, updatedAtMillis = updatedAt)
             val profileId = names.id(profile)
             val sourceId = sourceIds.id(item.source)
-            if (profileId == null || sourceId == null) continue
-            val key = localKey(item, sourceId)
+            // A title kept from an add-on is kept here too, from its IMDb id, even before this device
+            // has an Add-ons source of its own (ADR 0011).
+            val fromAddons = SourceDirectory.sameName(item.source, Source.ADDONS_NAME)
+            if (profileId == null || (sourceId == null && !fromAddons)) continue
+            val key = sourceId?.let { localKey(item, it) }
             when {
                 key != null -> placed += item.toPosition(profileId, key)
+                fromAddons && item.kind == MediaKey.MOVIE -> waiting += item.copy(source = Source.ADDONS_NAME)
                 item.kind == MediaKey.EPISODE && item.seriesId != null ->
                     waiting += item.copy(source = sourceIds.currentName(item.source))
             }
