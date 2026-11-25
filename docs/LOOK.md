@@ -196,7 +196,7 @@ Every question, choice and notice opens in a Side Panel: down the right of the s
 
 - **Slides in** from the right edge (the left in right-to-left languages) by its own width, in 200 ms on Slide in, never faded. The Highlight is on it from its first frame, so presses act during the slide, and new content in an open panel doesn't slide it again. The player's choice panels (Subtitles, Audio, Quality, Aspect ratio) do the same.
 - **Closes at once.** Back takes it away in one frame, with no slide out, so nothing stands between Back and the screen under it.
-- **Not yet frame-timed on the Stick.** If any frame of the slide misses, the slide goes (the panel slide set to 0 ms), rather than getting slower. With the system's animations removed the panel just appears.
+- **On the Stick** it drops no frames: a Settings panel and Subtitles over live TV each drew all 12 slide frames one refresh apart, after the two frames that build the panel, and it looks smooth. Over live TV each frame often took about 22 ms to draw, which doesn't drop one (see [Motion and cost](#motion-and-cost)). If a later change makes it drop frames, the slide goes (the panel slide set to 0 ms), rather than getting slower. With the system's animations removed the panel just appears.
 - **Choices** are the panel's rows. A list of options starts on its first row, or on the ticked one when it picks a setting.
 - **Prompts** that need explaining have a title, then a short body paragraph, then their choices as rows.
 - **Confirmations start on the safe choice,** such as Stay or Keep recording, and Back takes it too, so a stray OK changes nothing.
