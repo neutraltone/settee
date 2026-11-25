@@ -57,7 +57,7 @@ class SyncedProgress internal constructor(
         val waiting = mutableListOf<SyncPosition>()
         for (arrived in items) {
             val item = arrived.copy(updatedAtMillis = ceiling.clamp(arrived.updatedAtMillis))
-            val profile = history.currentName(item.profile, item.updatedAtMillis)
+            val profile = history.currentName(item.profile, arrived.updatedAtMillis)
             val profileId = names.id(profile)
             val sourceId = sourceIds.id(item.source)
             if (profileId == null || sourceId == null) continue
@@ -146,7 +146,8 @@ class SyncedDismissals internal constructor(
         val sourceIds = sources.directory()
         val placed = items.mapNotNull { item ->
             val dismissedAt = ceiling.clamp(item.dismissedAtMillis)
-            val profileId = names.id(history.currentName(item.profile, dismissedAt)) ?: return@mapNotNull null
+            val profileId =
+                names.id(history.currentName(item.profile, item.dismissedAtMillis)) ?: return@mapNotNull null
             val sourceId = sourceIds.id(item.source) ?: return@mapNotNull null
             SeriesDismissal(
                 profileId = profileId,

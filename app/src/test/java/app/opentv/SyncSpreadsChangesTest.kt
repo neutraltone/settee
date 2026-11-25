@@ -276,6 +276,8 @@ class SyncSpreadsChangesTest {
         deviceB.now = 3_000
         deviceB.favourite("Tom", 1)
         deviceB.sync.apply(unstarred)
+        // Not still 2 000: A's clock reading earlier than B's change would cap it there (#341).
+        deviceA.now = 4_000
         deviceA.sync.apply(deviceA.sync.decode(deviceB.sync.encode(deviceB.sync.gather())))
 
         assertThat(deviceB.favouriteNames("Tom")).contains("Movie 1")

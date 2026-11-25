@@ -164,7 +164,7 @@ class ProfileSettings(
         val names = profiles.directory()
         val placed = items.mapNotNull { item ->
             val updatedAt = ceiling.clamp(item.updatedAtMillis)
-            names.id(history.currentName(item.profile, updatedAt))?.let {
+            names.id(history.currentName(item.profile, item.updatedAtMillis))?.let {
                 ProfileSetting(it, item.name, item.value, updatedAt)
             }
         }
