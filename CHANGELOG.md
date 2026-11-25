@@ -2,6 +2,46 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.7.0](https://github.com/neutraltone/settee/compare/v1.6.0...v1.7.0) (2026-11-25)
+
+
+### Features
+
+* **#454:** side panels slide in from the edge of the screen ([#653](https://github.com/neutraltone/settee/issues/653)) ([901b662](https://github.com/neutraltone/settee/commit/901b662c462b41bed6a9bc785cfb5961135c6f04))
+* **#456:** "You're all set." rises in when setup finishes ([#654](https://github.com/neutraltone/settee/issues/654)) ([1b1e6a1](https://github.com/neutraltone/settee/commit/1b1e6a1dda5ce1b647fa3259d60fdf48a29091a5))
+* **#457:** "Are you still watching?" fades the picture down instead of cutting to dark ([#655](https://github.com/neutraltone/settee/issues/655)) ([0b880be](https://github.com/neutraltone/settee/commit/0b880be7ffce900a7c06f08c50b055df00ef1a17))
+
+
+### Bug fixes
+
+* **#337:** removing a provider also removes its watch progress ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#338:** a Parental Lock stays on across your TVs and after updates, even for a category with no name ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#340:** Watched and Unwatched marks from a newer TV survive passing through an older one ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#341:** a TV whose clock is set ahead no longer overrides changes made on your other TVs ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#361:** films with a year in their name, like Blade Runner 2049 or 1917, get their own poster and plot ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#362:** playlist channels with a comma in their name show the whole name ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#363:** films starting with It, No, In or Id keep their first word and get the right poster ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#373:** sharing to another TV runs its full five minutes after you restart it ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#375:** around a clock change, the guide's later days start at midnight and are labelled with the right day ([45626b2](https://github.com/neutraltone/settee/commit/45626b25ba0626460b75b35eda23dca292a73d9a))
+* **#377:** programme times follow the device's new time zone straight away, without restarting ([45626b2](https://github.com/neutraltone/settee/commit/45626b25ba0626460b75b35eda23dca292a73d9a))
+* **#448:** pressing Right past the day's last programme moves one day, and the highlight stays on the channel while it loads ([45626b2](https://github.com/neutraltone/settee/commit/45626b25ba0626460b75b35eda23dca292a73d9a))
+* **#500:** playlist channels that share a guide id all show up, not just the first ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#504:** a stray space, a capital or a rename no longer stops a provider's Favourites and progress syncing ([9fc4a40](https://github.com/neutraltone/settee/commit/9fc4a4019ce176aa0bc233c437fc9e7ce0a49d67))
+* **#505:** a playlist saved with a byte-order mark or listing several guides keeps its guide ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#507:** longer translations and names fit the player's buttons, the Next Episode card and Settings rows ([d053161](https://github.com/neutraltone/settee/commit/d0531612a9e78ec60d6ffd71415aa5ba490f4665))
+* **#509:** times follow your 12- or 24-hour clock and dates read in your language's order, straight after changing language ([d053161](https://github.com/neutraltone/settee/commit/d0531612a9e78ec60d6ffd71415aa5ba490f4665))
+* **#510:** a profile name starting with an emoji shows the whole emoji as its initial, and Turkish names capitalise correctly ([d053161](https://github.com/neutraltone/settee/commit/d0531612a9e78ec60d6ffd71415aa5ba490f4665))
+* **#511:** Cyrillic and Greek titles are drawn in one typeface on an English interface ([d053161](https://github.com/neutraltone/settee/commit/d0531612a9e78ec60d6ffd71415aa5ba490f4665))
+* **#639:** the highlight stays where you'd expect when something on screen changes ([#650](https://github.com/neutraltone/settee/issues/650)) ([3413392](https://github.com/neutraltone/settee/commit/341339242c7cb9a6539fb4612c0c7586d27ceaed))
+* **#642:** errors say what actually went wrong, and what to do next ([#657](https://github.com/neutraltone/settee/issues/657)) ([cb2fecd](https://github.com/neutraltone/settee/commit/cb2fecd9b8b951cfcf8c413756fd08de7da5b28d))
+* **#642:** errors say what actually went wrong, and what to do next ([#657](https://github.com/neutraltone/settee/issues/657)) ([7df48f3](https://github.com/neutraltone/settee/commit/7df48f3d471320efbdf7f8af48a94b7c11083233))
+
+
+### Performance
+
+* **#367:** scrolling quickly along film rows no longer starts look-ups that get thrown away ([46e5bae](https://github.com/neutraltone/settee/commit/46e5bae6f616e06de1f80676c72005b0b1e589e6))
+* **#374:** coming back to Live TV builds the guide once, not twice, so it doesn't stutter ([45626b2](https://github.com/neutraltone/settee/commit/45626b25ba0626460b75b35eda23dca292a73d9a))
+
 ## [1.6.0](https://github.com/neutraltone/settee/compare/v1.5.0...v1.6.0) (2026-11-24)
 
 
