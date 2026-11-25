@@ -27,13 +27,14 @@ class PanelSlide internal constructor(
 /**
  * Runs a panel's slide once, from when it's first drawn, so new content in an open panel doesn't
  * slide it again. It needs no check of the system's animation scale: Compose scales the time by it,
- * so with animations removed the panel is simply in place.
+ * so with animations removed the panel is simply in place. Apart from [slidesInFromEnd] because the
+ * progress has to be remembered, and Compose discourages modifier factories that are @Composable.
  */
 @Composable
 fun rememberPanelSlide(): PanelSlide {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        progress.animateTo(1f, tween(SetteeMotion.PANEL_SLIDE_MILLIS, easing = SetteeMotion.EaseDrawer))
+        progress.animateTo(1f, tween(SetteeMotion.PANEL_SLIDE_MILLIS, easing = SetteeMotion.SlideIn))
     }
     return PanelSlide(progress, LocalLayoutDirection.current == LayoutDirection.Rtl)
 }
@@ -42,7 +43,8 @@ fun rememberPanelSlide(): PanelSlide {
  * Moves the panel in by its own width. Moved, never faded: a see-through panel would show the screen
  * under it, which LOOK.md rules out, and would cost an offscreen layer on a Stick. Moved while
  * drawing, so the rows aren't measured again every frame. Nothing waits for it: the Highlight and
- * presses act on the rows while they move.
+ * presses act on the rows while they move. Takes a [PanelSlide] rather than remembering its own,
+ * since a modifier factory shouldn't be @Composable.
  */
 fun Modifier.slidesInFromEnd(slide: PanelSlide): Modifier = graphicsLayer {
     val towardsEnd = if (slide.rightToLeft) -1f else 1f

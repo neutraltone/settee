@@ -9,7 +9,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -111,12 +110,8 @@ class PlayerChoicePanelTest {
                 }
             }
         }
-        compose.waitForIdle()
-        compose.mainClock.autoAdvance = false
-        open = true
-        // The clock is held, so nothing else tells Compose the state changed.
-        Snapshot.sendApplyNotifications()
-        compose.mainClock.advanceTimeByFrame()
+        compose.holdClock()
+        compose.changeWithClockHeld { open = true }
         compose.mainClock.advanceTimeByFrame()
         val early = compose.onNodeWithText("English").getUnclippedBoundsInRoot().left
         compose.mainClock.advanceTimeBy(1_000)

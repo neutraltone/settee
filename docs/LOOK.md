@@ -121,7 +121,7 @@ Watched episodes step back by colour, never alpha. On-video colours for the play
 | Role | Value | Notes |
 |---|---|---|
 | Arrive | `CubicBezierEasing(0.23, 1, 0.32, 1)` | For something coming into view: fast at first, settling gently, so it's nearly in place by the time the eye gets there. Compose's own ease-out starts too slowly to feel like a response. |
-| Ease drawer | `CubicBezierEasing(0.32, 0.72, 0, 1)` | For a panel coming in from an edge, as a drawer does: fast off the mark, settling gently. |
+| Slide in | `CubicBezierEasing(0.32, 0.72, 0, 1)` | For a panel sliding in from an edge by its own width: fast off the mark, settling gently. Not Arrive, which over a 400 dp panel covers a third of the width in the first frame and reads as a jump. |
 | Panel slide | 200 ms | How long a Side Panel takes to come in. |
 
 Anything that uses a curve still has to pass [Motion and cost](#motion-and-cost) on the Stick.
@@ -194,9 +194,9 @@ On Live TV, Movies and Shows. Tucked away until Left from the leftmost item open
 
 Every question, choice and notice opens in a Side Panel: down the right of the screen, 400 dp wide, solid Surface over what's there, with nothing dimmed behind it. Back closes it. There are no dialogs in the middle of the screen.
 
-- **Slides in** from the right edge (the left in right-to-left languages) by its own width, in 200 ms on Ease drawer, never faded. The Highlight is on it from its first frame, so presses act during the slide, and new content in an open panel doesn't slide it again. With the system's animations removed it just appears. The player's choice panels (Subtitles, Audio, Quality, Aspect ratio) do the same.
+- **Slides in** from the right edge (the left in right-to-left languages) by its own width, in 200 ms on Slide in, never faded. The Highlight is on it from its first frame, so presses act during the slide, and new content in an open panel doesn't slide it again. The player's choice panels (Subtitles, Audio, Quality, Aspect ratio) do the same.
 - **Closes at once.** Back takes it away in one frame, with no slide out, so nothing stands between Back and the screen under it.
-- **Still to measure on the Stick:** a Settings panel, a confirmation and Subtitles over live TV, against [Motion and cost](#motion-and-cost). If any frame misses, the slide is turned off (the panel slide set to 0 ms), never slowed down.
+- **Not yet frame-timed on the Stick.** If any frame of the slide misses, the slide goes (the panel slide set to 0 ms), rather than getting slower. With the system's animations removed the panel just appears.
 - **Choices** are the panel's rows. A list of options starts on its first row, or on the ticked one when it picks a setting.
 - **Prompts** that need explaining have a title, then a short body paragraph, then their choices as rows.
 - **Confirmations start on the safe choice,** such as Stay or Keep recording, and Back takes it too, so a stray OK changes nothing.

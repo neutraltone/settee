@@ -8,7 +8,6 @@ package app.opentv
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -43,16 +42,10 @@ class SidePanelAnimationsOffTest {
         compose.setTvContent {
             if (open) SidePanel(onBack = { open = false }) { PanelRow("Subtitles", onClick = {}) }
         }
-        compose.waitForIdle()
-        compose.mainClock.autoAdvance = false
+        compose.holdClock()
 
-        open = true
-        // The clock is held, so nothing else tells Compose the state changed.
-        Snapshot.sendApplyNotifications()
-        compose.mainClock.advanceTimeByFrame()
-        // The panel's window is attached by the main looper, which a held clock doesn't run.
-        compose.waitForIdle()
-        repeat(3) { compose.mainClock.advanceTimeByFrame() }
+        compose.changeWithClockHeld { open = true }
+        compose.attachNewWindow()
         val early = compose.onNodeWithText("Subtitles").getUnclippedBoundsInRoot().left
         compose.mainClock.advanceTimeBy(1_000)
 

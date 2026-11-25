@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
@@ -96,9 +95,7 @@ class SidePanelSlideTest {
         compose.mainClock.advanceTimeBy(1_000)
         val settled = compose.rowLeft()
 
-        rows = listOf("Subtitles", "Audio", "Quality")
-        Snapshot.sendApplyNotifications()
-        compose.mainClock.advanceTimeByFrame()
+        compose.changeWithClockHeld { rows = listOf("Subtitles", "Audio", "Quality") }
         compose.mainClock.advanceTimeByFrame()
 
         compose.onNodeWithText("Quality").assertExists()
@@ -107,8 +104,7 @@ class SidePanelSlideTest {
 
     private fun ComposeContentTestRule.panel(content: @Composable () -> Unit = { rowsPanel() }) {
         setTvContent { if (open) content() }
-        waitForIdle()
-        mainClock.autoAdvance = false
+        holdClock()
     }
 
     @Composable
@@ -118,13 +114,8 @@ class SidePanelSlideTest {
 
     /** Opens the panel and draws its first frames, where the Highlight is placed, with the clock held there. */
     private fun ComposeContentTestRule.open() {
-        open = true
-        // The clock is held, so nothing else tells Compose the state changed.
-        Snapshot.sendApplyNotifications()
-        mainClock.advanceTimeByFrame()
-        // The panel's window is attached by the main looper, which a held clock doesn't run.
-        waitForIdle()
-        repeat(3) { mainClock.advanceTimeByFrame() }
+        changeWithClockHeld { open = true }
+        attachNewWindow()
     }
 
     /** Checks the panel hadn't come to rest yet, by letting it. */
@@ -136,12 +127,12 @@ class SidePanelSlideTest {
 
     private fun ComposeContentTestRule.pressMidSlide(keyCode: Int) {
         val panel = checkNotNull(ShadowDialog.getLatestDialog()) { "No Side Panel is open" }
-        runOnUiThread {
-            panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-            panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        changeWithClockHeld {
+            runOnUiThread {
+                panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+                panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+            }
         }
-        Snapshot.sendApplyNotifications()
-        mainClock.advanceTimeByFrame()
     }
 }
 
