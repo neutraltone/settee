@@ -29,7 +29,6 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
-import app.opentv.data.model.StreamLink
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
@@ -1099,9 +1098,10 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     private fun AddonStreamResults.toSearch() = AddonSearch.Results(
-        // Torrents are read but not offered yet: nothing here plays them so far.
-        streams = streams.filter { it.stream.link is StreamLink.Direct },
+        streams = streams,
         finished = finished,
+        // Read as each answer lands rather than watched: the switch can't change under an open picker.
+        torrentsOn = settings.torrentsEnabled.value,
         failure = outcomes.firstNotNullOfOrNull { (it as? AddonOutcome.Unreachable)?.failure }
             ?.let(graph.errorWording::ofAddon),
     )

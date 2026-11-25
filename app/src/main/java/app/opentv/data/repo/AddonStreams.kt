@@ -32,6 +32,8 @@ data class RankedStream(
     val sizeBytes: Long?,
     /** False when its Quality is bigger than this device's decoders take. */
     val playable: Boolean,
+    /** How many people are sharing a torrent, as its add-on wrote it, or null when it didn't say. */
+    val sharers: Int? = null,
 )
 
 /** How asking one add-on went. */
@@ -112,6 +114,7 @@ class AddonStreams(
             qualityLabel = QUALITY_LABELS[rank].orEmpty(),
             sizeBytes = videoSize ?: sizeIn(title) ?: name?.let(::sizeIn),
             playable = decoders.playsQualityRanked(rank),
+            sharers = if (link is StreamLink.Torrent) sharersIn("$title ${name.orEmpty()}") else null,
         )
     }
 
@@ -129,13 +132,18 @@ class AddonStreams(
 
         val WORD = Regex("[\\p{L}\\p{N}]+")
         val SIZE = Regex("(\\d+(?:[.,]\\d+)?)\\s*(TB|GB|MB|TiB|GiB|MiB)\\b", RegexOption.IGNORE_CASE)
+
+        // Add-ons have no field for it, so they write it in their text: `👤 45`, or `Seeders: 45`.
+        val SHARERS = Regex("(?:\uD83D\uDC64|\\bseed(?:er)?s?\\b)\\s*:?\\s*(\\d+)", RegexOption.IGNORE_CASE)
         val UNITS = mapOf("tb" to (1L shl 40), "gb" to (1L shl 30), "mb" to (1L shl 20))
 
         // A Quality too big for this device last, whatever it is; then links before torrents, which
-        // need far more before they play; then the biggest Quality that plays.
+        // need far more before they play; then the biggest Quality that plays; then, among torrents,
+        // the one more people share, which starts sooner.
         val BEST_FIRST = compareByDescending<RankedStream> { it.playable }
             .thenBy { it.stream.link is StreamLink.Torrent }
             .thenByDescending { it.qualityRank }
+            .thenByDescending { it.sharers ?: 0 }
 
         /**
          * An add-on that says what it serves is asked only for that. One stored before Settee read
@@ -150,6 +158,9 @@ class AddonStreams(
             val unit = UNITS[match.groupValues[2].lowercase().replace("i", "")]
             if (number != null && unit != null) (number * unit).toLong() else null
         }
+
+        /** How many people [text] says are sharing a torrent. */
+        fun sharersIn(text: String): Int? = SHARERS.find(text)?.groupValues?.get(1)?.toIntOrNull()
 
         /** What makes two streams the same one, whichever add-on sent it. */
         fun StreamLink.identity(): String = when (this) {

@@ -407,4 +407,6 @@
     <string name="report_question_send">Отправить</string>
     <string name="report_question_dont_send">Не отправлять</string>
     <string name="report_question_always_send">Всегда отправлять</string>
+    <string name="error_torrents_off">Торренты выключены. Включите их в Настройки, Дополнения, чтобы воспроизвести.</string>
+    <string name="error_torrents_not_yet">Торренты здесь пока не воспроизводятся. Выберите поток, который не является торрентом.</string>
 </resources>

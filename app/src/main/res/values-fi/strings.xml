@@ -405,4 +405,6 @@
     <string name="report_question_send">Lähetä</string>
     <string name="report_question_dont_send">Älä lähetä</string>
     <string name="report_question_always_send">Lähetä aina</string>
+    <string name="error_torrents_off">Torrentit ovat pois päältä. Laita ne päälle kohdassa Asetukset, Lisäosat, niin voit toistaa nämä.</string>
+    <string name="error_torrents_not_yet">Torrentteja ei voi vielä toistaa täällä. Valitse virta, joka ei ole torrent.</string>
 </resources>

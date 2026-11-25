@@ -406,4 +406,6 @@
     <string name="report_question_send">Invia</string>
     <string name="report_question_dont_send">Non inviare</string>
     <string name="report_question_always_send">Invia sempre</string>
+    <string name="error_torrents_off">I torrent sono disattivati. Attivali in Impostazioni, Componenti aggiuntivi, per riprodurli.</string>
+    <string name="error_torrents_not_yet">I torrent non si possono ancora riprodurre qui. Scegli uno stream che non sia un torrent.</string>
 </resources>

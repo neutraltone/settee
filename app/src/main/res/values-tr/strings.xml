@@ -405,4 +405,6 @@
     <string name="report_question_send">Gönder</string>
     <string name="report_question_dont_send">Gönderme</string>
     <string name="report_question_always_send">Her zaman gönder</string>
+    <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
+    <string name="error_torrents_not_yet">Torrentler burada henüz oynatılamıyor. Torrent olmayan bir yayın seçin.</string>
 </resources>

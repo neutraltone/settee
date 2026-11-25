@@ -49,6 +49,11 @@ class AddonsViewModel @JvmOverloads constructor(
         }
     }
 
+    /** Whether add-ons' torrent results may play, for the whole box. */
+    val torrentsEnabled: StateFlow<Boolean> = graph.settings.torrentsEnabled
+
+    fun setTorrentsEnabled(enabled: Boolean) = graph.settings.setTorrentsEnabled(enabled)
+
     fun remove(addon: StremioAddon) = graph.settings.removeStremioAddon(addon.manifestUrl)
 
     fun clearStatus() {

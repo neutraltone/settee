@@ -405,4 +405,6 @@
     <string name="report_question_send">Изпрати</string>
     <string name="report_question_dont_send">Не изпращай</string>
     <string name="report_question_always_send">Винаги изпращай</string>
+    <string name="error_torrents_off">Торентите са изключени. Включете ги от Настройки, Добавки, за да пуснете тези.</string>
+    <string name="error_torrents_not_yet">Торентите още не могат да се пускат тук. Изберете поток, който не е торент.</string>
 </resources>

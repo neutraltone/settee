@@ -409,4 +409,6 @@
     <string name="report_question_send">إرسال</string>
     <string name="report_question_dont_send">عدم الإرسال</string>
     <string name="report_question_always_send">الإرسال دائمًا</string>
+    <string name="error_torrents_off">التورنت متوقف. شغّله من الإعدادات، الإضافات، لتشغيل هذه.</string>
+    <string name="error_torrents_not_yet">لا يمكن تشغيل التورنت هنا بعد. اختر بثًا ليس تورنت.</string>
 </resources>

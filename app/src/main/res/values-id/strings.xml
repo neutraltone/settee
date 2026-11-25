@@ -404,4 +404,6 @@
     <string name="report_question_send">Kirim</string>
     <string name="report_question_dont_send">Jangan kirim</string>
     <string name="report_question_always_send">Selalu kirim</string>
+    <string name="error_torrents_off">Torrent nonaktif. Aktifkan di Pengaturan, Add-on, untuk memutarnya.</string>
+    <string name="error_torrents_not_yet">Torrent belum bisa diputar di sini. Pilih stream yang bukan torrent.</string>
 </resources>

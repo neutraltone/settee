@@ -407,4 +407,6 @@
     <string name="report_question_send">Odoslať</string>
     <string name="report_question_dont_send">Neodosielať</string>
     <string name="report_question_always_send">Vždy odoslať</string>
+    <string name="error_torrents_off">Torrenty sú vypnuté. Zapnite ich v Nastavenia, Doplnky, aby ste ich mohli prehrať.</string>
+    <string name="error_torrents_not_yet">Torrenty sa tu zatiaľ nedajú prehrať. Vyberte stream, ktorý nie je torrent.</string>
 </resources>

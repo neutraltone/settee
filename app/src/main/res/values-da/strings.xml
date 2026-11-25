@@ -405,4 +405,6 @@
     <string name="report_question_send">Send</string>
     <string name="report_question_dont_send">Send ikke</string>
     <string name="report_question_always_send">Send altid</string>
+    <string name="error_torrents_off">Torrents er slået fra. Slå dem til under Indstillinger, Tilføjelser, for at afspille dem.</string>
+    <string name="error_torrents_not_yet">Torrents kan ikke afspilles her endnu. Vælg en stream, der ikke er en torrent.</string>
 </resources>

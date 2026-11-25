@@ -407,4 +407,6 @@
     <string name="report_question_send">Wyślij</string>
     <string name="report_question_dont_send">Nie wysyłaj</string>
     <string name="report_question_always_send">Zawsze wysyłaj</string>
+    <string name="error_torrents_off">Torrenty są wyłączone. Włącz je w Ustawienia, Dodatki, aby je odtworzyć.</string>
+    <string name="error_torrents_not_yet">Torrentów nie można tu jeszcze odtwarzać. Wybierz strumień, który nie jest torrentem.</string>
 </resources>

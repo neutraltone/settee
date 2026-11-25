@@ -404,4 +404,6 @@
     <string name="report_question_send">发送</string>
     <string name="report_question_dont_send">不发送</string>
     <string name="report_question_always_send">始终发送</string>
+    <string name="error_torrents_off">种子已关闭。在设置的附加组件中开启后即可播放这些。</string>
+    <string name="error_torrents_not_yet">这里还不能播放种子。请选择不是种子的流。</string>
 </resources>
