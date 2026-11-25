@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">تغییر نام پروفایل</string>
     <string name="profiles_title">چه کسی تماشا می‌کند؟</string>
     <string name="recset_save_to">ذخیره ضبط‌ها در</string>
-    <string name="recset_usb_no_picker">هیچ ابزار انتخاب پوشه‌ای روی این دستگاه موجود نیست.</string>
+    <string name="recset_usb_no_picker_tv">این تلویزیون نمی‌تواند پوشه‌ای روی درایو USB انتخاب کند. به‌جای آن روی همین تلویزیون یا NAS خود ضبط کنید.</string>
+    <string name="recset_usb_no_picker_device">این دستگاه نمی‌تواند پوشه‌ای روی درایو USB انتخاب کند. به‌جای آن روی همین دستگاه یا NAS خود ضبط کنید.</string>
+    <string name="recset_usb_not_kept">دسترسی به آن پوشه حفظ نشد. دوباره انتخابش کنید یا پوشه دیگری روی درایو USB خود انتخاب کنید.</string>
     <string name="recset_field_username">نام کاربری</string>
     <string name="recset_field_password">گذرواژه</string>
     <string name="recset_status_testing">در حال آزمایش…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">%1$d مورد از %2$d دستگاه همگام‌سازی شد.</string>
     <string name="sync_nas_uploaded">این دستگاه در NAS ذخیره شد. هنوز هیچ دستگاه دیگری اینجا همگام‌سازی نکرده است.</string>
     <string name="sync_nas_failed">اتصال به NAS شما ممکن نشد. بررسی کنید روشن باشد و اطلاعات آن در تنظیمات ضبط درست باشد.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">خواندن آنچه %1$d دستگاه دیگر در NAS شما ذخیره کرده ممکن نشد. کمی بعد دوباره همگام‌سازی کنید یا Settee را روی آن به‌روز کنید.</item>
+        <item quantity="other">خواندن آنچه %1$d دستگاه دیگر در NAS شما ذخیره کرده‌اند ممکن نشد. کمی بعد دوباره همگام‌سازی کنید یا Settee را روی آن‌ها به‌روز کنید.</item>
+    </plurals>
     <string name="about_update_available">به‌روزرسانی موجود است: %1$s — برای نصب، پیام مربوطه را ببینید.</string>
     <string name="about_up_to_date">شما از جدیدترین نسخه استفاده می‌کنید.</string>
     <string name="about_checking">در حال بررسی…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">بارگذاری کانال‌های ارائه‌دهنده شما ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_movies_list">فهرست فیلم‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_shows_list">فهرست سریال‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
+    <string name="setup_failed_guide">راهنمای تلویزیون بارگیری نشد. Settee در به‌روزرسانی بعدی دوباره تلاش می‌کند.</string>
+    <string name="setup_failed_movies">فیلم‌ها بارگیری نشدند. Settee در به‌روزرسانی بعدی یا وقتی فیلم‌ها را باز کنید دوباره تلاش می‌کند.</string>
+    <string name="setup_failed_shows">سریال‌ها بارگیری نشدند. Settee در به‌روزرسانی بعدی یا وقتی سریال‌ها را باز کنید دوباره تلاش می‌کند.</string>
     <string name="vod_movies_load_failed">بارگذاری فیلم‌ها ممکن نشد</string>
     <string name="vod_shows_load_failed">بارگذاری سریال‌ها ممکن نشد</string>
     <string name="error_channel_list_memory_tv">فهرست کانال‌های ارائه‌دهنده شما به حافظه‌ای بیش از آنچه این تلویزیون دارد نیاز دارد.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">راه‌اندازی مدیریت کانال‌ها روی این دستگاه ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="manager_timed_out">مدیریت کانال‌ها پس از مدتی بی‌استفاده ماندن بسته شد. هر وقت لازم داشتید دوباره آن را باز کنید.</string>
     <string name="manager_too_many_codes">مدیریت کانال‌ها پس از وارد شدن کدهای نادرست زیاد بسته شد. برای شروع از نو، دوباره آن را باز کنید.</string>
+    <string name="manager_page_unreachable">دسترسی به تلویزیون ممکن نشد. مطمئن شوید به همان Wi-Fi وصل هستید. اگر مدیریت کانال‌ها بسته شده، آن را دوباره روی تلویزیون باز کنید و کد جدید را اسکن کنید.</string>
+    <string name="manager_page_closed">تلویزیون مدیریت کانال‌ها را بست. آن را دوباره روی تلویزیون باز کنید و کد جدید را اسکن کنید.</string>
+    <string name="manager_page_not_saved">تلویزیون این تغییر را ذخیره نکرد. دوباره امتحان کنید.</string>
+    <string name="manager_page_not_tested">تلویزیون نتوانست این آزمایش را انجام دهد. دوباره امتحان کنید.</string>
+    <string name="manager_page_not_loaded">تلویزیون نتوانست این فهرست را بفرستد. برای امتحان دوباره، این صفحه را دوباره بارگیری کنید.</string>
+    <string name="manager_page_nas_required">نشانی و پوشه اشتراکی NAS خود را وارد کنید، سپس دوباره ذخیره کنید.</string>
+    <string name="manager_page_provider_required">همه جزئیاتی را که این نوع ارائه‌دهنده لازم دارد پر کنید، سپس دوباره امتحان کنید.</string>
+    <string name="manager_page_url_required">نشانی ارائه‌دهنده را وارد کنید.</string>
+    <string name="manager_page_login_required">نام کاربری و گذرواژه را وارد کنید.</string>
+    <string name="manager_page_mac_required">نشانی دستگاهی را که ارائه‌دهنده برای این پورتال به شما داده وارد کنید.</string>
     <string name="pairing_no_network_tv">این تلویزیون به شبکه وصل نیست، پس گوشی شما نمی‌تواند به آن دسترسی پیدا کند. آن را وصل کنید، سپس دوباره تلاش کنید.</string>
     <string name="pairing_no_network_device">این دستگاه به شبکه وصل نیست، پس گوشی شما نمی‌تواند به آن دسترسی پیدا کند. آن را وصل کنید، سپس دوباره تلاش کنید.</string>
     <string name="pairing_failed_tv">شروع جفت‌سازی روی این تلویزیون ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">این تلویزیون نمی‌تواند %1$s را پخش کند</string>
     <string name="vod_cant_play_device">این دستگاه نمی‌تواند %1$s را پخش کند</string>
+    <string name="player_no_sound_tv">این تلویزیون نمی‌تواند این قالب صدا را پخش کند (%1$s). اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات آن ممکن است کمک کند.</string>
+    <string name="player_no_sound_device">این دستگاه نمی‌تواند این قالب صدا را پخش کند (%1$s). اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات این دستگاه ممکن است کمک کند.</string>
+    <string name="player_stepped_down_tv">این تلویزیون نمی‌تواند %1$s را پخش کند. به‌جای آن %2$s پخش می‌شود.</string>
+    <string name="player_stepped_down_device">این دستگاه نمی‌تواند %1$s را پخش کند. به‌جای آن %2$s پخش می‌شود.</string>
+    <string name="player_stepped_down_lower_tv">این تلویزیون نمی‌تواند %1$s را پخش کند. به‌جای آن کیفیت پایین‌تری پخش می‌شود.</string>
+    <string name="player_stepped_down_lower_device">این دستگاه نمی‌تواند %1$s را پخش کند. به‌جای آن کیفیت پایین‌تری پخش می‌شود.</string>
+    <string name="player_stepped_down_for_sound_tv">این تلویزیون نمی‌تواند این قالب صدا را پخش کند (%1$s). به‌جای آن نسخهٔ دیگری پخش می‌شود. اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات آن ممکن است کمک کند.</string>
+    <string name="player_stepped_down_for_sound_device">این دستگاه نمی‌تواند این قالب صدا را پخش کند (%1$s). به‌جای آن نسخهٔ دیگری پخش می‌شود. اگر تلویزیون یا ساندبار شما از آن پشتیبانی می‌کند، روشن کردن صدای فراگیر در تنظیمات این دستگاه ممکن است کمک کند.</string>
+    <string name="player_stepped_down_unnamed_tv">این تلویزیون نمی‌تواند این کیفیت را پخش کند. به‌جای آن کیفیت دیگری پخش می‌شود.</string>
+    <string name="player_stepped_down_unnamed_device">این دستگاه نمی‌تواند این کیفیت را پخش کند. به‌جای آن کیفیت دیگری پخش می‌شود.</string>
     <string name="vod_language_title">اینجا فقط به %1$s</string>
     <string name="vod_language_body_tv">این تلویزیون نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
     <string name="vod_language_body_device">این دستگاه نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles این نام کاربری یا گذرواژه را نپذیرفت. آن‌ها را بررسی کنید و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles این تلویزیون را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles این دستگاه را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
+    <string name="error_opensubtitles_not_saved_tv">در این تلویزیون جایی برای نگه داشتن این زیرنویس نیست. کمی فضا آزاد کنید و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_not_saved_device">در این دستگاه جایی برای نگه داشتن این زیرنویس نیست. کمی فضا آزاد کنید و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_not_kept_tv">این تلویزیون نتوانست این زیرنویس را نگه دارد. دوباره امتحان کنید یا زیرنویس دیگری انتخاب کنید.</string>
+    <string name="error_opensubtitles_not_kept_device">این دستگاه نتوانست این زیرنویس را نگه دارد. دوباره امتحان کنید یا زیرنویس دیگری انتخاب کنید.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ورود را پذیرفت، اما این تلویزیون نتوانست آن را ذخیره کند. این تلویزیون را دوباره راه‌اندازی کنید و دوباره وارد شوید.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ورود را پذیرفت، اما این دستگاه نتوانست آن را ذخیره کند. این دستگاه را دوباره راه‌اندازی کنید و دوباره وارد شوید.</string>
     <string name="error_not_a_guide">این نشانی راهنمای برنامه نیست. بررسی کنید که پیوند درست باشد، یا اگر Wi-Fi درخواست ورود کرد، وارد شوید.</string>
     <string name="settings_guide_bad_address">این یک نشانی وب نیست. بررسی کنید که همان‌طور که پیوند راهنما نشان می‌دهد نوشته شده باشد، مثلاً example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee نتوانست پایگاه داده‌اش را بخواند، پس این اعداد در دسترس نیستند.</string>

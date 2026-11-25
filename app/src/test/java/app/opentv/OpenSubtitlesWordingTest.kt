@@ -8,6 +8,7 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ErrorWording
 import app.opentv.core.LocaleUtils
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneId
@@ -60,6 +61,16 @@ class OpenSubtitlesWordingTest {
     }
 
     @Test
+    fun `Settee's key turned down with a 401 says so, with that status on the detail line`() {
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.KeyRejected(status = 401))
+
+        assertThat(error.sentence).isEqualTo(
+            "OpenSubtitles isn't accepting Settee right now. Your account is fine: this needs an update to Settee.",
+        )
+        assertThat(error.detail).isEqualTo("KeyRejected · HTTP 401")
+    }
+
+    @Test
     fun `the daily limit when not signed in suggests signing in`() {
         val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.DownloadLimit(signedIn = false, resetsAt = null))
 
@@ -103,5 +114,40 @@ class OpenSubtitlesWordingTest {
         val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.TokenRejected())
 
         assertThat(error.sentence).isEqualTo("OpenSubtitles signed this TV out. Sign in again in Settings.")
+    }
+
+    @Test
+    fun `a subtitle this TV had no room to keep is about this TV's storage, not reaching OpenSubtitles`() {
+        // How Android reports a full disk: the write's errno, ENOSPC, behind the IOException.
+        val full = java.io.IOException(android.system.ErrnoException("write", android.system.OsConstants.ENOSPC))
+
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(full))
+
+        assertThat(error.sentence).isEqualTo(
+            "There's no room on this TV to keep that subtitle. Free up some space, then try again.",
+        )
+        assertThat(error.detail).isEqualTo("NotSaved · IO")
+    }
+
+    @Test
+    fun `a subtitle this TV couldn't keep for any other reason doesn't send the viewer to free up space`() {
+        val error = wording.ofOpenSubtitles(
+            OpenSubtitlesFailure.NotSaved(java.io.IOException("Subtitle bigger than the cap")),
+        )
+
+        assertThat(error.sentence).isEqualTo("This TV couldn't keep that subtitle. Try again, or pick a different one.")
+        assertThat(error.detail).isEqualTo("NotSaved · IO")
+    }
+
+    @Test
+    fun `a sign-in this TV couldn't save says so, not that OpenSubtitles can't be reached`() {
+        val error = wording.ofOpenSubtitles(
+            OpenSubtitlesFailure.SignInNotSaved(java.security.KeyStoreException("no key")),
+        )
+
+        assertThat(error.sentence).isEqualTo(
+            "OpenSubtitles accepted the sign-in, but this TV couldn't save it. Restart this TV, then sign in again.",
+        )
+        assertThat(error.detail).isEqualTo("SignInNotSaved · KeyStore")
     }
 }

@@ -24,13 +24,21 @@ import kotlinx.coroutines.withContext
  * newest-wins (see [SyncEngine]); nothing on the NAS is ever deleted, so a device that has been
  * offline for months still contributes when it next syncs.
  */
-class NasSync(private val graph: ServiceLocator.Graph) {
+class NasSync(private val graph: ServiceLocator.Graph, private val files: NasFiles = SmbNasFiles) {
 
     private val engine = SyncEngine(graph)
 
     sealed interface Result {
-        /** [merged] items pulled in from [peers] other devices' files (this device's own excluded). */
-        data class Success(val merged: Int, val peers: Int) : Result
+        /**
+         * [merged] items pulled in from [peers] other devices' files (this device's own excluded).
+         * [unreadable] more couldn't be read or decoded, the first for [unreadableCause].
+         */
+        data class Success(
+            val merged: Int,
+            val peers: Int,
+            val unreadable: Int = 0,
+            val unreadableCause: Throwable? = null,
+        ) : Result
 
         /** No SMB/NAS is configured yet — the user needs to set one up under Recording settings. */
         data object NotConfigured : Result
@@ -55,19 +63,26 @@ class NasSync(private val graph: ServiceLocator.Graph) {
 
             // 1. Write this device's bundle. openForWrite creates the sync folder if missing.
             val bundleJson = engine.encode(engine.gather())
-            SmbClient.writeText(config, locatorFor(config, ownFile), bundleJson)
+            files.writeText(config, locatorFor(config, ownFile), bundleJson)
 
             // 2. Read and merge every OTHER device's bundle.
-            val peerFiles = SmbClient.list(config, syncFolderPath(config))
+            val peerFiles = files.list(config, syncFolderPath(config))
                 .filter { it.endsWith(".json", ignoreCase = true) && it != ownFile }
 
-            val bundles = peerFiles.mapNotNull { name ->
-                val text = runCatching { SmbClient.readText(config, locatorFor(config, name)) }
-                    .getOrNull() ?: return@mapNotNull null
-                runCatching { engine.decode(text) }.getOrNull()
+            // A file that won't read or decode is still skipped, but counted: dropped silently, a lone
+            // other device read as "no other devices have synced here yet" (#485).
+            val reads = peerFiles.map { name ->
+                runCatching { engine.decode(files.readText(config, locatorFor(config, name))) }
             }
+            val bundles = reads.mapNotNull { it.getOrNull() }
+            val unreadable = reads.mapNotNull { it.exceptionOrNull() }
             // Together, so a series several peers name is fetched once.
-            Result.Success(engine.apply(*bundles.toTypedArray()).total, bundles.size)
+            Result.Success(
+                merged = engine.apply(*bundles.toTypedArray()).total,
+                peers = bundles.size,
+                unreadable = unreadable.size,
+                unreadableCause = unreadable.firstOrNull(),
+            )
         }.getOrElse { Result.Failed(it) }
     }
 
@@ -79,4 +94,23 @@ class NasSync(private val graph: ServiceLocator.Graph) {
 
     private fun locatorFor(config: SmbConfig, fileName: String): String =
         "smb://${config.host}/${config.share}/${syncFolderPath(config)}/$fileName"
+}
+
+/** The SMB calls NAS sync makes, so a test can stand in for the NAS. */
+interface NasFiles {
+    fun list(config: SmbConfig, folder: String): List<String>
+
+    fun readText(config: SmbConfig, locator: String): String
+
+    fun writeText(config: SmbConfig, locator: String, text: String)
+}
+
+/** The real NAS, through [SmbClient]. */
+object SmbNasFiles : NasFiles {
+    override fun list(config: SmbConfig, folder: String): List<String> = SmbClient.list(config, folder)
+
+    override fun readText(config: SmbConfig, locator: String): String = SmbClient.readText(config, locator)
+
+    override fun writeText(config: SmbConfig, locator: String, text: String) =
+        SmbClient.writeText(config, locator, text)
 }

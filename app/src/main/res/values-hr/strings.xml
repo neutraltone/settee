@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Preimenuj profil</string>
     <string name="profiles_title">Tko gleda?</string>
     <string name="recset_save_to">Spremi snimke na</string>
-    <string name="recset_usb_no_picker">Na ovom uređaju nije dostupan alat za odabir mape.</string>
+    <string name="recset_usb_no_picker_tv">Ovaj TV ne može odabrati mapu na USB disku. Umjesto toga snimajte na ovaj TV ili na svoj NAS.</string>
+    <string name="recset_usb_no_picker_device">Ovaj uređaj ne može odabrati mapu na USB disku. Umjesto toga snimajte na ovaj uređaj ili na svoj NAS.</string>
+    <string name="recset_usb_not_kept">Pristup toj mapi nije moguće zadržati. Odaberite je ponovno ili odaberite drugu mapu na USB disku.</string>
     <string name="recset_field_username">Korisničko ime</string>
     <string name="recset_field_password">Lozinka</string>
     <string name="recset_status_testing">Testiranje…</string>
@@ -144,6 +146,11 @@
     <string name="sync_nas_done">Sinkronizirano %1$d stavki s %2$d uređaja.</string>
     <string name="sync_nas_uploaded">Ovaj uređaj spremljen je na NAS. Nijedan drugi uređaj još se nije sinkronizirao ovdje.</string>
     <string name="sync_nas_failed">Nije moguće doći do NAS-a. Provjerite je li uključen i jesu li podaci u postavkama snimanja točni.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nije moguće pročitati ono što je %1$d drugi uređaj spremio na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njemu ažurirajte Settee.</item>
+        <item quantity="few">Nije moguće pročitati ono što su %1$d druga uređaja spremila na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+        <item quantity="other">Nije moguće pročitati ono što je %1$d drugih uređaja spremilo na vaš NAS. Sinkronizirajte ponovno za trenutak ili na njima ažurirajte Settee.</item>
+    </plurals>
     <string name="about_update_available">Dostupno ažuriranje: %1$s — pogledajte upit za instalaciju.</string>
     <string name="about_up_to_date">Koristite najnoviju verziju.</string>
     <string name="about_checking">Provjera…</string>
@@ -267,6 +274,9 @@
     <string name="error_catalogue">Nije moguće učitati kanale vašeg pružatelja usluge. Pokušajte ponovno za trenutak.</string>
     <string name="error_movies_list">Popis filmova vašeg pružatelja usluge nije stigao. Pokušajte ponovno za trenutak.</string>
     <string name="error_shows_list">Popis serija vašeg pružatelja usluge nije stigao. Pokušajte ponovno za trenutak.</string>
+    <string name="setup_failed_guide">TV vodič se nije učitao. Settee će pokušati ponovno pri sljedećem osvježavanju.</string>
+    <string name="setup_failed_movies">Filmovi se nisu učitali. Settee će pokušati ponovno pri sljedećem osvježavanju ili kad otvorite Filmove.</string>
+    <string name="setup_failed_shows">Serije se nisu učitale. Settee će pokušati ponovno pri sljedećem osvježavanju ili kad otvorite Serije.</string>
     <string name="vod_movies_load_failed">Nije moguće učitati filmove</string>
     <string name="vod_shows_load_failed">Nije moguće učitati serije</string>
     <string name="error_channel_list_memory_tv">Popis kanala vašeg pružatelja usluge treba više memorije nego što ovaj TV ima.</string>
@@ -303,6 +313,16 @@
     <string name="manager_failed_device">Nije moguće pokrenuti upravitelja kanalima na ovom uređaju. Pokušajte ponovno za trenutak.</string>
     <string name="manager_timed_out">Upravitelj kanalima zatvorio se nakon što se neko vrijeme nije koristio. Ponovno ga otvorite kad vam zatreba.</string>
     <string name="manager_too_many_codes">Upravitelj kanalima zatvorio se nakon previše pogrešnih kodova. Ponovno ga otvorite da krenete ispočetka.</string>
+    <string name="manager_page_unreachable">Televizor nije dostupan. Provjerite jeste li na istoj Wi-Fi mreži. Ako se upravitelj kanalima zatvorio, ponovno ga otvorite na televizoru i skenirajte novi kod.</string>
+    <string name="manager_page_closed">Televizor je zatvorio upravitelj kanalima. Ponovno ga otvorite na televizoru i skenirajte novi kod.</string>
+    <string name="manager_page_not_saved">Televizor nije spremio tu promjenu. Pokušajte ponovno.</string>
+    <string name="manager_page_not_tested">Televizor nije mogao provesti taj test. Pokušajte ponovno.</string>
+    <string name="manager_page_not_loaded">Televizor nije mogao poslati ovaj popis. Ponovno učitajte stranicu da biste pokušali opet.</string>
+    <string name="manager_page_nas_required">Dodajte adresu i dijeljenu mapu svog NAS-a, a zatim ponovno spremite.</string>
+    <string name="manager_page_provider_required">Ispunite sve podatke koje ova vrsta pružatelja treba, a zatim pokušajte ponovno.</string>
+    <string name="manager_page_url_required">Unesite adresu pružatelja.</string>
+    <string name="manager_page_login_required">Unesite korisničko ime i lozinku.</string>
+    <string name="manager_page_mac_required">Unesite adresu uređaja koju vam je pružatelj dao za ovaj portal.</string>
     <string name="pairing_no_network_tv">Ovaj TV nije spojen na mrežu, pa mu vaš telefon ne može pristupiti. Spojite ga, zatim pokušajte ponovno.</string>
     <string name="pairing_no_network_device">Ovaj uređaj nije spojen na mrežu, pa mu vaš telefon ne može pristupiti. Spojite ga, zatim pokušajte ponovno.</string>
     <string name="pairing_failed_tv">Nije moguće pokrenuti uparivanje na ovom TV-u. Pokušajte ponovno za trenutak.</string>
@@ -329,6 +349,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Ovaj televizor ne može reproducirati %1$s</string>
     <string name="vod_cant_play_device">Ovaj uređaj ne može reproducirati %1$s</string>
+    <string name="player_no_sound_tv">Ovaj TV ne može reproducirati ovaj format zvuka (%1$s). Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u njegovim postavkama.</string>
+    <string name="player_no_sound_device">Ovaj uređaj ne može reproducirati ovaj format zvuka (%1$s). Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u postavkama ovog uređaja.</string>
+    <string name="player_stepped_down_tv">Ovaj televizor ne može reproducirati %1$s. Umjesto toga reproducira se %2$s.</string>
+    <string name="player_stepped_down_device">Ovaj uređaj ne može reproducirati %1$s. Umjesto toga reproducira se %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Ovaj televizor ne može reproducirati %1$s. Umjesto toga reproducira se niža kvaliteta.</string>
+    <string name="player_stepped_down_lower_device">Ovaj uređaj ne može reproducirati %1$s. Umjesto toga reproducira se niža kvaliteta.</string>
+    <string name="player_stepped_down_for_sound_tv">Ovaj TV ne može reproducirati ovaj format zvuka (%1$s). Umjesto toga reproducira se druga verzija. Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u njegovim postavkama.</string>
+    <string name="player_stepped_down_for_sound_device">Ovaj uređaj ne može reproducirati ovaj format zvuka (%1$s). Umjesto toga reproducira se druga verzija. Ako ga vaš TV ili soundbar podržava, moglo bi pomoći uključiti surround zvuk u postavkama ovog uređaja.</string>
+    <string name="player_stepped_down_unnamed_tv">Ovaj televizor ne može reproducirati tu kvalitetu. Umjesto toga reproducira se druga.</string>
+    <string name="player_stepped_down_unnamed_device">Ovaj uređaj ne može reproducirati tu kvalitetu. Umjesto toga reproducira se druga.</string>
     <string name="vod_language_title">Ovdje samo na jeziku %1$s</string>
     <string name="vod_language_body_tv">Ovaj televizor ne može reproducirati verziju na vašem jeziku.</string>
     <string name="vod_language_body_device">Ovaj uređaj ne može reproducirati verziju na vašem jeziku.</string>
@@ -353,6 +383,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nije prihvatio to korisničko ime ili lozinku. Provjerite ih i pokušajte ponovno.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles je odjavio ovaj televizor. Ponovno se prijavite u Postavkama.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
+    <string name="error_opensubtitles_not_saved_tv">Na ovom televizoru nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_not_saved_device">Na ovom uređaju nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_not_kept_tv">Ovaj televizor nije mogao spremiti te titlove. Pokušajte ponovno ili odaberite druge.</string>
+    <string name="error_opensubtitles_not_kept_device">Ovaj uređaj nije mogao spremiti te titlove. Pokušajte ponovno ili odaberite druge.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles je prihvatio prijavu, ali je ovaj televizor nije mogao spremiti. Ponovno pokrenite ovaj televizor pa se ponovno prijavite.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles je prihvatio prijavu, ali je ovaj uređaj nije mogao spremiti. Ponovno pokrenite ovaj uređaj pa se ponovno prijavite.</string>
     <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>
     <string name="settings_guide_bad_address">To nije web-adresa. Provjerite je li upisana onako kako je prikazuje poveznica vodiča, npr. example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nije mogao pročitati svoju bazu podataka, pa ovi brojevi nedostaju.</string>

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Gi profilen nytt navn</string>
     <string name="profiles_title">Hvem ser på?</string>
     <string name="recset_save_to">Lagre opptak til</string>
-    <string name="recset_usb_no_picker">Ingen mappevelger er tilgjengelig på denne enheten.</string>
+    <string name="recset_usb_no_picker_tv">Denne TV-en kan ikke velge en mappe på en USB-stasjon. Ta opp til denne TV-en eller NAS-en din i stedet.</string>
+    <string name="recset_usb_no_picker_device">Denne enheten kan ikke velge en mappe på en USB-stasjon. Ta opp til denne enheten eller NAS-en din i stedet.</string>
+    <string name="recset_usb_not_kept">Fikk ikke beholde tilgangen til den mappen. Velg den igjen, eller velg en annen mappe på USB-stasjonen din.</string>
     <string name="recset_field_username">Brukernavn</string>
     <string name="recset_field_password">Passord</string>
     <string name="recset_status_testing">Tester…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">Synkroniserte %1$d element(er) fra %2$d enhet(er).</string>
     <string name="sync_nas_uploaded">Lagret denne enheten til NAS-en. Ingen andre enheter har synkronisert hit ennå.</string>
     <string name="sync_nas_failed">Fikk ikke kontakt med NAS-en din. Sjekk at den er på, og at detaljene i opptaksinnstillingene stemmer.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Kunne ikke lese det %1$d annen enhet har lagret på NAS-en din. Synkroniser igjen om litt, eller oppdater Settee på den.</item>
+        <item quantity="other">Kunne ikke lese det %1$d andre enheter har lagret på NAS-en din. Synkroniser igjen om litt, eller oppdater Settee på dem.</item>
+    </plurals>
     <string name="about_update_available">Oppdatering tilgjengelig: %1$s — se forespørselen for å installere.</string>
     <string name="about_up_to_date">Du har den nyeste versjonen.</string>
     <string name="about_checking">Sjekker…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">Kunne ikke laste kanalene fra leverandøren din. Prøv igjen om litt.</string>
     <string name="error_movies_list">Filmlisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
     <string name="error_shows_list">Serielisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
+    <string name="setup_failed_guide">TV-guiden ble ikke lastet inn. Settee prøver igjen ved neste oppdatering.</string>
+    <string name="setup_failed_movies">Filmer ble ikke lastet inn. Settee prøver igjen ved neste oppdatering, eller når du åpner Filmer.</string>
+    <string name="setup_failed_shows">Serier ble ikke lastet inn. Settee prøver igjen ved neste oppdatering, eller når du åpner Serier.</string>
     <string name="vod_movies_load_failed">Kunne ikke laste filmene dine</string>
     <string name="vod_shows_load_failed">Kunne ikke laste seriene dine</string>
     <string name="error_channel_list_memory_tv">Leverandørens kanalliste trenger mer minne enn denne TV-en har.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">Kunne ikke starte kanalbehandlingen på denne enheten. Prøv igjen om litt.</string>
     <string name="manager_timed_out">Kanalbehandlingen ble lukket etter en stund uten bruk. Åpne den igjen når du trenger den.</string>
     <string name="manager_too_many_codes">Kanalbehandlingen ble lukket etter for mange feil koder. Åpne den igjen for å begynne på nytt.</string>
+    <string name="manager_page_unreachable">Fikk ikke kontakt med TV-en. Sjekk at du er på samme Wi-Fi. Hvis kanalbehandlingen er lukket, åpner du den igjen på TV-en og skanner den nye koden.</string>
+    <string name="manager_page_closed">TV-en lukket kanalbehandlingen. Åpne den igjen på TV-en, og skann den nye koden.</string>
+    <string name="manager_page_not_saved">TV-en lagret ikke endringen. Prøv igjen.</string>
+    <string name="manager_page_not_tested">TV-en klarte ikke å kjøre testen. Prøv igjen.</string>
+    <string name="manager_page_not_loaded">TV-en kunne ikke sende listen. Last inn siden på nytt for å prøve igjen.</string>
+    <string name="manager_page_nas_required">Legg til adressen og den delte mappen til NAS-en din, og lagre på nytt.</string>
+    <string name="manager_page_provider_required">Fyll inn alle opplysningene denne typen leverandør trenger, og prøv igjen.</string>
+    <string name="manager_page_url_required">Skriv inn adressen til leverandøren.</string>
+    <string name="manager_page_login_required">Skriv inn brukernavn og passord.</string>
+    <string name="manager_page_mac_required">Skriv inn enhetsadressen leverandøren ga deg for denne portalen.</string>
     <string name="pairing_no_network_tv">Denne TV-en er ikke koblet til et nettverk, så mobilen din får ikke kontakt med den. Koble den til, og prøv så igjen.</string>
     <string name="pairing_no_network_device">Denne enheten er ikke koblet til et nettverk, så mobilen din får ikke kontakt med den. Koble den til, og prøv så igjen.</string>
     <string name="pairing_failed_tv">Kunne ikke starte parkobling på denne TV-en. Prøv igjen om litt.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Denne TV-en kan ikke spille av %1$s</string>
     <string name="vod_cant_play_device">Denne enheten kan ikke spille av %1$s</string>
+    <string name="player_no_sound_tv">Denne TV-en kan ikke spille av dette lydformatet (%1$s). Hvis TV-en eller lydplanken din støtter det, kan det hjelpe å slå på surroundlyd i innstillingene.</string>
+    <string name="player_no_sound_device">Denne enheten kan ikke spille av dette lydformatet (%1$s). Hvis TV-en eller lydplanken din støtter det, kan det hjelpe å slå på surroundlyd i innstillingene på denne enheten.</string>
+    <string name="player_stepped_down_tv">Denne TV-en kan ikke spille av %1$s. Spiller av %2$s i stedet.</string>
+    <string name="player_stepped_down_device">Denne enheten kan ikke spille av %1$s. Spiller av %2$s i stedet.</string>
+    <string name="player_stepped_down_lower_tv">Denne TV-en kan ikke spille av %1$s. Spiller av en lavere kvalitet i stedet.</string>
+    <string name="player_stepped_down_lower_device">Denne enheten kan ikke spille av %1$s. Spiller av en lavere kvalitet i stedet.</string>
+    <string name="player_stepped_down_for_sound_tv">Denne TV-en kan ikke spille av dette lydformatet (%1$s). Spiller av en annen versjon i stedet. Hvis TV-en eller lydplanken din støtter det, kan det hjelpe å slå på surroundlyd i innstillingene.</string>
+    <string name="player_stepped_down_for_sound_device">Denne enheten kan ikke spille av dette lydformatet (%1$s). Spiller av en annen versjon i stedet. Hvis TV-en eller lydplanken din støtter det, kan det hjelpe å slå på surroundlyd i innstillingene på denne enheten.</string>
+    <string name="player_stepped_down_unnamed_tv">Denne TV-en kan ikke spille av den kvaliteten. Spiller av en annen i stedet.</string>
+    <string name="player_stepped_down_unnamed_device">Denne enheten kan ikke spille av den kvaliteten. Spiller av en annen i stedet.</string>
     <string name="vod_language_title">Bare på %1$s her</string>
     <string name="vod_language_body_tv">Denne TV-en kan ikke spille av en versjon på ditt språk.</string>
     <string name="vod_language_body_device">Denne enheten kan ikke spille av en versjon på ditt språk.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles godtok ikke det brukernavnet eller passordet. Sjekk dem, og prøv igjen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles har logget denne TV-en av. Logg på igjen i Innstillinger.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enheten av. Logg på igjen i Innstillinger.</string>
+    <string name="error_opensubtitles_not_saved_tv">Det er ikke plass på denne TV-en til å lagre de undertekstene. Frigjør litt plass, og prøv igjen.</string>
+    <string name="error_opensubtitles_not_saved_device">Det er ikke plass på denne enheten til å lagre de undertekstene. Frigjør litt plass, og prøv igjen.</string>
+    <string name="error_opensubtitles_not_kept_tv">Denne TV-en klarte ikke å lagre de undertekstene. Prøv igjen, eller velg noen andre.</string>
+    <string name="error_opensubtitles_not_kept_device">Denne enheten klarte ikke å lagre de undertekstene. Prøv igjen, eller velg noen andre.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles godtok påloggingen, men denne TV-en klarte ikke å lagre den. Start denne TV-en på nytt, og logg på igjen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles godtok påloggingen, men denne enheten klarte ikke å lagre den. Start denne enheten på nytt, og logg på igjen.</string>
     <string name="error_not_a_guide">Den adressen er ikke en programguide. Sjekk at det er riktig lenke, eller logg på Wi-Fi hvis det ber om det.</string>
     <string name="settings_guide_bad_address">Det er ikke en nettadresse. Sjekk at den er skrevet slik guidens lenke viser den, for eksempel example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee kunne ikke lese databasen sin, så disse tallene mangler.</string>

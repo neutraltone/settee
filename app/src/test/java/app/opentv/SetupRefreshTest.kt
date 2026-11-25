@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.CatalogueRefresh
@@ -205,6 +206,50 @@ class SetupRefreshTest {
     }
 
     @Test
+    fun `movies that time out say the provider stopped responding, with the timeout on the detail line`() = testing {
+        panel.replies["get_vod_streams"] = "!timeout"
+
+        setUp()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        assertThat(movies.failure).isEqualTo(
+            ViewerError(testGraph.app.getString(R.string.error_timed_out), "SocketTimeout"),
+        )
+    }
+
+    @Test
+    fun `shows that fail for no reason a viewer could act on keep setup's own sentence, with the cause`() = testing {
+        panel.replies["get_series"] = "!"
+
+        setUp()
+
+        val shows = refresh.state.value.setup!!.done.single { it.step == SetupStep.SHOWS }
+        assertThat(shows.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.setup_failed_shows), "IO"))
+    }
+
+    @Test
+    fun `movies too big for memory say it's about this device, not the provider`() = testing {
+        panel.replies["get_vod_streams"] = "!oom"
+
+        setUp()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        assertThat(movies.failure).isEqualTo(
+            ViewerError(testGraph.app.getString(R.string.error_channel_list_memory_device), "OutOfMemory"),
+        )
+    }
+
+    @Test
+    fun `a guide that won't download says why`() = testing {
+        panel.replies["xmltv.php"] = "!503"
+
+        setUp()
+
+        val guide = refresh.state.value.setup!!.done.single { it.step == SetupStep.GUIDE }
+        assertThat(guide.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.error_http_5xx), "HTTP 503"))
+    }
+
+    @Test
     fun `a login that fails says why, fetches nothing else and leaves no provider behind`() = testing {
         panel.replies["get_live_streams"] = "[]"
 
@@ -350,6 +395,29 @@ class SetupRefreshTest {
         assertThat(setup.done.map { it.step }).containsAtLeast(SetupStep.MOVIES, SetupStep.SHOWS)
         assertThat(setup.done.first { it.step == SetupStep.MOVIES }.count).isEqualTo(1)
         assertThat(setup.failed).isEmpty()
+    }
+
+    @Test
+    fun `movies another refresh was fetching that fail keep setup's own sentence, not the tab's`() = testing {
+        panel.replies["get_vod_streams"] = "!"
+        val guide = panel.hold("xmltv.php")
+        val vod = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        withContext(catalogueThreads) {
+            refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+            val opened = during(guide) { async { refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows) } }
+            during(vod) {
+                guide.release()
+                settle()
+                vod.release()
+            }
+            opened.await()
+        }
+        test.awaitRefresh()
+
+        val movies = refresh.state.value.setup!!.done.single { it.step == SetupStep.MOVIES }
+        // Settee tries again by itself after Setup, so not the Movies tab's "try again in a moment".
+        assertThat(movies.failure).isEqualTo(ViewerError(testGraph.app.getString(R.string.setup_failed_movies), "IO"))
     }
 
     @Test

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Перейменувати профіль</string>
     <string name="profiles_title">Хто дивиться?</string>
     <string name="recset_save_to">Зберігати записи в</string>
-    <string name="recset_usb_no_picker">На цьому пристрої недоступний вибір папки.</string>
+    <string name="recset_usb_no_picker_tv">Цей телевізор не може вибрати папку на USB-накопичувачі. Записуйте натомість на цей телевізор або на свій NAS.</string>
+    <string name="recset_usb_no_picker_device">Цей пристрій не може вибрати папку на USB-накопичувачі. Записуйте натомість на цей пристрій або на свій NAS.</string>
+    <string name="recset_usb_not_kept">Не вдалося зберегти доступ до цієї папки. Виберіть її знову або виберіть іншу папку на USB-накопичувачі.</string>
     <string name="recset_field_username">Ім\'я користувача</string>
     <string name="recset_field_password">Пароль</string>
     <string name="recset_status_testing">Перевірка…</string>
@@ -144,6 +146,12 @@
     <string name="sync_nas_done">Синхронізовано об\'єктів: %1$d із пристроїв: %2$d.</string>
     <string name="sync_nas_uploaded">Цей пристрій збережено на NAS. Жоден інший пристрій ще не синхронізувався сюди.</string>
     <string name="sync_nas_failed">Не вдалося з\'єднатися з вашим NAS. Перевірте, що він увімкнений, а дані в налаштуваннях запису правильні.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Не вдалося прочитати те, що %1$d інший пристрій зберіг на NAS. Синхронізуйте ще раз трохи згодом або оновіть на ньому Settee.</item>
+        <item quantity="few">Не вдалося прочитати те, що %1$d інші пристрої зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+        <item quantity="many">Не вдалося прочитати те, що %1$d інших пристроїв зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+        <item quantity="other">Не вдалося прочитати те, що %1$d іншого пристрою зберегли на NAS. Синхронізуйте ще раз трохи згодом або оновіть на них Settee.</item>
+    </plurals>
     <string name="about_update_available">Доступне оновлення: %1$s — див. підказку для встановлення.</string>
     <string name="about_up_to_date">У вас найновіша версія.</string>
     <string name="about_checking">Перевірка…</string>
@@ -267,6 +275,9 @@
     <string name="error_catalogue">Не вдалося завантажити канали провайдера. Спробуйте ще раз трохи згодом.</string>
     <string name="error_movies_list">Список фільмів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
     <string name="error_shows_list">Список серіалів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
+    <string name="setup_failed_guide">Програма передач не завантажилася. Settee спробує ще раз під час наступного оновлення.</string>
+    <string name="setup_failed_movies">Фільми не завантажилися. Settee спробує ще раз під час наступного оновлення або коли ви відкриєте Фільми.</string>
+    <string name="setup_failed_shows">Серіали не завантажилися. Settee спробує ще раз під час наступного оновлення або коли ви відкриєте Серіали.</string>
     <string name="vod_movies_load_failed">Не вдалося завантажити ваші фільми</string>
     <string name="vod_shows_load_failed">Не вдалося завантажити ваші серіали</string>
     <string name="error_channel_list_memory_tv">Списку каналів провайдера потрібно більше пам\'яті, ніж є в цього телевізора.</string>
@@ -303,6 +314,16 @@
     <string name="manager_failed_device">Не вдалося запустити менеджер каналів на цьому пристрої. Спробуйте ще раз трохи згодом.</string>
     <string name="manager_timed_out">Менеджер каналів закрився, бо ним довго не користувалися. Відкрийте його знову, коли знадобиться.</string>
     <string name="manager_too_many_codes">Менеджер каналів закрився після забагатьох неправильних кодів. Відкрийте його знову, щоб почати спочатку.</string>
+    <string name="manager_page_unreachable">Не вдалося зв\'язатися з телевізором. Перевірте, що ви в тій самій мережі Wi-Fi. Якщо менеджер каналів закрився, відкрийте його на телевізорі знову й відскануйте новий код.</string>
+    <string name="manager_page_closed">Телевізор закрив менеджер каналів. Відкрийте його на телевізорі знову й відскануйте новий код.</string>
+    <string name="manager_page_not_saved">Телевізор не зберіг цю зміну. Спробуйте ще раз.</string>
+    <string name="manager_page_not_tested">Телевізор не зміг виконати цю перевірку. Спробуйте ще раз.</string>
+    <string name="manager_page_not_loaded">Телевізор не зміг надіслати цей список. Перезавантажте сторінку, щоб спробувати ще раз.</string>
+    <string name="manager_page_nas_required">Укажіть адресу та спільну папку вашого NAS, потім збережіть знову.</string>
+    <string name="manager_page_provider_required">Заповніть усі дані, потрібні для цього типу провайдера, потім спробуйте ще раз.</string>
+    <string name="manager_page_url_required">Введіть адресу провайдера.</string>
+    <string name="manager_page_login_required">Введіть ім\'я користувача й пароль.</string>
+    <string name="manager_page_mac_required">Введіть адресу пристрою, яку провайдер видав для цього порталу.</string>
     <string name="pairing_no_network_tv">Цей телевізор не підключений до мережі, тож телефон не може до нього під\'єднатися. Підключіть його і спробуйте ще раз.</string>
     <string name="pairing_no_network_device">Цей пристрій не підключений до мережі, тож телефон не може до нього під\'єднатися. Підключіть його і спробуйте ще раз.</string>
     <string name="pairing_failed_tv">Не вдалося почати сполучення на цьому телевізорі. Спробуйте ще раз трохи згодом.</string>
@@ -329,6 +350,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Цей телевізор не може відтворити %1$s</string>
     <string name="vod_cant_play_device">Цей пристрій не може відтворити %1$s</string>
+    <string name="player_no_sound_tv">Цей телевізор не може відтворити цей аудіоформат (%1$s). Якщо ваш телевізор або саундбар це підтримує, може допомогти ввімкнення об’ємного звуку в його налаштуваннях.</string>
+    <string name="player_no_sound_device">Цей пристрій не може відтворити цей аудіоформат (%1$s). Якщо ваш телевізор або саундбар це підтримує, може допомогти ввімкнення об’ємного звуку в налаштуваннях цього пристрою.</string>
+    <string name="player_stepped_down_tv">Цей телевізор не може відтворити %1$s. Натомість відтворюється %2$s.</string>
+    <string name="player_stepped_down_device">Цей пристрій не може відтворити %1$s. Натомість відтворюється %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Цей телевізор не може відтворити %1$s. Натомість відтворюється нижча якість.</string>
+    <string name="player_stepped_down_lower_device">Цей пристрій не може відтворити %1$s. Натомість відтворюється нижча якість.</string>
+    <string name="player_stepped_down_for_sound_tv">Цей телевізор не може відтворити цей аудіоформат (%1$s). Натомість відтворюється інша версія. Якщо ваш телевізор або саундбар це підтримує, може допомогти ввімкнення об’ємного звуку в його налаштуваннях.</string>
+    <string name="player_stepped_down_for_sound_device">Цей пристрій не може відтворити цей аудіоформат (%1$s). Натомість відтворюється інша версія. Якщо ваш телевізор або саундбар це підтримує, може допомогти ввімкнення об’ємного звуку в налаштуваннях цього пристрою.</string>
+    <string name="player_stepped_down_unnamed_tv">Цей телевізор не може відтворити цю якість. Натомість відтворюється інша.</string>
+    <string name="player_stepped_down_unnamed_device">Цей пристрій не може відтворити цю якість. Натомість відтворюється інша.</string>
     <string name="vod_language_title">Тут лише мовою: %1$s</string>
     <string name="vod_language_body_tv">Цей телевізор не може відтворити версію вашою мовою.</string>
     <string name="vod_language_body_device">Цей пристрій не може відтворити версію вашою мовою.</string>
@@ -353,6 +384,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прийняв це ім\'я користувача або пароль. Перевірте їх і спробуйте ще раз.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles вийшов з облікового запису на цьому телевізорі. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
+    <string name="error_opensubtitles_not_saved_tv">На цьому телевізорі немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_not_saved_device">На цьому пристрої немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_not_kept_tv">Цей телевізор не зміг зберегти ці субтитри. Спробуйте ще раз або виберіть інші.</string>
+    <string name="error_opensubtitles_not_kept_device">Цей пристрій не зміг зберегти ці субтитри. Спробуйте ще раз або виберіть інші.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles прийняв вхід, але цей телевізор не зміг його зберегти. Перезапустіть цей телевізор і увійдіть знову.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles прийняв вхід, але цей пристрій не зміг його зберегти. Перезапустіть цей пристрій і увійдіть знову.</string>
     <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
     <string name="settings_guide_bad_address">Це не вебадреса. Перевірте, чи її введено так, як у посиланні на програму, наприклад example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee не вдалося прочитати свою базу даних, тому цих чисел немає.</string>

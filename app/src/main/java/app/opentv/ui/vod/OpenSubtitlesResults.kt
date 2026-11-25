@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.model.SubtitleKind
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.SubtitleResult

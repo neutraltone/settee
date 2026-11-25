@@ -32,31 +32,54 @@ class StalkerApiTest {
     }
 
     @Test
-    fun `a refused first call still shakes hands again and asks once more`() = runTest {
+    fun `a refused call is asked once more after a new handshake, then gives the portal's status`() = runTest {
         panel.replies["get_all_channels"] = "!503"
 
-        val channels = api.liveChannels(STALKER_SOURCE)
+        val error = runCatching { api.liveChannels(STALKER_SOURCE) }.exceptionOrNull()
 
-        assertThat(channels).isEmpty()
+        assertThat((error as StalkerApi.StalkerException).status).isEqualTo(503)
         assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(2)
         assertThat(panel.asked.count { it == "handshake" }).isEqualTo(2)
+    }
+
+    @Test
+    fun `a handshake reply that trips the client up at one address still tries the portal's other addresses`() =
+        runTest {
+            panel.replies["handshake"] = "!crash"
+
+            val error = runCatching { api.liveChannels(STALKER_SOURCE) }.exceptionOrNull()
+
+            assertThat(error).isInstanceOf(StalkerApi.StalkerException::class.java)
+            assertThat(panel.asked.count { it == "handshake" }).isEqualTo(ADDRESSES)
+        }
+
+    @Test
+    fun `a channel list that trips the client up fails as an unreadable list, after one more try`() = runTest {
+        panel.replies["get_all_channels"] = "!crash"
+
+        val error = runCatching { api.liveChannels(STALKER_SOURCE) }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(StalkerApi.StalkerException::class.java)
+        assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(2)
     }
 
     @Test
     fun `a blank first reply still shakes hands again and asks once more`() = runTest {
         panel.replies["get_all_channels"] = "  "
 
-        api.liveChannels(STALKER_SOURCE)
+        runCatching { api.liveChannels(STALKER_SOURCE) }
 
         assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(2)
         assertThat(panel.asked.count { it == "handshake" }).isEqualTo(2)
     }
 
     @Test
-    fun `a list cut off partway is no channels, after one more try, never the half that came`() = runTest {
+    fun `a list cut off partway fails, after one more try, never keeping the half that came`() = runTest {
         panel.replies["get_all_channels"] = """{"js": {"data": [{"id": "9", "name": "News"}, {"id": "1"""
 
-        assertThat(api.liveChannels(STALKER_SOURCE)).isEmpty()
+        val error = runCatching { api.liveChannels(STALKER_SOURCE) }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(StalkerApi.StalkerException::class.java)
         assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(2)
     }
 
@@ -84,6 +107,9 @@ class StalkerApiTest {
     }
 
     private companion object {
+        /** The paths a portal's API is looked for at. */
+        const val ADDRESSES = 5
+
         /** A numbered channel, one with no number, and entries a portal sends that aren't channels. */
         const val CHANNELS = """[
             {"id": "9", "name": "News", "number": "101", "tv_genre_id": "3", "logo": "/logo/9.png",

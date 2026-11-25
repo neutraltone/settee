@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">प्रोफ़ाइल का नाम बदलें</string>
     <string name="profiles_title">कौन देख रहा है?</string>
     <string name="recset_save_to">रिकॉर्डिंग्स सेव करें यहां</string>
-    <string name="recset_usb_no_picker">इस डिवाइस पर कोई फ़ोल्डर पिकर उपलब्ध नहीं है।</string>
+    <string name="recset_usb_no_picker_tv">यह टीवी USB ड्राइव पर फ़ोल्डर नहीं चुन सकता। इसके बजाय इसी टीवी या अपने NAS पर रिकॉर्ड करें।</string>
+    <string name="recset_usb_no_picker_device">यह डिवाइस USB ड्राइव पर फ़ोल्डर नहीं चुन सकता। इसके बजाय इसी डिवाइस या अपने NAS पर रिकॉर्ड करें।</string>
+    <string name="recset_usb_not_kept">उस फ़ोल्डर की पहुंच बनाए नहीं रखी जा सकी। उसे फिर से चुनें, या अपनी USB ड्राइव पर कोई दूसरा फ़ोल्डर चुनें।</string>
     <string name="recset_field_username">यूज़रनेम</string>
     <string name="recset_field_password">पासवर्ड</string>
     <string name="recset_status_testing">टेस्ट हो रहा है…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">%2$d डिवाइस से %1$d आइटम सिंक किए गए।</string>
     <string name="sync_nas_uploaded">इस डिवाइस को NAS पर सेव किया गया। अभी तक किसी अन्य डिवाइस ने यहां सिंक नहीं किया है।</string>
     <string name="sync_nas_failed">आपके NAS तक नहीं पहुंचा जा सका। जांचें कि वह चालू है और रिकॉर्डिंग सेटिंग्स में विवरण सही हैं।</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d दूसरे डिवाइस ने आपके NAS पर जो सेव किया, उसे पढ़ा नहीं जा सका। थोड़ी देर में फिर से सिंक करें, या उस पर Settee अपडेट करें।</item>
+        <item quantity="other">%1$d दूसरे डिवाइस ने आपके NAS पर जो सेव किया, उसे पढ़ा नहीं जा सका। थोड़ी देर में फिर से सिंक करें, या उन पर Settee अपडेट करें।</item>
+    </plurals>
     <string name="about_update_available">अपडेट उपलब्ध है: %1$s — इंस्टॉल करने के लिए प्रॉम्प्ट देखें।</string>
     <string name="about_up_to_date">आप नवीनतम वर्शन पर हैं।</string>
     <string name="about_checking">जांच हो रही है…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">आपके प्रदाता के चैनल लोड नहीं हो सके। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_movies_list">आपके प्रदाता की फ़िल्मों की सूची नहीं पहुँची। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_shows_list">आपके प्रदाता के शोज़ की सूची नहीं पहुँची। थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="setup_failed_guide">टीवी गाइड लोड नहीं हुई। Settee अगली बार रीफ़्रेश होने पर फिर कोशिश करेगा।</string>
+    <string name="setup_failed_movies">फ़िल्में लोड नहीं हुईं। Settee अगली बार रीफ़्रेश होने पर, या जब आप फ़िल्में खोलेंगे, फिर कोशिश करेगा।</string>
+    <string name="setup_failed_shows">शोज़ लोड नहीं हुए। Settee अगली बार रीफ़्रेश होने पर, या जब आप शोज़ खोलेंगे, फिर कोशिश करेगा।</string>
     <string name="vod_movies_load_failed">आपकी फ़िल्में लोड नहीं हो सकीं</string>
     <string name="vod_shows_load_failed">आपके शोज़ लोड नहीं हो सके</string>
     <string name="error_channel_list_memory_tv">आपके प्रदाता की चैनल सूची को इस टीवी में मौजूद मेमोरी से ज़्यादा मेमोरी चाहिए।</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">इस डिवाइस पर चैनल मैनेजर शुरू नहीं हो सका। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="manager_timed_out">कुछ देर इस्तेमाल न होने पर चैनल मैनेजर बंद हो गया। ज़रूरत हो तो इसे फिर से खोलें।</string>
     <string name="manager_too_many_codes">बहुत सारे गलत कोड के बाद चैनल मैनेजर बंद हो गया। फिर से शुरू करने के लिए इसे दोबारा खोलें।</string>
+    <string name="manager_page_unreachable">टीवी तक नहीं पहुँच सके। देखें कि आप उसी Wi-Fi पर हैं। अगर चैनल मैनेजर बंद हो गया है, तो उसे टीवी पर फिर से खोलें और नया कोड स्कैन करें।</string>
+    <string name="manager_page_closed">टीवी ने चैनल मैनेजर बंद कर दिया। उसे टीवी पर फिर से खोलें और नया कोड स्कैन करें।</string>
+    <string name="manager_page_not_saved">टीवी ने यह बदलाव सेव नहीं किया। फिर से कोशिश करें।</string>
+    <string name="manager_page_not_tested">टीवी यह जाँच नहीं कर पाया। फिर से कोशिश करें।</string>
+    <string name="manager_page_not_loaded">टीवी यह सूची नहीं भेज सका। फिर से कोशिश करने के लिए यह पेज दोबारा लोड करें।</string>
+    <string name="manager_page_nas_required">अपने NAS का पता और शेयर जोड़ें, फिर दोबारा सेव करें।</string>
+    <string name="manager_page_provider_required">इस तरह के प्रोवाइडर के लिए ज़रूरी सारी जानकारी भरें, फिर से कोशिश करें।</string>
+    <string name="manager_page_url_required">प्रोवाइडर का पता डालें।</string>
+    <string name="manager_page_login_required">यूज़रनेम और पासवर्ड डालें।</string>
+    <string name="manager_page_mac_required">वह डिवाइस पता डालें जो आपके प्रोवाइडर ने इस पोर्टल के लिए दिया है।</string>
     <string name="pairing_no_network_tv">यह टीवी किसी नेटवर्क पर नहीं है, इसलिए आपका फ़ोन इस तक नहीं पहुंच सकता। इसे कनेक्ट करें, फिर कोशिश करें।</string>
     <string name="pairing_no_network_device">यह डिवाइस किसी नेटवर्क पर नहीं है, इसलिए आपका फ़ोन इस तक नहीं पहुंच सकता। इसे कनेक्ट करें, फिर कोशिश करें।</string>
     <string name="pairing_failed_tv">इस टीवी पर पेयरिंग शुरू नहीं हो सकी। थोड़ी देर में फिर कोशिश करें।</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">यह टीवी %1$s नहीं चला सकता</string>
     <string name="vod_cant_play_device">यह डिवाइस %1$s नहीं चला सकता</string>
+    <string name="player_no_sound_tv">यह टीवी इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो उसकी सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_no_sound_device">यह डिवाइस इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो इस डिवाइस की सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_stepped_down_tv">यह टीवी %1$s नहीं चला सकता। इसकी जगह %2$s चल रहा है।</string>
+    <string name="player_stepped_down_device">यह डिवाइस %1$s नहीं चला सकता। इसकी जगह %2$s चल रहा है।</string>
+    <string name="player_stepped_down_lower_tv">यह टीवी %1$s नहीं चला सकता। इसकी जगह कम क्वालिटी चल रही है।</string>
+    <string name="player_stepped_down_lower_device">यह डिवाइस %1$s नहीं चला सकता। इसकी जगह कम क्वालिटी चल रही है।</string>
+    <string name="player_stepped_down_for_sound_tv">यह टीवी इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। इसकी जगह दूसरा वर्शन चल रहा है। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो उसकी सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_stepped_down_for_sound_device">यह डिवाइस इस ऑडियो फॉर्मेट को नहीं चला सकता (%1$s)। इसकी जगह दूसरा वर्शन चल रहा है। अगर आपका टीवी या साउंडबार इसे सपोर्ट करता है, तो इस डिवाइस की सेटिंग्स में सराउंड साउंड चालू करने से मदद मिल सकती है।</string>
+    <string name="player_stepped_down_unnamed_tv">यह टीवी यह क्वालिटी नहीं चला सकता। इसकी जगह दूसरी क्वालिटी चल रही है।</string>
+    <string name="player_stepped_down_unnamed_device">यह डिवाइस यह क्वालिटी नहीं चला सकता। इसकी जगह दूसरी क्वालिटी चल रही है।</string>
     <string name="vod_language_title">यहाँ केवल %1$s में</string>
     <string name="vod_language_body_tv">यह टीवी आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
     <string name="vod_language_body_device">यह डिवाइस आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ने यह यूज़रनेम या पासवर्ड स्वीकार नहीं किया। इन्हें जाँचें और फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ने इस टीवी को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
+    <string name="error_opensubtitles_not_saved_tv">इस टीवी पर ये सबटाइटल रखने की जगह नहीं है। कुछ जगह खाली करें, फिर से कोशिश करें।</string>
+    <string name="error_opensubtitles_not_saved_device">इस डिवाइस पर ये सबटाइटल रखने की जगह नहीं है। कुछ जगह खाली करें, फिर से कोशिश करें।</string>
+    <string name="error_opensubtitles_not_kept_tv">यह टीवी ये सबटाइटल नहीं रख पाया। फिर से कोशिश करें, या कोई दूसरा चुनें।</string>
+    <string name="error_opensubtitles_not_kept_device">यह डिवाइस ये सबटाइटल नहीं रख पाया। फिर से कोशिश करें, या कोई दूसरा चुनें।</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ने साइन इन स्वीकार कर लिया, पर यह टीवी उसे सेव नहीं कर पाया। इस टीवी को रीस्टार्ट करें, फिर से साइन इन करें।</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ने साइन इन स्वीकार कर लिया, पर यह डिवाइस उसे सेव नहीं कर पाया। इस डिवाइस को रीस्टार्ट करें, फिर से साइन इन करें।</string>
     <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
     <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
     <string name="diagnostics_database_failed">Settee अपना डेटाबेस नहीं पढ़ सका, इसलिए ये आंकड़े उपलब्ध नहीं हैं।</string>

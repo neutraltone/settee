@@ -126,6 +126,8 @@ class EpgRepository(
         val programmesWritten: Int,
         val channelsMatched: Int,
         val channelsTotal: Int,
+        /** Why the first of [feedsFailed] failed, for Setup to say why its guide didn't load. */
+        val failure: ViewerError? = null,
     )
 
     // ---- Reads -----------------------------------------------------------------------------
@@ -282,7 +284,7 @@ class EpgRepository(
         maybeAutoEnableRegionalFeed()
 
         var succeeded = 0
-        var failed = 0
+        val failures = mutableListOf<ViewerError>()
         var written = 0
         var downloaded = 0
 
@@ -319,7 +321,7 @@ class EpgRepository(
                 is FeedResult.Failed -> {
                     // A guide the viewer never asked for doesn't make the refresh a failure (Setup
                     // would say the guide didn't load); Guide settings still shows why it failed.
-                    if (!feed.isSelfEnabled(selfEnabledGuide.name)) failed++
+                    if (!feed.isSelfEnabled(selfEnabledGuide.name)) failures += result.reason
                     // The stamp is NOT advanced on failure, so the next sync retries
                     // rather than waiting out the interval on a feed that never landed.
                     feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason.stored())
@@ -338,7 +340,7 @@ class EpgRepository(
         val rematch = downloaded > 0 || guideDropped || channelsSaved
         val (matched, total) = if (rematch) runMatcher() else countMatched()
         reporting.done()
-        SyncSummary(succeeded, failed, written, matched, total)
+        SyncSummary(succeeded, failures.size, written, matched, total, failures.firstOrNull())
     }
 
     /**

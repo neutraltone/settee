@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.JourneyTimer
 import app.opentv.core.JourneyTimer.Journey
@@ -142,9 +143,29 @@ class CatalogueRefresh(
     data class VodFailures(
         val movies: Map<Long, ViewerError> = emptyMap(),
         val shows: Map<Long, ViewerError> = emptyMap(),
+        /**
+         * What each failed list was worded from, for Setup sharing the download, which words it with
+         * its own step's sentence rather than the tab's.
+         */
+        private val movieCauses: Map<Long, Throwable> = emptyMap(),
+        private val showCauses: Map<Long, Throwable> = emptyMap(),
     ) {
-        fun after(sourceId: Long, vod: VodFetch) =
-            VodFailures(movies.after(sourceId, vod.movies), shows.after(sourceId, vod.shows))
+        fun after(sourceId: Long, vod: VodFetch) = VodFailures(
+            movies.after(sourceId, vod.movies),
+            shows.after(sourceId, vod.shows),
+            movieCauses.causesAfter(sourceId, vod.movies),
+            showCauses.causesAfter(sourceId, vod.shows),
+        )
+
+        /** The cause of [sourceId]'s failed [step] list, where there is one. */
+        fun causeOf(sourceId: Long, step: SetupStep): Throwable? =
+            (if (step == SetupStep.MOVIES) movieCauses else showCauses)[sourceId]
+
+        private fun Map<Long, Throwable>.causesAfter(sourceId: Long, list: ListFetch?) = when {
+            list == null -> this
+            list.cause == null -> this - sourceId
+            else -> this + (sourceId to list.cause)
+        }
 
         private fun Map<Long, ViewerError>.after(sourceId: Long, list: ListFetch?) = when {
             list == null -> this
@@ -173,8 +194,17 @@ class CatalogueRefresh(
         val failed: List<SetupStep> get() = done.filter { it.failed }.map { it.step }
     }
 
-    /** A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it failed. */
-    data class StepDone(val step: SetupStep, val count: Int, val of: Int? = null, val failed: Boolean = false)
+    /**
+     * A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it
+     * failed, with why where it's known.
+     */
+    data class StepDone(
+        val step: SetupStep,
+        val count: Int,
+        val of: Int? = null,
+        val failed: Boolean = false,
+        val failure: ViewerError? = null,
+    )
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
@@ -343,6 +373,7 @@ class CatalogueRefresh(
                     run.running(SetupStep.GUIDE)
                     // Reported as adding a provider does, so whoever left for Live TV hears how the
                     // guide went the way they would have without Setup.
+                    var thrown: Throwable? = null
                     val guide = runCatching {
                         syncGuide(force = false) { done ->
                             run.update {
@@ -351,11 +382,21 @@ class CatalogueRefresh(
                         }
                     }
                         .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
-                        .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
+                        .onFailure {
+                            Log.w(TAG, "Guide failed to load during setup", it)
+                            thrown = it
+                        }
                         .getOrNull()
                     // Only when nothing came through: one dead feed among good ones still gives a guide.
                     val failed = guide == null || (guide.feedsSucceeded == 0 && guide.feedsFailed > 0)
-                    val step = StepDone(SetupStep.GUIDE, guide?.channelsMatched ?: 0, guide?.channelsTotal, failed)
+                    val failure = thrown?.let { setupFailure(it, SetupStep.GUIDE) } ?: guide?.failure
+                    val step = StepDone(
+                        SetupStep.GUIDE,
+                        guide?.channelsMatched ?: 0,
+                        guide?.channelsTotal,
+                        failed,
+                        failure = failure.takeIf { failed },
+                    )
                     run.stepDone(step)
                 }
                 vod(source, waitForNewEpisodes = false, setup = run)
@@ -394,7 +435,12 @@ class CatalogueRefresh(
             val missing = listOf(SetupStep.MOVIES, SetupStep.SHOWS)
                 .filter { step -> step in steps && _state.value.setup?.done?.none { it.step == step } == true }
             for (step in missing) {
-                stepDone(StepDone(step, catalog.storedCount(source.id, step), failed = vodIsStale(source)))
+                val failed = vodIsStale(source)
+                // Worded again from what the shared download threw, with this step's own sentence.
+                val failures = _state.value.vodFailures
+                val failure = (if (step == SetupStep.MOVIES) failures.movies else failures.shows)[source.id]
+                    ?.let { worded -> failures.causeOf(source.id, step)?.let { setupFailure(it, step) } ?: worded }
+                stepDone(StepDone(step, catalog.storedCount(source.id, step), failed = failed, failure = failure))
             }
         }
 
@@ -413,7 +459,10 @@ class CatalogueRefresh(
             fetch { saving ->
                 update { copy(bar = this@SetupRun.bar.saving(step, saving.share), found = saving.saved) }
             }
-                .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
+                .also { list ->
+                    val failure = list.cause?.let { setupFailure(it, step) } ?: list.failure
+                    stepDone(StepDone(step, list.count, failed = !list.complete, failure = failure))
+                }
         } else {
             null
         }
@@ -459,6 +508,25 @@ class CatalogueRefresh(
             count.decrementAndGet()
             _state.update { it.mark(count.get() > 0) }
         }
+    }
+
+    /**
+     * Why Setup's [step] didn't load, for its finished screen: the step's own sentence, which says
+     * Settee will try again, where [error] says nothing more a viewer could act on.
+     */
+    private fun setupFailure(error: Throwable, step: SetupStep): ViewerError {
+        // A list too big for the heap is about this hardware, not the provider, as the channels' is.
+        if (error is OutOfMemoryError) {
+            val tv = R.string.error_channel_list_memory_tv
+            return catalog.wording.ofHardware(tv, R.string.error_channel_list_memory_device, OUT_OF_MEMORY)
+        }
+        val fallback = when (step) {
+            SetupStep.MOVIES -> R.string.setup_failed_movies
+            SetupStep.SHOWS -> R.string.setup_failed_shows
+            // The channels never get here: a login that fails goes back to the form.
+            SetupStep.GUIDE, SetupStep.CHANNELS -> R.string.setup_failed_guide
+        }
+        return catalog.wording.ofProvider(error, fallback)
     }
 
     private fun vodIsStale(source: Source) = clock() - settings.vodFetchedAtMillis(source.id) >= VOD_FRESH_MILLIS
@@ -592,6 +660,7 @@ class CatalogueRefresh(
     private companion object {
         const val TAG = "CatalogueRefresh"
         const val VOD_FRESH_MILLIS = 12L * 60 * 60 * 1000
+        const val OUT_OF_MEMORY = "OutOfMemory"
     }
 }
 

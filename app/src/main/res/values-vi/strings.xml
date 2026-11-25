@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Đổi tên hồ sơ</string>
     <string name="profiles_title">Ai đang xem?</string>
     <string name="recset_save_to">Lưu bản ghi vào</string>
-    <string name="recset_usb_no_picker">Không có trình chọn thư mục nào khả dụng trên thiết bị này.</string>
+    <string name="recset_usb_no_picker_tv">TV này không thể chọn thư mục trên ổ USB. Hãy ghi hình vào TV này hoặc NAS của bạn.</string>
+    <string name="recset_usb_no_picker_device">Thiết bị này không thể chọn thư mục trên ổ USB. Hãy ghi hình vào thiết bị này hoặc NAS của bạn.</string>
+    <string name="recset_usb_not_kept">Không thể giữ quyền truy cập vào thư mục đó. Hãy chọn lại, hoặc chọn thư mục khác trên ổ USB của bạn.</string>
     <string name="recset_field_username">Tên đăng nhập</string>
     <string name="recset_field_password">Mật khẩu</string>
     <string name="recset_status_testing">Đang kiểm tra…</string>
@@ -144,6 +146,9 @@
     <string name="sync_nas_done">Đã đồng bộ %1$d mục từ %2$d thiết bị.</string>
     <string name="sync_nas_uploaded">Đã lưu thiết bị này vào NAS. Chưa có thiết bị nào khác đồng bộ ở đây.</string>
     <string name="sync_nas_failed">Không thể kết nối tới NAS của bạn. Kiểm tra xem nó đã bật chưa và thông tin trong Cài đặt ghi hình có đúng không.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Không đọc được dữ liệu mà %1$d thiết bị khác đã lưu trên NAS của bạn. Hãy đồng bộ lại sau giây lát hoặc cập nhật Settee trên thiết bị đó.</item>
+    </plurals>
     <string name="about_update_available">Có bản cập nhật: %1$s — xem hướng dẫn để cài đặt.</string>
     <string name="about_up_to_date">Bạn đang dùng phiên bản mới nhất.</string>
     <string name="about_checking">Đang kiểm tra…</string>
@@ -267,6 +272,9 @@
     <string name="error_catalogue">Không thể tải các kênh của nhà cung cấp. Thử lại sau giây lát.</string>
     <string name="error_movies_list">Danh sách phim của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
     <string name="error_shows_list">Danh sách phim bộ của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
+    <string name="setup_failed_guide">Lịch phát sóng chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo.</string>
+    <string name="setup_failed_movies">Phim chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo, hoặc khi bạn mở Phim.</string>
+    <string name="setup_failed_shows">Phim bộ chưa tải được. Settee sẽ thử lại ở lần làm mới tiếp theo, hoặc khi bạn mở Phim bộ.</string>
     <string name="vod_movies_load_failed">Không thể tải phim của bạn</string>
     <string name="vod_shows_load_failed">Không thể tải phim bộ của bạn</string>
     <string name="error_channel_list_memory_tv">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn TV này có.</string>
@@ -303,6 +311,16 @@
     <string name="manager_failed_device">Không thể khởi động trình quản lý kênh trên thiết bị này. Thử lại sau giây lát.</string>
     <string name="manager_timed_out">Trình quản lý kênh đã đóng sau một lúc không dùng. Mở lại khi bạn cần.</string>
     <string name="manager_too_many_codes">Trình quản lý kênh đã đóng vì nhập sai mã quá nhiều lần. Mở lại để bắt đầu từ đầu.</string>
+    <string name="manager_page_unreachable">Không kết nối được với TV. Hãy kiểm tra bạn đang dùng cùng Wi-Fi. Nếu trình quản lý kênh đã đóng, hãy mở lại trên TV rồi quét mã mới.</string>
+    <string name="manager_page_closed">TV đã đóng trình quản lý kênh. Hãy mở lại trên TV rồi quét mã mới.</string>
+    <string name="manager_page_not_saved">TV chưa lưu thay đổi đó. Hãy thử lại.</string>
+    <string name="manager_page_not_tested">TV không chạy được bài kiểm tra đó. Hãy thử lại.</string>
+    <string name="manager_page_not_loaded">TV không gửi được danh sách này. Hãy tải lại trang này để thử lại.</string>
+    <string name="manager_page_nas_required">Hãy thêm địa chỉ và thư mục chia sẻ của NAS, rồi lưu lại.</string>
+    <string name="manager_page_provider_required">Hãy điền mọi thông tin mà loại nhà cung cấp này cần, rồi thử lại.</string>
+    <string name="manager_page_url_required">Hãy nhập địa chỉ của nhà cung cấp.</string>
+    <string name="manager_page_login_required">Hãy nhập tên người dùng và mật khẩu.</string>
+    <string name="manager_page_mac_required">Hãy nhập địa chỉ thiết bị mà nhà cung cấp đưa cho bạn cho cổng này.</string>
     <string name="pairing_no_network_tv">TV này chưa kết nối mạng nên điện thoại của bạn không thể truy cập. Hãy kết nối, rồi thử lại.</string>
     <string name="pairing_no_network_device">Thiết bị này chưa kết nối mạng nên điện thoại của bạn không thể truy cập. Hãy kết nối, rồi thử lại.</string>
     <string name="pairing_failed_tv">Không thể bắt đầu ghép nối trên TV này. Thử lại sau giây lát.</string>
@@ -329,6 +347,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">TV này không phát được %1$s</string>
     <string name="vod_cant_play_device">Thiết bị này không phát được %1$s</string>
+    <string name="player_no_sound_tv">TV này không phát được định dạng âm thanh này (%1$s). Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của nó có thể giúp ích.</string>
+    <string name="player_no_sound_device">Thiết bị này không phát được định dạng âm thanh này (%1$s). Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của thiết bị này có thể giúp ích.</string>
+    <string name="player_stepped_down_tv">TV này không phát được %1$s. Đang phát %2$s thay thế.</string>
+    <string name="player_stepped_down_device">Thiết bị này không phát được %1$s. Đang phát %2$s thay thế.</string>
+    <string name="player_stepped_down_lower_tv">TV này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
+    <string name="player_stepped_down_lower_device">Thiết bị này không phát được %1$s. Đang phát chất lượng thấp hơn thay thế.</string>
+    <string name="player_stepped_down_for_sound_tv">TV này không phát được định dạng âm thanh này (%1$s). Đang phát phiên bản khác thay thế. Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của nó có thể giúp ích.</string>
+    <string name="player_stepped_down_for_sound_device">Thiết bị này không phát được định dạng âm thanh này (%1$s). Đang phát phiên bản khác thay thế. Nếu TV hoặc loa thanh của bạn hỗ trợ, bật âm thanh vòm trong phần cài đặt của thiết bị này có thể giúp ích.</string>
+    <string name="player_stepped_down_unnamed_tv">TV này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
+    <string name="player_stepped_down_unnamed_device">Thiết bị này không phát được chất lượng đó. Đang phát chất lượng khác thay thế.</string>
     <string name="vod_language_title">Ở đây chỉ có tiếng %1$s</string>
     <string name="vod_language_body_tv">TV này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
     <string name="vod_language_body_device">Thiết bị này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
@@ -353,6 +381,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles không chấp nhận tên người dùng hoặc mật khẩu đó. Hãy kiểm tra rồi thử lại.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles đã đăng xuất TV này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
+    <string name="error_opensubtitles_not_saved_tv">TV này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
+    <string name="error_opensubtitles_not_saved_device">Thiết bị này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
+    <string name="error_opensubtitles_not_kept_tv">TV này không lưu được phụ đề đó. Hãy thử lại hoặc chọn phụ đề khác.</string>
+    <string name="error_opensubtitles_not_kept_device">Thiết bị này không lưu được phụ đề đó. Hãy thử lại hoặc chọn phụ đề khác.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles đã chấp nhận đăng nhập, nhưng TV này không lưu được. Hãy khởi động lại TV này rồi đăng nhập lại.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles đã chấp nhận đăng nhập, nhưng thiết bị này không lưu được. Hãy khởi động lại thiết bị này rồi đăng nhập lại.</string>
     <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
     <string name="settings_guide_bad_address">Đó không phải địa chỉ web. Kiểm tra xem đã nhập đúng như liên kết của lịch phát sóng chưa, ví dụ example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee không đọc được cơ sở dữ liệu của mình, nên không có các con số này.</string>

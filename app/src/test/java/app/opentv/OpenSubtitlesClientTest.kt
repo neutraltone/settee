@@ -156,6 +156,27 @@ class OpenSubtitlesClientTest {
     }
 
     @Test
+    fun `a 401 to a request that carried no token is Settee's key turned down, not a sign-in`() {
+        site.replies["GET /subtitles"] = """!401 {"message": "Unauthorized"}"""
+        site.replies["POST /download"] = """!401 {"message": "Unauthorized"}"""
+
+        val searching = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null)).exceptionOrNull()
+        val downloading = client.download(fileId = 11, token = null).exceptionOrNull()
+
+        assertThat(searching).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+        assertThat((searching as OpenSubtitlesFailure.KeyRejected).status).isEqualTo(401)
+        assertThat(downloading).isInstanceOf(OpenSubtitlesFailure.KeyRejected::class.java)
+    }
+
+    @Test
+    fun `a 401 to a download that carried a token is still the sign-in turned down`() {
+        site.replies["POST /download"] = """!401 {"message": "invalid token"}"""
+
+        assertThat(client.download(fileId = 11, token = "t").exceptionOrNull())
+            .isInstanceOf(OpenSubtitlesFailure.TokenRejected::class.java)
+    }
+
+    @Test
     fun `a turned-down key is told by the message containing OpenSubtitles' words, as the release check does`() {
         site.replies["GET /subtitles"] = """!403 {"message":"You cannot consume this service. Contact support."}"""
 

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Μετονομασία προφίλ</string>
     <string name="profiles_title">Ποιος παρακολουθεί;</string>
     <string name="recset_save_to">Αποθήκευση εγγραφών σε</string>
-    <string name="recset_usb_no_picker">Δεν υπάρχει διαθέσιμο εργαλείο επιλογής φακέλου σε αυτή τη συσκευή.</string>
+    <string name="recset_usb_no_picker_tv">Αυτή η τηλεόραση δεν μπορεί να επιλέξει φάκελο σε δίσκο USB. Κάντε εγγραφή σε αυτή την τηλεόραση ή στο NAS σας.</string>
+    <string name="recset_usb_no_picker_device">Αυτή η συσκευή δεν μπορεί να επιλέξει φάκελο σε δίσκο USB. Κάντε εγγραφή σε αυτή τη συσκευή ή στο NAS σας.</string>
+    <string name="recset_usb_not_kept">Δεν ήταν δυνατή η διατήρηση της πρόσβασης σε αυτόν τον φάκελο. Επιλέξτε τον ξανά ή επιλέξτε άλλο φάκελο στον δίσκο USB σας.</string>
     <string name="recset_field_username">Όνομα χρήστη</string>
     <string name="recset_field_password">Κωδικός πρόσβασης</string>
     <string name="recset_status_testing">Έλεγχος…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">Συγχρονίστηκαν %1$d στοιχείο/α από %2$d συσκευή/ές.</string>
     <string name="sync_nas_uploaded">Αυτή η συσκευή αποθηκεύτηκε στο NAS. Καμία άλλη συσκευή δεν έχει συγχρονιστεί εδώ ακόμη.</string>
     <string name="sync_nas_failed">Δεν ήταν δυνατή η πρόσβαση στο NAS σας. Ελέγξτε ότι είναι ενεργό και ότι τα στοιχεία στις Ρυθμίσεις εγγραφής είναι σωστά.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Δεν ήταν δυνατή η ανάγνωση όσων αποθήκευσε στο NAS σας %1$d άλλη συσκευή. Συγχρονίστε ξανά σε λίγο ή ενημερώστε το Settee σε αυτήν.</item>
+        <item quantity="other">Δεν ήταν δυνατή η ανάγνωση όσων αποθήκευσαν στο NAS σας %1$d άλλες συσκευές. Συγχρονίστε ξανά σε λίγο ή ενημερώστε το Settee σε αυτές.</item>
+    </plurals>
     <string name="about_update_available">Διαθέσιμη ενημέρωση: %1$s — δείτε την προτροπή για εγκατάσταση.</string>
     <string name="about_up_to_date">Χρησιμοποιείτε την πιο πρόσφατη έκδοση.</string>
     <string name="about_checking">Έλεγχος…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">Δεν ήταν δυνατή η φόρτωση των καναλιών του παρόχου σας. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_movies_list">Η λίστα ταινιών του παρόχου σας δεν έφτασε. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_shows_list">Η λίστα σειρών του παρόχου σας δεν έφτασε. Δοκιμάστε ξανά σε λίγο.</string>
+    <string name="setup_failed_guide">Ο οδηγός TV δεν φορτώθηκε. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση.</string>
+    <string name="setup_failed_movies">Οι ταινίες δεν φορτώθηκαν. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση ή όταν ανοίξετε τις Ταινίες.</string>
+    <string name="setup_failed_shows">Οι σειρές δεν φορτώθηκαν. Το Settee θα δοκιμάσει ξανά στην επόμενη ανανέωση ή όταν ανοίξετε τις Σειρές.</string>
     <string name="vod_movies_load_failed">Δεν ήταν δυνατή η φόρτωση των ταινιών σας</string>
     <string name="vod_shows_load_failed">Δεν ήταν δυνατή η φόρτωση των σειρών σας</string>
     <string name="error_channel_list_memory_tv">Η λίστα καναλιών του παρόχου σας χρειάζεται περισσότερη μνήμη από όση έχει αυτή η τηλεόραση.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">Δεν ήταν δυνατή η έναρξη της διαχείρισης καναλιών σε αυτή τη συσκευή. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="manager_timed_out">Η διαχείριση καναλιών έκλεισε επειδή δεν χρησιμοποιήθηκε για αρκετή ώρα. Ανοίξτε την ξανά όταν τη χρειαστείτε.</string>
     <string name="manager_too_many_codes">Η διαχείριση καναλιών έκλεισε μετά από πάρα πολλούς λάθος κωδικούς. Ανοίξτε την ξανά για να ξεκινήσετε από την αρχή.</string>
+    <string name="manager_page_unreachable">Δεν ήταν δυνατή η σύνδεση με την τηλεόραση. Ελέγξτε ότι είστε στο ίδιο Wi-Fi. Αν η διαχείριση καναλιών έκλεισε, ανοίξτε την ξανά στην τηλεόραση και σαρώστε τον νέο κωδικό.</string>
+    <string name="manager_page_closed">Η τηλεόραση έκλεισε τη διαχείριση καναλιών. Ανοίξτε την ξανά στην τηλεόραση και σαρώστε τον νέο κωδικό.</string>
+    <string name="manager_page_not_saved">Η τηλεόραση δεν αποθήκευσε αυτή την αλλαγή. Δοκιμάστε ξανά.</string>
+    <string name="manager_page_not_tested">Η τηλεόραση δεν μπόρεσε να κάνει αυτόν τον έλεγχο. Δοκιμάστε ξανά.</string>
+    <string name="manager_page_not_loaded">Η τηλεόραση δεν μπόρεσε να στείλει αυτή τη λίστα. Φορτώστε ξανά τη σελίδα για να δοκιμάσετε ξανά.</string>
+    <string name="manager_page_nas_required">Προσθέστε τη διεύθυνση και τον κοινόχρηστο φάκελο του NAS σας και μετά αποθηκεύστε ξανά.</string>
+    <string name="manager_page_provider_required">Συμπληρώστε όλα τα στοιχεία που χρειάζεται αυτό το είδος παρόχου και δοκιμάστε ξανά.</string>
+    <string name="manager_page_url_required">Εισαγάγετε τη διεύθυνση του παρόχου.</string>
+    <string name="manager_page_login_required">Εισαγάγετε το όνομα χρήστη και τον κωδικό πρόσβασης.</string>
+    <string name="manager_page_mac_required">Εισαγάγετε τη διεύθυνση συσκευής που σας έδωσε ο πάροχος για αυτή την πύλη.</string>
     <string name="pairing_no_network_tv">Αυτή η τηλεόραση δεν είναι συνδεδεμένη σε δίκτυο, οπότε το κινητό σας δεν μπορεί να συνδεθεί σε αυτήν. Συνδέστε την και δοκιμάστε ξανά.</string>
     <string name="pairing_no_network_device">Αυτή η συσκευή δεν είναι συνδεδεμένη σε δίκτυο, οπότε το κινητό σας δεν μπορεί να συνδεθεί σε αυτήν. Συνδέστε την και δοκιμάστε ξανά.</string>
     <string name="pairing_failed_tv">Δεν ήταν δυνατή η έναρξη της σύζευξης σε αυτή την τηλεόραση. Δοκιμάστε ξανά σε λίγο.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s</string>
     <string name="vod_cant_play_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s</string>
+    <string name="player_no_sound_tv">Αυτή η τηλεόραση δεν μπορεί να αναπαραγάγει αυτή τη μορφή ήχου (%1$s). Αν η τηλεόραση ή το soundbar σας το υποστηρίζει, ίσως βοηθήσει να ενεργοποιήσετε τον ήχο surround στις ρυθμίσεις του.</string>
+    <string name="player_no_sound_device">Αυτή η συσκευή δεν μπορεί να αναπαραγάγει αυτή τη μορφή ήχου (%1$s). Αν η τηλεόραση ή το soundbar σας το υποστηρίζει, ίσως βοηθήσει να ενεργοποιήσετε τον ήχο surround στις ρυθμίσεις αυτής της συσκευής.</string>
+    <string name="player_stepped_down_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s. Αναπαράγεται %2$s στη θέση του.</string>
+    <string name="player_stepped_down_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s. Αναπαράγεται %2$s στη θέση του.</string>
+    <string name="player_stepped_down_lower_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s. Αναπαράγεται χαμηλότερη ποιότητα στη θέση του.</string>
+    <string name="player_stepped_down_lower_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s. Αναπαράγεται χαμηλότερη ποιότητα στη θέση του.</string>
+    <string name="player_stepped_down_for_sound_tv">Αυτή η τηλεόραση δεν μπορεί να αναπαραγάγει αυτή τη μορφή ήχου (%1$s). Αναπαράγεται άλλη έκδοση στη θέση του. Αν η τηλεόραση ή το soundbar σας το υποστηρίζει, ίσως βοηθήσει να ενεργοποιήσετε τον ήχο surround στις ρυθμίσεις του.</string>
+    <string name="player_stepped_down_for_sound_device">Αυτή η συσκευή δεν μπορεί να αναπαραγάγει αυτή τη μορφή ήχου (%1$s). Αναπαράγεται άλλη έκδοση στη θέση του. Αν η τηλεόραση ή το soundbar σας το υποστηρίζει, ίσως βοηθήσει να ενεργοποιήσετε τον ήχο surround στις ρυθμίσεις αυτής της συσκευής.</string>
+    <string name="player_stepped_down_unnamed_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει αυτή την ποιότητα. Αναπαράγεται άλλη στη θέση της.</string>
+    <string name="player_stepped_down_unnamed_device">Αυτή η συσκευή δεν μπορεί να παίξει αυτή την ποιότητα. Αναπαράγεται άλλη στη θέση της.</string>
     <string name="vod_language_title">Εδώ μόνο στα %1$s</string>
     <string name="vod_language_body_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
     <string name="vod_language_body_device">Αυτή η συσκευή δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">Το OpenSubtitles δεν δέχτηκε αυτό το όνομα χρήστη ή τον κωδικό. Ελέγξτε τα και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_token_tv">Το OpenSubtitles αποσύνδεσε αυτή την τηλεόραση. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
     <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
+    <string name="error_opensubtitles_not_saved_tv">Δεν υπάρχει χώρος σε αυτή την τηλεόραση για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_not_saved_device">Δεν υπάρχει χώρος σε αυτή τη συσκευή για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_not_kept_tv">Αυτή η τηλεόραση δεν μπόρεσε να αποθηκεύσει αυτούς τους υπότιτλους. Δοκιμάστε ξανά ή επιλέξτε άλλους.</string>
+    <string name="error_opensubtitles_not_kept_device">Αυτή η συσκευή δεν μπόρεσε να αποθηκεύσει αυτούς τους υπότιτλους. Δοκιμάστε ξανά ή επιλέξτε άλλους.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η τηλεόραση δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή την τηλεόραση και συνδεθείτε ξανά.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η συσκευή δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή τη συσκευή και συνδεθείτε ξανά.</string>
     <string name="error_not_a_guide">Αυτή η διεύθυνση δεν είναι οδηγός προγράμματος. Ελέγξτε ότι είναι ο σωστός σύνδεσμος ή συνδεθείτε στο Wi-Fi, αν σας το ζητά.</string>
     <string name="settings_guide_bad_address">Αυτή δεν είναι διεύθυνση ιστού. Ελέγξτε ότι είναι γραμμένη όπως τη δείχνει ο σύνδεσμος του οδηγού, π.χ. example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Το Settee δεν μπόρεσε να διαβάσει τη βάση δεδομένων του, γι\' αυτό λείπουν αυτοί οι αριθμοί.</string>

@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Ganti nama profil</string>
     <string name="profiles_title">Siapa yang menonton?</string>
     <string name="recset_save_to">Simpan rekaman ke</string>
-    <string name="recset_usb_no_picker">Tidak ada pemilih folder yang tersedia di perangkat ini.</string>
+    <string name="recset_usb_no_picker_tv">TV ini tidak dapat memilih folder di drive USB. Rekam ke TV ini atau NAS Anda saja.</string>
+    <string name="recset_usb_no_picker_device">Perangkat ini tidak dapat memilih folder di drive USB. Rekam ke perangkat ini atau NAS Anda saja.</string>
+    <string name="recset_usb_not_kept">Tidak dapat mempertahankan akses ke folder itu. Pilih lagi, atau pilih folder lain di drive USB Anda.</string>
     <string name="recset_field_username">Nama pengguna</string>
     <string name="recset_field_password">Kata sandi</string>
     <string name="recset_status_testing">Menguji…</string>
@@ -144,6 +146,9 @@
     <string name="sync_nas_done">%1$d item disinkronkan dari %2$d perangkat.</string>
     <string name="sync_nas_uploaded">Perangkat ini disimpan ke NAS. Belum ada perangkat lain yang tersinkron ke sini.</string>
     <string name="sync_nas_failed">Tidak dapat menjangkau NAS Anda. Periksa apakah NAS menyala dan detail di pengaturan Rekaman sudah benar.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">Tidak dapat membaca data yang disimpan %1$d perangkat lain di NAS Anda. Sinkronkan lagi sebentar lagi, atau perbarui Settee di perangkat tersebut.</item>
+    </plurals>
     <string name="about_update_available">Pembaruan tersedia: %1$s — lihat perintah untuk memasang.</string>
     <string name="about_up_to_date">Anda menggunakan versi terbaru.</string>
     <string name="about_checking">Memeriksa…</string>
@@ -267,6 +272,9 @@
     <string name="error_catalogue">Gagal memuat saluran penyedia Anda. Coba lagi sebentar lagi.</string>
     <string name="error_movies_list">Daftar film dari penyedia Anda tidak sampai. Coba lagi sebentar lagi.</string>
     <string name="error_shows_list">Daftar acara TV dari penyedia Anda tidak sampai. Coba lagi sebentar lagi.</string>
+    <string name="setup_failed_guide">Panduan TV tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya.</string>
+    <string name="setup_failed_movies">Film tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya, atau saat Anda membuka Film.</string>
+    <string name="setup_failed_shows">Acara TV tidak termuat. Settee akan mencoba lagi saat penyegaran berikutnya, atau saat Anda membuka Acara TV.</string>
     <string name="vod_movies_load_failed">Gagal memuat film Anda</string>
     <string name="vod_shows_load_failed">Gagal memuat acara TV Anda</string>
     <string name="error_channel_list_memory_tv">Daftar saluran penyedia Anda membutuhkan lebih banyak memori daripada yang dimiliki TV ini.</string>
@@ -303,6 +311,16 @@
     <string name="manager_failed_device">Gagal memulai pengelola saluran di perangkat ini. Coba lagi sebentar lagi.</string>
     <string name="manager_timed_out">Pengelola saluran ditutup setelah lama tidak dipakai. Buka lagi saat Anda membutuhkannya.</string>
     <string name="manager_too_many_codes">Pengelola saluran ditutup karena terlalu banyak kode yang salah. Buka lagi untuk memulai dari awal.</string>
+    <string name="manager_page_unreachable">Tidak dapat menjangkau TV. Pastikan Anda berada di Wi-Fi yang sama. Jika pengelola saluran tertutup, buka lagi di TV dan pindai kode yang baru.</string>
+    <string name="manager_page_closed">TV menutup pengelola saluran. Buka lagi di TV dan pindai kode yang baru.</string>
+    <string name="manager_page_not_saved">TV tidak menyimpan perubahan itu. Coba lagi.</string>
+    <string name="manager_page_not_tested">TV tidak dapat menjalankan pengujian itu. Coba lagi.</string>
+    <string name="manager_page_not_loaded">TV tidak dapat mengirim daftar ini. Muat ulang halaman ini untuk mencoba lagi.</string>
+    <string name="manager_page_nas_required">Tambahkan alamat dan folder bersama NAS Anda, lalu simpan lagi.</string>
+    <string name="manager_page_provider_required">Isi semua detail yang dibutuhkan jenis penyedia ini, lalu coba lagi.</string>
+    <string name="manager_page_url_required">Masukkan alamat penyedia.</string>
+    <string name="manager_page_login_required">Masukkan nama pengguna dan sandi.</string>
+    <string name="manager_page_mac_required">Masukkan alamat perangkat yang diberikan penyedia Anda untuk portal ini.</string>
     <string name="pairing_no_network_tv">TV ini tidak terhubung ke jaringan, jadi ponsel Anda tidak dapat menjangkaunya. Hubungkan, lalu coba lagi.</string>
     <string name="pairing_no_network_device">Perangkat ini tidak terhubung ke jaringan, jadi ponsel Anda tidak dapat menjangkaunya. Hubungkan, lalu coba lagi.</string>
     <string name="pairing_failed_tv">Gagal memulai pemasangan di TV ini. Coba lagi sebentar lagi.</string>
@@ -329,6 +347,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">TV ini tidak bisa memutar %1$s</string>
     <string name="vod_cant_play_device">Perangkat ini tidak bisa memutar %1$s</string>
+    <string name="player_no_sound_tv">TV ini tidak dapat memutar format audio ini (%1$s). Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturannya mungkin membantu.</string>
+    <string name="player_no_sound_device">Perangkat ini tidak dapat memutar format audio ini (%1$s). Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturan perangkat ini mungkin membantu.</string>
+    <string name="player_stepped_down_tv">TV ini tidak bisa memutar %1$s. Memutar %2$s sebagai gantinya.</string>
+    <string name="player_stepped_down_device">Perangkat ini tidak bisa memutar %1$s. Memutar %2$s sebagai gantinya.</string>
+    <string name="player_stepped_down_lower_tv">TV ini tidak bisa memutar %1$s. Memutar kualitas yang lebih rendah sebagai gantinya.</string>
+    <string name="player_stepped_down_lower_device">Perangkat ini tidak bisa memutar %1$s. Memutar kualitas yang lebih rendah sebagai gantinya.</string>
+    <string name="player_stepped_down_for_sound_tv">TV ini tidak dapat memutar format audio ini (%1$s). Memutar versi lain sebagai gantinya. Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturannya mungkin membantu.</string>
+    <string name="player_stepped_down_for_sound_device">Perangkat ini tidak dapat memutar format audio ini (%1$s). Memutar versi lain sebagai gantinya. Jika TV atau soundbar Anda mendukungnya, menyalakan suara surround di pengaturan perangkat ini mungkin membantu.</string>
+    <string name="player_stepped_down_unnamed_tv">TV ini tidak bisa memutar kualitas itu. Memutar kualitas lain sebagai gantinya.</string>
+    <string name="player_stepped_down_unnamed_device">Perangkat ini tidak bisa memutar kualitas itu. Memutar kualitas lain sebagai gantinya.</string>
     <string name="vod_language_title">Di sini hanya dalam bahasa %1$s</string>
     <string name="vod_language_body_tv">TV ini tidak bisa memutar versi dalam bahasamu.</string>
     <string name="vod_language_body_device">Perangkat ini tidak bisa memutar versi dalam bahasamu.</string>
@@ -353,6 +381,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles tidak menerima nama pengguna atau sandi itu. Periksa lalu coba lagi.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles mengeluarkan TV ini dari akun. Masuk lagi di Setelan.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
+    <string name="error_opensubtitles_not_saved_tv">Tidak ada ruang di TV ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
+    <string name="error_opensubtitles_not_saved_device">Tidak ada ruang di perangkat ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
+    <string name="error_opensubtitles_not_kept_tv">TV ini tidak dapat menyimpan subtitle itu. Coba lagi, atau pilih yang lain.</string>
+    <string name="error_opensubtitles_not_kept_device">Perangkat ini tidak dapat menyimpan subtitle itu. Coba lagi, atau pilih yang lain.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles menerima proses masuk, tetapi TV ini tidak dapat menyimpannya. Mulai ulang TV ini, lalu masuk lagi.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles menerima proses masuk, tetapi perangkat ini tidak dapat menyimpannya. Mulai ulang perangkat ini, lalu masuk lagi.</string>
     <string name="error_not_a_guide">Alamat itu bukan panduan acara. Periksa apakah tautannya benar, atau masuk ke Wi-Fi Anda jika diminta.</string>
     <string name="settings_guide_bad_address">Itu bukan alamat web. Periksa apakah sudah diketik seperti yang ditunjukkan tautan panduan, misalnya example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee tidak dapat membaca databasenya, jadi angka ini tidak tersedia.</string>

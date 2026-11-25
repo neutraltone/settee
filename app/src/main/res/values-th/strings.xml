@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">เปลี่ยนชื่อโปรไฟล์</string>
     <string name="profiles_title">ใครกำลังดูอยู่?</string>
     <string name="recset_save_to">บันทึกการบันทึกไปที่</string>
-    <string name="recset_usb_no_picker">ไม่มีตัวเลือกโฟลเดอร์ในอุปกรณ์นี้</string>
+    <string name="recset_usb_no_picker_tv">ทีวีเครื่องนี้เลือกโฟลเดอร์ในไดรฟ์ USB ไม่ได้ ให้บันทึกลงทีวีเครื่องนี้หรือ NAS ของคุณแทน</string>
+    <string name="recset_usb_no_picker_device">อุปกรณ์นี้เลือกโฟลเดอร์ในไดรฟ์ USB ไม่ได้ ให้บันทึกลงอุปกรณ์นี้หรือ NAS ของคุณแทน</string>
+    <string name="recset_usb_not_kept">ไม่สามารถคงสิทธิ์เข้าถึงโฟลเดอร์นั้นไว้ได้ เลือกอีกครั้ง หรือเลือกโฟลเดอร์อื่นในไดรฟ์ USB ของคุณ</string>
     <string name="recset_field_username">ชื่อผู้ใช้</string>
     <string name="recset_field_password">รหัสผ่าน</string>
     <string name="recset_status_testing">กำลังทดสอบ…</string>
@@ -144,6 +146,9 @@
     <string name="sync_nas_done">ซิงค์แล้ว %1$d รายการจาก %2$d อุปกรณ์</string>
     <string name="sync_nas_uploaded">บันทึกอุปกรณ์นี้ไปยัง NAS แล้ว ยังไม่มีอุปกรณ์อื่นซิงค์มาที่นี่</string>
     <string name="sync_nas_failed">ไม่สามารถเข้าถึง NAS ของคุณได้ ตรวจสอบว่าเปิดเครื่องอยู่และรายละเอียดในการตั้งค่าการบันทึกถูกต้อง</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="other">ไม่สามารถอ่านข้อมูลที่อุปกรณ์อื่น %1$d เครื่องบันทึกไว้ใน NAS ของคุณ ซิงค์อีกครั้งในอีกสักครู่ หรืออัปเดต Settee บนอุปกรณ์นั้น</item>
+    </plurals>
     <string name="about_update_available">มีอัปเดต: %1$s — ดูข้อความแจ้งเพื่อติดตั้ง</string>
     <string name="about_up_to_date">คุณใช้เวอร์ชันล่าสุดอยู่แล้ว</string>
     <string name="about_checking">กำลังตรวจสอบ…</string>
@@ -267,6 +272,9 @@
     <string name="error_catalogue">โหลดช่องจากผู้ให้บริการของคุณไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_movies_list">ไม่ได้รับรายการภาพยนตร์จากผู้ให้บริการของคุณ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_shows_list">ไม่ได้รับรายการซีรีส์จากผู้ให้บริการของคุณ ลองอีกครั้งในอีกสักครู่</string>
+    <string name="setup_failed_guide">โหลดผังรายการทีวีไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป</string>
+    <string name="setup_failed_movies">โหลดภาพยนตร์ไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป หรือเมื่อคุณเปิดภาพยนตร์</string>
+    <string name="setup_failed_shows">โหลดซีรีส์ไม่สำเร็จ Settee จะลองอีกครั้งเมื่อรีเฟรชครั้งถัดไป หรือเมื่อคุณเปิดซีรีส์</string>
     <string name="vod_movies_load_failed">โหลดภาพยนตร์ของคุณไม่สำเร็จ</string>
     <string name="vod_shows_load_failed">โหลดซีรีส์ของคุณไม่สำเร็จ</string>
     <string name="error_channel_list_memory_tv">รายการช่องของผู้ให้บริการต้องใช้หน่วยความจำมากกว่าที่ทีวีเครื่องนี้มี</string>
@@ -303,6 +311,16 @@
     <string name="manager_failed_device">เริ่มตัวจัดการช่องบนอุปกรณ์นี้ไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
     <string name="manager_timed_out">ตัวจัดการช่องปิดลงแล้วหลังจากไม่ได้ใช้งานสักพัก เปิดอีกครั้งเมื่อคุณต้องการ</string>
     <string name="manager_too_many_codes">ตัวจัดการช่องปิดลงแล้วเพราะป้อนรหัสผิดหลายครั้งเกินไป เปิดอีกครั้งเพื่อเริ่มใหม่</string>
+    <string name="manager_page_unreachable">เชื่อมต่อทีวีไม่ได้ ตรวจสอบว่าคุณอยู่ใน Wi-Fi เดียวกัน หากตัวจัดการช่องปิดไปแล้ว ให้เปิดอีกครั้งบนทีวีแล้วสแกนรหัสใหม่</string>
+    <string name="manager_page_closed">ทีวีปิดตัวจัดการช่องแล้ว เปิดอีกครั้งบนทีวีแล้วสแกนรหัสใหม่</string>
+    <string name="manager_page_not_saved">ทีวีไม่ได้บันทึกการเปลี่ยนแปลงนั้น ลองอีกครั้ง</string>
+    <string name="manager_page_not_tested">ทีวีทดสอบไม่ได้ ลองอีกครั้ง</string>
+    <string name="manager_page_not_loaded">ทีวีส่งรายการนี้ไม่ได้ โหลดหน้านี้ใหม่เพื่อลองอีกครั้ง</string>
+    <string name="manager_page_nas_required">เพิ่มที่อยู่และโฟลเดอร์ที่แชร์ของ NAS แล้วบันทึกอีกครั้ง</string>
+    <string name="manager_page_provider_required">กรอกรายละเอียดทั้งหมดที่ผู้ให้บริการประเภทนี้ต้องใช้ แล้วลองอีกครั้ง</string>
+    <string name="manager_page_url_required">ป้อนที่อยู่ของผู้ให้บริการ</string>
+    <string name="manager_page_login_required">ป้อนชื่อผู้ใช้และรหัสผ่าน</string>
+    <string name="manager_page_mac_required">ป้อนที่อยู่อุปกรณ์ที่ผู้ให้บริการให้ไว้สำหรับพอร์ทัลนี้</string>
     <string name="pairing_no_network_tv">ทีวีเครื่องนี้ไม่ได้เชื่อมต่อเครือข่าย โทรศัพท์ของคุณจึงเข้าถึงไม่ได้ เชื่อมต่อก่อน แล้วลองอีกครั้ง</string>
     <string name="pairing_no_network_device">อุปกรณ์นี้ไม่ได้เชื่อมต่อเครือข่าย โทรศัพท์ของคุณจึงเข้าถึงไม่ได้ เชื่อมต่อก่อน แล้วลองอีกครั้ง</string>
     <string name="pairing_failed_tv">เริ่มการจับคู่บนทีวีเครื่องนี้ไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
@@ -329,6 +347,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">ทีวีนี้เล่น %1$s ไม่ได้</string>
     <string name="vod_cant_play_device">อุปกรณ์นี้เล่น %1$s ไม่ได้</string>
+    <string name="player_no_sound_tv">ทีวีเครื่องนี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นั้นอาจช่วยได้</string>
+    <string name="player_no_sound_device">อุปกรณ์นี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นี้อาจช่วยได้</string>
+    <string name="player_stepped_down_tv">ทีวีนี้เล่น %1$s ไม่ได้ กำลังเล่น %2$s แทน</string>
+    <string name="player_stepped_down_device">อุปกรณ์นี้เล่น %1$s ไม่ได้ กำลังเล่น %2$s แทน</string>
+    <string name="player_stepped_down_lower_tv">ทีวีนี้เล่น %1$s ไม่ได้ กำลังเล่นคุณภาพที่ต่ำกว่าแทน</string>
+    <string name="player_stepped_down_lower_device">อุปกรณ์นี้เล่น %1$s ไม่ได้ กำลังเล่นคุณภาพที่ต่ำกว่าแทน</string>
+    <string name="player_stepped_down_for_sound_tv">ทีวีเครื่องนี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) กำลังเล่นเวอร์ชันอื่นแทน หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นั้นอาจช่วยได้</string>
+    <string name="player_stepped_down_for_sound_device">อุปกรณ์นี้เล่นเสียงรูปแบบนี้ไม่ได้ (%1$s) กำลังเล่นเวอร์ชันอื่นแทน หากทีวีหรือซาวด์บาร์ของคุณรองรับ การเปิดเสียงเซอร์ราวด์ในการตั้งค่าของอุปกรณ์นี้อาจช่วยได้</string>
+    <string name="player_stepped_down_unnamed_tv">ทีวีนี้เล่นคุณภาพนั้นไม่ได้ กำลังเล่นคุณภาพอื่นแทน</string>
+    <string name="player_stepped_down_unnamed_device">อุปกรณ์นี้เล่นคุณภาพนั้นไม่ได้ กำลังเล่นคุณภาพอื่นแทน</string>
     <string name="vod_language_title">ที่นี่มีแค่ภาษา%1$s</string>
     <string name="vod_language_body_tv">ทีวีนี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
     <string name="vod_language_body_device">อุปกรณ์นี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
@@ -353,6 +381,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ไม่ยอมรับชื่อผู้ใช้หรือรหัสผ่านนั้น ตรวจสอบแล้วลองอีกครั้ง</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ออกจากระบบทีวีเครื่องนี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
+    <string name="error_opensubtitles_not_saved_tv">ทีวีเครื่องนี้ไม่มีพื้นที่เก็บคำบรรยายนั้น ล้างพื้นที่บางส่วน แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_not_saved_device">อุปกรณ์นี้ไม่มีพื้นที่เก็บคำบรรยายนั้น ล้างพื้นที่บางส่วน แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_not_kept_tv">ทีวีเครื่องนี้เก็บคำบรรยายนั้นไว้ไม่ได้ ลองอีกครั้ง หรือเลือกคำบรรยายอื่น</string>
+    <string name="error_opensubtitles_not_kept_device">อุปกรณ์นี้เก็บคำบรรยายนั้นไว้ไม่ได้ ลองอีกครั้ง หรือเลือกคำบรรยายอื่น</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ยอมรับการลงชื่อเข้าใช้แล้ว แต่ทีวีเครื่องนี้บันทึกไว้ไม่ได้ รีสตาร์ททีวีเครื่องนี้ แล้วลงชื่อเข้าใช้อีกครั้ง</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ยอมรับการลงชื่อเข้าใช้แล้ว แต่อุปกรณ์นี้บันทึกไว้ไม่ได้ รีสตาร์ทอุปกรณ์นี้ แล้วลงชื่อเข้าใช้อีกครั้ง</string>
     <string name="error_not_a_guide">ที่อยู่นั้นไม่ใช่ผังรายการ ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
     <string name="settings_guide_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ตามที่ลิงก์ของผังรายการแสดง เช่น example.com/guide.xml</string>
     <string name="diagnostics_database_failed">Settee อ่านฐานข้อมูลของตัวเองไม่ได้ จึงไม่มีตัวเลขเหล่านี้</string>

@@ -77,9 +77,40 @@ sealed class OpenSubtitlesFailure(message: String, cause: Throwable? = null) : I
 
     /**
      * OpenSubtitles turned down Settee's own key, before it looked at any account. Retrying never helps
-     * and the viewer can't fix it: only a Settee with a key OpenSubtitles accepts can.
+     * and the viewer can't fix it: only a Settee with a key OpenSubtitles accepts can. [status] is
+     * 403 with OpenSubtitles' own words, or a 401 to a request that carried only the key.
      */
-    class KeyRejected : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
+    class KeyRejected(val status: Int = 403) : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
+
+    /**
+     * A subtitle downloaded, but this box couldn't keep it: storage full ([noRoom]), the write failed,
+     * or the file is over the Downloaded Subtitles' cap. Thrown by [app.opentv.data.repo.OpenSubtitles], not this
+     * client, and kept apart from [Unreachable] so the viewer isn't sent to check a network that's fine
+     * and spend another of the day's downloads on the same failure.
+     */
+    class NotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't keep the subtitle on this box", cause) {
+        /**
+         * The disk was full: the write failed with ENOSPC, which Android puts behind the IOException as
+         * an [android.system.ErrnoException]. Only then is the viewer sent to free up space; a write
+         * refused or a file over the cap isn't helped by that. Told by errno, never the message, which
+         * isn't the same on every device.
+         */
+        val noRoom: Boolean = generateSequence(cause) { it.cause }.take(MAX_CAUSES).any {
+            it is android.system.ErrnoException && it.errno == android.system.OsConstants.ENOSPC
+        }
+
+        private companion object {
+            /** Enough to reach the errno however it's wrapped, without following a cycle for ever. */
+            const val MAX_CAUSES = 8
+        }
+    }
+
+    /**
+     * OpenSubtitles accepted the sign-in, but this box couldn't seal the password to keep it (a Keystore
+     * fault). Thrown by [app.opentv.data.repo.OpenSubtitlesAccount]; signing in again the same way
+     * reaches the same Keystore, so it isn't worded as the network.
+     */
+    class SignInNotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't save the sign-in on this box", cause)
 }
 
 /**
@@ -234,17 +265,24 @@ class OpenSubtitlesClient(
             )
         }
         failure?.let(reportFailure)
-        throw failureFor(status, parsed, request, download = operation == Operation.DOWNLOAD)
+        throw failureFor(status, parsed, request, operation)
     }
 
     /** What an answer of [status] means; a success that isn't JSON is OpenSubtitles' trouble too. */
-    private fun failureFor(status: Int, answer: JsonObject?, request: Request, download: Boolean) = when {
-        status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.TokenRejected()
+    private fun failureFor(status: Int, answer: JsonObject?, request: Request, operation: Operation) = when {
+        // As for the report above: a 401 is the viewer's only when their password or token went with
+        // it. A search never sends a token, so telling that viewer they were signed out would send
+        // them to sign in, which can't help when it's Settee's key OpenSubtitles turned down.
+        // signIn turns its own TokenRejected into SignInRejected.
+        status == HTTP_UNAUTHORISED &&
+            (operation == Operation.SIGN_IN || request.header("Authorization") != null) ->
+            OpenSubtitlesFailure.TokenRejected()
+        status == HTTP_UNAUTHORISED -> OpenSubtitlesFailure.KeyRejected(status)
         // Told by its message too: Cloudflare answers 403 with a challenge page, which is passing trouble.
         // The same contains-match as the release check, tools/keys/check_keys.py: change both together.
         status == HTTP_FORBIDDEN && answer?.string("message")?.contains(KEY_REFUSED) == true ->
             OpenSubtitlesFailure.KeyRejected()
-        status == HTTP_NOT_ACCEPTABLE && download -> OpenSubtitlesFailure.DownloadLimit(
+        status == HTTP_NOT_ACCEPTABLE && operation == Operation.DOWNLOAD -> OpenSubtitlesFailure.DownloadLimit(
             signedIn = request.header("Authorization") != null,
             resetsAt = resetTime(answer),
         )

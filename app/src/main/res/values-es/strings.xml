@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Cambiar nombre del perfil</string>
     <string name="profiles_title">¿Quién está viendo?</string>
     <string name="recset_save_to">Guardar grabaciones en</string>
-    <string name="recset_usb_no_picker">No hay ningún selector de carpetas disponible en este dispositivo.</string>
+    <string name="recset_usb_no_picker_tv">Este televisor no puede elegir una carpeta en una unidad USB. Graba en este televisor o en tu NAS.</string>
+    <string name="recset_usb_no_picker_device">Este dispositivo no puede elegir una carpeta en una unidad USB. Graba en este dispositivo o en tu NAS.</string>
+    <string name="recset_usb_not_kept">No se pudo mantener el acceso a esa carpeta. Elígela de nuevo o elige otra carpeta en tu unidad USB.</string>
     <string name="recset_field_username">Usuario</string>
     <string name="recset_field_password">Contraseña</string>
     <string name="recset_status_testing">Probando…</string>
@@ -144,6 +146,11 @@
     <string name="sync_nas_done">Se sincronizaron %1$d elementos de %2$d dispositivos.</string>
     <string name="sync_nas_uploaded">Este dispositivo se guardó en el NAS. Todavía ningún otro dispositivo se ha sincronizado aquí.</string>
     <string name="sync_nas_failed">No se pudo conectar con tu NAS. Comprueba que esté encendido y que los datos en Ajustes de grabación sean correctos.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">No se pudo leer lo que %1$d otro dispositivo guardó en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en él.</item>
+        <item quantity="many">No se pudo leer lo que %1$d otros dispositivos guardaron en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en ellos.</item>
+        <item quantity="other">No se pudo leer lo que %1$d otros dispositivos guardaron en tu NAS. Vuelve a sincronizar en un momento o actualiza Settee en ellos.</item>
+    </plurals>
     <string name="about_update_available">Actualización disponible: %1$s — consulta el aviso para instalarla.</string>
     <string name="about_up_to_date">Tienes la versión más reciente.</string>
     <string name="about_checking">Comprobando…</string>
@@ -267,6 +274,9 @@
     <string name="error_catalogue">No se pudieron cargar los canales de tu proveedor. Vuelve a intentarlo en un momento.</string>
     <string name="error_movies_list">La lista de películas de tu proveedor no ha llegado. Vuelve a intentarlo en un momento.</string>
     <string name="error_shows_list">La lista de series de tu proveedor no ha llegado. Vuelve a intentarlo en un momento.</string>
+    <string name="setup_failed_guide">La guía de TV no se ha cargado. Settee lo volverá a intentar en la próxima actualización.</string>
+    <string name="setup_failed_movies">Las películas no se han cargado. Settee lo volverá a intentar en la próxima actualización o cuando abras Películas.</string>
+    <string name="setup_failed_shows">Las series no se han cargado. Settee lo volverá a intentar en la próxima actualización o cuando abras Series.</string>
     <string name="vod_movies_load_failed">No se pudieron cargar tus películas</string>
     <string name="vod_shows_load_failed">No se pudieron cargar tus series</string>
     <string name="error_channel_list_memory_tv">La lista de canales de tu proveedor necesita más memoria de la que tiene este televisor.</string>
@@ -303,6 +313,16 @@
     <string name="manager_failed_device">No se pudo iniciar el administrador de canales en este dispositivo. Vuelve a intentarlo en un momento.</string>
     <string name="manager_timed_out">El administrador de canales se cerró tras un rato sin usarse. Ábrelo de nuevo cuando lo necesites.</string>
     <string name="manager_too_many_codes">El administrador de canales se cerró tras demasiados códigos incorrectos. Ábrelo de nuevo para empezar otra vez.</string>
+    <string name="manager_page_unreachable">No se pudo conectar con el televisor. Comprueba que estás en la misma Wi-Fi. Si el administrador de canales se cerró, ábrelo de nuevo en el televisor y escanea el código nuevo.</string>
+    <string name="manager_page_closed">El televisor cerró el administrador de canales. Ábrelo de nuevo en el televisor y escanea el código nuevo.</string>
+    <string name="manager_page_not_saved">El televisor no guardó ese cambio. Inténtalo de nuevo.</string>
+    <string name="manager_page_not_tested">El televisor no pudo hacer esa prueba. Inténtalo de nuevo.</string>
+    <string name="manager_page_not_loaded">El televisor no pudo enviar esta lista. Vuelve a cargar esta página para intentarlo de nuevo.</string>
+    <string name="manager_page_nas_required">Añade la dirección y la carpeta compartida de tu NAS y vuelve a guardar.</string>
+    <string name="manager_page_provider_required">Rellena todos los datos que necesita este tipo de proveedor e inténtalo de nuevo.</string>
+    <string name="manager_page_url_required">Escribe la dirección del proveedor.</string>
+    <string name="manager_page_login_required">Escribe el usuario y la contraseña.</string>
+    <string name="manager_page_mac_required">Escribe la dirección de dispositivo que te dio tu proveedor para este portal.</string>
     <string name="pairing_no_network_tv">Este televisor no está conectado a una red, así que tu teléfono no puede llegar a él. Conéctalo y vuelve a intentarlo.</string>
     <string name="pairing_no_network_device">Este dispositivo no está conectado a una red, así que tu teléfono no puede llegar a él. Conéctalo y vuelve a intentarlo.</string>
     <string name="pairing_failed_tv">No se pudo iniciar la vinculación en este televisor. Vuelve a intentarlo en un momento.</string>
@@ -329,6 +349,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Esta tele no puede reproducir %1$s</string>
     <string name="vod_cant_play_device">Este dispositivo no puede reproducir %1$s</string>
+    <string name="player_no_sound_tv">Este televisor no puede reproducir este formato de audio (%1$s). Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en sus ajustes puede ayudar.</string>
+    <string name="player_no_sound_device">Este dispositivo no puede reproducir este formato de audio (%1$s). Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en los ajustes de este dispositivo puede ayudar.</string>
+    <string name="player_stepped_down_tv">Este televisor no puede reproducir %1$s. Se reproduce %2$s en su lugar.</string>
+    <string name="player_stepped_down_device">Este dispositivo no puede reproducir %1$s. Se reproduce %2$s en su lugar.</string>
+    <string name="player_stepped_down_lower_tv">Este televisor no puede reproducir %1$s. Se reproduce una calidad inferior en su lugar.</string>
+    <string name="player_stepped_down_lower_device">Este dispositivo no puede reproducir %1$s. Se reproduce una calidad inferior en su lugar.</string>
+    <string name="player_stepped_down_for_sound_tv">Este televisor no puede reproducir este formato de audio (%1$s). Se reproduce otra versión en su lugar. Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en sus ajustes puede ayudar.</string>
+    <string name="player_stepped_down_for_sound_device">Este dispositivo no puede reproducir este formato de audio (%1$s). Se reproduce otra versión en su lugar. Si tu televisor o barra de sonido lo admite, activar el sonido envolvente en los ajustes de este dispositivo puede ayudar.</string>
+    <string name="player_stepped_down_unnamed_tv">Este televisor no puede reproducir esa calidad. Se reproduce otra en su lugar.</string>
+    <string name="player_stepped_down_unnamed_device">Este dispositivo no puede reproducir esa calidad. Se reproduce otra en su lugar.</string>
     <string name="vod_language_title">Aquí solo en %1$s</string>
     <string name="vod_language_body_tv">Esta tele no puede reproducir una versión en tu idioma.</string>
     <string name="vod_language_body_device">Este dispositivo no puede reproducir una versión en tu idioma.</string>
@@ -353,6 +383,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles no ha aceptado ese usuario o contraseña. Revísalos y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha cerrado la sesión de esta tele. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
+    <string name="error_opensubtitles_not_saved_tv">No hay espacio en esta tele para guardar esos subtítulos. Libera algo de espacio y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_not_saved_device">No hay espacio en este dispositivo para guardar esos subtítulos. Libera algo de espacio y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_not_kept_tv">Esta tele no pudo guardar esos subtítulos. Vuelve a intentarlo o elige otros.</string>
+    <string name="error_opensubtitles_not_kept_device">Este dispositivo no pudo guardar esos subtítulos. Vuelve a intentarlo o elige otros.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles aceptó el inicio de sesión, pero esta tele no pudo guardarlo. Reinicia esta tele y vuelve a iniciar sesión.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles aceptó el inicio de sesión, pero este dispositivo no pudo guardarlo. Reinicia este dispositivo y vuelve a iniciar sesión.</string>
     <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>
     <string name="settings_guide_bad_address">Eso no es una dirección web. Comprueba que esté escrita como la muestra el enlace de la guía, por ejemplo example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee no pudo leer su base de datos, así que faltan estas cifras.</string>

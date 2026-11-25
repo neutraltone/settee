@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profil umbenennen</string>
     <string name="profiles_title">Wer schaut zu?</string>
     <string name="recset_save_to">Aufnahmen speichern auf</string>
-    <string name="recset_usb_no_picker">Auf diesem Gerät ist keine Ordnerauswahl verfügbar.</string>
+    <string name="recset_usb_no_picker_tv">Dieser Fernseher kann keinen Ordner auf einem USB-Laufwerk auswählen. Nimm stattdessen auf diesem Fernseher oder deinem NAS auf.</string>
+    <string name="recset_usb_no_picker_device">Dieses Gerät kann keinen Ordner auf einem USB-Laufwerk auswählen. Nimm stattdessen auf diesem Gerät oder deinem NAS auf.</string>
+    <string name="recset_usb_not_kept">Der Zugriff auf diesen Ordner konnte nicht behalten werden. Wähle ihn erneut oder einen anderen Ordner auf deinem USB-Laufwerk.</string>
     <string name="recset_field_username">Benutzername</string>
     <string name="recset_field_password">Passwort</string>
     <string name="recset_status_testing">Wird getestet…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">%1$d Element(e) von %2$d Gerät(en) synchronisiert.</string>
     <string name="sync_nas_uploaded">Dieses Gerät wurde auf dem NAS gespeichert. Bisher hat sich noch kein anderes Gerät hier synchronisiert.</string>
     <string name="sync_nas_failed">Dein NAS konnte nicht erreicht werden. Überprüfe, ob es eingeschaltet ist und die Angaben in den Aufnahme-Einstellungen stimmen.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Was %1$d anderes Gerät auf deinem NAS gespeichert hat, konnte nicht gelesen werden. Synchronisiere gleich noch einmal oder aktualisiere Settee darauf.</item>
+        <item quantity="other">Was %1$d andere Geräte auf deinem NAS gespeichert haben, konnte nicht gelesen werden. Synchronisiere gleich noch einmal oder aktualisiere Settee darauf.</item>
+    </plurals>
     <string name="about_update_available">Update verfügbar: %1$s — siehe Hinweis zur Installation.</string>
     <string name="about_up_to_date">Du hast die neueste Version.</string>
     <string name="about_checking">Wird geprüft…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">Die Sender deines Anbieters konnten nicht geladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_movies_list">Die Filmliste deines Anbieters ist nicht angekommen. Versuch es gleich noch einmal.</string>
     <string name="error_shows_list">Die Serienliste deines Anbieters ist nicht angekommen. Versuch es gleich noch einmal.</string>
+    <string name="setup_failed_guide">Der TV-Guide wurde nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal.</string>
+    <string name="setup_failed_movies">Filme wurden nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal oder wenn du Filme öffnest.</string>
+    <string name="setup_failed_shows">Serien wurden nicht geladen. Settee versucht es bei der nächsten Aktualisierung noch einmal oder wenn du Serien öffnest.</string>
     <string name="vod_movies_load_failed">Deine Filme konnten nicht geladen werden</string>
     <string name="vod_shows_load_failed">Deine Serien konnten nicht geladen werden</string>
     <string name="error_channel_list_memory_tv">Die Senderliste deines Anbieters braucht mehr Speicher, als dieser Fernseher hat.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">Die Senderverwaltung konnte auf diesem Gerät nicht gestartet werden. Versuch es gleich noch einmal.</string>
     <string name="manager_timed_out">Die Senderverwaltung wurde geschlossen, weil sie eine Weile nicht genutzt wurde. Öffne sie wieder, wenn du sie brauchst.</string>
     <string name="manager_too_many_codes">Die Senderverwaltung wurde nach zu vielen falschen Codes geschlossen. Öffne sie wieder, um neu anzufangen.</string>
+    <string name="manager_page_unreachable">Der Fernseher ist nicht erreichbar. Prüfe, ob du im selben WLAN bist. Wurde die Senderverwaltung geschlossen, öffne sie auf dem Fernseher erneut und scanne den neuen Code.</string>
+    <string name="manager_page_closed">Der Fernseher hat die Senderverwaltung geschlossen. Öffne sie auf dem Fernseher erneut und scanne den neuen Code.</string>
+    <string name="manager_page_not_saved">Der Fernseher hat diese Änderung nicht gespeichert. Versuch es noch einmal.</string>
+    <string name="manager_page_not_tested">Der Fernseher konnte diesen Test nicht ausführen. Versuch es noch einmal.</string>
+    <string name="manager_page_not_loaded">Der Fernseher konnte diese Liste nicht senden. Lade die Seite neu, um es noch einmal zu versuchen.</string>
+    <string name="manager_page_nas_required">Gib die Adresse und die Freigabe deines NAS an und speichere dann erneut.</string>
+    <string name="manager_page_provider_required">Fülle alle Angaben aus, die diese Art von Anbieter braucht, und versuch es dann noch einmal.</string>
+    <string name="manager_page_url_required">Gib die Adresse des Anbieters ein.</string>
+    <string name="manager_page_login_required">Gib Benutzername und Passwort ein.</string>
+    <string name="manager_page_mac_required">Gib die Geräteadresse ein, die dein Anbieter dir für dieses Portal gegeben hat.</string>
     <string name="pairing_no_network_tv">Dieser Fernseher ist mit keinem Netzwerk verbunden, deshalb erreicht ihn dein Smartphone nicht. Verbinde ihn und versuch es dann erneut.</string>
     <string name="pairing_no_network_device">Dieses Gerät ist mit keinem Netzwerk verbunden, deshalb erreicht es dein Smartphone nicht. Verbinde es und versuch es dann erneut.</string>
     <string name="pairing_failed_tv">Die Kopplung konnte auf diesem Fernseher nicht gestartet werden. Versuch es gleich noch einmal.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Dieser Fernseher kann %1$s nicht abspielen</string>
     <string name="vod_cant_play_device">Dieses Gerät kann %1$s nicht abspielen</string>
+    <string name="player_no_sound_tv">Dieser Fernseher kann dieses Audioformat nicht abspielen (%1$s). Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen Surround-Sound einzuschalten.</string>
+    <string name="player_no_sound_device">Dieses Gerät kann dieses Audioformat nicht abspielen (%1$s). Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen dieses Geräts Surround-Sound einzuschalten.</string>
+    <string name="player_stepped_down_tv">Dieser Fernseher kann %1$s nicht abspielen. Stattdessen läuft %2$s.</string>
+    <string name="player_stepped_down_device">Dieses Gerät kann %1$s nicht abspielen. Stattdessen läuft %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Dieser Fernseher kann %1$s nicht abspielen. Stattdessen läuft eine niedrigere Qualität.</string>
+    <string name="player_stepped_down_lower_device">Dieses Gerät kann %1$s nicht abspielen. Stattdessen läuft eine niedrigere Qualität.</string>
+    <string name="player_stepped_down_for_sound_tv">Dieser Fernseher kann dieses Audioformat nicht abspielen (%1$s). Stattdessen läuft eine andere Version. Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen Surround-Sound einzuschalten.</string>
+    <string name="player_stepped_down_for_sound_device">Dieses Gerät kann dieses Audioformat nicht abspielen (%1$s). Stattdessen läuft eine andere Version. Wenn dein Fernseher oder deine Soundbar es unterstützt, kann es helfen, in den Einstellungen dieses Geräts Surround-Sound einzuschalten.</string>
+    <string name="player_stepped_down_unnamed_tv">Dieser Fernseher kann diese Qualität nicht abspielen. Stattdessen läuft eine andere.</string>
+    <string name="player_stepped_down_unnamed_device">Dieses Gerät kann diese Qualität nicht abspielen. Stattdessen läuft eine andere.</string>
     <string name="vod_language_title">Hier nur auf %1$s</string>
     <string name="vod_language_body_tv">Dieser Fernseher kann keine Version in deiner Sprache abspielen.</string>
     <string name="vod_language_body_device">Dieses Gerät kann keine Version in deiner Sprache abspielen.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles hat diesen Benutzernamen oder dieses Passwort nicht akzeptiert. Prüfe beides und versuche es erneut.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles hat diesen Fernseher abgemeldet. Melde dich in den Einstellungen erneut an.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles hat dieses Gerät abgemeldet. Melde dich in den Einstellungen erneut an.</string>
+    <string name="error_opensubtitles_not_saved_tv">Auf diesem Fernseher ist kein Platz, um diese Untertitel zu speichern. Gib Speicher frei und versuche es erneut.</string>
+    <string name="error_opensubtitles_not_saved_device">Auf diesem Gerät ist kein Platz, um diese Untertitel zu speichern. Gib Speicher frei und versuche es erneut.</string>
+    <string name="error_opensubtitles_not_kept_tv">Dieser Fernseher konnte diese Untertitel nicht speichern. Versuche es erneut oder wähle andere.</string>
+    <string name="error_opensubtitles_not_kept_device">Dieses Gerät konnte diese Untertitel nicht speichern. Versuche es erneut oder wähle andere.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles hat die Anmeldung angenommen, aber dieser Fernseher konnte sie nicht speichern. Starte diesen Fernseher neu und melde dich erneut an.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles hat die Anmeldung angenommen, aber dieses Gerät konnte sie nicht speichern. Starte dieses Gerät neu und melde dich erneut an.</string>
     <string name="error_not_a_guide">Diese Adresse ist kein Programmführer. Überprüfe, ob es der richtige Link ist, oder melde dich im WLAN an, falls es danach fragt.</string>
     <string name="settings_guide_bad_address">Das ist keine Webadresse. Überprüfe, ob sie so eingegeben ist, wie der Link des Programmführers sie zeigt, etwa example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee konnte seine Datenbank nicht lesen, deshalb fehlen diese Zahlen.</string>

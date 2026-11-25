@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Profiel hernoemen</string>
     <string name="profiles_title">Wie kijkt er?</string>
     <string name="recset_save_to">Opnames opslaan op</string>
-    <string name="recset_usb_no_picker">Er is geen mapkiezer beschikbaar op dit apparaat.</string>
+    <string name="recset_usb_no_picker_tv">Deze tv kan geen map op een USB-drive kiezen. Neem in plaats daarvan op naar deze tv of je NAS.</string>
+    <string name="recset_usb_no_picker_device">Dit apparaat kan geen map op een USB-drive kiezen. Neem in plaats daarvan op naar dit apparaat of je NAS.</string>
+    <string name="recset_usb_not_kept">Kon de toegang tot die map niet behouden. Kies hem opnieuw, of kies een andere map op je USB-drive.</string>
     <string name="recset_field_username">Gebruikersnaam</string>
     <string name="recset_field_password">Wachtwoord</string>
     <string name="recset_status_testing">Testen…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">%1$d item(en) gesynchroniseerd van %2$d apparaat/apparaten.</string>
     <string name="sync_nas_uploaded">Dit apparaat is opgeslagen op de NAS. Er zijn nog geen andere apparaten hiermee gesynchroniseerd.</string>
     <string name="sync_nas_failed">Kan je NAS niet bereiken. Controleer of deze aanstaat en of de gegevens in Opname-instellingen kloppen.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Kan niet lezen wat %1$d ander apparaat op je NAS heeft opgeslagen. Synchroniseer zo opnieuw, of werk Settee daarop bij.</item>
+        <item quantity="other">Kan niet lezen wat %1$d andere apparaten op je NAS hebben opgeslagen. Synchroniseer zo opnieuw, of werk Settee daarop bij.</item>
+    </plurals>
     <string name="about_update_available">Update beschikbaar: %1$s — zie de melding om te installeren.</string>
     <string name="about_up_to_date">Je hebt de nieuwste versie.</string>
     <string name="about_checking">Controleren…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">Kan de zenders van je provider niet laden. Probeer het zo opnieuw.</string>
     <string name="error_movies_list">De filmlijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
     <string name="error_shows_list">De serielijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
+    <string name="setup_failed_guide">De tv-gids is niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing.</string>
+    <string name="setup_failed_movies">Films zijn niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing, of wanneer je Films opent.</string>
+    <string name="setup_failed_shows">Series zijn niet geladen. Settee probeert het opnieuw bij de volgende vernieuwing, of wanneer je Series opent.</string>
     <string name="vod_movies_load_failed">Kan je films niet laden</string>
     <string name="vod_shows_load_failed">Kan je series niet laden</string>
     <string name="error_channel_list_memory_tv">De zenderlijst van je provider heeft meer geheugen nodig dan deze tv heeft.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">Kan het zenderbeheer niet starten op dit apparaat. Probeer het zo opnieuw.</string>
     <string name="manager_timed_out">Het zenderbeheer is gesloten omdat het een tijd niet werd gebruikt. Open het opnieuw als je het nodig hebt.</string>
     <string name="manager_too_many_codes">Het zenderbeheer is gesloten na te veel verkeerde codes. Open het opnieuw om opnieuw te beginnen.</string>
+    <string name="manager_page_unreachable">Kan de tv niet bereiken. Controleer of je op dezelfde wifi zit. Is het zenderbeheer gesloten, open het dan opnieuw op de tv en scan de nieuwe code.</string>
+    <string name="manager_page_closed">De tv heeft het zenderbeheer gesloten. Open het opnieuw op de tv en scan de nieuwe code.</string>
+    <string name="manager_page_not_saved">De tv heeft deze wijziging niet opgeslagen. Probeer het opnieuw.</string>
+    <string name="manager_page_not_tested">De tv kon die test niet uitvoeren. Probeer het opnieuw.</string>
+    <string name="manager_page_not_loaded">De tv kon deze lijst niet sturen. Laad deze pagina opnieuw om het nog eens te proberen.</string>
+    <string name="manager_page_nas_required">Vul het adres en de gedeelde map van je NAS in en sla dan opnieuw op.</string>
+    <string name="manager_page_provider_required">Vul alle gegevens in die dit soort provider nodig heeft en probeer het dan opnieuw.</string>
+    <string name="manager_page_url_required">Vul het adres van de provider in.</string>
+    <string name="manager_page_login_required">Vul de gebruikersnaam en het wachtwoord in.</string>
+    <string name="manager_page_mac_required">Vul het apparaatadres in dat je provider je voor deze portal heeft gegeven.</string>
     <string name="pairing_no_network_tv">Deze tv is niet met een netwerk verbonden, dus je telefoon kan hem niet bereiken. Verbind hem en probeer het dan opnieuw.</string>
     <string name="pairing_no_network_device">Dit apparaat is niet met een netwerk verbonden, dus je telefoon kan het niet bereiken. Verbind het en probeer het dan opnieuw.</string>
     <string name="pairing_failed_tv">Kan koppelen niet starten op deze tv. Probeer het zo opnieuw.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Deze tv kan %1$s niet afspelen</string>
     <string name="vod_cant_play_device">Dit apparaat kan %1$s niet afspelen</string>
+    <string name="player_no_sound_tv">Deze tv kan dit audioformaat niet afspelen (%1$s). Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen ervan.</string>
+    <string name="player_no_sound_device">Dit apparaat kan dit audioformaat niet afspelen (%1$s). Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen van dit apparaat.</string>
+    <string name="player_stepped_down_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
+    <string name="player_stepped_down_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Deze tv kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
+    <string name="player_stepped_down_lower_device">Dit apparaat kan %1$s niet afspelen. In plaats daarvan speelt een lagere kwaliteit.</string>
+    <string name="player_stepped_down_for_sound_tv">Deze tv kan dit audioformaat niet afspelen (%1$s). In plaats daarvan speelt een andere versie. Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen ervan.</string>
+    <string name="player_stepped_down_for_sound_device">Dit apparaat kan dit audioformaat niet afspelen (%1$s). In plaats daarvan speelt een andere versie. Als je tv of soundbar het ondersteunt, kan het helpen om surroundgeluid aan te zetten in de instellingen van dit apparaat.</string>
+    <string name="player_stepped_down_unnamed_tv">Deze tv kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
+    <string name="player_stepped_down_unnamed_device">Dit apparaat kan die kwaliteit niet afspelen. In plaats daarvan speelt een andere.</string>
     <string name="vod_language_title">Hier alleen in het %1$s</string>
     <string name="vod_language_body_tv">Deze tv kan geen versie in jouw taal afspelen.</string>
     <string name="vod_language_body_device">Dit apparaat kan geen versie in jouw taal afspelen.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles accepteerde die gebruikersnaam of dat wachtwoord niet. Controleer ze en probeer het opnieuw.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles heeft deze tv afgemeld. Log opnieuw in via Instellingen.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
+    <string name="error_opensubtitles_not_saved_tv">Er is geen ruimte op deze tv om die ondertitels te bewaren. Maak wat ruimte vrij en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_not_saved_device">Er is geen ruimte op dit apparaat om die ondertitels te bewaren. Maak wat ruimte vrij en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_not_kept_tv">Deze tv kon die ondertitels niet bewaren. Probeer het opnieuw of kies andere.</string>
+    <string name="error_opensubtitles_not_kept_device">Dit apparaat kon die ondertitels niet bewaren. Probeer het opnieuw of kies andere.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles heeft de aanmelding geaccepteerd, maar deze tv kon die niet opslaan. Start deze tv opnieuw op en log opnieuw in.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles heeft de aanmelding geaccepteerd, maar dit apparaat kon die niet opslaan. Start dit apparaat opnieuw op en log opnieuw in.</string>
     <string name="error_not_a_guide">Dat adres is geen gids. Controleer of het de juiste link is, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
     <string name="settings_guide_bad_address">Dat is geen webadres. Controleer of het is getypt zoals de link van de gids het toont, bijvoorbeeld example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee kon zijn database niet lezen, dus deze cijfers ontbreken.</string>

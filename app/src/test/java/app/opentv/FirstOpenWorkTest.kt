@@ -6,7 +6,9 @@
 package app.opentv
 
 import app.opentv.core.StatusBus
+import app.opentv.sync.NasSync
 import com.google.common.truth.Truth.assertThat
+import java.net.ConnectException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.test.runTest
@@ -25,7 +27,10 @@ class FirstOpenWorkTest {
         catchUpNormaliser: suspend () -> Unit = { ran += "normaliser" },
     ) = FirstOpenWork(
         nasAutoSync = nasAutoSync,
-        syncNas = syncNas,
+        syncNas = {
+            syncNas()
+            SYNCED
+        },
         catchUpNormaliser = catchUpNormaliser,
         launchRefresh = { ran += "refresh" },
         syncingNas = SYNCING,
@@ -56,6 +61,7 @@ class FirstOpenWorkTest {
             syncNas = {
                 refreshed.await()
                 shownAfterRefresh = StatusBus.message.value
+                SYNCED
             },
             catchUpNormaliser = {},
             launchRefresh = {
@@ -80,6 +86,21 @@ class FirstOpenWorkTest {
         work(nasAutoSync = true).run()
 
         assertThat(ran).containsExactly("nas", "normaliser", "refresh")
+    }
+
+    @Test
+    fun `a NAS sync that fails at launch is logged rather than dropped`() = runTest {
+        val logged = mutableListOf<String>()
+        FirstOpenWork(
+            nasAutoSync = true,
+            syncNas = { NasSync.Result.Failed(ConnectException()) },
+            catchUpNormaliser = {},
+            launchRefresh = {},
+            failed = { step, _ -> logged += step },
+            syncingNas = SYNCING,
+        ).run()
+
+        assertThat(logged).containsExactly("NAS sync")
     }
 
     @Test
@@ -127,7 +148,7 @@ class FirstOpenWorkTest {
         val escaped = mutableListOf<Throwable>()
         val failing = FirstOpenWork(
             nasAutoSync = false,
-            syncNas = {},
+            syncNas = { SYNCED },
             catchUpNormaliser = { ran += "normaliser" },
             launchRefresh = { error("database full") },
             syncingNas = SYNCING,
@@ -141,5 +162,6 @@ class FirstOpenWorkTest {
 
     private companion object {
         const val SYNCING = "Syncing with your other devices"
+        val SYNCED = NasSync.Result.Success(merged = 0, peers = 0)
     }
 }

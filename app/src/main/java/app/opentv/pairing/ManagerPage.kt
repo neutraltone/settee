@@ -5,6 +5,11 @@
  */
 package app.opentv.pairing
 
+import app.opentv.R
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+
 /**
  * The page a phone or laptop sees when managing channels.
  *
@@ -16,10 +21,43 @@ package app.opentv.pairing
  * touch-friendly rather than TV-styled. All channel data arrives as JSON and is rendered with
  * `textContent`/DOM APIs (never string-built HTML), so a channel name full of `<`, `"`, `|` or
  * emoji can never break out into markup.
+ *
+ * Its failures are worded by the app's strings, in its language ([page]'s `text`), as the TV-side
+ * pairing page's are; the rest of the page is English.
  */
 object ManagerPage {
 
-    fun page(token: String): String = """
+    /** What the page's script calls each failure it can show, and the string that words it. */
+    private val WORDS = linkedMapOf(
+        // Fetch rejected: nothing answered, which is also what a closed manager looks like, since
+        // its socket goes with it, so this one can't blame the wifi alone. Both it and "closed" send
+        // the viewer back to the TV for a new code: each opening has a new token, so reloading this
+        // page would only be refused again.
+        "unreachable" to R.string.manager_page_unreachable,
+        // 403: a token this manager didn't hand out, from a page left open before it was reopened.
+        "closed" to R.string.manager_page_closed,
+        // Any other status: the TV answered, so the manager is open, but this request failed.
+        "notSaved" to R.string.manager_page_not_saved,
+        "notLoaded" to R.string.manager_page_not_loaded,
+        "notTested" to R.string.manager_page_not_tested,
+        "nasRequired" to R.string.manager_page_nas_required,
+        "urlRequired" to R.string.manager_page_url_required,
+        "loginRequired" to R.string.manager_page_login_required,
+        "macRequired" to R.string.manager_page_mac_required,
+        // Only when the TV's answer leaves its own sentence out, which it doesn't today.
+        "nasFailed" to R.string.recset_status_failed,
+        "testFailed" to R.string.error_test_failed,
+    )
+
+    /** Every sentence the page can show for a failure; docs/ERRORS.md lists each. */
+    val SENTENCES: List<Int> get() = WORDS.values.toList()
+
+    /** [WORDS] as a script literal. `</` is escaped so no translation can close the script early. */
+    private fun words(text: (Int) -> String): String =
+        Json.encodeToString(buildJsonObject { WORDS.forEach { (name, id) -> put(name, JsonPrimitive(text(id))) } })
+            .replace("</", "<\\/")
+
+    fun page(token: String, text: (Int) -> String): String = """
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -188,6 +226,7 @@ object ManagerPage {
 
         <script>
           var EMBEDDED_TOKEN = "$token";
+          var S = ${words(text)};
           var token = new URLSearchParams(location.search).get('t') || EMBEDDED_TOKEN;
 
           var meta = { sources: [], categories: [] };
@@ -213,20 +252,34 @@ object ManagerPage {
           }
 
           function withToken(path){ return path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(token); }
-          async function getJson(path){
-            var r = await fetch(withToken(path));
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
+          // Rejects with { status } when the TV answered but not with OK, or {} when nothing answered,
+          // so a failure says which it was rather than always blaming the wifi.
+          async function request(path, init){
+            var r;
+            try { r = await fetch(withToken(path), init); } catch (e) { throw {}; }
+            if (!r.ok) throw { status: r.status };
+            try { return await r.json(); } catch (e) { throw { status: r.status }; }
           }
-          async function post(path, bodyObj){
-            var r = await fetch(withToken(path), {
+          function getJson(path){ return request(path); }
+          function post(path, bodyObj){
+            return request(path, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(bodyObj)
             });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
           }
-          var UNREACH = "Couldn't reach the TV. Is it still on the same wifi?";
+          // The sentence for a failed request: answered is what to say once the TV has answered with
+          // anything but a refused token (S.notSaved, S.notLoaded or S.notTested).
+          function failedSentence(e, answered){
+            var status = e && e.status;
+            if (!status) return S.unreachable;
+            if (status === 403) return S.closed;
+            return answered;
+          }
+          function showFailure(e, answered){
+            setStatus(failedSentence(e, answered), 'err', e && e.status ? 'HTTP ' + e.status : null);
+          }
+          function showSaveFailure(e){ showFailure(e, S.notSaved); }
+          function showTestFailure(e){ showFailure(e, S.notTested); }
 
           // ---- Categories --------------------------------------------------------------------
           async function loadMeta(){
@@ -236,7 +289,7 @@ object ManagerPage {
               renderCategories();
             } catch (e) {
               el('catList').innerHTML = '';
-              var d = el('catEmpty'); d.hidden = false; d.textContent = UNREACH;
+              var d = el('catEmpty'); d.hidden = false; d.textContent = failedSentence(e, S.notLoaded);
             }
           }
 
@@ -298,7 +351,7 @@ object ManagerPage {
               channels = await getJson('/channels?cat=' + encodeURIComponent(cat.id) + '&source=' + cat.sourceId);
               renderChannels();
             } catch (e) {
-              empty.hidden = false; empty.textContent = UNREACH;
+              empty.hidden = false; empty.textContent = failedSentence(e, S.notLoaded);
             }
           }
 
@@ -355,7 +408,7 @@ object ManagerPage {
               var target = !c.favourite;
               post('/channel', { id: c.id, favourite: target })
                 .then(function(){ c.favourite = target; star.className = 'btn star' + (target ? ' on' : ''); star.innerHTML = target ? '&#9733;' : '&#9734;'; setStatus(target ? 'Favourited' : 'Unfavourited', 'ok'); })
-                .catch(function(){ setStatus(UNREACH, 'err'); });
+                .catch(showSaveFailure);
             };
 
             var eye = document.createElement('div');
@@ -374,7 +427,7 @@ object ManagerPage {
                   refreshSub();
                   setStatus(target ? 'Hidden from the guide' : 'Showing in the guide', 'ok');
                 })
-                .catch(function(){ setStatus(UNREACH, 'err'); });
+                .catch(showSaveFailure);
             };
 
             var up = document.createElement('div');
@@ -404,7 +457,7 @@ object ManagerPage {
                 c.name = val || c.original;
                 post('/channel', { id: c.id, name: val })
                   .then(function(){ setStatus('Renamed', 'ok'); })
-                  .catch(function(){ setStatus("Couldn't save the name.", 'err'); });
+                  .catch(showSaveFailure);
               }
               var fresh = document.createElement('span');
               fresh.className = 'name'; fresh.textContent = c.name;
@@ -432,6 +485,7 @@ object ManagerPage {
           var waitingOrders = [];   // { cat, ids }, oldest first
           var savingOrder = false;
           var unsavedCats = [];     // categories whose last save failed, until they're saved again
+          var lastOrderFailure = null;
           function saveOrder(ids){
             unsavedCats = unsavedCats.filter(function(c){ return c !== currentCat; });
             var last = waitingOrders[waitingOrders.length - 1];
@@ -447,14 +501,15 @@ object ManagerPage {
               // Another category's failed save keeps its error showing rather than 'Order saved'.
               .then(function(){
                 if (waitingOrders.length) return;
-                if (unsavedCats.length) setStatus(UNREACH, 'err');
+                if (unsavedCats.length) showSaveFailure(lastOrderFailure);
                 else setStatus('Order saved', 'ok');
               })
               // A newer order for the same category replaces this one; for another, it doesn't.
-              .catch(function(){
+              .catch(function(e){
                 if (waitingOrders.some(function(o){ return o.cat === next.cat; })) return;
                 unsavedCats.push(next.cat);
-                setStatus(UNREACH, 'err');
+                lastOrderFailure = e;
+                showSaveFailure(e);
               })
               .then(sendNextOrder);
           }
@@ -482,11 +537,11 @@ object ManagerPage {
           }
           function showTest(r){
             if (r && r.ok) setStatus('Connected to the NAS. Recordings will save there. ✓', 'ok');
-            else setStatus((r && r.error) || "Couldn't connect to your NAS. Check it's on and these details are right.", 'err', r && r.detail);
+            else setStatus((r && r.error) || S.nasFailed, 'err', r && r.detail);
           }
           el('recSave').onclick = function(){
             var body = smbBody();
-            if (!body.host || !body.share) { setStatus('Server and share are required.', 'err'); return; }
+            if (!body.host || !body.share) { setStatus(S.nasRequired, 'err'); return; }
             setStatus('Saving & testing…');
             post('/recording', body)
               .then(function(){
@@ -495,13 +550,13 @@ object ManagerPage {
                 return post('/recording/test', {});   // test the settings we just stored
               })
               .then(showTest)
-              .catch(function(){ setStatus(UNREACH, 'err'); });
+              .catch(showSaveFailure);
           };
           el('recTest').onclick = function(){
             setStatus('Testing…');
             post('/recording/test', smbBody())
               .then(showTest)
-              .catch(function(){ setStatus(UNREACH, 'err'); });
+              .catch(showTestFailure);
           };
 
           // ---- Add a provider ----------------------------------------------------------------
@@ -523,17 +578,17 @@ object ManagerPage {
                      username: el('provUser').value.trim(), password: el('provPass').value, mac: el('provMac').value.trim() };
           }
           function provInvalid(b){
-            if (!b.url) return 'Enter the URL.';
-            if (b.kind === 'xtream' && (!b.username || !b.password)) return 'Username and password are required.';
-            if (b.kind === 'stalker' && !b.mac) return 'A MAC address is required.';
+            if (!b.url) return S.urlRequired;
+            if (b.kind === 'xtream' && (!b.username || !b.password)) return S.loginRequired;
+            if (b.kind === 'stalker' && !b.mac) return S.macRequired;
             return null;
           }
           el('provTest').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
             setStatus('Testing…');
             post('/source/test', b)
-              .then(function(r){ if (r && r.ok) setStatus(r.message || 'Looks good.', 'ok'); else setStatus((r && r.error) || "Couldn't connect to your provider with these details. Check them and try again.", 'err', r && r.detail); })
-              .catch(function(){ setStatus(UNREACH, 'err'); });
+              .then(function(r){ if (r && r.ok) setStatus(r.message || 'Looks good.', 'ok'); else setStatus((r && r.error) || S.testFailed, 'err', r && r.detail); })
+              .catch(showTestFailure);
           };
           el('provSave').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
@@ -548,9 +603,9 @@ object ManagerPage {
                   el('provUrl').value = ''; el('provUser').value = ''; el('provPass').value = '';
                   el('provMac').value = ''; el('provName').value = '';
                   loadMeta();
-                } else setStatus((r && r.error) || "Couldn't add your provider. Try again in a moment.", 'err', r && r.detail);
+                } else setStatus((r && r.error) || S.notSaved, 'err', r && r.detail);
               })
-              .catch(function(){ save.disabled = false; setStatus(UNREACH, 'err'); });
+              .catch(function(e){ save.disabled = false; showSaveFailure(e); });
           };
 
           loadMeta();

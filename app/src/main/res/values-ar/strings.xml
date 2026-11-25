@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">إعادة تسمية الملف الشخصي</string>
     <string name="profiles_title">من يشاهد؟</string>
     <string name="recset_save_to">حفظ التسجيلات في</string>
-    <string name="recset_usb_no_picker">أداة اختيار المجلد غير متاحة على هذا الجهاز.</string>
+    <string name="recset_usb_no_picker_tv">لا يمكن لهذا التلفاز اختيار مجلد على محرك USB. سجّل على هذا التلفاز أو على وحدة NAS بدلاً من ذلك.</string>
+    <string name="recset_usb_no_picker_device">لا يمكن لهذا الجهاز اختيار مجلد على محرك USB. سجّل على هذا الجهاز أو على وحدة NAS بدلاً من ذلك.</string>
+    <string name="recset_usb_not_kept">تعذر الاحتفاظ بإمكانية الوصول إلى ذلك المجلد. اختره مرة أخرى، أو اختر مجلداً آخر على محرك USB.</string>
     <string name="recset_field_username">اسم المستخدم</string>
     <string name="recset_field_password">كلمة المرور</string>
     <string name="recset_status_testing">جارٍ الاختبار…</string>
@@ -144,6 +146,14 @@
     <string name="sync_nas_done">تمت مزامنة %1$d عنصر من %2$d جهاز.</string>
     <string name="sync_nas_uploaded">تم حفظ هذا الجهاز على وحدة NAS. لم تتم مزامنة أي جهاز آخر هنا بعد.</string>
     <string name="sync_nas_failed">تعذر الوصول إلى وحدة NAS. تأكد من أنها قيد التشغيل وأن التفاصيل في إعدادات التسجيل صحيحة.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="zero">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="one">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="two">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="few">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="many">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+        <item quantity="other">تعذرت قراءة ما حفظته أجهزتك الأخرى على وحدة NAS، وعددها %1$d. زامن مرة أخرى بعد قليل، أو حدّث Settee عليها.</item>
+    </plurals>
     <string name="about_update_available">يتوفر تحديث: %1$s — راجع الرسالة لتثبيته.</string>
     <string name="about_up_to_date">أنت تستخدم أحدث إصدار.</string>
     <string name="about_checking">جارٍ التحقق…</string>
@@ -267,6 +277,9 @@
     <string name="error_catalogue">تعذر تحميل قنوات مزوّدك. أعد المحاولة بعد قليل.</string>
     <string name="error_movies_list">لم تصل قائمة أفلام مزوّدك. أعد المحاولة بعد قليل.</string>
     <string name="error_shows_list">لم تصل قائمة مسلسلات مزوّدك. أعد المحاولة بعد قليل.</string>
+    <string name="setup_failed_guide">لم يتم تحميل دليل البرامج. سيحاول Settee مرة أخرى عند التحديث التالي.</string>
+    <string name="setup_failed_movies">لم يتم تحميل الأفلام. سيحاول Settee مرة أخرى عند التحديث التالي، أو عند فتح الأفلام.</string>
+    <string name="setup_failed_shows">لم يتم تحميل المسلسلات. سيحاول Settee مرة أخرى عند التحديث التالي، أو عند فتح المسلسلات.</string>
     <string name="vod_movies_load_failed">تعذر تحميل أفلامك</string>
     <string name="vod_shows_load_failed">تعذر تحميل مسلسلاتك</string>
     <string name="error_channel_list_memory_tv">تحتاج قائمة قنوات مزوّدك إلى ذاكرة أكبر مما يتوفر في هذا التلفاز.</string>
@@ -303,6 +316,16 @@
     <string name="manager_failed_device">تعذر تشغيل مدير القنوات على هذا الجهاز. أعد المحاولة بعد قليل.</string>
     <string name="manager_timed_out">أُغلق مدير القنوات بعد فترة من عدم الاستخدام. افتحه مرة أخرى عندما تحتاج إليه.</string>
     <string name="manager_too_many_codes">أُغلق مدير القنوات بعد إدخال رموز خاطئة كثيرة. افتحه مرة أخرى للبدء من جديد.</string>
+    <string name="manager_page_unreachable">تعذّر الوصول إلى التلفاز. تأكد من أنك على شبكة Wi-Fi نفسها. إذا أُغلق مدير القنوات، فافتحه على التلفاز مرة أخرى وامسح الرمز الجديد.</string>
+    <string name="manager_page_closed">أغلق التلفاز مدير القنوات. افتحه على التلفاز مرة أخرى وامسح الرمز الجديد.</string>
+    <string name="manager_page_not_saved">لم يحفظ التلفاز هذا التغيير. حاول مرة أخرى.</string>
+    <string name="manager_page_not_tested">تعذّر على التلفاز إجراء هذا الاختبار. حاول مرة أخرى.</string>
+    <string name="manager_page_not_loaded">تعذّر على التلفاز إرسال هذه القائمة. أعد تحميل هذه الصفحة للمحاولة مرة أخرى.</string>
+    <string name="manager_page_nas_required">أضف عنوان جهاز NAS واسم المجلد المشترك، ثم احفظ مرة أخرى.</string>
+    <string name="manager_page_provider_required">املأ كل التفاصيل التي يحتاجها هذا النوع من المزوّدين، ثم حاول مرة أخرى.</string>
+    <string name="manager_page_url_required">أدخل عنوان المزوّد.</string>
+    <string name="manager_page_login_required">أدخل اسم المستخدم وكلمة المرور.</string>
+    <string name="manager_page_mac_required">أدخل عنوان الجهاز الذي أعطاك إياه مزوّدك لهذه البوابة.</string>
     <string name="pairing_no_network_tv">هذا التلفاز غير متصل بشبكة، لذا لا يمكن لهاتفك الوصول إليه. صِله بالشبكة، ثم أعد المحاولة.</string>
     <string name="pairing_no_network_device">هذا الجهاز غير متصل بشبكة، لذا لا يمكن لهاتفك الوصول إليه. صِله بالشبكة، ثم أعد المحاولة.</string>
     <string name="pairing_failed_tv">تعذر بدء الإقران على هذا التلفاز. أعد المحاولة بعد قليل.</string>
@@ -329,6 +352,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">لا يمكن لهذا التلفزيون تشغيل %1$s</string>
     <string name="vod_cant_play_device">لا يمكن لهذا الجهاز تشغيل %1$s</string>
+    <string name="player_no_sound_tv">لا يستطيع هذا التلفاز تشغيل تنسيق الصوت هذا (%1$s). إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعداداته.</string>
+    <string name="player_no_sound_device">لا يستطيع هذا الجهاز تشغيل تنسيق الصوت هذا (%1$s). إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعدادات هذا الجهاز.</string>
+    <string name="player_stepped_down_tv">لا يمكن لهذا التلفزيون تشغيل %1$s. يتم تشغيل %2$s بدلاً منها.</string>
+    <string name="player_stepped_down_device">لا يمكن لهذا الجهاز تشغيل %1$s. يتم تشغيل %2$s بدلاً منها.</string>
+    <string name="player_stepped_down_lower_tv">لا يمكن لهذا التلفزيون تشغيل %1$s. يتم تشغيل جودة أقل بدلاً منها.</string>
+    <string name="player_stepped_down_lower_device">لا يمكن لهذا الجهاز تشغيل %1$s. يتم تشغيل جودة أقل بدلاً منها.</string>
+    <string name="player_stepped_down_for_sound_tv">لا يستطيع هذا التلفاز تشغيل تنسيق الصوت هذا (%1$s). يتم تشغيل نسخة أخرى بدلاً منها. إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعداداته.</string>
+    <string name="player_stepped_down_for_sound_device">لا يستطيع هذا الجهاز تشغيل تنسيق الصوت هذا (%1$s). يتم تشغيل نسخة أخرى بدلاً منها. إذا كان تلفازك أو مكبر الصوت يدعمه، فقد يساعد تشغيل الصوت المحيطي من إعدادات هذا الجهاز.</string>
+    <string name="player_stepped_down_unnamed_tv">لا يمكن لهذا التلفزيون تشغيل هذه الجودة. يتم تشغيل جودة أخرى بدلاً منها.</string>
+    <string name="player_stepped_down_unnamed_device">لا يمكن لهذا الجهاز تشغيل هذه الجودة. يتم تشغيل جودة أخرى بدلاً منها.</string>
     <string name="vod_language_title">متوفر هنا بـ%1$s فقط</string>
     <string name="vod_language_body_tv">لا يمكن لهذا التلفزيون تشغيل نسخة بلغتك.</string>
     <string name="vod_language_body_device">لا يمكن لهذا الجهاز تشغيل نسخة بلغتك.</string>
@@ -353,6 +386,12 @@
     <string name="error_opensubtitles_sign_in">لم يقبل OpenSubtitles اسم المستخدم أو كلمة المرور. تحقّق منهما وحاول مرة أخرى.</string>
     <string name="error_opensubtitles_token_tv">سجّل OpenSubtitles خروج هذا التلفاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
     <string name="error_opensubtitles_token_device">سجّل OpenSubtitles خروج هذا الجهاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
+    <string name="error_opensubtitles_not_saved_tv">لا توجد مساحة على هذا التلفاز لحفظ هذه الترجمة. أفرغ بعض المساحة، ثم حاول مرة أخرى.</string>
+    <string name="error_opensubtitles_not_saved_device">لا توجد مساحة على هذا الجهاز لحفظ هذه الترجمة. أفرغ بعض المساحة، ثم حاول مرة أخرى.</string>
+    <string name="error_opensubtitles_not_kept_tv">تعذّر على هذا التلفاز حفظ هذه الترجمة. حاول مرة أخرى، أو اختر ترجمة أخرى.</string>
+    <string name="error_opensubtitles_not_kept_device">تعذّر على هذا الجهاز حفظ هذه الترجمة. حاول مرة أخرى، أو اختر ترجمة أخرى.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">قبل OpenSubtitles تسجيل الدخول، لكن تعذّر على هذا التلفاز حفظه. أعد تشغيل هذا التلفاز، ثم سجّل الدخول مرة أخرى.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">قبل OpenSubtitles تسجيل الدخول، لكن تعذّر على هذا الجهاز حفظه. أعد تشغيل هذا الجهاز، ثم سجّل الدخول مرة أخرى.</string>
     <string name="error_not_a_guide">هذا العنوان ليس دليل برامج. تحقق من أنه الرابط الصحيح، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>
     <string name="settings_guide_bad_address">هذا ليس عنوان ويب. تحقق من كتابته كما يظهر في رابط الدليل، مثل example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">تعذّر على Settee قراءة قاعدة بياناته، لذا هذه الأرقام غير متوفرة.</string>

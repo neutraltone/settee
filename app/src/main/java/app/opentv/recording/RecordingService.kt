@@ -167,7 +167,7 @@ class RecordingService : Service() {
             // As playback words a refusal, so a recording and the channel it's of say the same thing.
             is StreamCapture.Ending.Refused ->
                 ViewerError(PlaybackErrors.describeHttpStatus(this, ending.status), "HTTP ${ending.status}")
-            is StreamCapture.Ending.NoLink -> PlaybackErrors.describe(this, ending.failure)
+            is StreamCapture.Ending.NoLink -> PlaybackErrors.describe(this, ending.failure, ending.cause)
             StreamCapture.Ending.StreamStopped -> channelStopped()
         }
 

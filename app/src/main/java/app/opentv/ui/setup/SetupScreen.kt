@@ -31,10 +31,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.CatalogueRefresh.Setup
 import app.opentv.data.repo.CatalogueRefresh.StepDone
 import app.opentv.data.repo.SetupStep
 import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
@@ -141,14 +143,11 @@ private fun Finished(setup: Setup, rises: Boolean) {
     Spacer(Modifier.height(12.dp))
     Column(Modifier.arriving(secondBeat, rise = FINISH_RISE), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-        setup.failed.mapNotNull { it.failure }.forEach { failure ->
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(failure),
-                SetteeType.Body,
-                color = SetteeColors.QuietText,
-                textAlign = TextAlign.Center,
-            )
+        setup.done.filter { it.failed }.forEach { done ->
+            // Why, where it's known; otherwise the step's own sentence, which still says what happens next.
+            val failure = done.failure ?: done.step.failure?.let { ViewerError(stringResource(it)) } ?: return@forEach
+            Spacer(Modifier.height(16.dp))
+            ErrorMessage(failure.sentence, failure.detail)
         }
     }
 }

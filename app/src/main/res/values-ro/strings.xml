@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Redenumește profilul</string>
     <string name="profiles_title">Cine urmărește?</string>
     <string name="recset_save_to">Salvează înregistrările în</string>
-    <string name="recset_usb_no_picker">Nu există niciun selector de foldere disponibil pe acest dispozitiv.</string>
+    <string name="recset_usb_no_picker_tv">Acest televizor nu poate alege un folder de pe o unitate USB. Înregistrează în schimb pe acest televizor sau pe NAS.</string>
+    <string name="recset_usb_no_picker_device">Acest dispozitiv nu poate alege un folder de pe o unitate USB. Înregistrează în schimb pe acest dispozitiv sau pe NAS.</string>
+    <string name="recset_usb_not_kept">Accesul la acel folder nu a putut fi păstrat. Alege-l din nou sau alege alt folder de pe unitatea USB.</string>
     <string name="recset_field_username">Nume utilizator</string>
     <string name="recset_field_password">Parolă</string>
     <string name="recset_status_testing">Se testează…</string>
@@ -144,6 +146,11 @@
     <string name="sync_nas_done">%1$d elemente sincronizate de la %2$d dispozitive.</string>
     <string name="sync_nas_uploaded">Acest dispozitiv a fost salvat pe NAS. Niciun alt dispozitiv nu s-a sincronizat încă aici.</string>
     <string name="sync_nas_failed">Nu s-a putut ajunge la NAS. Verifică dacă este pornit și dacă detaliile din Setări înregistrare sunt corecte.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nu s-a putut citi ce a salvat pe NAS %1$d alt dispozitiv. Sincronizează din nou peste puțin timp sau actualizează Settee pe el.</item>
+        <item quantity="few">Nu s-a putut citi ce au salvat pe NAS %1$d alte dispozitive. Sincronizează din nou peste puțin timp sau actualizează Settee pe ele.</item>
+        <item quantity="other">Nu s-a putut citi ce au salvat pe NAS %1$d de alte dispozitive. Sincronizează din nou peste puțin timp sau actualizează Settee pe ele.</item>
+    </plurals>
     <string name="about_update_available">Actualizare disponibilă: %1$s — vezi solicitarea pentru instalare.</string>
     <string name="about_up_to_date">Ai cea mai recentă versiune.</string>
     <string name="about_checking">Se verifică…</string>
@@ -267,6 +274,9 @@
     <string name="error_catalogue">Canalele furnizorului tău nu au putut fi încărcate. Încearcă din nou peste puțin timp.</string>
     <string name="error_movies_list">Lista de filme a furnizorului tău nu a sosit. Încearcă din nou peste puțin timp.</string>
     <string name="error_shows_list">Lista de seriale a furnizorului tău nu a sosit. Încearcă din nou peste puțin timp.</string>
+    <string name="setup_failed_guide">Ghidul TV nu s-a încărcat. Settee va încerca din nou la următoarea reîmprospătare.</string>
+    <string name="setup_failed_movies">Filmele nu s-au încărcat. Settee va încerca din nou la următoarea reîmprospătare sau când deschizi Filme.</string>
+    <string name="setup_failed_shows">Serialele nu s-au încărcat. Settee va încerca din nou la următoarea reîmprospătare sau când deschizi Seriale.</string>
     <string name="vod_movies_load_failed">Filmele nu au putut fi încărcate</string>
     <string name="vod_shows_load_failed">Serialele nu au putut fi încărcate</string>
     <string name="error_channel_list_memory_tv">Lista de canale a furnizorului tău are nevoie de mai multă memorie decât are acest televizor.</string>
@@ -303,6 +313,16 @@
     <string name="manager_failed_device">Managerul de canale nu a putut porni pe acest dispozitiv. Încearcă din nou peste puțin timp.</string>
     <string name="manager_timed_out">Managerul de canale s-a închis după o vreme în care nu a fost folosit. Deschide-l din nou când ai nevoie de el.</string>
     <string name="manager_too_many_codes">Managerul de canale s-a închis după prea multe coduri greșite. Deschide-l din nou ca să o iei de la capăt.</string>
+    <string name="manager_page_unreachable">Televizorul nu poate fi accesat. Verifică dacă ești în aceeași rețea Wi-Fi. Dacă managerul de canale s-a închis, deschide-l din nou pe televizor și scanează codul nou.</string>
+    <string name="manager_page_closed">Televizorul a închis managerul de canale. Deschide-l din nou pe televizor și scanează codul nou.</string>
+    <string name="manager_page_not_saved">Televizorul nu a salvat această modificare. Încearcă din nou.</string>
+    <string name="manager_page_not_tested">Televizorul nu a putut face acest test. Încearcă din nou.</string>
+    <string name="manager_page_not_loaded">Televizorul nu a putut trimite această listă. Reîncarcă pagina ca să încerci din nou.</string>
+    <string name="manager_page_nas_required">Adaugă adresa și folderul partajat ale NAS-ului tău, apoi salvează din nou.</string>
+    <string name="manager_page_provider_required">Completează toate detaliile de care are nevoie acest tip de furnizor, apoi încearcă din nou.</string>
+    <string name="manager_page_url_required">Introdu adresa furnizorului.</string>
+    <string name="manager_page_login_required">Introdu numele de utilizator și parola.</string>
+    <string name="manager_page_mac_required">Introdu adresa dispozitivului primită de la furnizor pentru acest portal.</string>
     <string name="pairing_no_network_tv">Acest televizor nu este conectat la o rețea, așa că telefonul tău nu îl poate accesa. Conectează-l, apoi încearcă din nou.</string>
     <string name="pairing_no_network_device">Acest dispozitiv nu este conectat la o rețea, așa că telefonul tău nu îl poate accesa. Conectează-l, apoi încearcă din nou.</string>
     <string name="pairing_failed_tv">Asocierea nu a putut porni pe acest televizor. Încearcă din nou peste puțin timp.</string>
@@ -329,6 +349,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Acest televizor nu poate reda %1$s</string>
     <string name="vod_cant_play_device">Acest dispozitiv nu poate reda %1$s</string>
+    <string name="player_no_sound_tv">Acest televizor nu poate reda acest format audio (%1$s). Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările lui poate ajuta.</string>
+    <string name="player_no_sound_device">Acest dispozitiv nu poate reda acest format audio (%1$s). Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările acestui dispozitiv poate ajuta.</string>
+    <string name="player_stepped_down_tv">Acest televizor nu poate reda %1$s. Se redă %2$s în schimb.</string>
+    <string name="player_stepped_down_device">Acest dispozitiv nu poate reda %1$s. Se redă %2$s în schimb.</string>
+    <string name="player_stepped_down_lower_tv">Acest televizor nu poate reda %1$s. Se redă o calitate mai mică în schimb.</string>
+    <string name="player_stepped_down_lower_device">Acest dispozitiv nu poate reda %1$s. Se redă o calitate mai mică în schimb.</string>
+    <string name="player_stepped_down_for_sound_tv">Acest televizor nu poate reda acest format audio (%1$s). Se redă o altă versiune în schimb. Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările lui poate ajuta.</string>
+    <string name="player_stepped_down_for_sound_device">Acest dispozitiv nu poate reda acest format audio (%1$s). Se redă o altă versiune în schimb. Dacă televizorul sau soundbarul tău acceptă, activarea sunetului surround din setările acestui dispozitiv poate ajuta.</string>
+    <string name="player_stepped_down_unnamed_tv">Acest televizor nu poate reda această calitate. Se redă alta în schimb.</string>
+    <string name="player_stepped_down_unnamed_device">Acest dispozitiv nu poate reda această calitate. Se redă alta în schimb.</string>
     <string name="vod_language_title">Aici doar în %1$s</string>
     <string name="vod_language_body_tv">Acest televizor nu poate reda o versiune în limba ta.</string>
     <string name="vod_language_body_device">Acest dispozitiv nu poate reda o versiune în limba ta.</string>
@@ -353,6 +383,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nu a acceptat acest nume de utilizator sau această parolă. Verifică-le și încearcă din nou.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a deconectat acest televizor. Conectează-te din nou din Setări.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
+    <string name="error_opensubtitles_not_saved_tv">Nu e loc pe acest televizor pentru a păstra aceste subtitrări. Eliberează spațiu, apoi încearcă din nou.</string>
+    <string name="error_opensubtitles_not_saved_device">Nu e loc pe acest dispozitiv pentru a păstra aceste subtitrări. Eliberează spațiu, apoi încearcă din nou.</string>
+    <string name="error_opensubtitles_not_kept_tv">Acest televizor nu a putut păstra aceste subtitrări. Încearcă din nou sau alege altele.</string>
+    <string name="error_opensubtitles_not_kept_device">Acest dispozitiv nu a putut păstra aceste subtitrări. Încearcă din nou sau alege altele.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles a acceptat conectarea, dar acest televizor nu a putut-o salva. Repornește acest televizor, apoi conectează-te din nou.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles a acceptat conectarea, dar acest dispozitiv nu a putut-o salva. Repornește acest dispozitiv, apoi conectează-te din nou.</string>
     <string name="error_not_a_guide">Adresa nu este un ghid. Verifică dacă este linkul corect sau conectează-te la Wi-Fi dacă îți cere.</string>
     <string name="settings_guide_bad_address">Aceasta nu este o adresă web. Verifică dacă este scrisă așa cum o arată linkul ghidului, de exemplu example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nu și-a putut citi baza de date, așa că aceste cifre lipsesc.</string>

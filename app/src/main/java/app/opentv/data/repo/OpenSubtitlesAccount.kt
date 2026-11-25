@@ -69,7 +69,15 @@ class OpenSubtitlesAccount(
     suspend fun signIn(username: String, password: String): Result<OpenSubtitlesSession> = io {
         // mapCatching: a Keystore that won't seal is a failed sign-in, never a crash, and keeps nothing.
         client.signIn(username.trim(), password).mapCatching {
-            settings.setOpenSubtitlesAccount(username.trim(), sealer.seal(password), it.token, clock())
+            val sealed = try {
+                sealer.seal(password)
+            } catch (e: java.security.GeneralSecurityException) {
+                throw OpenSubtitlesFailure.SignInNotSaved(e)
+            } catch (e: java.security.ProviderException) {
+                // What the Android Keystore throws for a key it can't make or use.
+                throw OpenSubtitlesFailure.SignInNotSaved(e)
+            }
+            settings.setOpenSubtitlesAccount(username.trim(), sealed, it.token, clock())
             settings.openSubtitlesHost = client.host
             it
         }

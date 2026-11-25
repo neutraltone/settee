@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import app.opentv.data.model.knownTmdbId
+import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.SubtitleResult
 import app.opentv.data.remote.SubtitleSearch
 
@@ -63,6 +64,13 @@ class OpenSubtitles(
     /** Downloads [result] and keeps it for [subject]'s title, so it plays from then on with no new download. */
     suspend fun fetch(subject: SubtitleSubject, result: SubtitleResult): Result<DownloadedSubtitle> =
         account.download(result.fileId).mapCatching { file ->
-            store.save(subject.title, result, file.text)
+            try {
+                store.save(subject.title, result, file.text)
+            } catch (e: java.io.IOException) {
+                // The download is already spent: worded as this box's storage, not as reaching OpenSubtitles.
+                throw OpenSubtitlesFailure.NotSaved(e)
+            } catch (e: SecurityException) {
+                throw OpenSubtitlesFailure.NotSaved(e)
+            }
         }
 }

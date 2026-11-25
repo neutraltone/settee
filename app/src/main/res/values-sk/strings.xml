@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Premenovať profil</string>
     <string name="profiles_title">Kto pozerá?</string>
     <string name="recset_save_to">Ukladať nahrávky do</string>
-    <string name="recset_usb_no_picker">Na tomto zariadení nie je k dispozícii žiadny nástroj na výber priečinka.</string>
+    <string name="recset_usb_no_picker_tv">Tento televízor nevie vybrať priečinok na USB disku. Nahrávajte namiesto toho do tohto televízora alebo na svoj NAS.</string>
+    <string name="recset_usb_no_picker_device">Toto zariadenie nevie vybrať priečinok na USB disku. Nahrávajte namiesto toho do tohto zariadenia alebo na svoj NAS.</string>
+    <string name="recset_usb_not_kept">Prístup k tomuto priečinku sa nepodarilo zachovať. Vyberte ho znova alebo vyberte iný priečinok na USB disku.</string>
     <string name="recset_field_username">Používateľské meno</string>
     <string name="recset_field_password">Heslo</string>
     <string name="recset_status_testing">Testuje sa…</string>
@@ -144,6 +146,12 @@
     <string name="sync_nas_done">Synchronizovaných %1$d položiek z %2$d zariadení.</string>
     <string name="sync_nas_uploaded">Toto zariadenie bolo uložené na NAS. Zatiaľ sa tu nesynchronizovalo žiadne iné zariadenie.</string>
     <string name="sync_nas_failed">Nepodarilo sa pripojiť k vášmu NAS. Skontrolujte, či je zapnutý a či sú údaje v Nastaveniach nahrávania správne.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Nepodarilo sa prečítať, čo %1$d iné zariadenie uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na ňom aktualizujte Settee.</item>
+        <item quantity="few">Nepodarilo sa prečítať, čo %1$d iné zariadenia uložili na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+        <item quantity="many">Nepodarilo sa prečítať, čo %1$d iného zariadenia uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+        <item quantity="other">Nepodarilo sa prečítať, čo %1$d iných zariadení uložilo na váš NAS. Synchronizujte znova o chvíľu alebo na nich aktualizujte Settee.</item>
+    </plurals>
     <string name="about_update_available">K dispozícii je aktualizácia: %1$s — pokyny na inštaláciu nájdete vo výzve.</string>
     <string name="about_up_to_date">Používate najnovšiu verziu.</string>
     <string name="about_checking">Kontroluje sa…</string>
@@ -267,6 +275,9 @@
     <string name="error_catalogue">Kanály poskytovateľa sa nepodarilo načítať. Skúste to o chvíľu znova.</string>
     <string name="error_movies_list">Zoznam filmov od poskytovateľa neprišiel. Skúste to o chvíľu znova.</string>
     <string name="error_shows_list">Zoznam seriálov od poskytovateľa neprišiel. Skúste to o chvíľu znova.</string>
+    <string name="setup_failed_guide">TV program sa nenačítal. Settee to skúsi znova pri ďalšej aktualizácii.</string>
+    <string name="setup_failed_movies">Filmy sa nenačítali. Settee to skúsi znova pri ďalšej aktualizácii alebo keď otvoríte Filmy.</string>
+    <string name="setup_failed_shows">Seriály sa nenačítali. Settee to skúsi znova pri ďalšej aktualizácii alebo keď otvoríte Seriály.</string>
     <string name="vod_movies_load_failed">Filmy sa nepodarilo načítať</string>
     <string name="vod_shows_load_failed">Seriály sa nepodarilo načítať</string>
     <string name="error_channel_list_memory_tv">Zoznam kanálov poskytovateľa potrebuje viac pamäte, než má tento televízor.</string>
@@ -303,6 +314,16 @@
     <string name="manager_failed_device">Správcu kanálov sa na tomto zariadení nepodarilo spustiť. Skúste to o chvíľu znova.</string>
     <string name="manager_timed_out">Správca kanálov sa po dlhšej nečinnosti zavrel. Otvorte ho znova, keď ho budete potrebovať.</string>
     <string name="manager_too_many_codes">Správca kanálov sa zavrel po príliš mnohých nesprávnych kódoch. Otvorte ho znova a začnite odznova.</string>
+    <string name="manager_page_unreachable">Televízor nie je dostupný. Skontrolujte, či ste na rovnakej Wi-Fi. Ak sa správca kanálov zavrel, otvorte ho na televízore znova a naskenujte nový kód.</string>
+    <string name="manager_page_closed">Televízor správcu kanálov zavrel. Otvorte ho na televízore znova a naskenujte nový kód.</string>
+    <string name="manager_page_not_saved">Televízor túto zmenu neuložil. Skúste to znova.</string>
+    <string name="manager_page_not_tested">Televízor tento test nedokázal vykonať. Skúste to znova.</string>
+    <string name="manager_page_not_loaded">Televízor nemohol tento zoznam poslať. Načítajte stránku znova a skúste to znova.</string>
+    <string name="manager_page_nas_required">Doplňte adresu a zdieľaný priečinok svojho NAS a potom znova uložte.</string>
+    <string name="manager_page_provider_required">Vyplňte všetky údaje, ktoré tento typ poskytovateľa potrebuje, a skúste to znova.</string>
+    <string name="manager_page_url_required">Zadajte adresu poskytovateľa.</string>
+    <string name="manager_page_login_required">Zadajte používateľské meno a heslo.</string>
+    <string name="manager_page_mac_required">Zadajte adresu zariadenia, ktorú vám poskytovateľ dal pre tento portál.</string>
     <string name="pairing_no_network_tv">Tento televízor nie je pripojený k sieti, takže sa k nemu telefón nedostane. Pripojte ho a potom to skúste znova.</string>
     <string name="pairing_no_network_device">Toto zariadenie nie je pripojené k sieti, takže sa k nemu telefón nedostane. Pripojte ho a potom to skúste znova.</string>
     <string name="pairing_failed_tv">Párovanie na tomto televízore sa nepodarilo spustiť. Skúste to o chvíľu znova.</string>
@@ -329,6 +350,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Tento televízor nedokáže prehrať %1$s</string>
     <string name="vod_cant_play_device">Toto zariadenie nedokáže prehrať %1$s</string>
+    <string name="player_no_sound_tv">Tento televízor nevie prehrať tento formát zvuku (%1$s). Ak to váš televízor alebo soundbar podporuje, môže pomôcť zapnúť priestorový zvuk v jeho nastaveniach.</string>
+    <string name="player_no_sound_device">Toto zariadenie nevie prehrať tento formát zvuku (%1$s). Ak to váš televízor alebo soundbar podporuje, môže pomôcť zapnúť priestorový zvuk v nastaveniach tohto zariadenia.</string>
+    <string name="player_stepped_down_tv">Tento televízor nedokáže prehrať %1$s. Namiesto toho sa prehráva %2$s.</string>
+    <string name="player_stepped_down_device">Toto zariadenie nedokáže prehrať %1$s. Namiesto toho sa prehráva %2$s.</string>
+    <string name="player_stepped_down_lower_tv">Tento televízor nedokáže prehrať %1$s. Namiesto toho sa prehráva nižšia kvalita.</string>
+    <string name="player_stepped_down_lower_device">Toto zariadenie nedokáže prehrať %1$s. Namiesto toho sa prehráva nižšia kvalita.</string>
+    <string name="player_stepped_down_for_sound_tv">Tento televízor nevie prehrať tento formát zvuku (%1$s). Namiesto toho sa prehráva iná verzia. Ak to váš televízor alebo soundbar podporuje, môže pomôcť zapnúť priestorový zvuk v jeho nastaveniach.</string>
+    <string name="player_stepped_down_for_sound_device">Toto zariadenie nevie prehrať tento formát zvuku (%1$s). Namiesto toho sa prehráva iná verzia. Ak to váš televízor alebo soundbar podporuje, môže pomôcť zapnúť priestorový zvuk v nastaveniach tohto zariadenia.</string>
+    <string name="player_stepped_down_unnamed_tv">Tento televízor nedokáže prehrať túto kvalitu. Namiesto toho sa prehráva iná.</string>
+    <string name="player_stepped_down_unnamed_device">Toto zariadenie nedokáže prehrať túto kvalitu. Namiesto toho sa prehráva iná.</string>
     <string name="vod_language_title">Tu len v jazyku %1$s</string>
     <string name="vod_language_body_tv">Tento televízor nedokáže prehrať verziu vo vašom jazyku.</string>
     <string name="vod_language_body_device">Toto zariadenie nedokáže prehrať verziu vo vašom jazyku.</string>
@@ -353,6 +384,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles neprijali toto používateľské meno alebo heslo. Skontrolujte ich a skúste to znova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles tento televízor odhlásili. Prihláste sa znova v Nastaveniach.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
+    <string name="error_opensubtitles_not_saved_tv">Na tomto televízore nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
+    <string name="error_opensubtitles_not_saved_device">Na tomto zariadení nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
+    <string name="error_opensubtitles_not_kept_tv">Tento televízor nedokázal uložiť tieto titulky. Skúste to znova alebo vyberte iné.</string>
+    <string name="error_opensubtitles_not_kept_device">Toto zariadenie nedokázalo uložiť tieto titulky. Skúste to znova alebo vyberte iné.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles prihlásenie prijali, ale tento televízor ho nedokázal uložiť. Reštartujte tento televízor a prihláste sa znova.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles prihlásenie prijali, ale toto zariadenie ho nedokázalo uložiť. Reštartujte toto zariadenie a prihláste sa znova.</string>
     <string name="error_not_a_guide">Táto adresa nie je sprievodca. Skontrolujte, že ide o správny odkaz, alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
     <string name="settings_guide_bad_address">To nie je webová adresa. Skontrolujte, že je zadaná tak, ako ju ukazuje odkaz na sprievodcu, napríklad example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee nemohol prečítať svoju databázu, preto tieto čísla chýbajú.</string>

@@ -1,0 +1,79 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv
+
+import android.content.Context
+import androidx.media3.common.util.UnstableApi
+import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.repo.MediaKey
+import app.opentv.player.PlayerController
+import app.opentv.player.StreamGuard
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.TestScope
+import org.junit.After
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * The notice over the picture when a Quality steps down by itself names the hardware the way every other
+ * sentence on the player does: "this TV" on a TV, "this device" elsewhere (#481).
+ * [QualityStepDownTest] checks the stepping itself through the player.
+ */
+@UnstableApi
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = android.app.Application::class)
+class StreamGuardStepDownTest {
+
+    private val scope = TestScope()
+
+    @After
+    fun close() = scope.cancel()
+
+    private fun guard(onTelevision: Boolean) = StreamGuard(
+        ApplicationProvider.getApplicationContext<Context>(),
+        scope,
+        ANY_SIZE_DECODERS,
+        moveDown = { null },
+        onTelevision = onTelevision,
+        onCantPlay = { _, _ -> },
+    )
+
+    private fun noticeFor(onTelevision: Boolean, from: String, to: String): String? {
+        val guard = guard(onTelevision)
+        guard.steppedDown(from, PlayerController.Quality(MediaKey.Live(2), to))
+        return guard.notice.value
+    }
+
+    @Test
+    fun `on a TV, a step down to a named Quality says this TV`() {
+        assertThat(noticeFor(onTelevision = true, "4K", "HD")).isEqualTo("This TV can't play 4K. Playing HD instead.")
+    }
+
+    @Test
+    fun `on a TV, a step down to a Quality with no name says this TV`() {
+        assertThat(noticeFor(onTelevision = true, "4K", ""))
+            .isEqualTo("This TV can't play 4K. Playing a lower quality instead.")
+    }
+
+    @Test
+    fun `on a TV, a step down from a Quality with no name says this TV`() {
+        assertThat(noticeFor(onTelevision = true, "", "HD"))
+            .isEqualTo("This TV can't play that quality. Playing another instead.")
+    }
+
+    @Test
+    fun `on a phone or tablet, the same notices say this device`() {
+        assertThat(noticeFor(onTelevision = false, "4K", "HD"))
+            .isEqualTo("This device can't play 4K. Playing HD instead.")
+        assertThat(noticeFor(onTelevision = false, "4K", ""))
+            .isEqualTo("This device can't play 4K. Playing a lower quality instead.")
+        assertThat(noticeFor(onTelevision = false, "", "HD"))
+            .isEqualTo("This device can't play that quality. Playing another instead.")
+    }
+}

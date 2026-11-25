@@ -19,6 +19,7 @@ import app.opentv.core.ViewerError
 import app.opentv.core.hardware
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.RecordedOn
+import app.opentv.isRunningOnTelevision
 import java.util.Locale
 
 /**
@@ -62,7 +63,7 @@ object PlaybackErrors {
         val cause = error.cause
     ) {
         is HttpDataSource.InvalidResponseCodeException -> describeHttpStatus(context, cause.responseCode)
-        else if ErrorWording.networkSentenceOf(cause, onTelevision) != null ->
+        else if ErrorWording.isNetworkFailure(cause) ->
             context.getString(ErrorWording.networkSentenceOf(cause, onTelevision)!!)
         // Checked before the error code: Media3 reports it as a source error with an IO code,
         // which would read as a network fault when the stream is simply too big for this device.
@@ -188,17 +189,28 @@ object PlaybackErrors {
         }
     }
 
-    /** Why [app.opentv.data.repo.PlaybackSources] had nothing to play. */
-    fun describe(context: Context, failure: Playable.Failure): ViewerError = ViewerError(
+    /**
+     * Why [app.opentv.data.repo.PlaybackSources] had nothing to play. [cause] is [Playable.Failed]'s:
+     * a portal that couldn't be reached is worded as the network failure it was, as a stream's is.
+     * [onTelevision] is worked out from [context] unless a caller (or a test) already knows it.
+     */
+    fun describe(
+        context: Context,
+        failure: Playable.Failure,
+        cause: Throwable? = null,
+        onTelevision: Boolean = isRunningOnTelevision(context),
+    ): ViewerError = ViewerError(
         context.getString(
             when (failure) {
                 Playable.Failure.LINK_REFUSED -> R.string.playback_link_refused
+                Playable.Failure.UNREACHABLE -> ErrorWording.networkSentenceOf(cause, onTelevision)
+                    ?: hardware(onTelevision, R.string.error_cant_reach_tv, R.string.error_cant_reach_device)
                 Playable.Failure.NO_CATCHUP -> R.string.playback_no_catchup
                 Playable.Failure.GONE -> R.string.error_gone
                 Playable.Failure.BAD_ADDRESS -> R.string.error_bad_address
             },
         ),
-        ErrorWording.codeName(failure.name),
+        cause?.let(ErrorWording::codeOf) ?: ErrorWording.codeName(failure.name),
     )
 
     fun describeHttpStatus(context: Context, code: Int): String = when (code) {

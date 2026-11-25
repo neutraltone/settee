@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Renommer le profil</string>
     <string name="profiles_title">Qui regarde ?</string>
     <string name="recset_save_to">Enregistrer les enregistrements sur</string>
-    <string name="recset_usb_no_picker">Aucun sélecteur de dossier disponible sur cet appareil.</string>
+    <string name="recset_usb_no_picker_tv">Cette télévision ne peut pas choisir de dossier sur un disque USB. Enregistrez plutôt sur cette télévision ou sur votre NAS.</string>
+    <string name="recset_usb_no_picker_device">Cet appareil ne peut pas choisir de dossier sur un disque USB. Enregistrez plutôt sur cet appareil ou sur votre NAS.</string>
+    <string name="recset_usb_not_kept">Impossible de garder l\'accès à ce dossier. Choisissez-le à nouveau, ou choisissez un autre dossier sur votre disque USB.</string>
     <string name="recset_field_username">Nom d\'utilisateur</string>
     <string name="recset_field_password">Mot de passe</string>
     <string name="recset_status_testing">Test en cours…</string>
@@ -144,6 +146,11 @@
     <string name="sync_nas_done">%1$d élément(s) synchronisé(s) depuis %2$d appareil(s).</string>
     <string name="sync_nas_uploaded">Cet appareil a été enregistré sur le NAS. Aucun autre appareil ne s\'est encore synchronisé ici.</string>
     <string name="sync_nas_failed">Impossible de joindre votre NAS. Vérifiez qu\'il est allumé et que les informations dans les paramètres d\'enregistrement sont correctes.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Impossible de lire ce que %1$d autre appareil a enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur cet appareil.</item>
+        <item quantity="many">Impossible de lire ce que %1$d autres appareils ont enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur ces appareils.</item>
+        <item quantity="other">Impossible de lire ce que %1$d autres appareils ont enregistré sur votre NAS. Synchronisez à nouveau dans un instant, ou mettez à jour Settee sur ces appareils.</item>
+    </plurals>
     <string name="about_update_available">Mise à jour disponible : %1$s — consultez l\'invite pour l\'installer.</string>
     <string name="about_up_to_date">Vous utilisez la dernière version.</string>
     <string name="about_checking">Vérification…</string>
@@ -267,6 +274,9 @@
     <string name="error_catalogue">Impossible de charger les chaînes de votre fournisseur. Réessayez dans un instant.</string>
     <string name="error_movies_list">La liste des films de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
     <string name="error_shows_list">La liste des séries de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
+    <string name="setup_failed_guide">Le guide TV ne s\'est pas chargé. Settee réessaiera lors de la prochaine actualisation.</string>
+    <string name="setup_failed_movies">Les films ne se sont pas chargés. Settee réessaiera lors de la prochaine actualisation, ou quand vous ouvrirez Films.</string>
+    <string name="setup_failed_shows">Les séries ne se sont pas chargées. Settee réessaiera lors de la prochaine actualisation, ou quand vous ouvrirez Séries.</string>
     <string name="vod_movies_load_failed">Impossible de charger vos films</string>
     <string name="vod_shows_load_failed">Impossible de charger vos séries</string>
     <string name="error_channel_list_memory_tv">La liste de chaînes de votre fournisseur demande plus de mémoire que cette télévision n\'en a.</string>
@@ -303,6 +313,16 @@
     <string name="manager_failed_device">Impossible de lancer le gestionnaire de chaînes sur cet appareil. Réessayez dans un instant.</string>
     <string name="manager_timed_out">Le gestionnaire de chaînes s\'est fermé après un moment d\'inactivité. Rouvrez-le quand vous en avez besoin.</string>
     <string name="manager_too_many_codes">Le gestionnaire de chaînes s\'est fermé après trop de codes erronés. Rouvrez-le pour recommencer.</string>
+    <string name="manager_page_unreachable">Impossible de joindre la télévision. Vérifiez que vous êtes sur le même Wi-Fi. Si le gestionnaire de chaînes s\'est fermé, rouvrez-le sur la télévision et scannez le nouveau code.</string>
+    <string name="manager_page_closed">La télévision a fermé le gestionnaire de chaînes. Rouvrez-le sur la télévision et scannez le nouveau code.</string>
+    <string name="manager_page_not_saved">La télévision n\'a pas enregistré cette modification. Réessayez.</string>
+    <string name="manager_page_not_tested">La télévision n\'a pas pu faire ce test. Réessayez.</string>
+    <string name="manager_page_not_loaded">La télévision n\'a pas pu envoyer cette liste. Rechargez cette page pour réessayer.</string>
+    <string name="manager_page_nas_required">Ajoutez l\'adresse et le dossier partagé de votre NAS, puis enregistrez à nouveau.</string>
+    <string name="manager_page_provider_required">Remplissez toutes les informations dont ce type de fournisseur a besoin, puis réessayez.</string>
+    <string name="manager_page_url_required">Saisissez l\'adresse du fournisseur.</string>
+    <string name="manager_page_login_required">Saisissez le nom d\'utilisateur et le mot de passe.</string>
+    <string name="manager_page_mac_required">Saisissez l\'adresse d\'appareil que votre fournisseur vous a donnée pour ce portail.</string>
     <string name="pairing_no_network_tv">Cette télévision n\'est connectée à aucun réseau, votre téléphone ne peut donc pas la joindre. Connectez-la, puis réessayez.</string>
     <string name="pairing_no_network_device">Cet appareil n\'est connecté à aucun réseau, votre téléphone ne peut donc pas le joindre. Connectez-le, puis réessayez.</string>
     <string name="pairing_failed_tv">Impossible de lancer l\'appairage sur cette télévision. Réessayez dans un instant.</string>
@@ -329,6 +349,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Cette TV ne peut pas lire la %1$s</string>
     <string name="vod_cant_play_device">Cet appareil ne peut pas lire la %1$s</string>
+    <string name="player_no_sound_tv">Cette télévision ne peut pas lire ce format audio (%1$s). Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans ses réglages peut aider.</string>
+    <string name="player_no_sound_device">Cet appareil ne peut pas lire ce format audio (%1$s). Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans les réglages de cet appareil peut aider.</string>
+    <string name="player_stepped_down_tv">Cette TV ne peut pas lire la %1$s. Lecture en %2$s à la place.</string>
+    <string name="player_stepped_down_device">Cet appareil ne peut pas lire la %1$s. Lecture en %2$s à la place.</string>
+    <string name="player_stepped_down_lower_tv">Cette TV ne peut pas lire la %1$s. Lecture dans une qualité inférieure à la place.</string>
+    <string name="player_stepped_down_lower_device">Cet appareil ne peut pas lire la %1$s. Lecture dans une qualité inférieure à la place.</string>
+    <string name="player_stepped_down_for_sound_tv">Cette télévision ne peut pas lire ce format audio (%1$s). Une autre version est lue à la place. Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans ses réglages peut aider.</string>
+    <string name="player_stepped_down_for_sound_device">Cet appareil ne peut pas lire ce format audio (%1$s). Une autre version est lue à la place. Si votre télévision ou votre barre de son le prend en charge, activer le son surround dans les réglages de cet appareil peut aider.</string>
+    <string name="player_stepped_down_unnamed_tv">Cette TV ne peut pas lire cette qualité. Lecture dans une autre qualité à la place.</string>
+    <string name="player_stepped_down_unnamed_device">Cet appareil ne peut pas lire cette qualité. Lecture dans une autre qualité à la place.</string>
     <string name="vod_language_title">Seulement en %1$s ici</string>
     <string name="vod_language_body_tv">Cette TV ne peut pas lire de version dans votre langue.</string>
     <string name="vod_language_body_device">Cet appareil ne peut pas lire de version dans votre langue.</string>
@@ -353,6 +383,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles n\'a pas accepté ce nom d\'utilisateur ou ce mot de passe. Vérifiez-les et réessayez.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a déconnecté ce téléviseur. Reconnectez-vous dans les Réglages.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a déconnecté cet appareil. Reconnectez-vous dans les Réglages.</string>
+    <string name="error_opensubtitles_not_saved_tv">Il n\'y a plus de place sur ce téléviseur pour garder ces sous-titres. Libérez de l\'espace, puis réessayez.</string>
+    <string name="error_opensubtitles_not_saved_device">Il n\'y a plus de place sur cet appareil pour garder ces sous-titres. Libérez de l\'espace, puis réessayez.</string>
+    <string name="error_opensubtitles_not_kept_tv">Ce téléviseur n\'a pas pu garder ces sous-titres. Réessayez, ou choisissez-en d\'autres.</string>
+    <string name="error_opensubtitles_not_kept_device">Cet appareil n\'a pas pu garder ces sous-titres. Réessayez, ou choisissez-en d\'autres.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles a accepté la connexion, mais ce téléviseur n\'a pas pu l\'enregistrer. Redémarrez ce téléviseur, puis reconnectez-vous.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles a accepté la connexion, mais cet appareil n\'a pas pu l\'enregistrer. Redémarrez cet appareil, puis reconnectez-vous.</string>
     <string name="error_not_a_guide">Cette adresse n\'est pas un guide. Vérifiez que c\'est le bon lien, ou connectez-vous à votre Wi-Fi s\'il le demande.</string>
     <string name="settings_guide_bad_address">Ce n\'est pas une adresse web. Vérifiez qu\'elle est saisie comme l\'indique le lien du guide, par exemple example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee n\'a pas pu lire sa base de données, ces chiffres sont donc absents.</string>

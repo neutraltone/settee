@@ -118,7 +118,9 @@
     <string name="profiles_rename_heading">Nimeä profiili uudelleen</string>
     <string name="profiles_title">Kuka katsoo?</string>
     <string name="recset_save_to">Tallenna tallenteet kohteeseen</string>
-    <string name="recset_usb_no_picker">Kansion valitsin ei ole käytettävissä tällä laitteella.</string>
+    <string name="recset_usb_no_picker_tv">Tämä televisio ei voi valita kansiota USB-asemalta. Tallenna sen sijaan tähän televisioon tai NAS-laitteeseesi.</string>
+    <string name="recset_usb_no_picker_device">Tämä laite ei voi valita kansiota USB-asemalta. Tallenna sen sijaan tähän laitteeseen tai NAS-laitteeseesi.</string>
+    <string name="recset_usb_not_kept">Kansion käyttöoikeutta ei voitu säilyttää. Valitse se uudelleen tai valitse toinen kansio USB-asemaltasi.</string>
     <string name="recset_field_username">Käyttäjätunnus</string>
     <string name="recset_field_password">Salasana</string>
     <string name="recset_status_testing">Testataan…</string>
@@ -144,6 +146,10 @@
     <string name="sync_nas_done">Synkronoitu %1$d kohdetta %2$d laitteelta.</string>
     <string name="sync_nas_uploaded">Tämä laite tallennettu NAS-laitteeseen. Yksikään muu laite ei ole vielä synkronoinut tänne.</string>
     <string name="sync_nas_failed">NAS-laitetta ei tavoitettu. Tarkista, että se on päällä ja että tallennusasetusten tiedot ovat oikein.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">%1$d muun laitteen NAS-laitteelle tallentamia tietoja ei voitu lukea. Synkronoi uudelleen hetken päästä tai päivitä Settee siihen.</item>
+        <item quantity="other">%1$d muun laitteen NAS-laitteelle tallentamia tietoja ei voitu lukea. Synkronoi uudelleen hetken päästä tai päivitä Settee niihin.</item>
+    </plurals>
     <string name="about_update_available">Päivitys saatavilla: %1$s — katso asennuskehote.</string>
     <string name="about_up_to_date">Sinulla on uusin versio.</string>
     <string name="about_checking">Tarkistetaan…</string>
@@ -267,6 +273,9 @@
     <string name="error_catalogue">Palveluntarjoajasi kanavia ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_movies_list">Palveluntarjoajasi elokuvaluettelo ei tullut perille. Yritä hetken päästä uudelleen.</string>
     <string name="error_shows_list">Palveluntarjoajasi sarjaluettelo ei tullut perille. Yritä hetken päästä uudelleen.</string>
+    <string name="setup_failed_guide">TV-opas ei latautunut. Settee yrittää uudelleen seuraavan päivityksen yhteydessä.</string>
+    <string name="setup_failed_movies">Elokuvat eivät latautuneet. Settee yrittää uudelleen seuraavan päivityksen yhteydessä tai kun avaat Elokuvat.</string>
+    <string name="setup_failed_shows">Sarjat eivät latautuneet. Settee yrittää uudelleen seuraavan päivityksen yhteydessä tai kun avaat Sarjat.</string>
     <string name="vod_movies_load_failed">Elokuvia ei voitu ladata</string>
     <string name="vod_shows_load_failed">Sarjoja ei voitu ladata</string>
     <string name="error_channel_list_memory_tv">Palveluntarjoajasi kanavalista tarvitsee enemmän muistia kuin tässä televisiossa on.</string>
@@ -303,6 +312,16 @@
     <string name="manager_failed_device">Kanavahallintaa ei voitu käynnistää tällä laitteella. Yritä hetken päästä uudelleen.</string>
     <string name="manager_timed_out">Kanavahallinta sulkeutui, kun sitä ei käytetty hetkeen. Avaa se uudelleen, kun tarvitset sitä.</string>
     <string name="manager_too_many_codes">Kanavahallinta sulkeutui liian monen väärän koodin jälkeen. Avaa se uudelleen aloittaaksesi alusta.</string>
+    <string name="manager_page_unreachable">Televisioon ei saatu yhteyttä. Tarkista, että olet samassa Wi-Fi-verkossa. Jos kanavahallinta sulkeutui, avaa se uudelleen televisiossa ja skannaa uusi koodi.</string>
+    <string name="manager_page_closed">Televisio sulki kanavahallinnan. Avaa se uudelleen televisiossa ja skannaa uusi koodi.</string>
+    <string name="manager_page_not_saved">Televisio ei tallentanut muutosta. Yritä uudelleen.</string>
+    <string name="manager_page_not_tested">Televisio ei voinut tehdä tätä testiä. Yritä uudelleen.</string>
+    <string name="manager_page_not_loaded">Televisio ei voinut lähettää tätä luetteloa. Yritä uudelleen lataamalla sivu uudelleen.</string>
+    <string name="manager_page_nas_required">Lisää NAS-laitteesi osoite ja jaettu kansio ja tallenna sitten uudelleen.</string>
+    <string name="manager_page_provider_required">Täytä kaikki tiedot, joita tämäntyyppinen palveluntarjoaja tarvitsee, ja yritä sitten uudelleen.</string>
+    <string name="manager_page_url_required">Anna palveluntarjoajan osoite.</string>
+    <string name="manager_page_login_required">Anna käyttäjätunnus ja salasana.</string>
+    <string name="manager_page_mac_required">Anna laiteosoite, jonka palveluntarjoaja antoi sinulle tätä portaalia varten.</string>
     <string name="pairing_no_network_tv">Tämä televisio ei ole verkossa, joten puhelimesi ei tavoita sitä. Yhdistä se ja yritä sitten uudelleen.</string>
     <string name="pairing_no_network_device">Tämä laite ei ole verkossa, joten puhelimesi ei tavoita sitä. Yhdistä se ja yritä sitten uudelleen.</string>
     <string name="pairing_failed_tv">Pariliitosta ei voitu aloittaa tällä televisiolla. Yritä hetken päästä uudelleen.</string>
@@ -329,6 +348,16 @@
     <!-- A film or show's Versions (#181) -->
     <string name="vod_cant_play_tv">Tämä televisio ei voi toistaa %1$s-laatua</string>
     <string name="vod_cant_play_device">Tämä laite ei voi toistaa %1$s-laatua</string>
+    <string name="player_no_sound_tv">Tämä televisio ei voi toistaa tätä äänimuotoa (%1$s). Jos televisiosi tai soundbarisi tukee sitä, tilaäänen ottaminen käyttöön sen asetuksista voi auttaa.</string>
+    <string name="player_no_sound_device">Tämä laite ei voi toistaa tätä äänimuotoa (%1$s). Jos televisiosi tai soundbarisi tukee sitä, tilaäänen ottaminen käyttöön tämän laitteen asetuksista voi auttaa.</string>
+    <string name="player_stepped_down_tv">Tämä televisio ei voi toistaa %1$s-laatua. Toistetaan sen sijaan %2$s-laatua.</string>
+    <string name="player_stepped_down_device">Tämä laite ei voi toistaa %1$s-laatua. Toistetaan sen sijaan %2$s-laatua.</string>
+    <string name="player_stepped_down_lower_tv">Tämä televisio ei voi toistaa %1$s-laatua. Toistetaan sen sijaan heikompaa laatua.</string>
+    <string name="player_stepped_down_lower_device">Tämä laite ei voi toistaa %1$s-laatua. Toistetaan sen sijaan heikompaa laatua.</string>
+    <string name="player_stepped_down_for_sound_tv">Tämä televisio ei voi toistaa tätä äänimuotoa (%1$s). Toistetaan sen sijaan toista versiota. Jos televisiosi tai soundbarisi tukee sitä, tilaäänen ottaminen käyttöön sen asetuksista voi auttaa.</string>
+    <string name="player_stepped_down_for_sound_device">Tämä laite ei voi toistaa tätä äänimuotoa (%1$s). Toistetaan sen sijaan toista versiota. Jos televisiosi tai soundbarisi tukee sitä, tilaäänen ottaminen käyttöön tämän laitteen asetuksista voi auttaa.</string>
+    <string name="player_stepped_down_unnamed_tv">Tämä televisio ei voi toistaa tätä laatua. Toistetaan sen sijaan toista.</string>
+    <string name="player_stepped_down_unnamed_device">Tämä laite ei voi toistaa tätä laatua. Toistetaan sen sijaan toista.</string>
     <string name="vod_language_title">Täällä vain kielellä %1$s</string>
     <string name="vod_language_body_tv">Tämä televisio ei voi toistaa versiota omalla kielelläsi.</string>
     <string name="vod_language_body_device">Tämä laite ei voi toistaa versiota omalla kielelläsi.</string>
@@ -353,6 +382,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ei hyväksynyt käyttäjätunnusta tai salasanaa. Tarkista ne ja yritä uudelleen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles kirjasi tämän television ulos. Kirjaudu uudelleen asetuksissa.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
+    <string name="error_opensubtitles_not_saved_tv">Tässä televisiossa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_not_saved_device">Tässä laitteessa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_not_kept_tv">Tämä televisio ei voinut tallentaa näitä tekstityksiä. Yritä uudelleen tai valitse toiset.</string>
+    <string name="error_opensubtitles_not_kept_device">Tämä laite ei voinut tallentaa näitä tekstityksiä. Yritä uudelleen tai valitse toiset.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles hyväksyi kirjautumisen, mutta tämä televisio ei voinut tallentaa sitä. Käynnistä tämä televisio uudelleen ja kirjaudu uudelleen.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles hyväksyi kirjautumisen, mutta tämä laite ei voinut tallentaa sitä. Käynnistä tämä laite uudelleen ja kirjaudu uudelleen.</string>
     <string name="error_not_a_guide">Osoite ei ole ohjelmaopas. Tarkista, että linkki on oikea, tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
     <string name="settings_guide_bad_address">Tämä ei ole verkko-osoite. Tarkista, että se on kirjoitettu kuten oppaan linkki sen näyttää, esimerkiksi example.com/guide.xml.</string>
     <string name="diagnostics_database_failed">Settee ei voinut lukea tietokantaansa, joten nämä luvut puuttuvat.</string>

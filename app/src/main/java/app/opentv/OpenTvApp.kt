@@ -167,7 +167,9 @@ open class OpenTvApp :
             // this device's bundle to the shared folder and merges in every other device's — favourites,
             // watch history and NAS recordings. Fire-and-forget and fully guarded: a blank or unreachable
             // NAS returns a result rather than throwing, so a bad launch never costs the user anything.
-            syncNas = { app.opentv.sync.NasSync(graph).sync() },
+            // That result is kept, so Your devices says when it keeps failing (#484): NasSync returns
+            // its failures rather than throwing them, so otherwise one at launch went nowhere at all.
+            syncNas = { app.opentv.sync.NasSync(graph).sync().also(graph.lastNasSync::record) },
             catchUpNormaliser = catchUpNormaliser::invoke,
             launchRefresh = {
                 // Runs on every launch. It is cheap when nothing is stale (feeds within their

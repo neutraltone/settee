@@ -134,11 +134,14 @@
     <string name="player_paused_left">Paused · %1$s left</string>
     <string name="player_no_sound_tv">This TV can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
     <string name="player_no_sound_device">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>
-    <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
-    <string name="player_stepped_down_lower">This device can\'t play %1$s. Playing a lower quality instead.</string>
+    <string name="player_stepped_down_tv">This TV can\'t play %1$s. Playing %2$s instead.</string>
+    <string name="player_stepped_down_device">This device can\'t play %1$s. Playing %2$s instead.</string>
+    <string name="player_stepped_down_lower_tv">This TV can\'t play %1$s. Playing a lower quality instead.</string>
+    <string name="player_stepped_down_lower_device">This device can\'t play %1$s. Playing a lower quality instead.</string>
     <string name="player_stepped_down_for_sound_tv">This TV can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
     <string name="player_stepped_down_for_sound_device">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>
-    <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
+    <string name="player_stepped_down_unnamed_tv">This TV can\'t play that quality. Playing another instead.</string>
+    <string name="player_stepped_down_unnamed_device">This device can\'t play that quality. Playing another instead.</string>
     <string name="player_back_to_live">Paused too long. Back to live.</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>
     <string name="live_pause_prompt_turn_on">Turn on and pause</string>
@@ -334,7 +337,9 @@
 
     <!-- ============================ Recording settings ============================ -->
     <string name="recset_save_to">Save recordings to</string>
-    <string name="recset_usb_no_picker">No folder picker is available on this device.</string>
+    <string name="recset_usb_no_picker_tv">This TV can\'t choose a folder on a USB drive. Record to this TV or your NAS instead.</string>
+    <string name="recset_usb_no_picker_device">This device can\'t choose a folder on a USB drive. Record to this device or your NAS instead.</string>
+    <string name="recset_usb_not_kept">Couldn\'t keep access to that folder. Pick it again, or pick another folder on your USB drive.</string>
     <string name="recset_field_username">Username</string>
     <string name="recset_field_password">Password</string>
     <string name="recset_status_testing">Testing…</string>
@@ -366,6 +371,10 @@
     <string name="sync_nas_done">Synced %1$d item(s) from %2$d device(s).</string>
     <string name="sync_nas_uploaded">Saved this device to the NAS. No other devices have synced here yet.</string>
     <string name="sync_nas_failed">Couldn\'t reach your NAS. Check it\'s on and the details in Recording settings are right.</string>
+    <plurals name="sync_nas_unreadable">
+        <item quantity="one">Couldn\'t read what another device saved on your NAS. Sync again in a moment, or update Settee on it.</item>
+        <item quantity="other">Couldn\'t read what %1$d other devices saved on your NAS. Sync again in a moment, or update Settee on them.</item>
+    </plurals>
 
     <!-- ============================ About ============================ -->
     <string name="about_based_on">Based on OpenTV</string>
@@ -738,6 +747,12 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles didn\'t accept that username or password. Check them and try again.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles signed this TV out. Sign in again in Settings.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles signed this device out. Sign in again in Settings.</string>
+    <string name="error_opensubtitles_not_saved_tv">There\'s no room on this TV to keep that subtitle. Free up some space, then try again.</string>
+    <string name="error_opensubtitles_not_saved_device">There\'s no room on this device to keep that subtitle. Free up some space, then try again.</string>
+    <string name="error_opensubtitles_not_kept_tv">This TV couldn\'t keep that subtitle. Try again, or pick a different one.</string>
+    <string name="error_opensubtitles_not_kept_device">This device couldn\'t keep that subtitle. Try again, or pick a different one.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles accepted the sign-in, but this TV couldn\'t save it. Restart this TV, then sign in again.</string>
+    <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles accepted the sign-in, but this device couldn\'t save it. Restart this device, then sign in again.</string>
     <string name="opensubtitles_name" translatable="false">OpenSubtitles</string>
     <string name="opensubtitles_attribution">Subtitles provided by OpenSubtitles.com</string>
     <string name="opensubtitles_find">Find subtitles online</string>
@@ -837,6 +852,16 @@
     <string name="manager_failed_device">Couldn\'t start the channel manager on this device. Try again in a moment.</string>
     <string name="manager_timed_out">The channel manager closed after a while unused. Open it again when you need it.</string>
     <string name="manager_too_many_codes">The channel manager closed after too many wrong codes. Open it again to start over.</string>
+    <string name="manager_page_unreachable">Couldn\'t reach the TV. Check you\'re on the same Wi-Fi. If the channel manager closed, open Manage on phone or laptop on the TV again and scan the new code.</string>
+    <string name="manager_page_closed">The TV closed the channel manager. Open Manage on phone or laptop on the TV again and scan the new code.</string>
+    <string name="manager_page_not_saved">The TV didn\'t save that change. Try again.</string>
+    <string name="manager_page_not_tested">The TV couldn\'t run that test. Try again.</string>
+    <string name="manager_page_not_loaded">The TV couldn\'t send this list. Reload this page to try again.</string>
+    <string name="manager_page_nas_required">Add your NAS\'s address and share, then save again.</string>
+    <string name="manager_page_provider_required">Fill in every detail this kind of provider needs, then try again.</string>
+    <string name="manager_page_url_required">Enter the provider\'s address.</string>
+    <string name="manager_page_login_required">Enter the username and password.</string>
+    <string name="manager_page_mac_required">Enter the device address your provider gave you for this portal.</string>
     <string name="pairing_no_network_tv">This TV isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
     <string name="pairing_no_network_device">This device isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
     <string name="pairing_failed_tv">Couldn\'t start pairing on this TV. Try again in a moment.</string>

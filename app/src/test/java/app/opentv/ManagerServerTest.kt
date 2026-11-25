@@ -12,8 +12,11 @@ import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
+import app.opentv.pairing.ManagerPage
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
+import java.io.File
 import java.net.Socket
 import java.net.URI
 import java.util.Collections
@@ -54,6 +57,8 @@ class ManagerServerTest {
 
     @Volatile private var holdFirstCommit = false
 
+    @Volatile private var failCommits = false
+
     private val server = ManagerServer(
         scope,
         test.catalog,
@@ -63,6 +68,7 @@ class ManagerServerTest {
         test.refresh(),
     ).apply {
         saveOrder = { ids ->
+            check(!failCommits) { "the database refused the write" }
             if (holdFirstCommit && firstCommitting.count > 0) {
                 firstCommitting.countDown()
                 firstMayCommit.await(5, TimeUnit.SECONDS)
@@ -218,6 +224,62 @@ class ManagerServerTest {
         val status = sendRaw(session, "/reorder", contentLength = 1_000, pieces = emptyList())
 
         assertThat(status).isEqualTo("HTTP/1.1 404 Not Found")
+    }
+
+    @Test
+    fun `a request carrying a token that isn't this manager's is refused with 403, which the page words as closed`() {
+        val session = listening()
+
+        val (code, _) = get("http://${session.host}:${session.port}/meta?t=0123456789abcdef")
+
+        assertThat(code).isEqualTo(403)
+    }
+
+    @Test
+    fun `a change the TV fails to save is answered 500, so the page can say it wasn't saved`() {
+        val session = listening()
+        failCommits = true
+
+        val code = post(session, "/reorder", """{"ids":[1,2]}""")
+
+        assertThat(code).isEqualTo(500)
+    }
+
+    @Test
+    fun `the page says when the TV closed it or didn't save a change, in the app's words, not only the wifi`() {
+        val session = listening()
+
+        val (_, page) = get(session.url)
+
+        listOf(
+            R.string.manager_page_unreachable,
+            R.string.manager_page_closed,
+            R.string.manager_page_not_saved,
+            R.string.manager_page_not_loaded,
+            R.string.manager_page_nas_required,
+            R.string.manager_page_not_tested,
+            R.string.manager_page_url_required,
+            R.string.manager_page_login_required,
+            R.string.manager_page_mac_required,
+        ).forEach { assertThat(page).contains(context.getString(it)) }
+        // Every opening of the manager has a new code, so reloading an old page only gets refused again.
+        assertThat(context.getString(R.string.manager_page_closed)).contains("scan the new code")
+        assertThat(context.getString(R.string.manager_page_unreachable)).contains("scan the new code")
+        assertThat(page).doesNotContain("Is it still on the same wifi?")
+        assertThat(page).doesNotContain("Couldn't save the name.")
+        assertThat(page).doesNotContain("Server and share are required.")
+    }
+
+    @Test
+    fun `docs ERRORS md lists every sentence the channel manager page can show`() {
+        val errors = File("../docs/ERRORS.md").readText()
+        val section = errors.substringAfter("## Channel manager page\n", missingDelimiterValue = "")
+            .substringBefore("\n## ")
+
+        val unlisted = ManagerPage.SENTENCES.map(context.resources::getResourceEntryName)
+            .filterNot { "`$it`" in section }
+
+        assertWithMessage("channel manager page sentences missing from docs/ERRORS.md").that(unlisted).isEmpty()
     }
 
     /** [path] with the session's long token, as the manager page asks for it. */

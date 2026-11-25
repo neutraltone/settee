@@ -35,6 +35,7 @@ import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
+import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.OpenSubtitlesSession
 import app.opentv.data.repo.OpenSubtitles

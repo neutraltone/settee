@@ -27,7 +27,8 @@ import app.opentv.ui.design.ScreenFrame
 @Composable
 internal fun GoneDetail(onBack: () -> Unit) {
     val context = LocalContext.current
-    val gone = remember(context) { PlaybackErrors.describe(context, Playable.Failure.GONE) }
+    val gone =
+        remember(context) { PlaybackErrors.describe(context, Playable.Failure.GONE) }
     val back = remember { FocusRequester() }
     ScreenFrame {
         Message(

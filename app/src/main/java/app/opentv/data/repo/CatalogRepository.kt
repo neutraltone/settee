@@ -833,7 +833,7 @@ class CatalogRepository(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Catalogue sync failed for source ${source.id}", e)
+            Log.w(TAG, "Catalogue sync failed for source ${source.id}: ${kindsOf(e)}")
             SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
         } catch (e: OutOfMemoryError) {
             // A list too big for the heap. The half-built list went with the frames that threw, so
@@ -944,7 +944,7 @@ class CatalogRepository(
                 if (saved.count > 0) viewerLibrary.retired.movies(source.id, saved.stamp)
             }
             if (count > 0) fillGenresInBackground(source)
-            ListFetch(count, (list ?: categories)?.let { wording.ofProvider(it, R.string.error_movies_list) })
+            ListFetch.of(count, list ?: categories, wording, R.string.error_movies_list)
         }
 
     /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
@@ -959,11 +959,7 @@ class CatalogRepository(
                 }
             }
             if (saved.count > 0) fillGenresInBackground(source)
-            ListFetch(
-                saved.count,
-                (list ?: categories)?.let { wording.ofProvider(it, R.string.error_shows_list) },
-                saved.moved,
-            )
+            ListFetch.of(saved.count, list ?: categories, wording, R.string.error_shows_list, saved.moved)
         }
 
     /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */
@@ -1204,6 +1200,16 @@ class CatalogRepository(
 
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
+
+/**
+ * [error]'s kind and its causes', for a log: a network failure's message can carry the provider's
+ * host, and some clients put the request's address, with the account's login in it, there too.
+ */
+private fun kindsOf(error: Throwable): String =
+    generateSequence(error) { it.cause }.take(MAX_LOGGED_CAUSES).joinToString(" < ") { it.javaClass.simpleName }
+
+/** Far more than any client wraps a failure, and stops a cause that loops back on itself. */
+private const val MAX_LOGGED_CAUSES = 5
 private const val MORE_LIKE_THIS_LIMIT = 20
 
 /**
