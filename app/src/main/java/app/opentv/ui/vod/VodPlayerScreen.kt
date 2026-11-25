@@ -748,6 +748,8 @@ fun VodPlayerContent(
             onDismiss = { optionsOpen = false },
         )
     }
+
+    PlayerAddonPick(viewModel, onBack)
 }
 
 private const val POLL_MILLIS = 500L

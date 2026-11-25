@@ -115,12 +115,22 @@ fun rememberAddonPickerState(key: Any?): AddonPickerState {
  * The streams a title's add-ons offer, shown while [state] is open: a line until the first arrive,
  * then one row per stream as each add-on answers. When none came, it says whether nothing was found,
  * an add-on couldn't be reached (with Try again, which calls [find] anew), or the add-ons can't look
- * the title up at all. Picking a row closes it and calls [onPick].
+ * the title up at all. Picking a row closes it and calls [onPick]; Back closes it and calls [onDismiss].
  */
 @Composable
-fun AddonStreamPicker(state: AddonPickerState, find: () -> Flow<AddonSearch>, onPick: (RankedStream) -> Unit) {
+fun AddonStreamPicker(
+    state: AddonPickerState,
+    find: () -> Flow<AddonSearch>,
+    onDismiss: () -> Unit = {},
+    onPick: (RankedStream) -> Unit,
+) {
     if (!state.open) return
-    Dialog(onDismissRequest = state::close) {
+    Dialog(
+        onDismissRequest = {
+            state.close()
+            onDismiss()
+        },
+    ) {
         Column(
             Modifier
                 .width(560.dp)

@@ -34,10 +34,7 @@ import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
-import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.ProviderException
-import app.opentv.data.repo.AddonOutcome
-import app.opentv.data.repo.AddonStreamResults
 import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -78,6 +75,7 @@ import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.AddonSearch
+import app.opentv.ui.vod.AddonSearches
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -103,7 +101,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -1078,53 +1075,13 @@ class VodViewModel @JvmOverloads constructor(
             .map { it.isNotEmpty() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), settings.stremioAddons.value.isNotEmpty())
 
-    /**
-     * What the viewer's add-ons offer for [movie], growing as each answers. The film is matched to IMDb
-     * through TMDB first, since that's what add-ons are asked by; with no match they can't be asked.
-     */
-    fun addonStreams(movie: Movie): Flow<AddonSearch> =
-        addonSearch(aboutShow = false, { graph.addonTitles.imdbIdOf(movie) }) { graph.addonStreams.forFilm(it) }
+    private val addonSearches = AddonSearches(graph)
 
-    /**
-     * What the viewer's add-ons offer for [episode] of [series], as for a film: add-ons are asked by the
-     * show's IMDb id plus the episode's season and number, so with no IMDb match they can't be asked.
-     */
-    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> =
-        addonSearch(aboutShow = true, { graph.addonTitles.imdbIdOf(series) }) {
-            graph.addonStreams.forEpisode(it, episode.season, episode.episodeNumber)
-        }
+    /** What the viewer's add-ons offer for [movie], growing as each answers. */
+    fun addonStreams(movie: Movie): Flow<AddonSearch> = addonSearches.forFilm(movie)
 
-    private fun addonSearch(
-        aboutShow: Boolean,
-        imdbId: suspend () -> Result<String?>,
-        ask: (imdbId: String) -> Flow<AddonStreamResults>,
-    ): Flow<AddonSearch> = flow {
-        imdbId().fold(
-            onSuccess = { imdb ->
-                if (imdb == null) {
-                    // IMDb's id is what add-ons are asked by, so with none they can't be asked at all.
-                    val sentence = if (aboutShow) R.string.error_addon_no_match_show else R.string.error_addon_no_match
-                    val noMatch = graph.errorWording.of(sentence, "NoImdbMatch")
-                    emit(AddonSearch.CantAsk(noMatch, canRetry = false))
-                } else {
-                    emitAll(ask(imdb).map { it.toSearch() })
-                }
-            },
-            onFailure = {
-                val failure = graph.errorWording.ofAddon(AddonFailure.NoLookup(it), aboutShow)
-                emit(AddonSearch.CantAsk(failure, canRetry = true))
-            },
-        )
-    }
-
-    private fun AddonStreamResults.toSearch() = AddonSearch.Results(
-        streams = streams,
-        finished = finished,
-        // Read as each answer lands rather than watched: the switch can't change under an open picker.
-        torrentsOn = settings.torrentsEnabled.value,
-        failure = outcomes.firstNotNullOfOrNull { (it as? AddonOutcome.Unreachable)?.failure }
-            ?.let(graph.errorWording::ofAddon),
-    )
+    /** What the viewer's add-ons offer for [episode] of [series], as for a film. */
+    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> = addonSearches.forEpisode(series, episode)
 
     // ---- Netflix-style home rows ----------------------------------------------------------------
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds

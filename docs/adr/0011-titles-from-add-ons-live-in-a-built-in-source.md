@@ -9,6 +9,7 @@ The name is fixed and never translated, since sync matches a title by its source
 ## Consequences
 
 - A film of the Add-ons source has no stream URL. Play on its page opens the add-on stream picker, and with no add-on set up it can't play. When a Provider carries the same film, Play and the Quality pill stand for the Provider's copies, and the add-on copy is reached through Add-on sources.
+- Whatever opens the player on such a title straight away, Continue Watching, the Next Episode card, Search or Play from start, the player shows the same picker over itself and plays the stream picked from the title's resume point; Back on it leaves the player. After an add-on episode, the Next Episode card opens the next one's picker rather than reusing the add-on by its `bingeGroup`, which the player's route doesn't carry.
 - Anything that walks the Providers, a Catalogue Refresh, Setup, the phone manager, the guide, must keep using `SourceDao`'s Provider lists. Only sync's directory of names (`everySource`) and look-ups by id see the Add-ons source.
 - Removing every add-on leaves its titles, progress and Favourites in place; they're only left out of Search's add-on section until an add-on is set up again.
 - A Provider already named "Add-ons" before this change shares the name with the Add-ons source, and sync can't tell their titles apart. A Provider saved from now on with that name gets a number added, as any taken name does.
