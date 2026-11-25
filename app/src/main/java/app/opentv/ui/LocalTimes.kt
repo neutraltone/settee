@@ -30,15 +30,19 @@ fun viewerZone(): ZoneId {
 /**
  * The [ViewerClock] for this screen. Its language is the configuration's, which is the one
  * [app.opentv.core.LocaleUtils] put on the activity (a language change recreates it), read here
- * rather than wrapping a context again for every cell of the guide.
+ * rather than wrapping a context again for every cell of the guide. The device's 12- or 24-hour
+ * setting is read once per configuration too, not for every time drawn: it's a settings lookup,
+ * and the guide's header, cards and rows draw dozens of times on each recomposition.
  */
 @Composable
 fun viewerClock(): ViewerClock {
     val context = LocalContext.current
-    val locale = LocalConfiguration.current.locales[0]
+    val configuration = LocalConfiguration.current
+    val locale = configuration.locales[0]
     val zone = viewerZone()
-    return remember(context, locale, zone) {
-        ViewerClock({ locale }, { zone }, { ViewerClock.deviceIs24Hour(context) })
+    return remember(context, configuration, locale, zone) {
+        val is24Hour = ViewerClock.deviceIs24Hour(context)
+        ViewerClock({ locale }, { zone }, { is24Hour })
     }
 }
 

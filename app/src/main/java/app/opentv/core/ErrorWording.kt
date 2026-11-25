@@ -49,11 +49,7 @@ class ErrorWording(
     internal val zone: () -> ZoneId = ZoneId::systemDefault,
 ) {
     /** Times in a sentence: in its language, the viewer's zone and the device's clock setting. */
-    internal val clock = ViewerClock(
-        locale = { resources.configuration.locales[0] },
-        zone = zone,
-        is24Hour = { ViewerClock.deviceIs24Hour(context) },
-    )
+    internal val clock = ViewerClock.of(context, zone)
 
     /** What Test connection says when it passes, in the same language as its failures. */
     val tests = TestOutcomeWording({ resources }, clock)

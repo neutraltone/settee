@@ -14,7 +14,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Every clock time and day label the viewer sees, as their language writes it. The language, the
@@ -30,41 +29,39 @@ class ViewerClock(
 ) {
 
     /** [utcMillis] as a clock time, such as `20:00` or `8:00 PM`. */
-    fun formatTime(utcMillis: Long): String = format(utcMillis, hours())
+    fun formatTime(utcMillis: Long): String = format(utcMillis) { bestPattern(hours(), it) }
 
     /** [utcMillis]'s weekday, day and month, in the language's own order: `Sat, 4 Jul`, `7月4日(土)`. */
-    fun formatDay(utcMillis: Long): String = format(utcMillis, DAY)
+    fun formatDay(utcMillis: Long): String = format(utcMillis) { bestPattern(DAY, it) }
 
     /** [utcMillis]'s day and clock time as one phrase, joined as the language joins them: `Sat, 4 Jul, 20:00`. */
-    fun formatDayTime(utcMillis: Long): String = format(utcMillis, DAY + hours())
+    fun formatDayTime(utcMillis: Long): String = format(utcMillis) { bestPattern(DAY + hours(), it) }
 
     /** [utcMillis]'s date with its year, as the language writes it: `4 Jul 2026`, `04.07.2026`. */
-    fun formatDate(utcMillis: Long): String = format(utcMillis, DATE)
+    fun formatDate(utcMillis: Long): String =
+        // The localised medium date, which Test connection has always used, rather than a skeleton.
+        format(utcMillis) { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(it) }
 
     private fun hours(): String = if (is24Hour()) "Hm" else "hm"
 
-    private fun format(utcMillis: Long, skeleton: String): String {
-        val locale = locale()
-        return formatters.getOrPut(skeleton to locale) {
-            if (skeleton == DATE) {
-                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
-            } else {
-                DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-            }
-        }.format(Instant.ofEpochMilli(utcMillis).atZone(zone()))
-    }
+    // Built for each time rather than kept, so nothing outlives a language change: a formatter costs
+    // a pattern parse, and the pattern lookup behind it is cached by Android's ICU (#645).
+    private fun format(utcMillis: Long, formatter: (Locale) -> DateTimeFormatter): String =
+        formatter(locale()).format(Instant.ofEpochMilli(utcMillis).atZone(zone()))
+
+    private fun bestPattern(skeleton: String, locale: Locale): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
 
     companion object {
         // Skeletons, not patterns: each language puts the fields in its own order with its own
         // punctuation, which a fixed "EEE d MMM" would write in English order everywhere.
         private const val DAY = "EEEdMMM"
 
-        // Not a skeleton: the localised medium date, which Test connection has always used.
-        private const val DATE = "date:MEDIUM"
-
         /**
-         * The app's language as [LocaleUtils] applies it to [context], the device's clock setting,
-         * and [zone] (the graph's [ServiceLocator.Graph.zone]).
+         * The clock for words outside a screen, such as an error's sentence: the app's language as
+         * [LocaleUtils] applies it to [context], the device's clock setting, and [zone] (the graph's
+         * [ServiceLocator.Graph.zone]), each read when a time is drawn. A screen's clock is
+         * [app.opentv.ui.viewerClock], which reads the clock setting once per configuration.
          */
         fun of(context: Context, zone: () -> ZoneId): ViewerClock = ViewerClock(
             locale = { LocaleUtils.wrap(context).resources.configuration.locales[0] },
@@ -84,11 +81,5 @@ class ViewerClock(
                 else -> DateFormat.getBestDateTimePattern(Resources.getSystem().configuration.locales[0], "jm")
                     .contains('H')
             }
-
-        // A formatter holds a pattern and a locale but no zone (the zone is the instant's, given on each
-        // call), so one per skeleton and locale serves every zone and every clock. Kept rather than built
-        // per call because the guide's cells ask on every recomposition; keyed by locale, so a language
-        // change finds its own rather than the last one's.
-        private val formatters = ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
     }
 }
