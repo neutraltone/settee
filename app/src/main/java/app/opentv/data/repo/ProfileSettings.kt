@@ -152,21 +152,12 @@ class ProfileSettings(
         }
     }
 
-    /**
-     * Merges another device's settings, newest wins, labels going by [history], each time taken
-     * through [ceiling] first. Returns how many were taken.
-     */
-    suspend fun import(
-        items: List<SyncProfileSetting>,
-        history: ProfileHistory = ProfileHistory.NONE,
-        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
-    ): Int {
+    /** Merges another device's settings, newest wins, each placed by [arrival]. Returns how many were taken. */
+    suspend fun import(items: List<SyncProfileSetting>, arrival: SyncArrival = SyncArrival.NONE): Int {
         val names = profiles.directory()
         val placed = items.mapNotNull { item ->
-            val updatedAt = ceiling.clamp(item.updatedAtMillis)
-            names.id(history.currentName(item.profile, item.updatedAtMillis))?.let {
-                ProfileSetting(it, item.name, item.value, updatedAt)
-            }
+            val (profile, updatedAt) = arrival.placed(item.profile, item.updatedAtMillis)
+            names.id(profile)?.let { ProfileSetting(it, item.name, item.value, updatedAt) }
         }
         return db.mergeForProfiles(placed, { it.profileId }) { mergeSynced(it) }
     }

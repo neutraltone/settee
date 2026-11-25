@@ -6,9 +6,8 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
-import app.opentv.data.repo.ArrivalCeiling
-import app.opentv.data.repo.NamelessCategory
-import app.opentv.data.repo.SourceDirectory
+import app.opentv.data.repo.ArrivalClock
+import app.opentv.data.repo.SyncArrival
 import kotlinx.serialization.json.Json
 
 /**
@@ -48,11 +47,11 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         profiles = graph.profiles.export(),
         profileRenames = graph.profiles.history.renames,
         profileAdds = graph.profiles.history.adds,
-        providerRenames = graph.sourceRepository.renames(),
+        providerRenames = graph.providerRenames.all(),
         progress = graph.viewerLibrary.syncedProgress.export(),
         dismissals = graph.viewerLibrary.syncedDismissals.export(),
         favourites = graph.viewerLibrary.favourites.export(),
-        hiddenStreams = graph.catalogRepository.exportHiddenChannels(),
+        hiddenStreams = graph.syncedHiddenChannels.export(),
         hiddenCategories = graph.settings.hiddenCategories.value.toList(),
         categoryLocks = graph.settings.exportCategoryLocks(),
         recordings = graph.recordingRepository.export(),
@@ -74,54 +73,28 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         return merged
     }
 
-    private suspend fun applyOne(received: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
-        // One per bundle, handed to every store that decides newest-wins; this merges nothing itself.
-        val ceiling = ArrivalCeiling.of(graph.clock(), received.generatedAtMillis)
-        // First: everything else lands on a Profile by name, and these decide what the names are now.
-        // Rename and add records, Profiles' and providers', keep the times they came with: each applies
-        // once, matched on its time, and a time clamped differently on every sync would make the same
-        // record new again. So the stores look an item's Profile up by its own time too, on the clock
-        // those records share, and clamp it only to compare and store: a clamped time on a TV whose
-        // clock is behind would file a new Tom's progress under the Tom who became Thomas.
-        graph.profiles.importChanges(received.profileRenames, received.profileAdds)
-        // Then the providers' names, so each item below carries the exact name its provider has here.
-        graph.sourceRepository.importRenames(received.providerRenames)
-        val bundle = received.labelledFor(graph.sourceRepository.directory())
-        val history = graph.profiles.history
+    private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
+        // One per bundle, handed to every store; this merges nothing itself.
+        val clock = ArrivalClock.of(graph.clock(), bundle.generatedAtMillis)
+        // First: everything else lands on a Profile, and a provider, by name, and these decide what
+        // the names are now.
+        graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds, clock)
+        graph.providerRenames.import(bundle.providerRenames, clock)
+        val arrival = SyncArrival(graph.profiles.history, clock, graph.providerRenames.all())
         graph.profiles.import(bundle.profiles, bundle.generatedAtMillis)
-        graph.settings.importCategoryLocks(
+        graph.syncedCategoryLocks.import(
             bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },
-            ceiling,
+            arrival,
         )
-        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, history, ceiling)
+        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, arrival)
         waiting += progress.waiting
         return MergeResult(
             // Counted with positions: both are where a Profile is with its titles.
-            positions = progress.taken +
-                graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, history, ceiling),
-            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, history, ceiling),
-            hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams, ceiling),
+            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, arrival),
+            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, arrival),
+            hidden = graph.syncedHiddenChannels.import(bundle.hiddenStreams, arrival),
             recordings = graph.recordingRepository.import(bundle.recordings),
-            settings = graph.profileSettings.import(bundle.profileSettings, history, ceiling),
+            settings = graph.profileSettings.import(bundle.profileSettings, arrival),
         )
     }
-}
-
-/**
- * This bundle with every item's provider named as this device names it: "Sky " or an old name from
- * before a rename become this device's "Sky". The stores then match names exactly, and a Favourite is
- * kept under the name its provider's rows are joined by.
- */
-private fun SyncBundle.labelledFor(sources: SourceDirectory): SyncBundle {
-    val names = mutableMapOf<String, String>()
-    fun name(label: String) = names.getOrPut(label) { sources.currentName(label) }
-    return copy(
-        progress = progress.map { it.copy(source = name(it.source)) },
-        dismissals = dismissals.map { it.copy(source = name(it.source)) },
-        favourites = favourites.map { it.copy(source = name(it.source)) },
-        hiddenStreams = hiddenStreams.map { it.copy(source = name(it.source)) },
-        // A nameless category's lock is keyed by its provider's name too (#338).
-        hiddenCategories = hiddenCategories.map { NamelessCategory.relabelled(it, ::name) },
-        categoryLocks = categoryLocks.map { it.copy(key = NamelessCategory.relabelled(it.key, ::name)) },
-    )
 }

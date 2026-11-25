@@ -56,7 +56,7 @@ class RecordingDeleteTest {
             XtreamApi(test.panel.http),
             StalkerApi(test.panel.http),
             test.panel.http,
-            test.settings,
+            test.providerRenames,
         ),
         settings,
         EpgRepository(

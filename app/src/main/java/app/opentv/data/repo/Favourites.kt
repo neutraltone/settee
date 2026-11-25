@@ -77,8 +77,10 @@ class Favourites internal constructor(
      * Whether the active Profile has this channel or Version as a Favourite: [itemId] is the provider's
      * stream id ([kind] LIVE or MOVIE) or series id (SERIES) within the source [sourceId].
      */
-    suspend fun contains(kind: StreamKind, sourceId: Long, itemId: String): Boolean =
-        dao.contains(activeProfileId.value, kind, sourceId, itemId)
+    suspend fun contains(kind: StreamKind, sourceId: Long, itemId: String): Boolean {
+        val source = db.sources().byId(sourceId)?.name ?: return false
+        return dao.find(activeProfileId.value, kind, source, itemId)?.removed == false
+    }
 
     /** Whether the active Profile has any Version of [title] as a Favourite (ADR 0007). */
     suspend fun isFavourite(title: VodTitle): Boolean = when (title) {
@@ -128,20 +130,18 @@ class Favourites internal constructor(
     }
 
     /**
-     * Merges another device's Favourites, newest change wins, labels going by [history]. Returns how
-     * many it starred or unstarred here. Each time is taken through [ceiling] first.
+     * Merges another device's Favourites, newest change wins, each placed by [arrival]. Returns how many
+     * it starred or unstarred here. Each is kept under the name its provider has here, the name its
+     * rows are joined by.
      */
-    suspend fun import(
-        items: List<SyncFavourite>,
-        history: ProfileHistory = ProfileHistory.NONE,
-        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
-    ): Int {
+    suspend fun import(items: List<SyncFavourite>, arrival: SyncArrival = SyncArrival.NONE): Int {
         val names = profiles.directory()
+        val sources = arrival.sources(db.sources())
         val placed = items.mapNotNull { item ->
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@mapNotNull null
-            val changedAt = ceiling.clamp(item.changedAtMillis)
-            val profileId = names.id(history.currentName(item.profile, item.changedAtMillis)) ?: return@mapNotNull null
-            Favourite(profileId, kind, item.source, item.id, changedAt, item.removed)
+            val (profile, changedAt) = arrival.placed(item.profile, item.changedAtMillis)
+            val profileId = names.id(profile) ?: return@mapNotNull null
+            Favourite(profileId, kind, sources.currentName(item.source), item.id, changedAt, item.removed)
         }
         return db.mergeForProfiles(placed, { it.profileId }) { fav ->
             val here = dao.find(fav.profileId, fav.kind, fav.source, fav.itemId)
@@ -184,6 +184,21 @@ private suspend fun OpenTvDatabase.setFavourite(
             }
         }
     }
+}
+
+/**
+ * Moves every Profile's Favourites from the provider named [from] to [to], as renaming it does (ADR
+ * 0004). Where a title is already kept under [to], as sync can leave one, the newer change stays, a
+ * tie keeping what's under [to]. Called inside the rename's transaction.
+ */
+internal suspend fun OpenTvDatabase.favouritesSourceRenamed(from: String, to: String) {
+    val dao = favourites()
+    for (moving in dao.all().filter { it.source == from }) {
+        val there = dao.find(moving.profileId, moving.kind, to, moving.itemId) ?: continue
+        // The move replaces what's under the new name, so the change that stays rides along with it.
+        if (!isNewerChange(moving.changedAtMillis, there.changedAtMillis)) dao.upsert(there.copy(source = from))
+    }
+    dao.moveSource(from, to)
 }
 
 /** What makes two of a list's titles one: their TMDB id, or for a title without one, the row itself. */

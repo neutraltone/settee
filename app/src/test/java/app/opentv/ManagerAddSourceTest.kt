@@ -45,7 +45,7 @@ class ManagerAddSourceTest {
             XtreamApi(panel.http),
             StalkerApi(panel.http),
             panel.http,
-            test.settings,
+            test.providerRenames,
         ),
         test.lineup,
         test.refresh { panel.asked += RESCAN },

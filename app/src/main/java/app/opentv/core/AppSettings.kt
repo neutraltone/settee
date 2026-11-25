@@ -88,6 +88,15 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     fun setProviderRenames(renames: List<SyncProviderRename>) =
         prefs.edit { putString(KEY_PROVIDER_RENAMES, addonJson.encodeToString(renames)) }
 
+    /**
+     * Provider renames received that couldn't apply yet, because no provider here had the old name or
+     * another already had the new one: tried again with each sync and each provider added.
+     */
+    fun pendingProviderRenames(): List<SyncProviderRename> = readJsonList(KEY_PENDING_PROVIDER_RENAMES)
+
+    fun setPendingProviderRenames(renames: List<SyncProviderRename>) =
+        prefs.edit { putString(KEY_PENDING_PROVIDER_RENAMES, addonJson.encodeToString(renames)) }
+
     private inline fun <reified T> readJsonList(key: String): List<T> = runCatching {
         prefs.getString(key, null)?.let { addonJson.decodeFromString<List<T>>(it) }
     }.getOrNull() ?: emptyList()
@@ -562,8 +571,10 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     /** Episodes a provider's answer left out, so sync stops asking it for them; see [WaitingProgress]. */
     fun syncEpisodesNotFound(): Set<String> = prefs.getStringSet(KEY_SYNC_EPISODES_NOT_FOUND, emptySet())!!.toSet()
 
-    fun addSyncEpisodesNotFound(keys: List<String>) {
-        prefs.edit { putStringSet(KEY_SYNC_EPISODES_NOT_FOUND, syncEpisodesNotFound() + keys) }
+    fun addSyncEpisodesNotFound(keys: List<String>) = setSyncEpisodesNotFound(syncEpisodesNotFound() + keys)
+
+    fun setSyncEpisodesNotFound(keys: Set<String>) {
+        prefs.edit { putStringSet(KEY_SYNC_EPISODES_NOT_FOUND, keys) }
     }
 
     /** Whether to run a NAS sync automatically each time the app is opened. Off by default. */
@@ -773,6 +784,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_PROFILE_RENAMES = "profile_renames"
         private const val KEY_PROFILE_ADDS = "profile_adds"
         private const val KEY_PROVIDER_RENAMES = "provider_renames"
+        private const val KEY_PENDING_PROVIDER_RENAMES = "pending_provider_renames"
         private const val KEY_LIVE_PREVIEW_HOME_BEFORE = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_SKIP_INTROS_CREDITS = "skip_intros_and_credits"

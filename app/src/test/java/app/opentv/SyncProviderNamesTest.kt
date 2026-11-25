@@ -5,7 +5,10 @@
  */
 package app.opentv
 
+import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
+import app.opentv.sync.SyncBundle
+import app.opentv.sync.SyncProviderRename
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
@@ -122,5 +125,32 @@ class SyncProviderNamesTest {
         deviceB.syncFrom(deviceA)
 
         assertThat(deviceB.providerName()).isEqualTo("Sky")
+    }
+
+    @Test
+    fun `a second rename heard of before the first is applied once the first arrives`() = testing {
+        deviceB.seed("Alex")
+
+        deviceB.sync.apply(SyncBundle(providerRenames = listOf(SyncProviderRename("Sky", "Sky UK", 3_000))))
+        deviceB.sync.apply(SyncBundle(providerRenames = listOf(SyncProviderRename("Provider", "Sky", 2_000))))
+
+        assertThat(deviceB.providerName()).isEqualTo("Sky UK")
+    }
+
+    @Test
+    fun `an episode the provider doesn't have isn't asked for again after the provider is renamed`() = testing {
+        deviceA.seed("Alex")
+        deviceB.openedSeries = false
+        deviceB.seed("Alex")
+        deviceB.panel.replies["get_series_info:s"] = episodesReply("9-9")
+        deviceA.play("Alex", deviceA.episodeKey, 900_000, EPISODE_MILLIS)
+        deviceB.syncFrom(deviceA)
+        deviceB.awaitEpisodes()
+
+        deviceB.renameProvider("Sky")
+        deviceB.syncFrom(deviceA)
+        deviceB.awaitEpisodes()
+
+        assertThat(deviceB.seriesFetches()).isEqualTo(1)
     }
 }

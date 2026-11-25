@@ -52,7 +52,7 @@ class PlaylistTestConnectionTest {
         XtreamApi(http),
         StalkerApi(http),
         http,
-        test.settings,
+        test.providerRenames,
     )
 
     private val playlist = Source(name = "Playlist", kind = SourceKind.M3U, url = "http://example.com/list.m3u")

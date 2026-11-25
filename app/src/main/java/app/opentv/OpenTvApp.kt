@@ -16,7 +16,6 @@ import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.core.carryLivePreviewFromBefore
 import app.opentv.data.repo.CatalogueRefresh
-import app.opentv.data.repo.CategoryLockCarry
 import app.opentv.data.work.SyncWorker
 import app.opentv.recording.RecordingEngine
 import coil.ImageLoader
@@ -141,7 +140,7 @@ open class OpenTvApp :
         // Now, so the titles are grouped while the viewer picks a Profile rather than after Home first
         // asks for them (#582). Off the main thread: making the index makes the database.
         appScope.launch { graph.titleIndex.start() }
-        val lockCarry = CategoryLockCarry(graph.database, graph.settings)
+        val lockCarry = graph.categoryLockCarry
         val catchUpNormaliser = NormaliserCatchUp(
             this,
             renormalise = {

@@ -129,13 +129,12 @@ interface SourceDao {
     suspend fun setName(id: Long, name: String)
 
     /**
-     * Moves everything kept by a source's name (ADR 0004) from [from] to [to], so a rename keeps its
-     * Favourites, hides, channel edits, Live Preview, series rules and reminders. Where a row is
-     * already kept under [to], as sync can leave one, the newer change stays. Call in a transaction.
+     * Moves the device's own rows kept by a source's name (ADR 0004) from [from] to [to], so a rename
+     * keeps its hides, channel edits, Live Preview, series rules and reminders. Where a hide is
+     * already kept under [to], as sync can leave one, the newer change stays. Favourites are
+     * `Favourites.sourceRenamed`'s to move. Call in a transaction.
      */
     suspend fun carryName(from: String, to: String) {
-        dropOlderFavourites(from, to)
-        moveFavourites(from, to)
         dropOlderHiddenChanges(from, to)
         moveHiddenChanges(from, to)
         moveChannelEdits(from, to)
@@ -143,20 +142,6 @@ interface SourceDao {
         moveSeriesRules(from, to)
         moveReminders(from, to)
     }
-
-    @Query(
-        """
-        DELETE FROM favourites WHERE source = :from AND EXISTS (
-            SELECT 1 FROM favourites kept WHERE kept.source = :to AND kept.profileId = favourites.profileId
-                AND kept.kind = favourites.kind AND kept.itemId = favourites.itemId
-                AND kept.changedAtMillis >= favourites.changedAtMillis
-        )
-        """,
-    )
-    suspend fun dropOlderFavourites(from: String, to: String)
-
-    @Query("UPDATE OR REPLACE favourites SET source = :to WHERE source = :from")
-    suspend fun moveFavourites(from: String, to: String)
 
     @Query(
         """
@@ -1800,15 +1785,9 @@ interface RecentSearchDao {
 
 @Dao
 interface FavouriteDao {
-    @Query(
-        """
-        SELECT EXISTS(
-          SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-            AND removed = 0 AND source = (SELECT name FROM sources WHERE id = :sourceId)
-        )
-        """,
-    )
-    suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
+    /** Moves Favourites to another source name, replacing any already kept under it. */
+    @Query("UPDATE OR REPLACE favourites SET source = :to WHERE source = :from")
+    suspend fun moveSource(from: String, to: String)
 
     /** Whether a profile has a Favourite of [kind]: Home's quick check for a Favourites row. */
     @Query("SELECT EXISTS(SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND removed = 0)")

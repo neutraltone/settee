@@ -32,7 +32,7 @@ class SourceNamesTest {
             XtreamApi(test.panel.http),
             StalkerApi(test.panel.http),
             test.panel.http,
-            test.settings,
+            test.providerRenames,
         )
 
     private fun source(name: String, id: Long = 0) =

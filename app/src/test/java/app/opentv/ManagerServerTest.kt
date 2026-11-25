@@ -68,7 +68,7 @@ class ManagerServerTest {
             XtreamApi(test.panel.http),
             StalkerApi(test.panel.http),
             test.panel.http,
-            test.settings,
+            test.providerRenames,
         ),
         test.lineup,
         test.refresh(),

@@ -50,6 +50,23 @@ internal class CategoryLockCarry(private val db: OpenTvDatabase, private val set
     private suspend fun sources() = SourceDirectory(db.sources().all())
 }
 
+/**
+ * Parental Lock's locks as they travel between devices. A nameless category's lock is keyed by its
+ * provider's name, which this relabels with the name the provider has here, following the renames
+ * [SyncArrival] knows, before the locks are taken (ADR 0005).
+ */
+class SyncedCategoryLocks internal constructor(private val db: OpenTvDatabase, private val settings: AppSettings) {
+    /** Takes another device's [locks], each dated on this device's clock. */
+    suspend fun import(locks: List<SyncCategoryLock>, arrival: SyncArrival = SyncArrival.NONE) {
+        val sources = arrival.sources(db.sources())
+        val names = mutableMapOf<String, String>()
+        val here = locks.map { lock ->
+            lock.copy(key = NamelessCategory.relabelled(lock.key) { names.getOrPut(it) { sources.currentName(it) } })
+        }
+        settings.importCategoryLocks(here, arrival.clock)
+    }
+}
+
 /** [locks] without names, with the names of the [categories] each locks today. */
 internal fun rememberedCategoryLocks(
     categories: List<Category>,

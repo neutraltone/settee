@@ -56,7 +56,7 @@ class WaitingProgress(
         val enabled = sources.enabled().associateBy { it.name }
         val notFound = settings.syncEpisodesNotFound()
         val series = waiting
-            .filter { it.source in enabled && notFoundKey(it) !in notFound }
+            .filter { it.source in enabled && keyOf(it) !in notFound }
             .groupBy { it.source to it.seriesId.orEmpty() }
         val down = HashSet<String>()
         // A limit because panels rate-limit, and this can run at app launch; the rest wait for a later sync.
@@ -86,10 +86,10 @@ class WaitingProgress(
      */
     private suspend fun notFound(source: Source, seriesId: String, missing: List<SyncPosition>) {
         if (episodes.forSeries(source.id, seriesId).isEmpty()) return
-        settings.addSyncEpisodesNotFound(missing.map(::notFoundKey))
+        settings.addSyncEpisodesNotFound(missing.map(::keyOf))
     }
 
-    private fun notFoundKey(position: SyncPosition) = "${position.source}\t${position.id}"
+    private fun keyOf(position: SyncPosition) = notFoundKey(position.source, position.id)
 
     /** Waits for the work still running. Tests close their database straight after a sync. */
     internal suspend fun awaitBackground() = background.coroutineContext.job.children.toList().joinAll()
@@ -98,4 +98,15 @@ class WaitingProgress(
         const val TAG = "WaitingProgress"
         const val MAX_SERIES_PER_RUN = 25
     }
+}
+
+// Keyed by the provider's name, as the waiting positions are labelled, so a rename has to move them.
+private fun notFoundKey(source: String, episodeId: String) = "$source\t$episodeId"
+
+/** Moves the episodes [WaitingProgress] stopped asking the provider [from] for to its new name, [to]. */
+internal fun AppSettings.carryEpisodesNotFound(from: String, to: String) {
+    val prefix = notFoundKey(from, "")
+    val keys = syncEpisodesNotFound()
+    if (keys.none { it.startsWith(prefix) }) return
+    setSyncEpisodesNotFound(keys.mapTo(HashSet()) { if (it.startsWith(prefix)) to + it.removePrefix(from) else it })
 }

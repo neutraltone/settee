@@ -42,33 +42,30 @@ class SyncedProgress internal constructor(
     }
 
     /**
-     * Merges progress from another device, newest wins, labels going by [history]. An episode this
+     * Merges progress from another device, newest wins, each placed by [arrival]. An episode this
      * device hasn't fetched comes back in [ProgressImport.waiting], labelled with the Profile's name
-     * now; anything else it can't place is dropped, as is a position with a mark this version doesn't
-     * know. Each time is taken through [ceiling] first.
+     * and the provider's name here now; anything else it can't place is dropped, as is a position with
+     * a mark this version doesn't know.
      */
-    suspend fun import(
-        items: List<SyncPosition>,
-        history: ProfileHistory = ProfileHistory.NONE,
-        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
-    ): ProgressImport {
+    suspend fun import(items: List<SyncPosition>, arrival: SyncArrival = SyncArrival.NONE): ProgressImport {
         val names = profiles.directory()
-        val sourceIds = sources.directory()
+        val sourceIds = arrival.sources(sources)
         val placed = mutableListOf<PlaybackPosition>()
         val waiting = mutableListOf<SyncPosition>()
         // A mark a newer version added can't be shown here, and storing it as no mark would pass
         // that on with the original time, where it ties with, and beats, the real mark (#340).
         val readable = items.filter { it.mark == null || it.handMark() != null }
         for (arrived in readable) {
-            val item = arrived.copy(updatedAtMillis = ceiling.clamp(arrived.updatedAtMillis))
-            val profile = history.currentName(item.profile, arrived.updatedAtMillis)
+            val (profile, updatedAt) = arrival.placed(arrived.profile, arrived.updatedAtMillis)
+            val item = arrived.copy(profile = profile, updatedAtMillis = updatedAt)
             val profileId = names.id(profile)
             val sourceId = sourceIds.id(item.source)
             if (profileId == null || sourceId == null) continue
             val key = localKey(item, sourceId)
             when {
                 key != null -> placed += item.toPosition(profileId, key)
-                item.kind == MediaKey.EPISODE && item.seriesId != null -> waiting += item.copy(profile = profile)
+                item.kind == MediaKey.EPISODE && item.seriesId != null ->
+                    waiting += item.copy(source = sourceIds.currentName(item.source))
             }
         }
         return ProgressImport(merge(placed), waiting)
@@ -139,21 +136,13 @@ class SyncedDismissals internal constructor(
         }
     }
 
-    /**
-     * Merges another device's removals, newest wins, labels going by [history], each time taken
-     * through [ceiling] first. Returns how many were taken.
-     */
-    suspend fun import(
-        items: List<SyncDismissal>,
-        history: ProfileHistory = ProfileHistory.NONE,
-        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
-    ): Int {
+    /** Merges another device's removals, newest wins, each placed by [arrival]. Returns how many were taken. */
+    suspend fun import(items: List<SyncDismissal>, arrival: SyncArrival = SyncArrival.NONE): Int {
         val names = profiles.directory()
-        val sourceIds = sources.directory()
+        val sourceIds = arrival.sources(sources)
         val placed = items.mapNotNull { item ->
-            val dismissedAt = ceiling.clamp(item.dismissedAtMillis)
-            val profileId =
-                names.id(history.currentName(item.profile, item.dismissedAtMillis)) ?: return@mapNotNull null
+            val (profile, dismissedAt) = arrival.placed(item.profile, item.dismissedAtMillis)
+            val profileId = names.id(profile) ?: return@mapNotNull null
             val sourceId = sourceIds.id(item.source) ?: return@mapNotNull null
             SeriesDismissal(
                 profileId = profileId,

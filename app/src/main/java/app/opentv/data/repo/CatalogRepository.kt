@@ -18,7 +18,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
-import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.CoverRow
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
@@ -39,7 +38,6 @@ import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
-import app.opentv.sync.SyncHiddenChannel
 import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
@@ -735,35 +733,6 @@ class CatalogRepository(
     /** One category's channels, hidden included, optionally scoped to a single source. */
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
-
-    /** The channels a viewer hid or showed on this device, for sync. */
-    suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
-
-    /**
-     * Merges another device's hides and unhides, newest change wins. A dated change is kept even if
-     * the provider isn't listing that channel right now. Each time is taken through [ceiling] first.
-     * Returns how many channels it changed here.
-     */
-    suspend fun importHiddenChannels(
-        items: List<SyncHiddenChannel>,
-        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
-    ): Int {
-        val sources = sourceDao.directory()
-        return items.count { arrived ->
-            val item = arrived.copy(changedAtMillis = ceiling.clamp(arrived.changedAtMillis))
-            val sourceId = sources.id(item.source) ?: return@count false
-            val here = channelDao.hiddenChange(item.source, item.id)?.changedAtMillis
-            if (!isNewerChange(item.changedAtMillis, here)) return@count false
-            if (item.changedAtMillis > 0) {
-                channelDao.upsertHiddenChange(
-                    ChannelHiddenChange(item.source, item.id, item.hidden, item.changedAtMillis),
-                )
-            }
-            val wasHidden = channelDao.isHidden(sourceId, item.id)
-            channelDao.setHidden(sourceId, item.id, item.hidden)
-            wasHidden != null && wasHidden != item.hidden
-        }
-    }
 
     /**
      * Series episodes are fetched lazily — panels are slow and most series are never opened.

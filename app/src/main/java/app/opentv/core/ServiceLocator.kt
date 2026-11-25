@@ -23,6 +23,7 @@ import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
+import app.opentv.data.repo.CategoryLockCarry
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.DownloadedSubtitles
 import app.opentv.data.repo.EpgRepository
@@ -33,10 +34,13 @@ import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.Profiles
+import app.opentv.data.repo.ProviderRenames
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.SyncedCategoryLocks
+import app.opentv.data.repo.SyncedHiddenChannels
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
@@ -203,8 +207,22 @@ object ServiceLocator {
         val stremioClient: StremioClient by lazy { StremioClient(httpClient) }
 
         val sourceRepository: SourceRepository by lazy {
-            SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient, settings, dispatchers, clock)
+            SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient, providerRenames, dispatchers)
         }
+
+        /** Providers' renames, made here or heard of, and what each takes along (ADR 0004). */
+        val providerRenames: ProviderRenames by lazy {
+            ProviderRenames(database, settings, clock)
+        }
+
+        /** Hidden channels as they travel between devices. */
+        val syncedHiddenChannels: SyncedHiddenChannels by lazy { SyncedHiddenChannels(database) }
+
+        /** Parental Lock's locks as they travel between devices. */
+        val syncedCategoryLocks: SyncedCategoryLocks by lazy { SyncedCategoryLocks(database, settings) }
+
+        /** Keeps Parental Lock's locks on their categories when a new normaliser moves their keys. */
+        internal val categoryLockCarry: CategoryLockCarry by lazy { CategoryLockCarry(database, settings) }
 
         val catalogRepository: CatalogRepository by lazy {
             CatalogRepository(
