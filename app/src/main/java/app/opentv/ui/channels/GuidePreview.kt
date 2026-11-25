@@ -45,12 +45,13 @@ import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.clockTime
+import app.opentv.ui.design.HIGHLIGHT_SYNOPSIS_LINES
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.rememberTextHeight
+import app.opentv.ui.design.rememberHighlightTextHeight
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -104,13 +105,7 @@ internal fun ScreenFrameScope.GuideBand(
     inFull: suspend (GuideProgramme) -> Programme?,
     modifier: Modifier = Modifier,
 ) {
-    // Tall enough for its tallest text, which grows with the font size: at a fixed 150 dp, the
-    // synopsis lost its last line from about 1.1 times the usual size (#507).
-    val height = maxOf(
-        BAND_HEIGHT,
-        rememberTextHeight(SetteeType.Section, TITLE_LINES) + rememberTextHeight(SetteeType.Body, 1) +
-            BAND_LINE_GAP + rememberTextHeight(SetteeType.Synopsis, SYNOPSIS_LINES),
-    )
+    val height = rememberHighlightTextHeight(SetteeType.Section, TITLE_LINES, BAND_LINE_GAP, atLeast = BAND_HEIGHT)
     Row(modifier.fillMaxWidth().height(height)) {
         // Nothing highlighted (no Favourites yet, say): an empty band, not an empty black box.
         if (row == null) return@Row
@@ -140,7 +135,7 @@ internal fun ScreenFrameScope.GuideBand(
             val synopsis = rememberInFull(programme, inFull, settleMillis = SYNOPSIS_SETTLE_MILLIS)?.description
             synopsis?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(BAND_LINE_GAP))
-                Text(it, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
+                Text(it, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = HIGHLIGHT_SYNOPSIS_LINES)
             }
         }
     }
@@ -174,7 +169,6 @@ internal fun rememberInFull(
 private val BAND_HEIGHT = 150.dp
 private val BAND_GAP = 18.dp
 private val BAND_LINE_GAP = 6.dp
-private const val SYNOPSIS_LINES = 3
 private const val TITLE_LINES = 2
 
 /** Shorter than the preview player's 350 ms switch, so the synopsis isn't the last thing to arrive. */

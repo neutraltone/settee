@@ -31,12 +31,13 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import app.opentv.ui.Backdrop
 import app.opentv.ui.coverStatusText
+import app.opentv.ui.design.HIGHLIGHT_SYNOPSIS_LINES
 import app.opentv.ui.design.QuietLabel
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.rememberTextHeight
+import app.opentv.ui.design.rememberHighlightTextHeight
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -128,13 +129,7 @@ private fun factsOf(backdrop: Backdrop): List<String> = listOfNotNull(
  */
 @Composable
 internal fun BackdropText(backdrop: Backdrop?) {
-    // Tall enough for its lines, which grow with the font size: at a fixed 150 dp, the synopsis lost
-    // its last line from about 1.1 times the usual size (#507).
-    val height = maxOf(
-        BACKDROP_TEXT_HEIGHT,
-        rememberTextHeight(SetteeType.Hero, 1) + rememberTextHeight(SetteeType.Body, 1) + FACTS_GAP +
-            rememberTextHeight(SetteeType.Synopsis, SYNOPSIS_LINES),
-    )
+    val height = rememberHighlightTextHeight(SetteeType.Hero, 1, FACTS_GAP, atLeast = BACKDROP_TEXT_HEIGHT)
     Column(Modifier.fillMaxWidth(BACKDROP_TEXT_WIDTH).height(height)) {
         Fading(backdrop?.title) { Text(it, SetteeType.Hero, maxLines = 1) }
         // One line, always there even when empty, so the synopsis starts in the same place for every
@@ -147,7 +142,7 @@ internal fun BackdropText(backdrop: Backdrop?) {
             Fading(facts) { QuietLabel(it) }
         }
         val synopsis = backdrop?.synopsis?.takeIf { it.isNotBlank() }
-        Fading(synopsis) { Text(it, SetteeType.Synopsis, maxLines = SYNOPSIS_LINES) }
+        Fading(synopsis) { Text(it, SetteeType.Synopsis, maxLines = HIGHLIGHT_SYNOPSIS_LINES) }
     }
 }
 
@@ -196,7 +191,6 @@ private val BACKDROP_HEIGHT = 260.dp
 private const val BACKDROP_WIDTH = 0.7f
 private const val BACKDROP_TEXT_WIDTH = 0.55f
 private val BACKDROP_TEXT_HEIGHT = 150.dp
-private const val SYNOPSIS_LINES = 3
 
 /**
  * From the screen's background at the art's left edge to the art itself. It stays dark under the

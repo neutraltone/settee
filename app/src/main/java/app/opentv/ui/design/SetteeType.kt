@@ -75,7 +75,11 @@ fun TextStyle.forLocale(locale: Locale): TextStyle =
  */
 fun TextStyle.forText(text: String, locale: Locale): TextStyle {
     val inLocale = forLocale(locale)
-    return if (inLocale.fontFamily == SetteeFonts.YoungSerif && needsSans(text)) inSans() else inLocale
+    // Nearly every title is all Latin-1 and Latin Extended-A, which needs no code point decoding.
+    val needsSans = inLocale.fontFamily == SetteeFonts.YoungSerif &&
+        text.any { it.code >= YOUNG_SERIF_FULL_BELOW } &&
+        needsSans(text)
+    return if (needsSans) inSans() else inLocale
 }
 
 private fun TextStyle.inSans() = copy(fontFamily = SetteeFonts.AlegreyaSans, fontWeight = FontWeight.Bold)
