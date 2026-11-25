@@ -160,6 +160,20 @@ class SettingsSectionsScrollTest {
         captureScreen("settings_recording_nas_path")
     }
 
+    @Test
+    fun `a value longer than half the row shows whole when its label leaves room for it`() {
+        // Wider than half the pane's rows, but with room to spare beside "Shared folder".
+        val share = "recordings-from-the-big-telly-in-the-corner"
+        testGraph.graph.settings.setRecordingTarget(AppSettings.RecordingTarget.SMB)
+        testGraph.graph.settings.setSmbConfig("192.168.1.20", share, "", user = "", password = "")
+        compose.setTvContent {
+            SettingsScreen(memory = SettingsMemory(SettingsSection.Recording), onBack = {}, openSubtitles = null)
+        }
+
+        compose.onNodeWithText(share, useUnmergedTree = true).assertShownWhole()
+        compose.onNodeWithText("Shared folder", useUnmergedTree = true).assertShownWhole().assertOnOneLine()
+    }
+
     private fun paneTitle() = compose.onNodeWithTag(SettingsTags.PANE_TITLE).fetchSemanticsNode()
 
     private fun paneTitleHeight() = paneTitle().size.height
