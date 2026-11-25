@@ -6,9 +6,6 @@
 package app.opentv.ui.vod
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -43,7 +39,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.player.NextEpisodeCountdown.Overlay
@@ -51,10 +46,11 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeMotion
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.arriving
+import app.opentv.ui.design.rememberArrival
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
@@ -220,27 +216,6 @@ private val CARD_WIDTH = 340.dp
 /** The Next Episode card, for tests to measure. */
 internal const val NEXT_EPISODE_CARD_TAG = "next_episode_card"
 
-/**
- * How an overlay that comes up without a press arrives (the Next Episode card, Skip intro): it fades in
- * as it rises into place over [ARRIVAL_MILLIS], rather than cutting into the picture. Runs once, from
- * when it's first drawn.
- */
-@Composable
-internal fun rememberArrival(): Animatable<Float, AnimationVector1D> {
-    val arrival = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { arrival.animateTo(1f, tween(ARRIVAL_MILLIS, easing = SetteeMotion.Arrive)) }
-    return arrival
-}
-
-/** Draws [arrival] as a fade in while rising [rise] into place. */
-internal fun Modifier.arriving(arrival: Animatable<Float, AnimationVector1D>, rise: Dp): Modifier = graphicsLayer {
-    alpha = arrival.value
-    translationY = (1f - arrival.value) * rise.toPx()
-}
-
-// If a frame of an arrival misses on a Stick, set the time to 0, never longer (docs/LOOK.md, Motion
-// and cost).
-private const val ARRIVAL_MILLIS = 250
 private const val COUNTDOWN_SECONDS = 15f
 
 // A plain dim over the picture: LOOK.md rules out blur.
