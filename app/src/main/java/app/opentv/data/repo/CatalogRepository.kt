@@ -1170,6 +1170,7 @@ class CatalogRepository(
         database.withTransaction {
             channelDao.deleteForSource(sourceId)
             categoryDao.deleteForSource(sourceId)
+            viewerLibrary.retired.sourceRemoved(sourceId)
             movieDao.deleteForSource(sourceId)
             seriesDao.deleteForSource(sourceId)
             episodeDao.deleteForSource(sourceId)

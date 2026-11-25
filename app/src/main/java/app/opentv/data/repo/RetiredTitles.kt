@@ -53,6 +53,13 @@ class RetiredTitles internal constructor(private val db: OpenTvDatabase, private
     }
 
     /**
+     * Deletes every Profile's resume points on [sourceId]'s films and episodes, as the source itself is
+     * removed (#337), so none is left on a deleted title. Called inside the removal's transaction, before
+     * its titles go.
+     */
+    suspend fun sourceRemoved(sourceId: Long) = positions.deleteForSource(sourceId)
+
+    /**
      * Deletes [sourceId]'s series last listed before [stamp], and their episodes. Another Version's
      * episodes are stored only once its page has been opened, so those a point could go to are fetched
      * first with [fetchEpisodes] (see [fetchMissing]).

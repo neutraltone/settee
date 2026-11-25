@@ -10,6 +10,7 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.pairing.PairingHttp
 import app.opentv.pairing.ServerSecrets
+import app.opentv.pairing.SessionTimer
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.InetAddress
@@ -18,13 +19,12 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Serves this device's watch-history bundle to another OpenTV on the same wifi.
@@ -33,7 +33,11 @@ import kotlinx.coroutines.launch
  * server on the LAN, gated by a six-digit code shown on screen, private-network only, and torn
  * down on a timeout. The bundle is a snapshot taken when sharing starts, served as-is.
  */
-class SyncServer(private val scope: CoroutineScope) {
+class SyncServer(
+    scope: CoroutineScope,
+    /** Where the share's timeout waits: tests pass a test dispatcher to move its clock. */
+    timerDispatcher: CoroutineDispatcher = Dispatchers.Default,
+) {
 
     data class Session(val host: String, val port: Int, val code: String) {
         val address: String get() = "$host:$port"
@@ -56,6 +60,17 @@ class SyncServer(private val scope: CoroutineScope) {
     private var wrongAttempts = 0
 
     @Volatile private var running = false
+
+    /**
+     * Ends a share left open. Kept so [stop] cancels it: a timer left running from an earlier
+     * share would otherwise end a new one early, while the other TV is still typing its code.
+     */
+    private val timer = SessionTimer(scope, TimeUnit.MINUTES.toMillis(TIMEOUT_MINUTES), timerDispatcher) {
+        if (running) {
+            stop()
+            _state.value = State.Failed(ServerProblem.TIMED_OUT)
+        }
+    }
 
     fun start(bundleJson: String) {
         if (running) return
@@ -90,16 +105,11 @@ class SyncServer(private val scope: CoroutineScope) {
             }
         }
 
-        scope.launch(Dispatchers.Default) {
-            delay(TimeUnit.MINUTES.toMillis(TIMEOUT_MINUTES))
-            if (running) {
-                stop()
-                _state.value = State.Failed(ServerProblem.TIMED_OUT)
-            }
-        }
+        timer.arm()
     }
 
     fun stop() {
+        timer.cancel()
         running = false
         runCatching { serverSocket?.close() }
         serverSocket = null

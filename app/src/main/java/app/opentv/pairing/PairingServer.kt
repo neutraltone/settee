@@ -17,13 +17,9 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -554,26 +550,4 @@ private fun afterAnswer(answer: PairingServer.Reply?, text: (Int) -> String): St
         text(R.string.pairing_phone_stopped_title),
         text(R.string.pairing_phone_stopped_body),
     )
-}
-
-/** Runs [onExpiry] [millis] after the last [arm], unless [cancel]led first. */
-private class SessionTimer(
-    private val scope: CoroutineScope,
-    private val millis: Long,
-    private val onExpiry: () -> Unit,
-) {
-    @Volatile private var running: Job? = null
-
-    fun arm() {
-        running?.cancel()
-        running = scope.launch(Dispatchers.Default) {
-            delay(millis)
-            onExpiry()
-        }
-    }
-
-    fun cancel() {
-        running?.cancel()
-        running = null
-    }
 }
