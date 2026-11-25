@@ -19,6 +19,7 @@ import app.opentv.core.ViewerError
 import app.opentv.core.hardware
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.RecordedOn
+import app.opentv.isRunningOnTelevision
 import java.util.Locale
 
 /**
@@ -191,12 +192,13 @@ object PlaybackErrors {
     /**
      * Why [app.opentv.data.repo.PlaybackSources] had nothing to play. [cause] is [Playable.Failed]'s:
      * a portal that couldn't be reached is worded as the network failure it was, as a stream's is.
+     * [onTelevision] is worked out from [context] unless a caller (or a test) already knows it.
      */
     fun describe(
         context: Context,
         failure: Playable.Failure,
-        onTelevision: Boolean,
         cause: Throwable? = null,
+        onTelevision: Boolean = isRunningOnTelevision(context),
     ): ViewerError = ViewerError(
         context.getString(
             when (failure) {
