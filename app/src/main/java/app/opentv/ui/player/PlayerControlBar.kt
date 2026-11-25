@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
@@ -49,7 +51,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.ui.design.HighlightStyle
@@ -60,6 +66,8 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.forLocale
+import app.opentv.ui.design.rememberTextHeight
 import app.opentv.ui.formatPlaybackTime
 
 /**
@@ -284,7 +292,9 @@ internal fun PlayerControlBar(
             }
             Spacer(Modifier.height(16.dp))
             // Kept at the pills' height while they're away, so the row above doesn't move as they come.
-            Box(Modifier.height(PillRowHeight)) {
+            // Their label's line grows with the font size, so the space for them does too.
+            val pillRowHeight = PillRowHeight - PillLabelLine + rememberTextHeight(SetteeType.Body, 1)
+            Box(Modifier.height(pillRowHeight)) {
                 if (pillsUp) {
                     PillRow(pills, firstPill = firstPill, up = subtitles) { pill ->
                         lower.remembered(BarSpot.Pill(pill.label))
@@ -413,6 +423,12 @@ private class LastHighlight {
 /**
  * The pills, with Up back to the row above ([up]) and the remote kept inside the row's ends. [each]
  * is a pill's own modifier.
+ *
+ * One row, never scrolled or wrapped (#507): where the labels don't all fit, as in German or Russian
+ * at a larger font size, the pills share the width, the shortest keeping their whole label and the
+ * longest cut to an ellipsis, and a pill whose label can't keep a recognisable start shows its icon
+ * alone. Measured here rather than left to the Row, which gave the first pills all they wanted and
+ * squeezed the last until their labels wrapped and were clipped.
  */
 @Composable
 private fun PillRow(
@@ -421,21 +437,80 @@ private fun PillRow(
     up: FocusRequester,
     each: (PlayerPill) -> Modifier,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        pills.forEachIndexed { index, pill ->
-            Pill(
-                pill,
-                modifier = each(pill)
-                    .then(if (index == 0) Modifier.focusRequester(firstPill) else Modifier)
-                    .focusProperties {
-                        this.up = up
-                        down = FocusRequester.Cancel
-                        if (index == 0) left = FocusRequester.Cancel
-                        if (index == pills.lastIndex) right = FocusRequester.Cancel
-                    },
+    val measurer = rememberTextMeasurer()
+    val style = SetteeType.Body.forLocale(LocalConfiguration.current.locales[0])
+    val labels = pills.map { it.label }
+    val natural = remember(labels, style, measurer) {
+        labels.map { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width }
+    }
+    BoxWithConstraints {
+        val density = LocalDensity.current
+        val fits = with(density) {
+            fitLabels(
+                natural,
+                room = constraints.maxWidth - PillGap.roundToPx() * (pills.size - 1),
+                labelled = (PillPadding * 2 + PillIcon + PillIconGap).roundToPx(),
+                iconOnly = (PillPadding * 2 + PillIcon).roundToPx(),
+                shortest = MinPillLabel.roundToPx(),
             )
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(PillGap)) {
+            pills.forEachIndexed { index, pill ->
+                val fit = fits[index]
+                val cut = fit?.takeIf { width -> width < natural[index] }
+                Pill(
+                    pill,
+                    label = if (fit == null) null else PillLabel(cutTo = cut?.let { with(density) { it.toDp() } }),
+                    modifier = each(pill)
+                        .then(if (index == 0) Modifier.focusRequester(firstPill) else Modifier)
+                        .focusProperties {
+                            this.up = up
+                            down = FocusRequester.Cancel
+                            if (index == 0) left = FocusRequester.Cancel
+                            if (index == pills.lastIndex) right = FocusRequester.Cancel
+                        },
+                )
+            }
+        }
     }
+}
+
+/** How a pill shows its label: whole, or cut to [cutTo] with an ellipsis. */
+private class PillLabel(val cutTo: Dp?)
+
+/**
+ * How wide each pill's label may be, in pixels, given the labels' [natural] widths and the [room]
+ * the pills have between their gaps; null for a pill shown as its icon alone. A pill takes
+ * [labelled] around its label, or [iconOnly] without one. Labels share what's left evenly, any
+ * shorter than an even share keeping their own width; when that share is under [shortest], the
+ * longest label goes, its pill to its icon, and the rest share again.
+ */
+internal fun fitLabels(natural: List<Int>, room: Int, labelled: Int, iconOnly: Int, shortest: Int): List<Int?> {
+    // A pixel each in hand, so rounding between this sum and the Row's never squeezes the last pill.
+    val usable = room - natural.size
+    val shown = natural.indices.toMutableList()
+    var share = 0
+    while (shown.isNotEmpty()) {
+        val budget = usable - labelled * shown.size - iconOnly * (natural.size - shown.size)
+        share = evenShare(shown.map { natural[it] }, budget)
+        if (share >= shortest) break
+        shown.remove(shown.maxBy { natural[it] })
+    }
+    return natural.indices.map { if (it in shown) minOf(natural[it], share) else null }
+}
+
+/**
+ * The widest each of [wanted] may be for them to add up to [budget], those under it keeping their
+ * own; as wide as the widest when they all fit.
+ */
+private fun evenShare(wanted: List<Int>, budget: Int): Int {
+    var left = budget
+    wanted.sorted().forEachIndexed { index, width ->
+        val share = left / (wanted.size - index)
+        if (width > share) return share
+        left -= width
+    }
+    return wanted.maxOrNull() ?: 0
 }
 
 /**
@@ -469,19 +544,47 @@ private fun IconAction(icon: ImageVector, label: String, onClick: () -> Unit, mo
     }
 }
 
+/** A pill: its icon and [label], or its icon alone where [label] is null, which then names it. */
 @Composable
-private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
+private fun Pill(pill: PlayerPill, label: PillLabel?, modifier: Modifier = Modifier) {
     HighlightSurface(onClick = pill.onClick, style = HighlightStyle.Button, modifier = modifier) { highlighted ->
         val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(pill.icon, contentDescription = null, tint = colour, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(pill.label, SetteeType.Body, color = colour)
+        Row(
+            Modifier.padding(horizontal = PillPadding, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                pill.icon,
+                contentDescription = pill.label.takeIf { label == null },
+                tint = colour,
+                modifier = Modifier.size(PillIcon),
+            )
+            if (label != null) {
+                Spacer(Modifier.width(PillIconGap))
+                Text(
+                    pill.label,
+                    SetteeType.Body,
+                    color = colour,
+                    maxLines = 1,
+                    modifier = label.cutTo?.let { Modifier.widthIn(max = it) } ?: Modifier,
+                )
+            }
         }
     }
 }
 
+private val PillPadding = 16.dp
+private val PillIcon = 20.dp
+private val PillIconGap = 8.dp
+private val PillGap = 10.dp
+
+/** The least of a label worth showing, about four letters and an ellipsis; any less and it's the icon alone. */
+private val MinPillLabel = 44.dp
+
 private val PillRowHeight = 42.dp
+
+/** A label's line at the usual font size, which [PillRowHeight] has room for. */
+private val PillLabelLine = 21.dp
 
 /** The rest of the row while the bar is picked up, so the eye stays on the thumb. */
 private const val DIMMED_ALPHA = 0.35f
