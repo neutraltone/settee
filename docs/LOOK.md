@@ -102,7 +102,7 @@ Watched episodes step back by colour, never alpha. On-video colours for the play
 - **Figures:** lining, with `fontFeatureSettings = "lnum, tnum"`, wherever a number appears.
 - **Shipping the fonts:** the exact Google Fonts files, Young Serif 3.003 and Alegreya Sans 2.004, unmodified, not subset and never turned into code. Young Serif on upstream `master` has been redrawn much thinner, so pin 3.003. Ship Young Serif Regular and Alegreya Sans Medium and Bold.
 - **Licences:** rely on the fonts being an aggregate alongside the app, not on the OFL being compatible with the GPL. Ship each upstream `OFL.txt` in the APK and the repo with its version, source commit and hash, and add a row on the About screen.
-- **Other languages:** Young Serif doesn't cover Russian, Ukrainian, Bulgarian, Greek or Vietnamese, so titles in those locales use Alegreya Sans Bold, chosen by locale. Arabic, Persian, Hindi, Thai, Chinese, Japanese and Korean stay on the system fallback.
+- **Other languages:** Young Serif doesn't cover Russian, Ukrainian, Bulgarian, Greek or Vietnamese, so titles in those locales, and titles written in those letters on any interface, use Alegreya Sans Bold. Arabic, Persian, Hindi, Thai, Chinese, Japanese and Korean stay on the system fallback.
 
 ### Shape and space
 

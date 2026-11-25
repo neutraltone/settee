@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
  * Settee's text. The [style] is required and should be one of [SetteeType]'s roles: Material's
  * `Text` falls back to a default size, which is how text under 16 sp crept into the app.
  *
- * Titles switch face in languages Young Serif can't draw ([forLocale]).
+ * Titles switch face in languages, and for letters, Young Serif can't draw ([forText]).
  */
 @Composable
 fun Text(
@@ -32,8 +32,8 @@ fun Text(
     overflow: TextOverflow = TextOverflow.Ellipsis,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val drawn = remember(style, locale, color, textAlign) {
-        style.forLocale(locale).merge(TextStyle(color = color, textAlign = textAlign ?: TextAlign.Unspecified))
+    val drawn = remember(text, style, locale, color, textAlign) {
+        style.forText(text, locale).merge(TextStyle(color = color, textAlign = textAlign ?: TextAlign.Unspecified))
     }
     BasicText(text, modifier, style = drawn, overflow = overflow, maxLines = maxLines)
 }
