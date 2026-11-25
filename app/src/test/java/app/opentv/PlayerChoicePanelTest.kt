@@ -98,13 +98,14 @@ class PlayerChoicePanelTest {
     /** How far the panel's row is from where it settles, early in its slide in [direction]. */
     private fun slideOf(direction: LayoutDirection): Float {
         var open by mutableStateOf(false)
+        val start = FocusRequester()
         compose.setTvContent {
             CompositionLocalProvider(LocalLayoutDirection provides direction) {
                 if (open) {
                     PlayerChoicePanel(
                         title = "Audio",
                         choices = listOf(PlayerChoice("English", selected = true, onClick = {})),
-                        startFocus = FocusRequester(),
+                        startFocus = start,
                         onClose = {},
                     )
                 }
