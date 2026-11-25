@@ -71,4 +71,16 @@ class DevicesPaneTest {
         compose.onNodeWithText("Every device you set up", substring = true).assertDoesNotExist()
         captureScreen("devices_nas_auto_failed")
     }
+
+    @Test
+    fun `a stored NAS failure goes once automatic NAS sync is turned off`() {
+        graph.settings.setSmbConfig("nas.example.com", "share", "", "u", "p")
+        graph.lastNasSync.record(NasSync.Result.Failed(ConnectException()))
+        graph.settings.setNasAutoSync(false)
+        show()
+        device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Couldn't reach your NAS", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Every device you set up", substring = true).assertExists()
+    }
 }

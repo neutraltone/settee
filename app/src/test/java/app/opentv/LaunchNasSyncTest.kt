@@ -63,6 +63,26 @@ class LaunchNasSyncTest {
         assertThat(lastNasSync().outcome.value?.failure).isNull()
     }
 
+    @Test
+    fun `a stored failure is worded in the app's language when it's read, not when it happened`() = runTest {
+        launch(lastNasSync(), NasSync.Result.Failed(ConnectException()))
+        val locale = java.util.Locale.getDefault()
+        try {
+            // The language changed since: as MainActivity puts the chosen language on every context.
+            val german = ErrorWording(app.opentv.core.LocaleUtils.wrap(context, "de"), onTelevision = true)
+
+            val stored = LastNasSync(prefs, german, now = { NOW }).outcome.value
+
+            assertThat(stored?.failure?.sentence).isEqualTo(
+                "Dein NAS konnte nicht erreicht werden. Überprüfe, ob es eingeschaltet ist und die Angaben in den " +
+                    "Aufnahme-Einstellungen stimmen.",
+            )
+            assertThat(stored?.failure?.detail).isEqualTo("Connect")
+        } finally {
+            java.util.Locale.setDefault(locale)
+        }
+    }
+
     private companion object {
         const val NOW = 1_700_000_000_000L
     }

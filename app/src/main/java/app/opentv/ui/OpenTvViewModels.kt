@@ -2329,14 +2329,20 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Until Sync now is pressed, the last sync's failure if it failed, the launch's included (#484):
-     * otherwise the row's reassuring note stayed up while nothing had synced for weeks.
+     * otherwise the row's reassuring note stayed up while nothing had synced for weeks. Only while
+     * automatic NAS sync is on and a NAS is set up: a failure of a sync no longer meant to run, or of a
+     * NAS since removed, isn't news.
      */
-    val nasState: StateFlow<NasState> = combine(_nasState, graph.lastNasSync.outcome) { pressed, last ->
-        nasStateOf(pressed, last)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, nasStateOf(_nasState.value, graph.lastNasSync.outcome.value))
+    val nasState: StateFlow<NasState> =
+        combine(_nasState, graph.lastNasSync.outcome, nasAutoSync, smbHost, ::nasStateOf)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                nasStateOf(_nasState.value, graph.lastNasSync.outcome.value, nasAutoSync.value, smbHost.value),
+            )
 
-    private fun nasStateOf(pressed: NasState, last: LastNasSync.Outcome?): NasState {
-        val failure = last?.failure
+    private fun nasStateOf(pressed: NasState, last: LastNasSync.Outcome?, auto: Boolean, host: String): NasState {
+        val failure = last?.failure?.takeIf { auto && host.isNotBlank() }
         return if (pressed == NasState.Idle && failure != null) NasState.Failed(failure) else pressed
     }
 
