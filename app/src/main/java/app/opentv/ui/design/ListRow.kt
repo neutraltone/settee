@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
@@ -93,7 +94,7 @@ fun ListRow(
             }
             value?.let {
                 Spacer(Modifier.width(SIDE))
-                Text(it, SetteeType.Body, color = quiet, maxLines = 1)
+                Text(it, SetteeType.Body, color = quiet, maxLines = 1, modifier = Modifier.atMostHalf())
             }
             if (opens) {
                 Spacer(Modifier.width(GAP))
@@ -105,6 +106,24 @@ fun ListRow(
             }
         }
     }
+}
+
+/**
+ * At most half the width offered, so a long value (a network drive's path) is cut short rather than
+ * the label beside it. The Row measures the value before the label, which has the weight, so without
+ * this a value could take all but a letter of the label's room (#507).
+ */
+private fun Modifier.atMostHalf() = layout { measurable, constraints ->
+    val half = if (constraints.hasBoundedWidth) {
+        constraints.copy(
+            minWidth = 0,
+            maxWidth = constraints.maxWidth / 2,
+        )
+    } else {
+        constraints
+    }
+    val placeable = measurable.measure(half)
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
 }
 
 /**
