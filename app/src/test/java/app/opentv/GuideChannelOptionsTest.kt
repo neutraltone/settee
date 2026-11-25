@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.app.Application
+import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -198,17 +200,23 @@ class GuideChannelOptionsTest {
 
     @Test
     fun `a later programme's time moves to the device's new time zone while the list is open`() {
+        // A 12-hour clock, as the device's own setting rather than its language's habit.
+        Settings.System.putString(
+            ApplicationProvider.getApplicationContext<Application>().contentResolver,
+            Settings.System.TIME_12_24,
+            "12",
+        )
         insertLateFilm()
         rows = listOf(row(1, "BBC One", epgId = "later-guide"))
         showGrid()
         pressMenuOn("BBC One")
         waitFor("Schedule a later programme").performClick()
-        waitFor("20:00   Late Film")
+        waitFor("8:00 PM   Late Film")
 
         zone.value = ZoneId.of("Asia/Tokyo")
 
-        waitFor("05:00   Late Film")
-        compose.onNode(hasText("20:00", substring = true)).assertDoesNotExist()
+        waitFor("5:00 AM   Late Film")
+        compose.onNode(hasText("8:00 PM", substring = true)).assertDoesNotExist()
     }
 
     private fun insertLateFilm() {

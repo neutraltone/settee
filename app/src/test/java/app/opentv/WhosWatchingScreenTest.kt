@@ -10,6 +10,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -72,5 +73,20 @@ class WhosWatchingScreenTest {
 
         compose.onNodeWithContentDescription("Kids").assertIsFocused()
         assertThat(chosen).containsExactly(3L)
+    }
+
+    @Test
+    fun `a name starting with an emoji shows the whole emoji as its initial`() {
+        compose.setTvContent {
+            WhosWatchingScreen(
+                profiles = listOf(Profile(id = 1, name = "\uD83D\uDC4D\uD83C\uDFFDBo"), Profile(id = 2, name = "Sam")),
+                lastActiveId = 1,
+                stills = emptyMap(),
+                onChoose = {},
+            )
+        }
+
+        compose.onNodeWithText("\uD83D\uDC4D\uD83C\uDFFD").assertExists()
+        captureScreen("whos_watching_emoji_initial")
     }
 }

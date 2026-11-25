@@ -66,15 +66,15 @@ private fun ErrorWording.ofOpenSubtitlesUnreachable(error: OpenSubtitlesFailure.
     }
 }
 
-/** Today's downloads used up, saying when more come where OpenSubtitles said, in the app's time format. */
+/** Today's downloads used up, saying when more come where OpenSubtitles said, on the device's clock. */
 private fun ErrorWording.ofOpenSubtitlesLimit(error: OpenSubtitlesFailure.DownloadLimit): ViewerError {
     val resetsAt = error.resetsAt
     val sentence = when {
         !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
         resetsAt != null -> resources.getString(
             R.string.error_opensubtitles_limit_account,
-            // In the app's language, as the sentence around it is, not the device's, and in the viewer's zone.
-            ViewerTime.localTime(resetsAt, zone(), resources.configuration.locales[0]),
+            // In the app's language, as the sentence around it is, on the device's clock, in the viewer's zone.
+            clock.formatTime(resetsAt),
         )
         else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
     }

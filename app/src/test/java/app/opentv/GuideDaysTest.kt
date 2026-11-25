@@ -5,11 +5,12 @@
  */
 package app.opentv
 
-import app.opentv.core.ViewerTime
+import app.opentv.core.ViewerClock
 import app.opentv.ui.ChannelsViewModel
 import com.google.common.truth.Truth.assertThat
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
@@ -58,7 +59,7 @@ class GuideDaysTest {
 
         assertThat(start).isEqualTo(localMillis("2025-10-27T00:00"))
         assertThat(end).isEqualTo(localMillis("2025-10-28T00:00"))
-        assertThat(ViewerTime.dayLabel(start, london)).isEqualTo("Mon 27 Oct")
+        assertThat(ViewerClock({ Locale.UK }, { london }, { true }).formatDay(start)).isEqualTo("Mon, 27 Oct")
     }
 
     @Test

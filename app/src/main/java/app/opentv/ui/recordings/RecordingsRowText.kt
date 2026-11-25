@@ -14,8 +14,7 @@ import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
-import app.opentv.ui.clockTime
-import app.opentv.ui.dayLabel
+import app.opentv.ui.dayTime
 import java.util.concurrent.TimeUnit
 
 // What a row on the Recordings screen says: its title, the quiet line under it, and why it stopped.
@@ -129,8 +128,7 @@ internal val RecordingsRow.recording: Recording?
     }
 
 @Composable
-private fun formatWhen(utcMillis: Long): String =
-    if (utcMillis <= 0) "" else "${dayLabel(utcMillis)}, ${clockTime(utcMillis)}"
+private fun formatWhen(utcMillis: Long): String = if (utcMillis <= 0) "" else dayTime(utcMillis)
 
 private fun formatLength(millis: Long): String {
     if (millis <= 0) return ""
