@@ -289,6 +289,7 @@
     <string name="error_addon_cant_reach_device">دسترسی به افزونه ممکن نیست. بررسی کنید این دستگاه به اینترنت وصل باشد و نشانی درست باشد.</string>
     <string name="error_addon_timed_out">افزونه دیگر پاسخ نمی‌دهد. ممکن است مشغول باشد، پس کمی بعد دوباره تلاش کنید.</string>
     <string name="error_addon_bad_address">این یک نشانی وب نیست. آنچه را نوشتید از نظر اشتباه بررسی کنید.</string>
+    <string name="error_addon_no_match">افزونه‌های شما نمی‌توانند این فیلم را جستجو کنند، چون در IMDb مطابقتی ندارد.</string>
     <string name="error_addon_trouble">افزونه با مشکل روبه‌رو است. مشکل از طرف آن است، پس بعداً دوباره تلاش کنید.</string>
     <string name="error_not_an_addon_tv">این نشانی افزونه‌ای نداد. بررسی کنید پیوند manifest.json باشد و اینترنت این تلویزیون اول از شما درخواست ورود نکند.</string>
     <string name="error_not_an_addon_device">این نشانی افزونه‌ای نداد. بررسی کنید پیوند manifest.json باشد و اینترنت این دستگاه اول از شما درخواست ورود نکند.</string>

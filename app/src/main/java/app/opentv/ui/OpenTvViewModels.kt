@@ -29,8 +29,7 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
-import app.opentv.data.model.StremioAddon
-import app.opentv.data.model.StremioStream
+import app.opentv.data.model.StreamLink
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
@@ -38,6 +37,8 @@ import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.ProviderException
+import app.opentv.data.repo.AddonOutcome
+import app.opentv.data.repo.AddonStreamResults
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
@@ -75,6 +76,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.AddonSearch
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -100,6 +102,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -913,18 +916,6 @@ data class Backdrop(
 /** What Movies and Shows know a category by: its id is only unique within its provider. */
 val Category.browseKey: String get() = "$sourceId:$id"
 
-/** What a film's add-ons came back with, for its Add-on sources picker. */
-sealed interface AddonStreams {
-    /** TMDB couldn't match the film to IMDb, or the add-ons answered with nothing that plays directly. */
-    data object NoneFound : AddonStreams
-
-    /** The streams that play directly, from every add-on that answered. */
-    data class Found(val streams: List<StremioStream>) : AddonStreams
-
-    /** Every add-on failed, or TMDB didn't answer: [error] says why. */
-    data class Failed(val error: ViewerError) : AddonStreams
-}
-
 /**
  * A Movies or Shows download that failed: which provider, so Provider setup can open it, why, and
  * its kind, for its Error Report.
@@ -1087,49 +1078,33 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), settings.stremioAddons.value.isNotEmpty())
 
     /**
-     * The streams the configured add-ons offer for [movie], resolved through TMDB for the IMDb id.
-     * Each add-on is asked on its own, so one failing doesn't sink the rest: it's [AddonStreams.Failed]
-     * only when every one failed, saying why the first did, or when TMDB didn't answer.
+     * What the viewer's add-ons offer for [movie], growing as each answers. The film is matched to IMDb
+     * through TMDB first, since that's what add-ons are asked by; with no match they can't be asked.
      */
-    suspend fun addonStreams(movie: Movie): AddonStreams {
-        val imdb = if (settings.stremioAddons.value.isEmpty()) {
-            Result.success(null)
-        } else {
-            graph.catalogRepository.imdbIdFor(movie)
-        }
-        val answers = imdb.fold(
-            onSuccess = { id ->
-                if (id == null) {
-                    emptyList()
+    fun addonStreams(movie: Movie): Flow<AddonSearch> = flow {
+        graph.catalogRepository.imdbIdFor(movie).fold(
+            onSuccess = { imdb ->
+                if (imdb == null) {
+                    // IMDb's id is what add-ons are asked by, so with none they can't be asked at all.
+                    val noMatch = graph.errorWording.of(R.string.error_addon_no_match, "NoImdbMatch")
+                    emit(AddonSearch.CantAsk(noMatch, canRetry = false))
                 } else {
-                    // Only once they're to be asked: an old add-on is read again then, not before.
-                    val addons = graph.addonRepository.addons()
-                    withContext(graph.dispatchers.io) { addons.map { askAddon(it, id) } }
+                    emitAll(graph.addonStreams.forFilm(imdb).map { it.toSearch() })
                 }
             },
-            onFailure = { listOf(AddonAnswer.Failed(AddonFailure.NoLookup(it))) },
+            onFailure = {
+                emit(AddonSearch.CantAsk(graph.errorWording.ofAddon(AddonFailure.NoLookup(it)), canRetry = true))
+            },
         )
-        val streams = answers.filterIsInstance<AddonAnswer.Streams>().flatMap { it.streams }
-        val firstFailure = (answers.firstOrNull() as? AddonAnswer.Failed)?.failure
-        return when {
-            streams.isNotEmpty() -> AddonStreams.Found(streams)
-            firstFailure != null && answers.all { it is AddonAnswer.Failed } ->
-                AddonStreams.Failed(graph.errorWording.ofAddon(firstFailure))
-            else -> AddonStreams.NoneFound
-        }
     }
 
-    // Only an AddonFailure: anything else, cancellation above all, isn't the add-on's to word.
-    private fun askAddon(addon: StremioAddon, imdb: String): AddonAnswer = try {
-        AddonAnswer.Streams(graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb))
-    } catch (failure: AddonFailure) {
-        AddonAnswer.Failed(failure)
-    }
-
-    private sealed interface AddonAnswer {
-        data class Streams(val streams: List<StremioStream>) : AddonAnswer
-        data class Failed(val failure: AddonFailure) : AddonAnswer
-    }
+    private fun AddonStreamResults.toSearch() = AddonSearch.Results(
+        // Torrents are read but not offered yet: nothing here plays them so far.
+        streams = streams.filter { it.stream.link is StreamLink.Direct },
+        finished = finished,
+        failure = outcomes.firstNotNullOfOrNull { (it as? AddonOutcome.Unreachable)?.failure }
+            ?.let(graph.errorWording::ofAddon),
+    )
 
     // ---- Netflix-style home rows ----------------------------------------------------------------
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds

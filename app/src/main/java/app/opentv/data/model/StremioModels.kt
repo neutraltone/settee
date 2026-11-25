@@ -35,15 +35,35 @@ data class StremioAddon(
 /** What an add-on's manifest says about it. */
 data class AddonManifest(val name: String, val resources: List<String>, val types: List<String>)
 
+/** Where an add-on's stream is: a link to play, or a torrent to fetch. */
+sealed interface StreamLink {
+    /** A link that plays as it is, sent with [headers] when the add-on asks for them. */
+    data class Direct(val url: String, val headers: Map<String, String> = emptyMap()) : StreamLink
+
+    /**
+     * A torrent by its [infoHash] (lower case), the file in it to play ([fileIdx], null when the add-on
+     * leaves it to the largest), and the trackers and peers it names ([sources]).
+     */
+    data class Torrent(val infoHash: String, val fileIdx: Int? = null, val sources: List<String> = emptyList()) :
+        StreamLink
+}
+
 /**
- * A single playable stream an add-on returned for a title. OpenTV keeps only streams that carry a
- * direct, ready-to-play [url] (what debrid-backed add-ons return); raw torrent (infoHash-only)
- * entries are dropped, because OpenTV plays URLs and deliberately does no torrenting itself.
+ * One stream an add-on offered for a title, as it said it. Entries that only open YouTube or another
+ * app (`ytId`, `externalUrl`) are never made into one: nothing in Settee can play them.
  */
 data class StremioStream(
-    val url: String,
-    /** A human label for the quality/source line the add-on supplied (e.g. "4K • 12GB"). */
+    val link: StreamLink,
+    /** The add-on's own line about it (its `title` or `description`, else its `name`), or "Stream". */
     val title: String,
-    /** Which add-on produced this, for grouping in the picker. */
+    /** Which add-on sent it. */
     val addonName: String,
+    /** The add-on's `name` column, which often holds the Quality, when it gave one apart from [title]. */
+    val name: String? = null,
+    /** Streams of one kind across episodes share it, for picking the next episode's (`bingeGroup`). */
+    val bingeGroup: String? = null,
+    /** The file's name, when the add-on knows it. */
+    val filename: String? = null,
+    /** The file's size in bytes, when the add-on knows it. */
+    val videoSize: Long? = null,
 )

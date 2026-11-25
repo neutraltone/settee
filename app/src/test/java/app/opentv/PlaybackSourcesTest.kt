@@ -153,7 +153,10 @@ class PlaybackSourcesTest {
     fun `a film's add-on stream plays as that film, with the app's own user agent`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.movies().upsertAll(listOf(movie()))
-        val key = MediaKey.AddonStream(db.movies().all().single().id, "https://example.org/addon/drive.mp4")
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(db.movies().all().single().id),
+            "https://example.org/addon/drive.mp4",
+        )
 
         val playable = sources.forWatching(key)
 
@@ -165,6 +168,31 @@ class PlaybackSourcesTest {
                 "Drive",
                 isLive = false,
                 source = ReportedSource.STREMIO,
+            ),
+        )
+    }
+
+    @Test
+    fun `a film's add-on stream goes with the add-on's headers and user agent, never the provider's`() = testing {
+        db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+        db.movies().upsertAll(listOf(movie()))
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(db.movies().all().single().id),
+            "https://example.org/addon/drive.mp4",
+            mapOf("Referer" to "https://example.org/", "user-agent" to "AddonPlayer/2"),
+        )
+
+        val playable = sources.forWatching(key)
+
+        assertThat(playable).isEqualTo(
+            Playable.Ready(
+                key,
+                "https://example.org/addon/drive.mp4",
+                "AddonPlayer/2",
+                "Drive",
+                isLive = false,
+                source = ReportedSource.STREMIO,
+                requestHeaders = mapOf("Referer" to "https://example.org/"),
             ),
         )
     }

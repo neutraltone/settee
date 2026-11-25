@@ -139,6 +139,24 @@ class PlayerNavigationTest {
     }
 
     @Test
+    fun `an add-on stream reaches the player with its link and the headers the add-on asked for`() {
+        setApp()
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(9),
+            "https://example.com/a b.mkv?x=1&y=2",
+            mapOf("Referer" to "https://example.com/", "Cookie" to "a=1; b=2"),
+        )
+
+        act { navigate(Routes.vodPlayer(key)) }
+        showing("Movie player")
+
+        compose.runOnIdle {
+            fun arg(name: String) = java.net.URLDecoder.decode(nav.playerArg(name), "UTF-8")
+            assertThat(Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"))).isEqualTo(key)
+        }
+    }
+
+    @Test
     fun `the options panel's pages are the title's own pages`() {
         setApp()
 

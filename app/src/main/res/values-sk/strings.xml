@@ -291,6 +291,7 @@
     <string name="error_addon_cant_reach_device">Doplnok nie je dostupný. Skontrolujte, či je toto zariadenie pripojené na internet a adresa je správna.</string>
     <string name="error_addon_timed_out">Doplnok prestal odpovedať. Možno je vyťažený, preto to skúste o chvíľu znova.</string>
     <string name="error_addon_bad_address">To nie je webová adresa. Skontrolujte, či ste sa nepreklepli.</string>
+    <string name="error_addon_no_match">Vaše doplnky nemôžu tento film vyhľadať, pretože nemá zhodu na IMDb.</string>
     <string name="error_addon_trouble">Doplnok má problémy. Je to na jeho strane, preto to skúste neskôr.</string>
     <string name="error_not_an_addon_tv">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto televízora od vás najprv nežiada prihlásenie.</string>
     <string name="error_not_an_addon_device">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto zariadenia od vás najprv nežiada prihlásenie.</string>

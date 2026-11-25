@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_device">เข้าถึงแอดออนไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่และที่อยู่ถูกต้อง</string>
     <string name="error_addon_timed_out">แอดออนหยุดตอบสนอง อาจกำลังมีผู้ใช้มาก ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_addon_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ผิดหรือไม่</string>
+    <string name="error_addon_no_match">ส่วนเสริมของคุณค้นหาภาพยนตร์เรื่องนี้ไม่ได้ เพราะไม่มีรายการที่ตรงกันใน IMDb</string>
     <string name="error_addon_trouble">แอดออนกำลังมีปัญหา ปัญหานี้อยู่ฝั่งแอดออน ลองอีกครั้งภายหลัง</string>
     <string name="error_not_an_addon_tv">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของทีวีเครื่องนี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>
     <string name="error_not_an_addon_device">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของอุปกรณ์นี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>

@@ -31,7 +31,7 @@ class MediaKeyTest {
 
     @Test
     fun `an add-on stream keeps its progress on the film it plays`() {
-        assertThat(MediaKey.AddonStream(5, "https://example.org/drive.mp4").stored).isEqualTo("movie:5")
+        assertThat(MediaKey.AddonStream(MediaKey.Movie(5), "https://example.org/drive.mp4").stored).isEqualTo("movie:5")
     }
 
     @Test

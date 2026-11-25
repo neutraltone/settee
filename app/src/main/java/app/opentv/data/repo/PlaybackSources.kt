@@ -45,11 +45,13 @@ sealed interface MediaKey {
     }
 
     /**
-     * A stream a Stremio add-on offered for [movieId]. Its [url] isn't in the catalogue, so the key
-     * carries it; progress is kept on the film, the same as playing it from the panel.
+     * A stream a Stremio add-on offered for [title]. Its [url] and the request [headers] the add-on
+     * asks for aren't in the catalogue, so the key carries them; progress is kept on the title, the same
+     * as playing it from the panel, so [stored] is the title's.
      */
-    data class AddonStream(val movieId: Long, val url: String) : MediaKey {
-        override val stored get() = "$MOVIE:$movieId"
+    data class AddonStream(val title: Movie, val url: String, val headers: Map<String, String> = emptyMap()) :
+        MediaKey {
+        override val stored get() = title.stored
     }
 
     data class Episode(val episodeId: Long) : MediaKey {
@@ -112,6 +114,8 @@ sealed interface Playable {
          * add-on's stream, and null for a recording, kept on the device or the viewer's NAS.
          */
         val source: ReportedSource? = null,
+        /** Sent with every request for it besides [userAgent]: what an add-on asks its stream be fetched with. */
+        val requestHeaders: Map<String, String> = emptyMap(),
     ) : Playable
 
     /**
@@ -237,16 +241,21 @@ class PlaybackSources(
         )
     }
 
-    /** An add-on's stream isn't the panel's, so the panel's user agent has no business on it. */
+    /**
+     * An add-on's stream isn't the panel's, so the panel's user agent has no business on it: it goes
+     * with the headers the add-on asked for, its own user agent among them when it names one.
+     */
     private suspend fun addonStream(key: MediaKey.AddonStream): Playable.Ready {
-        val movie = db.movies().byId(key.movieId).or(Failure.GONE)
+        val movie = db.movies().byId(key.title.movieId).or(Failure.GONE)
+        val agent = key.headers.entries.firstOrNull { it.key.equals(USER_AGENT, ignoreCase = true) }
         return Playable.Ready(
             key,
             key.url,
-            Source.DEFAULT_USER_AGENT,
+            agent?.value ?: Source.DEFAULT_USER_AGENT,
             movie.displayTitle,
             isLive = false,
             source = ReportedSource.STREMIO,
+            requestHeaders = key.headers - agent?.key.orEmpty(),
         )
     }
 
@@ -377,3 +386,4 @@ private fun userAgentOf(source: Source?) = source?.userAgent ?: Source.DEFAULT_U
 val Episode.playerTitle: String get() = "S${season}E$episodeNumber · $title"
 
 private const val TAG = "PlaybackSources"
+private const val USER_AGENT = "User-Agent"

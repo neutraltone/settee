@@ -293,6 +293,7 @@
     <string name="error_addon_cant_reach_device">تعذر الوصول إلى الإضافة. تأكد من أن هذا الجهاز متصل بالإنترنت وأن العنوان صحيح.</string>
     <string name="error_addon_timed_out">توقفت الإضافة عن الاستجابة. ربما تكون مشغولة، لذا أعد المحاولة بعد قليل.</string>
     <string name="error_addon_bad_address">هذا ليس عنوان ويب. تحقق مما كتبته بحثًا عن خطأ.</string>
+    <string name="error_addon_no_match">لا تستطيع إضافاتك البحث عن هذا الفيلم، لأنه لا يوجد له تطابق على IMDb.</string>
     <string name="error_addon_trouble">تواجه الإضافة مشكلات. المشكلة من جهتها، لذا أعد المحاولة لاحقًا.</string>
     <string name="error_not_an_addon_tv">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا التلفاز لا يطلب منك تسجيل الدخول أولًا.</string>
     <string name="error_not_an_addon_device">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا الجهاز لا يطلب منك تسجيل الدخول أولًا.</string>

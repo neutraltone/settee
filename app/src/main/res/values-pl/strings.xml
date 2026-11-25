@@ -291,6 +291,7 @@
     <string name="error_addon_cant_reach_device">Nie można połączyć się z dodatkiem. Sprawdź, czy to urządzenie ma dostęp do internetu i czy adres jest poprawny.</string>
     <string name="error_addon_timed_out">Dodatek przestał odpowiadać. Może być przeciążony, więc spróbuj ponownie za chwilę.</string>
     <string name="error_addon_bad_address">To nie jest adres internetowy. Sprawdź, czy nie ma literówki.</string>
+    <string name="error_addon_no_match">Twoje dodatki nie mogą wyszukać tego filmu, bo nie ma on odpowiednika w IMDb.</string>
     <string name="error_addon_trouble">Dodatek ma problemy. To leży po jego stronie, więc spróbuj ponownie później.</string>
     <string name="error_not_an_addon_tv">Pod tym adresem nie ma dodatku. Sprawdź, czy to link do manifest.json i czy internet tego telewizora nie wymaga najpierw zalogowania.</string>
     <string name="error_not_an_addon_device">Pod tym adresem nie ma dodatku. Sprawdź, czy to link do manifest.json i czy internet tego urządzenia nie wymaga najpierw zalogowania.</string>

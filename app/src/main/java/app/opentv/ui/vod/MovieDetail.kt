@@ -5,7 +5,6 @@
  */
 package app.opentv.ui.vod
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -14,13 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,36 +32,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
-import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
+import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
-import app.opentv.ui.AddonStreams
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
-import app.opentv.ui.design.ErrorMessage
-import app.opentv.ui.design.HighlightStyle
-import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Shelf
@@ -76,10 +63,10 @@ import app.opentv.ui.design.rememberShelfMemory
 import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -150,7 +137,12 @@ fun MovieDetailScreen(
         onOpenMovie = onOpenMovie,
         onOpenPerson = onOpenPerson,
         onPlay = { onPlay(m) },
-        onPlayAddonStream = { onPlayAddonStream(MediaKey.AddonStream(m.id, it.url)) },
+        onPlayAddonStream = { stream ->
+            // Only links are offered so far: torrents wait for the engine that will play them.
+            (stream.link as? StreamLink.Direct)?.let {
+                onPlayAddonStream(MediaKey.AddonStream(MediaKey.Movie(m.id), it.url, it.headers))
+            }
+        },
         onSetFavourite = { viewModel.setMovieFavourite(m, it) },
         versions = versions,
         onChooseVersion = { chosen ->
@@ -179,7 +171,7 @@ internal fun MovieDetailContent(
     resumes: Boolean,
     status: CoverStatus?,
     favourite: Boolean?,
-    findAddonStreams: (suspend () -> AddonStreams)?,
+    findAddonStreams: (() -> Flow<AddonSearch>)?,
     similar: List<Movie>?,
     onOpenMovie: (Movie) -> Unit,
     onOpenPerson: (String) -> Unit,
@@ -196,19 +188,7 @@ internal fun MovieDetailContent(
     var askingLanguage by remember(movie.id) { mutableStateOf(false) }
     val plays = versions.plays
     val scope = rememberCoroutineScope()
-    // Null while the picker is closed; Loading while the add-ons are asked.
-    var picker by remember(movie.id) { mutableStateOf<AddonPicker?>(null) }
-    // Closing the picker cancels its lookup, so an answer arriving later can't open it again.
-    var lookup by remember(movie.id) { mutableStateOf<Job?>(null) }
-
-    // Asks the add-ons, from Add-on sources and again from the picker's Try again.
-    val askAddons: () -> Unit = {
-        if (findAddonStreams != null) {
-            picker = AddonPicker.Loading
-            lookup?.cancel()
-            lookup = scope.launch { picker = AddonPicker.Answered(findAddonStreams()) }
-        }
-    }
+    val picker = rememberAddonPickerState(movie.id)
 
     FirstHighlight(movie, spot, similar, likeThisRow, playFocus)
 
@@ -256,7 +236,7 @@ internal fun MovieDetailContent(
                             PillButton(
                                 label = stringResource(R.string.vod_addon_sources),
                                 icon = Icons.Filled.Extension,
-                                onClick = askAddons,
+                                onClick = { picker.ask(findAddonStreams) },
                                 modifier = Modifier.returnSpot(spot, null),
                             )
                         }
@@ -302,21 +282,7 @@ internal fun MovieDetailContent(
         },
     )
 
-    picker?.let { shown ->
-        AddonStreamPicker(
-            picker = shown,
-            onRetry = askAddons,
-            onPick = { stream ->
-                lookup?.cancel()
-                picker = null
-                onPlayAddonStream(stream)
-            },
-            onDismiss = {
-                lookup?.cancel()
-                picker = null
-            },
-        )
-    }
+    if (findAddonStreams != null) AddonStreamPicker(picker, findAddonStreams) { onPlayAddonStream(it.stream) }
 }
 
 /**
@@ -402,116 +368,3 @@ private fun ScreenFrameScope.MoreLikeThis(
 private val ROW_PEEK = 84.dp
 
 private const val SYNOPSIS_WIDTH = 0.6f
-
-/** What the add-on picker shows. */
-private sealed interface AddonPicker {
-    data object Loading : AddonPicker
-
-    /** What the add-ons came back with. */
-    data class Answered(val result: AddonStreams) : AddonPicker
-}
-
-/**
- * The streams a film's add-ons offer: a line while they're asked, then one row per stream, or why
- * none came with Try again when every add-on failed.
- */
-@Composable
-private fun AddonStreamPicker(
-    picker: AddonPicker,
-    onRetry: () -> Unit,
-    onPick: (StremioStream) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .width(560.dp)
-                .background(SetteeColors.Surface, SetteeShapes.Card)
-                .padding(24.dp),
-        ) {
-            Text(stringResource(R.string.vod_addon_pick_title), style = SetteeType.Section)
-            Spacer(Modifier.height(12.dp))
-            val result = (picker as? AddonPicker.Answered)?.result
-            when (result) {
-                null -> Text(
-                    stringResource(R.string.vod_addon_loading),
-                    style = SetteeType.Body,
-                    color = SetteeColors.QuietText,
-                )
-                is AddonStreams.Found -> StreamList(result.streams, onPick)
-                is AddonStreams.Failed -> AddonsFailed(result.error, onRetry)
-                AddonStreams.NoneFound -> Text(
-                    stringResource(R.string.vod_addon_none),
-                    style = SetteeType.Body,
-                    color = SetteeColors.QuietText,
-                )
-            }
-        }
-    }
-}
-
-/**
- * Gives [requester] the Highlight once the picker's window is up, again whenever [shown] changes.
- * Asked from inside the dialog: its window composes after the page's, and a FocusRequester asked
- * before it is attached throws.
- */
-@Composable
-private fun FocusOnceShown(requester: FocusRequester, shown: Any) {
-    LaunchedEffect(shown) {
-        withFrameNanos {}
-        runCatching { requester.requestFocus() }
-    }
-}
-
-/** Why the add-ons gave nothing, and Try again, which has the Highlight so OK asks them again. */
-@Composable
-private fun AddonsFailed(error: ViewerError, onRetry: () -> Unit) {
-    val retry = remember { FocusRequester() }
-    FocusOnceShown(retry, error)
-    ErrorMessage(error.sentence, error.detail, textAlign = TextAlign.Start)
-    Spacer(Modifier.height(18.dp))
-    PillButton(
-        label = stringResource(R.string.common_try_again),
-        onClick = onRetry,
-        modifier = Modifier.focusRequester(retry),
-    )
-}
-
-@Composable
-private fun StreamList(streams: List<StremioStream>, onPick: (StremioStream) -> Unit) {
-    val first = remember { FocusRequester() }
-    FocusOnceShown(first, streams)
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.heightIn(max = 360.dp)) {
-        // Not keyed by URL: two add-ons can offer the same link, and a repeated key would crash the list.
-        itemsIndexed(streams) { index, stream ->
-            HighlightSurface(
-                onClick = { onPick(stream) },
-                style = HighlightStyle.Row,
-                modifier = Modifier.fillMaxWidth().then(
-                    if (stream ==
-                        streams.first()
-                    ) {
-                        Modifier.focusRequester(first)
-                    } else {
-                        Modifier
-                    },
-                ),
-            ) { highlighted ->
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    Text(
-                        stream.title,
-                        style = SetteeType.RowTitle,
-                        color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-                        maxLines = 2,
-                    )
-                    Text(
-                        stream.addonName,
-                        style = SetteeType.Body,
-                        color = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
-}

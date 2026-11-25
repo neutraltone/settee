@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_device">Tidak dapat menjangkau add-on. Periksa apakah perangkat ini online dan alamatnya sudah benar.</string>
     <string name="error_addon_timed_out">Add-on berhenti merespons. Mungkin sedang sibuk, jadi coba lagi sebentar lagi.</string>
     <string name="error_addon_bad_address">Itu bukan alamat web. Periksa apakah ada salah ketik.</string>
+    <string name="error_addon_no_match">Add-on Anda tidak dapat mencari film ini, karena tidak ada kecocokan di IMDb.</string>
     <string name="error_addon_trouble">Add-on sedang bermasalah. Masalahnya ada di pihaknya, jadi coba lagi nanti.</string>
     <string name="error_not_an_addon_tv">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet TV ini tidak meminta Anda masuk terlebih dahulu.</string>
     <string name="error_not_an_addon_device">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet perangkat ini tidak meminta Anda masuk terlebih dahulu.</string>

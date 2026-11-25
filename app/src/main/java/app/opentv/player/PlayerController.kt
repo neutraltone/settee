@@ -490,7 +490,8 @@ class PlayerController(
             _reportedSource.value = playable.source
             _title.value = playable.title
             titled = request.key
-            httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))
+            // The whole set is replaced, so an add-on's headers never ride along on the next stream.
+            httpFactory.setDefaultRequestProperties(playable.requestHeaders + ("User-Agent" to playable.userAgent))
             states.publish(State.Buffering(playable.title))
 
             val mediaItem = playable.mediaItem()

@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_device">无法连接到插件。请检查本设备是否已联网，以及地址是否正确。</string>
     <string name="error_addon_timed_out">插件停止了响应。它可能正忙，请稍后重试。</string>
     <string name="error_addon_bad_address">这不是网址。请检查输入是否有误。</string>
+    <string name="error_addon_no_match">此电影在 IMDb 上没有匹配项，因此你的附加组件无法查找它。</string>
     <string name="error_addon_trouble">插件出现了问题。这是插件那边的问题，请稍后重试。</string>
     <string name="error_not_an_addon_tv">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及这台电视的网络是否要求你先登录。</string>
     <string name="error_not_an_addon_device">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及本设备的网络是否要求你先登录。</string>

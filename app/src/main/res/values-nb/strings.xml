@@ -289,6 +289,7 @@
     <string name="error_addon_cant_reach_device">Får ikke kontakt med tillegget. Sjekk at denne enheten er på nett, og at adressen stemmer.</string>
     <string name="error_addon_timed_out">Tillegget sluttet å svare. Det kan være opptatt, så prøv igjen om litt.</string>
     <string name="error_addon_bad_address">Det er ikke en nettadresse. Sjekk det du skrev for feil.</string>
+    <string name="error_addon_no_match">Tilleggene dine kan ikke slå opp denne filmen, fordi den ikke har noe treff på IMDb.</string>
     <string name="error_addon_trouble">Tillegget har problemer. Det er på deres side, så prøv igjen senere.</string>
     <string name="error_not_an_addon_tv">Den adressen ga ikke et tillegg. Sjekk at det er lenken til manifest.json, og at internett på denne TV-en ikke krever at du logger på først.</string>
     <string name="error_not_an_addon_device">Den adressen ga ikke et tillegg. Sjekk at det er lenken til manifest.json, og at internett på denne enheten ikke krever at du logger på først.</string>

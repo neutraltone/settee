@@ -7,12 +7,14 @@ package app.opentv
 
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
+import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioAddon
-import app.opentv.data.model.StremioStream
-import app.opentv.ui.AddonStreams
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.vod.AddonSearch
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.Request
 import org.junit.After
 import org.junit.Rule
@@ -71,9 +73,15 @@ class VodAddonStreamsTest {
     }
 
     private fun addon(host: String, name: String, reply: String) {
-        graph.settings.addStremioAddon(StremioAddon("https://$host/manifest.json", name))
+        graph.settings.addStremioAddon(
+            StremioAddon("https://$host/manifest.json", name, listOf("stream"), listOf("movie")),
+        )
         addonReplies[host] = reply
     }
+
+    /** What the picker ends up showing for [movie], once every add-on has answered. */
+    private suspend fun search(movie: Movie): AddonSearch =
+        withTimeout(10_000) { testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(movie).last() }
 
     private fun streams(vararg urls: String) =
         """{"streams": [${urls.joinToString { """{"url": "$it", "title": "1080p"}""" }}]}"""
@@ -84,11 +92,16 @@ class VodAddonStreamsTest {
             addon("films.example.com", "Films", "503")
             addon("more.example.com", "More films", "!")
 
-            val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
+            val found = search(heat)
 
             assertThat(found).isEqualTo(
-                AddonStreams.Failed(
-                    ViewerError("The add-on is having problems. That's at its end, so try again later.", "HTTP 503"),
+                AddonSearch.Results(
+                    streams = emptyList(),
+                    finished = true,
+                    failure = ViewerError(
+                        "The add-on is having problems. That's at its end, so try again later.",
+                        "HTTP 503",
+                    ),
                 ),
             )
         }
@@ -98,22 +111,26 @@ class VodAddonStreamsTest {
         addon("broken.example.com", "Broken", "!")
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
+        val found = search(heat)
 
-        assertThat(found).isEqualTo(
-            AddonStreams.Found(
-                listOf(StremioStream(url = "https://example.com/heat.mkv", title = "1080p", addonName = "Films")),
-            ),
-        )
+        found as AddonSearch.Results
+        assertThat(found.streams.map { it.stream.link to it.stream.addonName })
+            .containsExactly(StreamLink.Direct("https://example.com/heat.mkv") to "Films")
+        assertThat(found.finished).isTrue()
     }
 
     @Test
-    fun `a film TMDB can't match to IMDb finds no match, without asking the add-ons`() = runBlocking {
+    fun `a film TMDB can't match to IMDb says the add-ons can't look it up, without asking them`() = runBlocking {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
 
-        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat.copy(tmdbId = "1"))
+        val found = search(heat.copy(tmdbId = "1"))
 
-        assertThat(found).isEqualTo(AddonStreams.NoneFound)
+        assertThat(found).isEqualTo(
+            AddonSearch.CantAsk(
+                ViewerError("Your add-ons can't look this film up, as it has no match on IMDb.", "NoImdbMatch"),
+                canRetry = false,
+            ),
+        )
         assertThat(network.hosts()).doesNotContain("films.example.com")
     }
 
@@ -122,16 +139,24 @@ class VodAddonStreamsTest {
         addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
         tmdbDown = true
 
-        val found = testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(heat)
+        val found = search(heat)
 
         assertThat(found).isEqualTo(
-            AddonStreams.Failed(
+            AddonSearch.CantAsk(
                 ViewerError(
                     "Couldn't look this film up to ask your add-ons. Check this device is online, then try again.",
                     "IO",
                 ),
+                canRetry = true,
             ),
         )
         assertThat(network.hosts()).doesNotContain("films.example.com")
+    }
+
+    @Test
+    fun `torrents aren't offered yet, so an add-on with only torrents found nothing to play`() = runBlocking {
+        addon("films.example.com", "Films", """{"streams": [{"infoHash": "abc", "name": "1080p"}]}""")
+
+        assertThat(search(heat)).isEqualTo(AddonSearch.Results(emptyList(), finished = true))
     }
 }

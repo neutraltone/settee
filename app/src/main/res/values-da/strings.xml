@@ -289,6 +289,7 @@
     <string name="error_addon_cant_reach_device">Kan ikke nå tilføjelsen. Tjek, at denne enhed er online, og at adressen er rigtig.</string>
     <string name="error_addon_timed_out">Tilføjelsen holdt op med at svare. Den har måske travlt, så prøv igen om lidt.</string>
     <string name="error_addon_bad_address">Det er ikke en webadresse. Tjek det, du skrev, for fejl.</string>
+    <string name="error_addon_no_match">Dine tilføjelser kan ikke slå denne film op, da den ikke har noget match på IMDb.</string>
     <string name="error_addon_trouble">Tilføjelsen har problemer. Det er hos den, så prøv igen senere.</string>
     <string name="error_not_an_addon_tv">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at dette tv\'s internet ikke kræver, at du logger ind først.</string>
     <string name="error_not_an_addon_device">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at denne enheds internet ikke kræver, at du logger ind først.</string>

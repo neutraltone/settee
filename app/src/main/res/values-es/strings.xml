@@ -290,6 +290,7 @@
     <string name="error_addon_cant_reach_device">No se puede conectar con el complemento. Comprueba que este dispositivo esté conectado a internet y que la dirección sea correcta.</string>
     <string name="error_addon_timed_out">El complemento dejó de responder. Puede que esté ocupado, así que vuelve a intentarlo en un momento.</string>
     <string name="error_addon_bad_address">Eso no es una dirección web. Revisa lo que escribiste por si hay un error.</string>
+    <string name="error_addon_no_match">Tus complementos no pueden buscar esta película, porque no tiene coincidencia en IMDb.</string>
     <string name="error_addon_trouble">El complemento tiene problemas. Es cosa suya, así que vuelve a intentarlo más tarde.</string>
     <string name="error_not_an_addon_tv">Esa dirección no dio un complemento. Comprueba que sea el enlace a manifest.json y que el internet de este televisor no te pida iniciar sesión antes.</string>
     <string name="error_not_an_addon_device">Esa dirección no dio un complemento. Comprueba que sea el enlace a manifest.json y que el internet de este dispositivo no te pida iniciar sesión antes.</string>

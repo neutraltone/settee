@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.StremioClient
@@ -126,7 +127,7 @@ class StremioClientTest {
         """.trimIndent()
 
         assertThat(streams(reply)).containsExactly(
-            StremioStream(url = "https://example.com/heat.mkv", title = "Stream", addonName = "Films"),
+            StremioStream(StreamLink.Direct("https://example.com/heat.mkv"), title = "Stream", addonName = "Films"),
         )
     }
 
@@ -140,8 +141,13 @@ class StremioClientTest {
         """.trimIndent()
 
         assertThat(streams(reply)).containsExactly(
-            StremioStream(url = "https://example.com/heat.mkv", title = "1080p", addonName = "Films"),
-            StremioStream(url = "https://example.com/heat-4k.mkv", title = "Stream", addonName = "Films"),
+            StremioStream(
+                StreamLink.Direct("https://example.com/heat.mkv"),
+                title = "1080p",
+                addonName = "Films",
+                name = "1080p",
+            ),
+            StremioStream(StreamLink.Direct("https://example.com/heat-4k.mkv"), title = "Stream", addonName = "Films"),
         ).inOrder()
     }
 }

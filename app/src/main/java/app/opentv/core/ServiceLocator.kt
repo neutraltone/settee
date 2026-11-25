@@ -22,6 +22,7 @@ import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.AddonRepository
+import app.opentv.data.repo.AddonStreams
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryLockCarry
@@ -209,6 +210,11 @@ object ServiceLocator {
 
         /** The viewer's add-ons: adding one by its address, and the stored list. */
         val addonRepository: AddonRepository by lazy { AddonRepository(settings, stremioClient, dispatchers) }
+
+        /** The one thing that asks add-ons for streams, ranked for this device's decoders. */
+        val addonStreams: AddonStreams by lazy {
+            AddonStreams(stremioClient, decoders, dispatchers) { addonRepository.addons() }
+        }
 
         val sourceRepository: SourceRepository by lazy {
             SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient, providerRenames, dispatchers)

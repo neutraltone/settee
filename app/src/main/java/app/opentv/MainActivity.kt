@@ -86,6 +86,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class MainActivity : ComponentActivity() {
 
@@ -256,9 +259,10 @@ object Routes {
 
     // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
     // the account password), title or user agent sits in the back stack. An add-on's stream isn't in
-    // the catalogue, so its URL is the one thing carried besides. Whether to start at 0 can't be
-    // looked up either; the player's view model makes sure it only applies once.
-    const val VOD_PLAYER = "vod?key={key}&addon={addon}&fromStart={fromStart}"
+    // the catalogue, so its URL and the request headers it asks for are the one thing carried besides.
+    // Whether to start at 0 can't be looked up either; the player's view model makes sure it only
+    // applies once.
+    const val VOD_PLAYER = "vod?key={key}&addon={addon}&headers={headers}&fromStart={fromStart}"
 
     fun player(channelId: Long) = "player/$channelId"
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
@@ -269,8 +273,9 @@ object Routes {
     fun editSource(sourceId: Long) = "edit-source/$sourceId"
     fun vodPlayer(key: MediaKey, fromStart: Boolean = false): String {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
-        val addon = (key as? MediaKey.AddonStream)?.url.orEmpty()
-        return "vod?key=${e(key.stored)}&addon=${e(addon)}&fromStart=$fromStart"
+        val addon = key as? MediaKey.AddonStream
+        val headers = addon?.headers?.takeIf { it.isNotEmpty() }?.let { Json.encodeToString(it) }.orEmpty()
+        return "vod?key=${e(key.stored)}&addon=${e(addon?.url.orEmpty())}&headers=${e(headers)}&fromStart=$fromStart"
     }
 
     /** The route of where the options panel is leaving for. */
@@ -280,10 +285,13 @@ object Routes {
         is OptionsDestination.SeriesPage -> seriesDetail(destination.seriesId)
     }
 
-    /** The key [vodPlayer] put in a route, from its `key` and `addon` arguments. */
-    fun vodPlayerKey(stored: String, addon: String): MediaKey? {
+    /** The key [vodPlayer] put in a route, from its `key`, `addon` and `headers` arguments. */
+    fun vodPlayerKey(stored: String, addon: String, headers: String = ""): MediaKey? {
         val key = MediaKey.parse(stored)
-        return if (key is MediaKey.Movie && addon.isNotEmpty()) MediaKey.AddonStream(key.movieId, addon) else key
+        if (key !is MediaKey.Movie || addon.isEmpty()) return key
+        val sent = headers.takeIf { it.isNotEmpty() }
+            ?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+        return MediaKey.AddonStream(key, addon, sent.orEmpty())
     }
 }
 
@@ -547,7 +555,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         composable(Routes.VOD_PLAYER) { entry ->
                             fun arg(name: String) = entry.arguments?.getString(name)
                                 ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
-                            val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
+                            val mediaKey =
+                                Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers")) ?: return@composable
                             val leaveScope = rememberCoroutineScope()
                             VodPlayerScreen(
                                 mediaKey = mediaKey,

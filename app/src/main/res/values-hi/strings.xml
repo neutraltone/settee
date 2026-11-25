@@ -289,6 +289,7 @@
     <string name="error_addon_cant_reach_device">ऐड-ऑन तक नहीं पहुंचा जा सका। जांचें कि यह डिवाइस ऑनलाइन है और पता सही है।</string>
     <string name="error_addon_timed_out">ऐड-ऑन ने जवाब देना बंद कर दिया। हो सकता है वह व्यस्त हो, इसलिए थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_addon_bad_address">यह वेब पता नहीं है। जो लिखा है उसमें गलती जाँचें।</string>
+    <string name="error_addon_no_match">आपके ऐड-ऑन इस फ़िल्म को नहीं खोज सकते, क्योंकि IMDb पर इसका कोई मेल नहीं है।</string>
     <string name="error_addon_trouble">ऐड-ऑन को दिक्कत आ रही है। यह उसकी तरफ़ की समस्या है, इसलिए बाद में फिर कोशिश करें।</string>
     <string name="error_not_an_addon_tv">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस टीवी का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
     <string name="error_not_an_addon_device">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस डिवाइस का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>

@@ -290,6 +290,7 @@
     <string name="error_addon_cant_reach_device">Nije moguće doći do dodatka. Provjerite je li ovaj uređaj povezan s internetom i je li adresa točna.</string>
     <string name="error_addon_timed_out">Dodatak je prestao odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
     <string name="error_addon_bad_address">To nije web-adresa. Provjerite ima li pogreške u upisanom.</string>
+    <string name="error_addon_no_match">Vaši dodaci ne mogu potražiti ovaj film jer nema podudaranja na IMDb-u.</string>
     <string name="error_addon_trouble">Dodatak ima problema. To je na njegovoj strani, pa pokušajte ponovno kasnije.</string>
     <string name="error_not_an_addon_tv">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog TV-a ne traži da se prvo prijavite.</string>
     <string name="error_not_an_addon_device">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog uređaja ne traži da se prvo prijavite.</string>
