@@ -5,6 +5,8 @@
  */
 package app.opentv
 
+import android.app.Application
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -31,7 +33,9 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.LineupChannel
@@ -42,6 +46,9 @@ import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import com.google.common.truth.Truth.assertThat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,8 +63,11 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalTestApi::class)
 class SearchContentTest {
 
+    private val compose = createComposeRule()
+
+    // The viewer's zone, fixed so the times on screen don't depend on the machine running the test.
     @get:Rule
-    val compose = createComposeRule()
+    val testGraph = TestGraph(compose, zone = MutableStateFlow(ZoneId.of("Europe/London")))
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -166,6 +176,24 @@ class SearchContentTest {
         query.clearText()
 
         assertThat(device.textShownBy()).isEmpty()
+    }
+
+    @Test
+    fun `a channel's programme time follows the device's 12-hour clock`() {
+        Settings.System.putString(
+            ApplicationProvider.getApplicationContext<Application>().contentResolver,
+            Settings.System.TIME_12_24,
+            "12",
+        )
+        // 8pm in London on Saturday 4 July 2026.
+        val london = ZoneId.of("Europe/London")
+        val start = LocalDateTime.parse("2026-07-04T20:00").atZone(london).toInstant().toEpochMilli()
+        val bbc = channelRow("BBC One")
+        query.setTextAndPlaceCursorAtEnd("bbc")
+
+        show(channels = listOf(bbc.copy(now = GuideProgramme("bbc", start, start + HOUR_MILLIS, "Late Film"))))
+
+        compose.onNodeWithText("8:00 PM  Late Film").assertIsDisplayed()
     }
 
     @Test
@@ -667,5 +695,6 @@ class SearchContentTest {
 
 // What MainTestClock.advanceTimeByFrame moves the clock by.
 private const val FRAME_MILLIS = 16L
+private const val HOUR_MILLIS = 3_600_000L
 private const val CLEAR = "Clear recent searches"
 private const val HINT = "Start typing to search channels, movies and shows."

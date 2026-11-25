@@ -68,8 +68,10 @@ class LaunchNasSyncTest {
         launch(lastNasSync(), NasSync.Result.Failed(ConnectException()))
         val locale = java.util.Locale.getDefault()
         try {
-            // The language changed since: as MainActivity puts the chosen language on every context.
-            val german = ErrorWording(app.opentv.core.LocaleUtils.wrap(context, "de"), onTelevision = true)
+            // The language changed since, as Settings > Language saves it.
+            context.getSharedPreferences("opentv_settings", android.content.Context.MODE_PRIVATE)
+                .edit().putString("language_tag", "de").commit()
+            val german = ErrorWording(context, onTelevision = true)
 
             val stored = LastNasSync(prefs, german, now = { NOW }).outcome.value
 
