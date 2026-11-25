@@ -155,13 +155,16 @@ internal object NamelessCategory {
     /** What [categoryGroupKey] gave a nameless category before #338: the provider's row id here. */
     fun legacyKey(sourceId: Long, categoryId: String): String = "$sourceId:$categoryId"
 
-    /** The provider's name and category id in [key], or null when it isn't a nameless category's. */
-    fun parse(key: String): Pair<String, String>? {
+    /** A nameless category's provider, by name, and its id there. */
+    data class Parts(val sourceName: String, val categoryId: String)
+
+    /** What [key] is made of, or null when it isn't a nameless category's. */
+    fun parse(key: String): Parts? {
         val colon = key.indexOf(':')
         val length = if (key.firstOrNull() == MARK && colon > 1) key.substring(1, colon).toIntOrNull() else null
         val end = length?.let { colon + 1 + it }
         return if (end != null && end < key.length && key[end] == ':') {
-            key.substring(colon + 1, end) to key.substring(end + 1)
+            Parts(key.substring(colon + 1, end), key.substring(end + 1))
         } else {
             null
         }
@@ -169,12 +172,13 @@ internal object NamelessCategory {
 
     /** [key] with its provider named by [rename], as another device or a rename names it; others as they are. */
     fun relabelled(key: String, rename: (String) -> String): String =
-        parse(key)?.let { (source, id) -> key(rename(source), id) } ?: key
+        parse(key)?.let { key(rename(it.sourceName), it.categoryId) } ?: key
 }
 
 /** Categories with the providers they belong to, which a nameless one's key is made from. */
 internal data class KeyedCategories(val categories: List<Category>, val sources: List<Source>) {
-    private val directory by lazy { SourceDirectory(sources) }
+    /** [sources] by id and name, for [categoryGroupKey]. */
+    val directory by lazy { SourceDirectory(sources) }
 
     fun keyOf(category: Category): String = categoryGroupKey(category, directory)
 }
@@ -183,16 +187,21 @@ private fun List<Source>.namesById() = map { it.id to it.name }
 
 /** Folds [categories] into one [CategoryGroup] per [categoryGroupKey], in their order. */
 internal fun foldCategories(categories: List<Category>, sources: SourceDirectory): List<CategoryGroup> {
-    val groups = LinkedHashMap<String, Triple<String, MutableList<String>, MutableList<String>>>()
+    val groups = LinkedHashMap<String, GroupBeingFolded>()
     for (category in categories) {
-        val label = ChannelNameNormalizer.normalize(category.name).baseName
         val group = groups.getOrPut(categoryGroupKey(category, sources)) {
-            Triple(label, mutableListOf(), mutableListOf())
+            GroupBeingFolded(ChannelNameNormalizer.normalize(category.name).baseName)
         }
-        group.second += category.id
-        if (category.name !in group.third) group.third += category.name
+        group.ids += category.id
+        if (category.name !in group.names) group.names += category.name
     }
-    return groups.map { (key, value) -> CategoryGroup(key, value.first, value.second, value.third) }
+    return groups.map { (key, group) -> CategoryGroup(key, group.label, group.ids, group.names) }
+}
+
+/** A [CategoryGroup] as [foldCategories] gathers it: labelled by its first category. */
+private class GroupBeingFolded(val label: String) {
+    val ids = mutableListOf<String>()
+    val names = mutableListOf<String>()
 }
 
 /**
@@ -307,7 +316,7 @@ constructor(
             // provider's own index, which interleaves two providers' lists row by row.
             val groups = foldCategories(
                 keyed.categories.filter { sourceId == null || it.sourceId == sourceId }.sortedBy { it.sourceId },
-                SourceDirectory(keyed.sources),
+                keyed.directory,
             )
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }

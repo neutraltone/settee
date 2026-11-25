@@ -261,6 +261,14 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         setHiddenCategories(hidden)
     }
 
+    /**
+     * What `CategoryLockCarry.remember` last looked for names with and didn't find them all: the locks
+     * still without names and the catalogue it searched, so it doesn't search the same one again.
+     */
+    var lockNamesSearched: String?
+        get() = prefs.getString(KEY_LOCK_NAMES_SEARCHED, null)
+        set(value) = prefs.edit { putString(KEY_LOCK_NAMES_SEARCHED, value) }
+
     private fun categoryLockTimes(): Map<String, CategoryLockTimes> = runCatching {
         prefs.getString(KEY_CATEGORY_LOCK_TIMES, null)?.let {
             addonJson.decodeFromString<Map<String, CategoryLockTimes>>(it)
@@ -779,6 +787,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_PIN_HASH = "parental_pin_hash"
         private const val KEY_HIDDEN_CATS = "hidden_categories"
         private const val KEY_CATEGORY_LOCK_TIMES = "category_lock_times"
+        private const val KEY_LOCK_NAMES_SEARCHED = "lock_names_searched"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_PROFILE_RENAMES = "profile_renames"

@@ -757,6 +757,10 @@ private fun mergedOver(
 
 @Dao
 interface CategoryDao {
+    /** How many categories every provider lists, of every kind: a cheap sign the catalogue changed. */
+    @Query("SELECT COUNT(*) FROM categories")
+    suspend fun count(): Int
+
     @Query("SELECT * FROM categories WHERE kind = :kind ORDER BY sortIndex, name")
     fun observe(kind: StreamKind): Flow<List<Category>>
 

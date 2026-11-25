@@ -30,12 +30,25 @@ internal class CategoryLockCarry(private val db: OpenTvDatabase, private val set
      * locks kept them, or sent by an older device) the names of the categories they lock today, so
      * the next normaliser change can move them. A nameless category locked under this device's row
      * id, as before #338, is locked under its provider's name as well. Reads the catalogue only when
-     * a lock lacks names.
+     * a lock lacks names, and not again for the same locks until the catalogue or the providers
+     * change: a lock for a provider this device doesn't have would otherwise have every launch read
+     * every category.
      */
     suspend fun remember() {
         val locks = settings.exportCategoryLocks()
-        if (locks.none { it.names.isEmpty() }) return
-        settings.importCategoryLocks(rememberedCategoryLocks(categories(), sources(), locks))
+        val nameless = locks.filter { it.names.isEmpty() }
+        if (nameless.isEmpty()) return
+        val providers = db.sources().all()
+        val searched = listOf(
+            nameless.map { it.key }.sorted().joinToString("\n"),
+            db.categories().count().toString(),
+            providers.sortedBy { it.id }.joinToString("\n") { "${it.id}:${it.name}" },
+        ).joinToString("\u0000")
+        if (settings.lockNamesSearched == searched) return
+        val remembered = rememberedCategoryLocks(categories(), SourceDirectory(providers), nameless)
+        settings.importCategoryLocks(remembered)
+        val named = remembered.map { it.key }.toSet()
+        settings.lockNamesSearched = searched.takeIf { nameless.any { it.key !in named } }
     }
 
     /** After the normaliser moved on from version [from]: locks each lock's categories under their new keys. */
@@ -116,17 +129,19 @@ internal fun carriedCategoryLocks(
     return carried.values.toList()
 }
 
-/** The keys today's normaliser gives the categories [lock] was set on, and those categories' names. */
+/** The keys today's normaliser gives the categories a lock was set on, and those categories' names. */
+private data class LockedNow(val keys: Set<String>, val names: List<String>)
+
 private fun keysNow(
     lock: SyncCategoryLock,
     categories: List<Category>,
     sources: SourceDirectory,
     from: Int,
-): Pair<Set<String>, List<String>> {
+): LockedNow {
     val nameless = NamelessCategory.parse(lock.key)
     val locked = when {
         nameless != null -> categories.filter {
-            sources.name(it.sourceId) == nameless.first && it.id == nameless.second
+            sources.name(it.sourceId) == nameless.sourceName && it.id == nameless.categoryId
         }
         lock.names.isNotEmpty() -> categories.filter { it.name in lock.names }
         from <= LAST_ASCII_KEY_NORMALIZER -> categories.filter {
@@ -141,5 +156,5 @@ private fun keysNow(
         else -> emptyList()
     }
     val keys = locked.mapTo(LinkedHashSet()) { categoryGroupKey(it, sources) } + fromNames
-    return keys to lock.names.ifEmpty { locked.map(Category::name).distinct() }
+    return LockedNow(keys, lock.names.ifEmpty { locked.map(Category::name).distinct() })
 }

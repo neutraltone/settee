@@ -126,6 +126,20 @@ class SyncCategoryLocksTest {
         }
 
     @Test
+    fun `a lock whose category isn't listed yet learns its name on the first launch after the provider lists it`() =
+        testing {
+            deviceA.seed()
+            deviceA.graph.settings.setHiddenCategories(setOf("adult"))
+            deviceA.lockCarry().remember()
+
+            deviceA.addLiveCategory(ADULT, "UK| Adult")
+            deviceA.lockCarry().remember()
+
+            assertThat(deviceA.graph.settings.exportCategoryLocks().single { it.key == "adult" }.names)
+                .containsExactly("UK| Adult")
+        }
+
+    @Test
     fun `a nameless category locked under this device's old row id key is locked on every device after launch`() =
         testing {
             deviceA.seedWithCategories()

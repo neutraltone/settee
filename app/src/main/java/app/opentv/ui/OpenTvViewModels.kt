@@ -47,6 +47,7 @@ import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.KeyedCategories
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -54,12 +55,10 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ShowEpisodes
-import app.opentv.data.repo.SourceDirectory
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
-import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
@@ -1006,8 +1005,8 @@ class VodViewModel @JvmOverloads constructor(
         if (unlocked) {
             raw
         } else {
-            val names = SourceDirectory(sources)
-            raw.filter { categoryGroupKey(it, names) !in locked }
+            val keyed = KeyedCategories(raw, sources)
+            raw.filter { keyed.keyOf(it) !in locked }
         }
     }
 
@@ -2278,13 +2277,14 @@ private class LockedTitles(
     private val locked: Set<String>,
 ) {
     private val keys = mutableMapOf<StreamKind, Map<Pair<Long, String>, String>>()
-    private var sources: SourceDirectory? = null
+    private var sources: List<Source>? = null
 
     suspend fun has(kind: StreamKind, sourceId: Long, categoryId: String?): Boolean {
         if (locked.isEmpty() || categoryId == null) return false
-        val names = sources ?: SourceDirectory(providers.all()).also { sources = it }
+        val known = sources ?: providers.all().also { sources = it }
         val byId = keys.getOrPut(kind) {
-            catalog.observeCategories(kind).first().associate { (it.sourceId to it.id) to categoryGroupKey(it, names) }
+            val keyed = KeyedCategories(catalog.observeCategories(kind).first(), known)
+            keyed.categories.associate { (it.sourceId to it.id) to keyed.keyOf(it) }
         }
         return byId[sourceId to categoryId] in locked
     }
