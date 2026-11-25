@@ -21,7 +21,8 @@ internal class ProfileRenames(
     private val settings: AppSettings,
     private val removed: RemovedProfiles,
 ) {
-    suspend fun apply(rename: SyncProfileRename, profiles: List<Profile>) {
+    /** Applies [rename], made at [atMillis] on this device's clock. */
+    suspend fun apply(rename: SyncProfileRename, profiles: List<Profile>, atMillis: Long) {
         val from = profiles.firstOrNull { Profiles.sameName(it.name, rename.from) }
         val to = profiles.firstOrNull { Profiles.sameName(it.name, rename.to) }
         val name = rename.to.trim()
@@ -31,12 +32,12 @@ internal class ProfileRenames(
                 if (to == null && rename.from in removed) removed.add(name)
             }
             // This device's Tom took the name after that Tom was renamed, so it's someone else.
-            from.namedAtMillis > rename.atMillis -> Unit
+            from.namedAtMillis > atMillis -> Unit
             to == null || to.id == from.id -> {
-                db.profiles().rename(from.id, name, rename.atMillis)
+                db.profiles().rename(from.id, name, atMillis)
                 removed.lift(name)
             }
-            else -> merge(from, to, rename.copy(to = name))
+            else -> merge(from, to, rename.copy(to = name, atMillis = atMillis))
         }
     }
 

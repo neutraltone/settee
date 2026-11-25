@@ -115,20 +115,25 @@ class Profiles(
     /**
      * Applies the Profile Renames and adds this device hasn't seen, oldest first and each only once,
      * so Tom → Thomas → Tom can't loop and a record seen again on a later sync changes nothing.
-     * On the same millisecond a rename goes first, since adding its old name has to follow it.
+     * On the same millisecond a rename goes first, since adding its old name has to follow it. Each is
+     * compared with the names chosen here on this device's clock ([arrival]), and recorded as it came.
      */
-    suspend fun importChanges(renames: List<SyncProfileRename>, adds: List<SyncProfileAdd>) = writes.withLock {
+    suspend fun importChanges(
+        renames: List<SyncProfileRename>,
+        adds: List<SyncProfileAdd>,
+        arrival: ArrivalClock = ArrivalClock.NONE,
+    ) = writes.withLock {
         // A blank name is no Profile's, so a record of one is neither applied nor passed on.
         val newRenames = renames.filter { it.to.isNotBlank() }.distinct() - settings.profileRenames().toSet()
         val newAdds = adds.distinct() - settings.profileAdds().toSet()
         val steps = newRenames.map { rename ->
             rename.atMillis to suspend {
-                renamer.apply(rename, dao.seeded(clock()))
+                renamer.apply(rename, dao.seeded(clock()), arrival.corrected(rename.atMillis))
                 settings.setProfileRenames(settings.profileRenames() + rename)
             }
         } + newAdds.map { add ->
             add.atMillis to suspend {
-                findOrCreateLocked(add.name, add.atMillis)
+                findOrCreateLocked(add.name, arrival.corrected(add.atMillis))
                 settings.setProfileAdds(settings.profileAdds() + add)
             }
         }

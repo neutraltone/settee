@@ -466,6 +466,7 @@ class SyncSpreadsChangesTest {
         deviceA.rename("Tom", "Thomas")
         deviceA.now = 3_000
         deviceA.rename("Thomas", "Tommy")
+        deviceB.now = 3_000
 
         syncAToB()
 
@@ -542,6 +543,7 @@ class SyncSpreadsChangesTest {
         checkNotNull(deviceA.graph.profiles.create("Tom"))
         deviceA.now = 4_000
         deviceA.play("Tom", deviceA.movieKey, 300_000, MOVIE_MILLIS)
+        deviceB.now = 4_000
 
         syncAToB()
         deviceB.sync.apply(oldFile)

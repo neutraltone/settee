@@ -9,7 +9,7 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
-import app.opentv.data.repo.ArrivalCeiling
+import app.opentv.data.repo.ArrivalClock
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.WaitingProgress
 import app.opentv.data.repo.isNewerChange
@@ -203,14 +203,14 @@ class AppSettings private constructor(context: Context, fileName: String = "open
      * Takes each lock from another device unless it's no newer than this device's last unlock of that
      * category. An undated lock counts as the oldest possible, so only a category never unlocked
      * here takes one. Keeps the newest time, so a deliberate new lock travels on through this device.
-     * Each time is taken through [ceiling] first.
+     * Each time is compared on this device's clock ([arrival]).
      */
-    fun importCategoryLocks(locks: List<SyncCategoryLock>, ceiling: ArrivalCeiling = ArrivalCeiling.NONE) =
+    fun importCategoryLocks(locks: List<SyncCategoryLock>, arrival: ArrivalClock = ArrivalClock.NONE) =
         synchronized(lockChanges) {
             val times = categoryLockTimes().toMutableMap()
             val taken = locks.filter { lock ->
                 val previous = times[lock.key] ?: CategoryLockTimes()
-                val lockedAt = ceiling.clamp(lock.lockedAtMillis)
+                val lockedAt = arrival.corrected(lock.lockedAtMillis)
                 val takes = isNewerChange(lockedAt, previous.unlockedAt)
                 if (takes) {
                     times[lock.key] = previous.copy(

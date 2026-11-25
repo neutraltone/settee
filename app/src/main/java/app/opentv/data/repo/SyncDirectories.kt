@@ -54,28 +54,54 @@ internal suspend fun <T> OpenTvDatabase.mergeForProfiles(
 private const val SYNC_BATCH = 200
 
 /**
- * The latest time a change arriving in one bundle may claim. Every store takes an incoming change's
- * time through [clamp] before comparing it with [isNewerChange] and before storing it, so the time a
- * row keeps, and passes on to the next device, is the one that was compared. `SyncEngine.applyOne` works
- * out one per bundle; a time of zero (undated) stays zero, still the oldest possible.
+ * A bundle's times on this device's clock (ADR 0005). A bundle made at [generatedAtMillis] by a TV
+ * whose clock reads ahead of this one's [now] is that far ahead in everything it dates, so every time
+ * in it is moved back by the gap; and nothing is dated after [now]. A bundle dated in the past, or
+ * with no time, has no gap: a TV whose clock is behind passes on changes made elsewhere with the
+ * times they were made. Moved by the gap rather than capped at now, so the same change arriving again
+ * on a later sync gets the same time, and can't beat a change made here in between.
  */
-@JvmInline
-value class ArrivalCeiling(val millis: Long) {
-    fun clamp(atMillis: Long): Long = minOf(atMillis, millis)
+class ArrivalClock private constructor(private val gapMillis: Long, private val nowMillis: Long) {
+    /** [sentAtMillis] on this device's clock. Zero (undated) stays zero, and a dated change stays dated. */
+    fun corrected(sentAtMillis: Long): Long =
+        if (sentAtMillis <= 0) sentAtMillis else (sentAtMillis - gapMillis).coerceAtMost(nowMillis).coerceAtLeast(1)
 
     companion object {
-        /** No limit: a change keeps the time it came with. Also for merges that aren't a sync, such as two Profiles. */
-        val NONE = ArrivalCeiling(Long.MAX_VALUE)
+        /** Times as they came. Also for merges that aren't a sync, such as two Profiles. */
+        val NONE = ArrivalClock(0, Long.MAX_VALUE)
 
-        /**
-         * The ceiling for a bundle made at [generatedAtMillis] arriving when this device's clock reads
-         * [now] (ADR 0005). Nothing in a bundle can be newer than the bundle itself, so its own time
-         * caps it, but only when that's believable: a bundle dated after [now] came from a clock set
-         * ahead, and zero is an old bundle without a time. Either way [now] caps it, so a TV whose clock
-         * is ahead can't date a change after everything the other TVs do from here on.
-         */
-        fun of(now: Long, generatedAtMillis: Long): ArrivalCeiling =
-            ArrivalCeiling(if (generatedAtMillis in 1..now) generatedAtMillis else now)
+        fun of(now: Long, generatedAtMillis: Long) = ArrivalClock(maxOf(0, generatedAtMillis - now), now)
+    }
+}
+
+/**
+ * What a store needs to place one bundle's items here: the Profile Renames and adds that say whose an
+ * item's Profile name is now, the bundle's [clock], and the provider renames this device knows, which
+ * the stores' [SourceDirectory] follows to the name each provider has here.
+ */
+class SyncArrival(
+    private val history: ProfileHistory = ProfileHistory.NONE,
+    internal val clock: ArrivalClock = ArrivalClock.NONE,
+    private val providerRenames: List<SyncProviderRename> = emptyList(),
+) {
+    /**
+     * Where an item labelled [profile] and dated [sentAtMillis] lands. Its Profile is looked up by the
+     * time it came with, the clock the rename and add records keep theirs on (they apply once each,
+     * recognised by their time, so they aren't moved); a moved time on a TV whose clock is behind
+     * would file a new Tom's progress under the Tom who became Thomas. The time it's compared and
+     * stored with, and passed on with, is on this device's clock.
+     */
+    fun placed(profile: String, sentAtMillis: Long) =
+        Placed(history.currentName(profile, sentAtMillis), clock.corrected(sentAtMillis))
+
+    internal suspend fun sources(dao: SourceDao): SourceDirectory = dao.directory(providerRenames)
+
+    /** An item's Profile, by its name here now, and its time on this device's clock. */
+    data class Placed(val profile: String, val atMillis: Long)
+
+    companion object {
+        /** Labels as they are and times as they came: for a store's own tests, and items already placed. */
+        val NONE = SyncArrival()
     }
 }
 
@@ -84,22 +110,20 @@ value class ArrivalCeiling(val millis: Long) {
  * this device has no record of the item): the one newest-wins rule every synced store imports by.
  * The newest wins and a tie keeps what's here. A time of zero means the bundle had none, which
  * counts as the oldest possible: it applies only where this device has never changed the item, so
- * an old file can't undo a change made here. [incoming] is taken through [ceiling] first.
+ * an old file can't undo a change made here. Stores pass [incoming] on this device's clock
+ * ([SyncArrival.placed]).
  */
-internal fun isNewerChange(incoming: Long, here: Long?, ceiling: ArrivalCeiling = ArrivalCeiling.NONE): Boolean {
-    val dated = ceiling.clamp(incoming)
-    return when {
-        here == null -> true
-        dated == 0L -> false
-        else -> dated > here
-    }
+internal fun isNewerChange(incoming: Long, here: Long?): Boolean = when {
+    here == null -> true
+    incoming == 0L -> false
+    else -> incoming > here
 }
 
 /**
- * This device's sources by id and by name, which [SourceRepository] keeps unique ignoring case and
- * surrounding spaces (ADR 0004). A name another device sends matches the same way, so "Sky " there is
- * "sky" here. One that matches nothing is followed through the provider [renames] this device knows,
- * oldest first, so an item from a device that hasn't heard of a rename still finds the provider.
+ * This device's sources by id and by name, which [SourceRepository] keeps unique by [sameName] (ADR
+ * 0004). A name another device sends matches the same way, so "Sky " there is "sky" here. One that
+ * matches nothing is followed through the provider [renames] this device knows, oldest first, so an
+ * item from a device that hasn't heard of a rename still finds the provider.
  */
 internal class SourceDirectory(private val sources: List<Source>, renames: List<SyncProviderRename> = emptyList()) {
     private val namesById = sources.associate { it.id to it.name }
@@ -115,10 +139,18 @@ internal class SourceDirectory(private val sources: List<Source>, renames: List<
      */
     fun currentName(label: String): String = id(label)?.let(::name) ?: renamed(label)
 
-    private fun matching(name: String) = sources.firstOrNull { SourceRepository.sameName(it.name, name) }?.id
+    private fun matching(name: String) = sources.firstOrNull { sameName(it.name, name) }?.id
 
     private fun renamed(label: String): String = renamesInOrder.fold(label.trim()) { name, rename ->
-        if (SourceRepository.sameName(rename.from, name)) rename.to.trim() else name
+        if (sameName(rename.from, name)) rename.to.trim() else name
+    }
+
+    companion object {
+        /**
+         * Whether two provider names are the same provider's: ignoring case and surrounding spaces.
+         * Kotlin's ignoreCase is Unicode, and SQLite's NOCASE only ASCII, so this never moves into SQL.
+         */
+        fun sameName(a: String, b: String) = a.trim().equals(b.trim(), ignoreCase = true)
     }
 }
 
