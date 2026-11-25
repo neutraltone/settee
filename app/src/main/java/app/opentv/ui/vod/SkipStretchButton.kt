@@ -11,6 +11,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.player.SkipCue
+import app.opentv.ui.design.arriving
+import app.opentv.ui.design.rememberArrival
 
 /**
  * Skip intro, Skip recap, or one button for both (#518). Like the Next Episode card it turns up without

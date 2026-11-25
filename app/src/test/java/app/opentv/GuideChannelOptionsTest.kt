@@ -30,6 +30,8 @@ import app.opentv.ui.channels.GuideGrid
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
 import java.time.Instant
+import java.time.ZoneId
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -46,8 +48,11 @@ class GuideChannelOptionsTest {
 
     private val compose = createComposeRule()
 
+    /** The viewer's zone, which a test moves as Android does when the device's changes. */
+    private val zone = MutableStateFlow(ZoneId.of("Europe/London"))
+
     @get:Rule
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(compose, zone = zone)
 
     @get:Rule
     val artwork = PlaceholderArtwork()
@@ -176,6 +181,37 @@ class GuideChannelOptionsTest {
 
     @Test
     fun `Schedule a later programme lists what's on later, and leads to the record and remind choices`() {
+        insertLateFilm()
+        rows = listOf(row(1, "BBC One", epgId = "later-guide"))
+        showGrid()
+        pressMenuOn("BBC One")
+
+        waitFor("Schedule a later programme").performClick()
+        waitFor("Late Film").assertIsFocused()
+        captureScreen("guide_channel_options_schedule_later")
+        compose.onNode(hasText("Late Film", substring = true)).performClick()
+
+        waitFor("Schedule recording")
+        waitFor("Remind me")
+        waitFor("Auto-switch")
+    }
+
+    @Test
+    fun `a later programme's time moves to the device's new time zone while the list is open`() {
+        insertLateFilm()
+        rows = listOf(row(1, "BBC One", epgId = "later-guide"))
+        showGrid()
+        pressMenuOn("BBC One")
+        waitFor("Schedule a later programme").performClick()
+        waitFor("20:00   Late Film")
+
+        zone.value = ZoneId.of("Asia/Tokyo")
+
+        waitFor("05:00   Late Film")
+        compose.onNode(hasText("20:00", substring = true)).assertDoesNotExist()
+    }
+
+    private fun insertLateFilm() {
         runBlocking {
             val feed = graph.database.epgFeeds().insert(EpgFeed(name = "Feed"))
             graph.database.programmes().insertOrReplace(
@@ -190,18 +226,6 @@ class GuideChannelOptionsTest {
                 ),
             )
         }
-        rows = listOf(row(1, "BBC One", epgId = "later-guide"))
-        showGrid()
-        pressMenuOn("BBC One")
-
-        waitFor("Schedule a later programme").performClick()
-        waitFor("Late Film").assertIsFocused()
-        captureScreen("guide_channel_options_schedule_later")
-        compose.onNode(hasText("Late Film", substring = true)).performClick()
-
-        waitFor("Schedule recording")
-        waitFor("Remind me")
-        waitFor("Auto-switch")
     }
 
     private companion object {

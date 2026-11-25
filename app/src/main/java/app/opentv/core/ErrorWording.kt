@@ -20,8 +20,7 @@ import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.NoRouteToHostException
 import java.net.UnknownHostException
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -41,20 +40,17 @@ interface HttpStatus {
     val status: Int?
 }
 
-class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
+/** [zone] is the viewer's, the graph's [ServiceLocator.Graph.zone], which times in a sentence are drawn in. */
+class ErrorWording(
+    private val context: Context,
+    private val onTelevision: Boolean,
+    private val zone: () -> ZoneId = ZoneId::systemDefault,
+) {
     /** What Test connection says when it passes, in the same language as its failures. */
-    val tests = TestOutcomeWording { resources }
+    val tests = TestOutcomeWording({ resources }, zone)
 
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
-
-    // The app's own language decides 12 or 24 hours, as it does the words around it. Android's DateFormat
-    // goes by the device's setting instead, which would say "12:00 AM" in a British sentence.
-    private val timeFormat get() = java.time.format.DateTimeFormatter.ofLocalizedTime(
-        java.time.format.FormatStyle.SHORT,
-    )
-        .withLocale(resources.configuration.locales[0])
-        .withZone(java.time.ZoneId.systemDefault())
 
     /**
      * A provider's [error] in words, or [fallback] when its type says nothing a viewer could act on.
@@ -183,8 +179,10 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
                 !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
                 resetsAt != null -> resources.getString(
                     R.string.error_opensubtitles_limit_account,
-                    // In the app's language, as the sentence around it is, not the device's.
-                    timeFormat.format(java.time.Instant.ofEpochMilli(resetsAt)),
+                    // The app's own language decides 12 or 24 hours, as it does the words around it.
+                    // Android's DateFormat goes by the device's setting instead, which would say
+                    // "12:00 AM" in a British sentence. In the viewer's zone, the graph's.
+                    ViewerTime.localTime(resetsAt, zone(), resources.configuration.locales[0]),
                 )
                 else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
             }

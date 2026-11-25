@@ -5,7 +5,9 @@
  */
 package app.opentv
 
+import app.opentv.core.ViewerTime
 import app.opentv.data.model.GuideProgramme
+import app.opentv.ui.GuideBuildMemory
 import app.opentv.ui.ProgrammeIndex
 import app.opentv.ui.guideBuilds
 import app.opentv.ui.guideIndex
@@ -55,7 +57,7 @@ class GuideIndexTest {
         val seen = mutableListOf<Pair<ProgrammeIndex, Long>>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             window.guideIndex { from, _ ->
-                listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.first) "Now" else "Later")))
+                listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.startUtcMillis) "Now" else "Later")))
             }.collect { seen += it to testScheduler.currentTime }
         }
 
@@ -137,6 +139,70 @@ class GuideIndexTest {
         ).inOrder()
     }
 
+    @Test
+    fun `coming back to the guide builds once, from the fresh listings, not again from the old ones`() = runTest {
+        // Like the view model's programme index, this replays the listings it last held.
+        val index = MutableStateFlow(index(WINDOW, 1))
+        val remembered = GuideBuildMemory<List<String>>()
+        val firstVisit = mutableListOf<Build>()
+        val leaving = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            collectBuilds(flowOf(listOf("BBC One")), index, remembered, firstVisit)
+        }
+        advanceTimeBy(1_000)
+        leaving.cancel()
+
+        // Covered for more than the five seconds guideRows waits before it stops.
+        advanceTimeBy(6_000)
+        val secondVisit = mutableListOf<Build>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            collectBuilds(flowOf(listOf("BBC One")), index, remembered, secondVisit)
+        }
+        advanceTimeBy(100)
+        index.value = index(WINDOW, 2)
+        advanceTimeBy(20_000)
+
+        assertThat(firstVisit).containsExactly(Build(listOf("BBC One"), 1, 0L))
+        assertThat(secondVisit).containsExactly(Build(listOf("BBC One"), 2, 7_100L))
+    }
+
+    @Test
+    fun `coming back to different channels builds them at once`() = runTest {
+        val index = MutableStateFlow(index(WINDOW, 1))
+        val remembered = GuideBuildMemory<List<String>>()
+        val firstVisit = mutableListOf<Build>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            collectBuilds(flowOf(listOf("BBC One")), index, remembered, firstVisit)
+        }.cancel()
+
+        advanceTimeBy(6_000)
+        val secondVisit = mutableListOf<Build>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            collectBuilds(flowOf(listOf("BBC One", "ITV")), index, remembered, secondVisit)
+        }
+        advanceTimeBy(20_000)
+
+        assertThat(secondVisit).containsExactly(Build(listOf("BBC One", "ITV"), 1, 6_000L))
+    }
+
+    @Test
+    fun `a new time zone's window builds exactly once`() = runTest {
+        // A zone change moves the guide's window, which reads that window's listings afresh.
+        val window = MutableStateFlow(WINDOW)
+        val index = window.guideIndex { from, _ ->
+            listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.startUtcMillis) "Here" else "There")))
+        }
+        val builds = mutableListOf<Build>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            collectBuilds(flowOf(listOf("BBC One")), index, GuideBuildMemory(), builds)
+        }
+
+        advanceTimeBy(500)
+        window.value = NEXT_WINDOW
+        advanceTimeBy(20_000)
+
+        assertThat(builds.map { it.atMillis }).containsExactly(0L, 500L).inOrder()
+    }
+
     private data class Build(val channels: List<String>, val programmes: Int, val atMillis: Long)
 
     /** Every build guideBuilds starts, with the virtual time it started. */
@@ -147,15 +213,25 @@ class GuideIndexTest {
     ): List<Build> {
         val builds = mutableListOf<Build>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            channels.guideBuilds(index, quiet) { names, byChannel ->
-                builds += Build(names, byChannel.values.sumOf { it.size }, testScheduler.currentTime)
-                delay(buildMillis)
-            }.collect {}
+            collectBuilds(channels, index, GuideBuildMemory(), builds, buildMillis)
         }
         return builds
     }
 
-    private fun index(window: Pair<Long, Long>, count: Int) =
+    private suspend fun TestScope.collectBuilds(
+        channels: Flow<List<String>>,
+        index: Flow<ProgrammeIndex>,
+        remembered: GuideBuildMemory<List<String>>,
+        builds: MutableList<Build>,
+        buildMillis: Long = 0,
+    ) {
+        channels.guideBuilds(index, remembered, quiet) { names, byChannel ->
+            builds += Build(names, byChannel.values.sumOf { it.size }, testScheduler.currentTime)
+            delay(buildMillis)
+        }.collect {}
+    }
+
+    private fun index(window: ViewerTime.Window, count: Int) =
         ProgrammeIndex(window, mapOf("bbc1" to (1..count).map { programme("bbc1", "Programme $it", startMinute = it) }))
 
     private fun listingsThenWait(programmes: List<GuideProgramme>) = flow {
@@ -165,13 +241,13 @@ class GuideIndexTest {
 
     private fun programme(channel: String, title: String, startMinute: Int = 0) = GuideProgramme(
         epgChannelId = channel,
-        startUtcMillis = WINDOW.first + startMinute * 60_000L,
-        endUtcMillis = WINDOW.first + (startMinute + 1) * 60_000L,
+        startUtcMillis = WINDOW.startUtcMillis + startMinute * 60_000L,
+        endUtcMillis = WINDOW.startUtcMillis + (startMinute + 1) * 60_000L,
         title = title,
     )
 
     private companion object {
-        val WINDOW = 1_800_000_000_000L to 1_800_086_400_000L
-        val NEXT_WINDOW = 1_800_001_800_000L to 1_800_086_400_000L
+        val WINDOW = ViewerTime.Window(1_800_000_000_000L, 1_800_086_400_000L)
+        val NEXT_WINDOW = ViewerTime.Window(1_800_001_800_000L, 1_800_086_400_000L)
     }
 }

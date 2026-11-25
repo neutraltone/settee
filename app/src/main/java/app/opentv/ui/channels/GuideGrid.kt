@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -60,6 +61,7 @@ import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.SetteeColors
@@ -71,9 +73,6 @@ import app.opentv.ui.options.RowHighlight
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -89,7 +88,8 @@ import kotlinx.coroutines.launch
  * calls [onNextDay] and Left before its first calls [onPrevDay], when there's a day that way: the
  * guide pages through days rather than running into them. A row with nothing on that day pages on
  * from its channel. On the new day the Highlight lands on [landOnRow]'s first programme, or its last
- * with [landAtEnd], or its channel when it has none, then [onLanded] says it's done.
+ * with [landAtEnd], or its channel when it has none, then [onLanded] says it's done. It waits on the
+ * channel while the day loads, and a held key (the remote repeating it) never pages.
  *
  * Left from a channel goes back to now first, when the guide is on a later day ([onToNow]) or
  * scrolled on from now, and only opens the sidebar from there. A new [rowsFor] (a category picked)
@@ -119,8 +119,8 @@ fun GuideGrid(
     onProgramme: (ChannelsViewModel.Row, GuideProgramme) -> Unit = { _, _ -> },
     dayLabel: String = "",
     dayOffset: Int = 0,
-    onNextDay: ((ChannelsViewModel.Row) -> Unit)? = null,
-    onPrevDay: ((ChannelsViewModel.Row) -> Unit)? = null,
+    onNextDay: ((ChannelsViewModel.Row) -> Boolean)? = null,
+    onPrevDay: ((ChannelsViewModel.Row) -> Boolean)? = null,
     returnToChannelId: Long? = null,
     takeFocus: Boolean = true,
     onReturnToRow: (ChannelsViewModel.Row) -> Unit = {},
@@ -309,7 +309,7 @@ private fun TimeHeader(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        clockFormat.format(Date(windowStartMillis + i * HALF_HOUR_MS)),
+                        clockTime(windowStartMillis + i * HALF_HOUR_MS),
                         SetteeType.Body,
                         color = SetteeColors.QuietText,
                     )
@@ -331,8 +331,8 @@ private fun GuideRow(
     onWatch: () -> Unit,
     onHighlight: (GuideProgramme?) -> Unit,
     onProgramme: (GuideProgramme) -> Unit,
-    onNextDay: (() -> Unit)?,
-    onPrevDay: (() -> Unit)?,
+    onNextDay: (() -> Boolean)?,
+    onPrevDay: (() -> Boolean)?,
     focusRequester: FocusRequester?,
     onLeft: () -> Boolean,
     highlight: RowHighlight,
@@ -358,6 +358,12 @@ private fun GuideRow(
             onLanded()
         }
     }
+    SideEffect { if (land == null) landing.paging = false }
+    // Paging from a programme, the Highlight waits on the channel: the cell it was on can leave with
+    // the old day (one ending at midnight) or stay until the new rows come, and a second Right from
+    // it paged again, two days on (#448).
+    val pageNext = onNextDay?.let { next -> { landing.page(next) } }
+    val pagePrev = onPrevDay?.let { prev -> { landing.page(prev) } }
     // The window moves on at :00 and :30, and a programme ending then leaves the row, its cell and
     // the Highlight with it. Worked out as the row composes, while that cell is still there: once
     // it's gone, so is any sign it had the Highlight.
@@ -390,8 +396,10 @@ private fun GuideRow(
             onHighlight = { onHighlight(null) },
             focusRequester = focusRequester,
             self = channel,
-            // With nothing on this day there's no last programme to page on from, so the channel does.
-            onRight = onNextDay.takeIf { shown.isEmpty() },
+            // With nothing on this day there's no last programme to page on from, so the channel does,
+            // as it does while the day it paged to loads (where a day's landing in progress stops it).
+            onRight = pageNext,
+            pagesRight = { shown.isEmpty() || landing.paging },
             onLeft = onLeft,
             highlight = highlight,
             index = index,
@@ -400,8 +408,8 @@ private fun GuideRow(
             NoInformationCell(
                 onWatch = onWatch,
                 onHighlight = { onHighlight(null) },
-                onNextDay = onNextDay,
-                onPrevDay = onPrevDay,
+                onNextDay = pageNext,
+                onPrevDay = pagePrev,
                 railFallback = channel,
                 modifier = Modifier.weight(1f),
             )
@@ -414,8 +422,8 @@ private fun GuideRow(
                     nowMillis = nowMillis,
                     onHighlight = onHighlight,
                     onProgramme = onProgramme,
-                    onNextDay = onNextDay,
-                    onPrevDay = onPrevDay,
+                    onNextDay = pageNext,
+                    onPrevDay = pagePrev,
                     first = first,
                     last = last,
                     highlighted = highlighted,
@@ -434,6 +442,7 @@ private fun ChannelCell(
     focusRequester: FocusRequester?,
     self: FocusRequester,
     onRight: (() -> Unit)?,
+    pagesRight: () -> Boolean,
     onLeft: () -> Boolean,
     highlight: RowHighlight,
     index: Int,
@@ -456,7 +465,7 @@ private fun ChannelCell(
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionRight -> onRight?.invoke() != null
+                    Key.DirectionRight -> onRight?.takeIf { pagesRight() }?.unlessHeld(event) != null
                     Key.DirectionLeft -> onLeft()
                     else -> false
                 }
@@ -561,6 +570,20 @@ private class RowLanding {
     val first = FocusRequester()
     val last = FocusRequester()
 
+    /** Whether this row has paged a day and not landed yet. Plain: read when a key comes, not drawn. */
+    var paging = false
+
+    /**
+     * Pages a day with [turn], the Highlight on the channel until the new day's cells come. Only when
+     * [turn] says it paged: the guide turns it down while another day's landing is still to happen,
+     * and the Highlight stays where it was.
+     */
+    fun page(turn: () -> Boolean) {
+        if (!turn()) return
+        paging = true
+        runCatching { channel.requestFocus() }
+    }
+
     fun target(shown: List<GuideProgramme>, land: Land): FocusRequester = when {
         shown.isEmpty() -> channel
         land == Land.Last -> last
@@ -613,7 +636,7 @@ private fun ProgrammeCell(
                     Key.DirectionLeft -> onBeforeStart
                     else -> null
                 } ?: return@onPreviewKeyEvent false
-                turn()
+                turn.unlessHeld(event)
                 true
             }
             .width(width)
@@ -646,8 +669,3 @@ internal val CELL_PADDING = 10.dp
 internal val RULE = 1.dp
 private val STRONG_RULE = 2.dp
 internal val HALF_HOUR_WIDTH: Dp = (30 * MINUTE_DP).dp
-
-private val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-/** UTC in the database, device zone on screen. Converted here and nowhere else. */
-internal fun formatTime(utcMillis: Long): String = clockFormat.format(Date(utcMillis))

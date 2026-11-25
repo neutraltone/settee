@@ -37,7 +37,7 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.NowAndNext
-import app.opentv.ui.channels.formatTime
+import app.opentv.ui.clockTime
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.QuietLabel
 import app.opentv.ui.design.SetteeColors
@@ -88,7 +88,7 @@ internal fun ChannelCard(channel: CardChannel, nowAndNext: suspend (Long) -> Now
             }
             guide?.next?.let { next ->
                 Spacer(Modifier.height(6.dp))
-                QuietLabel(stringResource(R.string.guide_next_prefix, formatTime(next.startUtcMillis), next.title))
+                QuietLabel(stringResource(R.string.guide_next_prefix, clockTime(next.startUtcMillis), next.title))
             }
         }
     }
