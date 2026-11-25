@@ -376,10 +376,11 @@ The aerial TV: the TV from the mark, with its face on the screen and coral arcs 
 
 Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/neutraltone/settee/issues/156). The Stick is the device the budget is set on. Slower Android TV boxes aren't a target.
 
-- **While anything moves,** its frames take under 16.7 ms, so 60 fps, on a release build.
+- **While anything moves,** no frame is dropped: a new frame reaches the screen at every refresh, so 60 fps, on a release build.
 - **The first two frames after a press** may each take up to 50 ms: that's where the app reacts, such as the Highlight moving or a panel's labels appearing.
 - **One frame where the layout changes size** may also take up to 50 ms, such as the content resizing once at the end of the rail's slide.
-- **How to measure a movement:** time it frame by frame with `dumpsys gfxinfo <package> framestats`, one movement at a time, from the press until the last frame. Leave out the first two frames and the one resize frame, and the rest must all be under 16.7 ms. The app-wide summary in [PERFORMANCE.md](PERFORMANCE.md) mixes in press responses and idle frames, so it isn't the test. The rail passes this way: its slide frames took 8-12 ms.
+- **How to measure a movement:** read it frame by frame with `dumpsys gfxinfo <package> framestats`, one movement at a time, from the press until the last frame. Leave out the first two frames and the one resize frame. The rest must each start one refresh (16.7 ms) after the one before, by `IntendedVsync`: a gap of two or more refreshes is a dropped frame. How long a frame takes from `IntendedVsync` to `FrameCompleted` isn't the test. Android draws one frame while finishing the last, so a frame can take over 16.7 ms and still reach the screen on time. Count the frames too: a 200 ms movement should have about 12. The app-wide summary in [PERFORMANCE.md](PERFORMANCE.md) mixes in press responses and idle frames, so it isn't the test either. The rail passes: its slide frames took 8-12 ms.
+- **Then watch it on the Stick.** Numbers that pass but look wrong don't pass, and the owner watching it on the Stick settles a reading that's unclear. That's how the Side Panel slide passed ([#454](https://github.com/neutraltone/settee/issues/454)): over live TV, most openings drew every slide frame in about 22 ms, but there were still about 12 frames in its 200 ms, one per refresh, and it looked smooth.
 - **A new screen's first frame** comes within 300 ms.
 - **Anything that can't pass doesn't animate.** It goes straight to where it ends up. There's no slower animation as a middle ground.
 - **No limit on how many things move at once.** The budget applies to the whole screen while they move.
