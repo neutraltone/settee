@@ -8,6 +8,7 @@ package app.opentv
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -27,7 +28,9 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.TimingsSource
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown.Overlay
+import app.opentv.ui.vod.NEXT_EPISODE_BUTTONS_WIDTH
 import app.opentv.ui.vod.NEXT_EPISODE_CARD_TAG
+import app.opentv.ui.vod.NextEpisodeButtons
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.countsAsInput
@@ -105,6 +108,31 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vod_player_next_episode_card")
     }
+
+    @Test
+    @Config(qualifiers = "+fr")
+    fun `in French the card's two buttons share its width side by side, every word showing`() {
+        // The French the issue measured (#507), longer than both buttons' English; the card's own
+        // strings fall back to English until they're translated.
+        compose.setTvContent {
+            Box(Modifier.width(NEXT_EPISODE_BUTTONS_WIDTH)) {
+                NextEpisodeButtons("Lire maintenant", "Regarder le générique", onPlay = {}, onLeave = {})
+            }
+        }
+
+        compose.onNodeWithText("Lire maintenant", useUnmergedTree = true).assertShownWhole()
+        compose.onNodeWithText("Regarder le générique", useUnmergedTree = true).assertShownWhole()
+        // The merged nodes are the buttons themselves: one row of two, the same size.
+        val playButton = compose.onNodeWithText("Lire maintenant").fetchSemanticsNode().boundsInRoot
+        val leaveButton = compose.onNodeWithText("Regarder le générique").fetchSemanticsNode().boundsInRoot
+        assertThat(leaveButton.top).isEqualTo(playButton.top)
+        assertThat(leaveButton.size).isEqualTo(playButton.size)
+        assertThat(leaveButton.left).isGreaterThan(playButton.right)
+        assertThat(leaveButton.right).isAtMost(NEXT_EPISODE_BUTTONS_WIDTH.value * density())
+        captureScreen("next_episode_fr")
+    }
+
+    private fun density() = compose.density.density
 
     /**
      * The player over S1 E1 of a show whose episode TheIntroDB timed, credits at 38:00 of 40:00, with
