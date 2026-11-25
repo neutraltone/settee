@@ -1083,14 +1083,14 @@ class VodViewModel @JvmOverloads constructor(
      * through TMDB first, since that's what add-ons are asked by; with no match they can't be asked.
      */
     fun addonStreams(movie: Movie): Flow<AddonSearch> =
-        addonSearch(aboutShow = false, { graph.catalogRepository.imdbIdFor(movie) }) { graph.addonStreams.forFilm(it) }
+        addonSearch(aboutShow = false, { graph.addonTitles.imdbIdOf(movie) }) { graph.addonStreams.forFilm(it) }
 
     /**
      * What the viewer's add-ons offer for [episode] of [series], as for a film: add-ons are asked by the
      * show's IMDb id plus the episode's season and number, so with no IMDb match they can't be asked.
      */
     fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> =
-        addonSearch(aboutShow = true, { graph.catalogRepository.imdbIdFor(series) }) {
+        addonSearch(aboutShow = true, { graph.addonTitles.imdbIdOf(series) }) {
             graph.addonStreams.forEpisode(it, episode.season, episode.episodeNumber)
         }
 
@@ -1390,7 +1390,7 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * Films the Provider doesn't carry, for Search's last section (ADR 0011): only with an add-on set up
+     * Films and shows the Provider doesn't carry, for Search's last section (ADR 0011): only with an add-on set up
      * and a TMDB Key. A flow of its own, so the Provider's results never wait on TMDB.
      */
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -1411,6 +1411,9 @@ class VodViewModel @JvmOverloads constructor(
 
     /** [film], from Search's Not from your provider, kept as a film of the Add-ons source to open. */
     suspend fun keepAddonFilm(film: AddonTitle): Movie = graph.addonTitles.keepFilm(film)
+
+    /** [show], from Search's Not from your provider, kept as a show of the Add-ons source to open. */
+    suspend fun keepAddonShow(show: AddonTitle): Series = graph.addonTitles.keepShow(show)
 
     /**
      * The active Profile's Favourite movies and series: the Favourites rows and the detail pages'
@@ -1474,10 +1477,12 @@ class VodViewModel @JvmOverloads constructor(
             // Read here, after the fetches stored them, rather than left to the page's live read, which can
             // come a moment later and would have the page say there are none just before they show.
             val none = showEpisodes(series).first().all.isEmpty()
+            // A show kept from an add-on asks TMDB, not a Provider: no sentence may blame "your provider".
+            val fromAddons = graph.sourceRepository.byId(series.sourceId)?.kind == SourceKind.ADDONS
             val failure = when {
                 !none -> null
-                timedOut -> graph.errorWording.ofProvider(SocketTimeoutException(), R.string.vod_episodes_failed)
-                else -> episodesFailure(outcomes)
+                timedOut -> episodesFailure(listOf(Result.failure(SocketTimeoutException())), fromAddons)
+                else -> episodesFailure(outcomes, fromAddons)
             }
             send(Opened.Found(OpenedShow(series, fetched = true, noEpisodes = none, failure = failure)))
         } finally {
@@ -1503,14 +1508,21 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
-     * the opened Version's failure first. Not when any worked: even with nothing in it, the provider has
+     * the opened Version's failure first, and never in a Provider's words for a show kept from an add-on
+     * ([fromAddons]), whose episodes come from TMDB. Not when any worked: even with nothing in it, the provider has
      * answered, and the viewer can't do anything about the other Versions' panels.
      */
-    private fun episodesFailure(outcomes: List<Result<Unit>>): ViewerError? =
+    private fun episodesFailure(outcomes: List<Result<Unit>>, fromAddons: Boolean): ViewerError? =
         outcomes.takeIf { all -> all.none { it.isSuccess } }
             ?.firstOrNull()
             ?.exceptionOrNull()
-            ?.let { graph.errorWording.ofProvider(it, R.string.vod_episodes_failed) }
+            ?.let {
+                if (fromAddons) {
+                    graph.errorWording.of(it, R.string.vod_episodes_failed)
+                } else {
+                    graph.errorWording.ofProvider(it, R.string.vod_episodes_failed)
+                }
+            }
 
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)

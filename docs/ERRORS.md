@@ -242,6 +242,9 @@ episodes' place, as an error only when every Version's fetch failed: one that an
 nothing in it, means there's no error to show. Stored episodes always show instead of either. `ErrorWording.ofProvider` words
 the failure of the opened Version, or of the first other one, so a timeout, a rejected login, a 429 or
 a 5xx read as in [Provider connection](#provider-connection). Under it, Try again asks every panel again.
+A show kept from an add-on (#672) asks TMDB instead of a panel, so its failure, a timeout included, is
+always `vod_episodes_failed` worded by `ErrorWording.of`, with the exception type as its detail: no
+sentence about "your provider" fits a show that has none.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|

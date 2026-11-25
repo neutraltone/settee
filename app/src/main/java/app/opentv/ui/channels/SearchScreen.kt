@@ -135,8 +135,16 @@ fun SearchScreen(
         onResultOpened = recentSearches::save,
         onClearRecentSearches = recentSearches::clear,
         addonResults = addonResults,
-        // Kept as it's opened, then shown as any film is: its page reads it from the database.
-        onOpenAddonFilm = { film -> scope.launch { onPlayMovie(vodViewModel.keepAddonFilm(film)) } },
+        // Kept as it's opened, then shown as any film or show is: its page reads it from the database.
+        onOpenAddonTitle = { title ->
+            scope.launch {
+                if (title.isMovie) {
+                    onPlayMovie(vodViewModel.keepAddonFilm(title))
+                } else {
+                    onOpenSeries(vodViewModel.keepAddonShow(title))
+                }
+            }
+        },
     )
 }
 
@@ -158,7 +166,7 @@ internal fun SearchContent(
     onResultOpened: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
     addonResults: List<AddonTitle> = emptyList(),
-    onOpenAddonFilm: (AddonTitle) -> Unit = {},
+    onOpenAddonTitle: (AddonTitle) -> Unit = {},
 ) {
     val anyResults = listOf(channelResults, movieResults, seriesResults, addonResults).any { it.isNotEmpty() }
     val searchBox = remember { FocusRequester() }
@@ -265,10 +273,10 @@ internal fun SearchContent(
                         onResultOpened(typed)
                         onOpenSeries(it)
                     },
-                    onOpenAddonFilm = {
+                    onOpenAddonTitle = {
                         openedResult = it.resultKey
                         onResultOpened(typed)
-                        onOpenAddonFilm(it)
+                        onOpenAddonTitle(it)
                     },
                     onLeave = { key, go ->
                         openedResult = key
@@ -331,7 +339,7 @@ private fun SearchResults(
     onPlayChannel: (ChannelsViewModel.Row) -> Unit,
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
-    onOpenAddonFilm: (AddonTitle) -> Unit,
+    onOpenAddonTitle: (AddonTitle) -> Unit,
     onLeave: (key: String, go: () -> Unit) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -403,15 +411,15 @@ private fun SearchResults(
         // nothing is kept of these till one is opened.
         if (addonResults.isNotEmpty()) {
             item(contentType = "header") { SearchSectionHeader(stringResource(R.string.search_not_from_provider)) }
-            items(addonResults, key = { it.resultKey }, contentType = { "title" }) { film ->
+            items(addonResults, key = { it.resultKey }, contentType = { "title" }) { title ->
                 VodResultRow(
-                    film.name,
-                    film.posterUrl,
-                    film.year?.toString(),
+                    title.name,
+                    title.posterUrl,
+                    title.year?.toString(),
                     onOptions = null,
-                    modifier = Modifier.returning(film.resultKey),
+                    modifier = Modifier.returning(title.resultKey),
                 ) {
-                    onOpenAddonFilm(film)
+                    onOpenAddonTitle(title)
                 }
             }
         }

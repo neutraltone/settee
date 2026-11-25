@@ -282,27 +282,6 @@ class CatalogRepository(
 
     suspend fun movie(id: Long): Movie? = movieDao.byId(id)
 
-    /**
-     * The IMDb id for a film, for Stremio add-on stream lookups. Resolved through Settee's TMDB
-     * key (using the provider's TMDB id when present, else a title+year search). Null without a key
-     * or a match — the add-on feature stays inert rather than guessing — and a failure when TMDB
-     * didn't answer.
-     */
-    suspend fun imdbIdFor(movie: Movie): Result<String?> = withContext(dispatchers.io) {
-        // A film kept from an add-on is stored by its IMDb id: nothing to look up.
-        if (sourceDao.keptFromAddons(movie)) return@withContext Result.success(movie.streamId)
-        tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
-    }
-
-    /** The show's IMDb id: its own id when it already is one, as Stremio-style series are, else TMDB's. */
-    suspend fun imdbIdFor(series: Series): Result<String?> = if (IMDB_ID.matches(series.seriesId)) {
-        Result.success(series.seriesId)
-    } else {
-        withContext(dispatchers.io) {
-            tmdb.imdbId(title = series.name, year = series.year, isMovie = false, tmdbId = series.tmdbId)
-        }
-    }
-
     suspend fun episode(id: Long): Episode? = episodeDao.byId(id)
 
     suspend fun series(id: Long): app.opentv.data.model.Series? = seriesDao.byId(id)
@@ -612,7 +591,8 @@ class CatalogRepository(
     private fun seriesDetails(id: Long, now: Long, opening: Boolean, onFetched: (Result<Unit>) -> Unit): Flow<Series> =
         flow {
             val series = seriesDao.byId(id) ?: return@flow
-            val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
+            val source = sourceDao.byId(series.sourceId)
+            val panel = source?.takeIf { it.kind == SourceKind.XTREAM }
 
             // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
             //    for a still-bare row its details.
@@ -641,11 +621,18 @@ class CatalogRepository(
                 return@flow
             }
             if (!shownFirst) emit(result)
+            // A show kept from an add-on has no panel: its episodes come from TMDB, once it's shown.
+            addonEpisodesOnOpening(source, series, now, opening)?.let(onFetched)
 
             // 2) TMDB, in a build with a key, at once when something is still missing or TMDB's answer
             //    is six months old, so a series the background pass hasn't reached still fills in.
             tmdbAnswered(result, now)?.let { emit(it) }
         }.flowOn(dispatchers.io)
+
+    /** On [opening] a show kept from an add-on, how fetching its episodes went; null for any other. */
+    private suspend fun addonEpisodesOnOpening(source: Source?, series: Series, now: Long, opening: Boolean) =
+        source?.takeIf { opening && it.kind == SourceKind.ADDONS }
+            ?.let { fetchAddonEpisodes(it, series.seriesId, now) }
 
     /**
      * [series] with TMDB's answer saved onto it as it's stored now, if it [wantsTmdb]; null if TMDB
@@ -764,11 +751,19 @@ class CatalogRepository(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long = System.currentTimeMillis(),
-    ): Result<Unit> = if (!source.kind.carriesMoviesAndShows) {
-        Result.success(Unit)
-    } else {
-        fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true).map {}
+    ): Result<Unit> = when {
+        source.kind == SourceKind.ADDONS -> fetchAddonEpisodes(source, seriesId, nowUtcMillis)
+        !source.kind.carriesMoviesAndShows -> Result.success(Unit)
+        else -> fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true).map {}
     }
+
+    /** A show kept from an add-on has no panel: TMDB lists its episodes, stored as a Provider's are (ADR 0011). */
+    private suspend fun fetchAddonEpisodes(source: Source, seriesId: String, now: Long): Result<Unit> =
+        withContext(dispatchers.io) {
+            tmdb.storeAddonEpisodes(seriesDao.byProviderId(source.id, seriesId), now) {
+                storeEpisodes(source, seriesId, it, now)
+            }
+        }
 
     /**
      * Asks the panel for [seriesId]'s `get_series_info`, storing its episodes when [storeEpisodes],
@@ -1163,8 +1158,6 @@ class CatalogRepository(
 
     companion object {
         private const val TAG = "CatalogRepository"
-
-        private val IMDB_ID = Regex("tt\\d+")
 
         /**
          * How long a film's or show's page waits on its details before drawing from the row as stored

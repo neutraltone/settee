@@ -66,6 +66,7 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
+import app.opentv.data.repo.playsThroughAddons
 import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
@@ -94,7 +95,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
  * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
  * page says why ([episodeFetch]). With [findAddonStreams], each episode's options offer its add-on streams
- * in a picker, and the one picked calls [onPlayAddonStream].
+ * in a picker, and the one picked calls [onPlayAddonStream]; for a show kept from an add-on, OK on an
+ * episode, and its main button, open that picker.
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -122,7 +124,10 @@ internal fun SeriesDetailContent(
     var askingFor by remember(series.id) { mutableStateOf<MediaKey?>(null) }
     // Play asks first when only another language plays, and when nothing plays here an episode doesn't
     // either: the hero says why, and the player would only fail (#181).
-    val play: (MediaKey) -> Unit = { key ->
+    // An episode of a show kept from an add-on has no stream of its own: it plays through the add-on
+    // picker, and can't without add-ons (ADR 0011).
+    val addons = rememberEpisodeAddons(series.id, findAddonStreams)
+    val play: (MediaKey) -> Unit = addons.playing(episodes) { key ->
         when {
             !versions.plays -> Unit
             versions.otherLanguage != null -> askingFor = key
@@ -130,7 +135,6 @@ internal fun SeriesDetailContent(
         }
     }
     val seasons = remember(episodes) { seasonsOf(episodes) }
-    val addons = rememberEpisodeAddons(series.id, findAddonStreams)
     val nav = remember(series.id) { ShowPageNav() }
     val spot = rememberReturnSpot(series.id)
     val hasLikeThis = suggestions.isNotEmpty()
@@ -459,7 +463,8 @@ private fun EpisodeList(
                 status = statuses[ep.id],
                 seriesArt = listOfNotNull(series.backdropUrl, series.posterUrl),
                 onPlay = onPlayEpisode,
-                onAddonSources = onAddonSources?.let { ask -> { ask(ep) } },
+                // Not offered again in its options where OK already opens the picker.
+                onAddonSources = onAddonSources?.takeUnless { ep.playsThroughAddons }?.let { ask -> { ask(ep) } },
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
                     .returnSpot(spot, PageSpot.Episode(ep.id))

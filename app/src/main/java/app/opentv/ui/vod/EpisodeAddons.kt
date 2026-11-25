@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.opentv.data.model.Episode
 import app.opentv.data.model.StremioStream
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.playsThroughAddons
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -48,3 +50,13 @@ internal fun EpisodeAddonPicker(addons: EpisodeAddons, onPlay: (Episode, Stremio
     val episode = addons.episode ?: return
     AddonStreamPicker(addons.picker, { find(episode) }) { onPlay(episode, it.stream) }
 }
+
+/**
+ * Playing [key] on the show page: an episode of a show kept from an add-on has no stream of its own, so
+ * it opens the add-on picker, and can't play without add-ons (ADR 0011); anything else goes to [otherwise].
+ */
+internal fun EpisodeAddons.playing(episodes: List<Episode>, otherwise: (MediaKey) -> Unit): (MediaKey) -> Unit =
+    { key ->
+        val episode = (key as? MediaKey.Episode)?.let { asked -> episodes.find { it.id == asked.episodeId } }
+        if (episode?.playsThroughAddons == true) ask?.invoke(episode) else otherwise(key)
+    }

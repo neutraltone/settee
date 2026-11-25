@@ -260,6 +260,13 @@ a handful of calls, not the catalogue. A refresh (the worker, or Refresh in sett
 The Movies and Shows re-sync as the app opens launches it instead, so its spinner isn't held, but
 can't skip it: once the stored times have moved, a later refresh would never see that show again.
 
+A show kept from an add-on (ADR 0011) has no panel: `fetchEpisodes` asks TMDB for its seasons instead,
+appended to one show request rather than one request a season, and stores them through the same
+`storeEpisodes`, so local ids, `firstSeenMillis` and retired episodes behave as a Provider's do. Each
+episode's id is the show's IMDb id plus season and episode (`tt…:1:3`), what add-ons are asked with;
+Specials and episodes not yet aired are left out, as no add-on has them and Up Next mustn't point at
+one. They have no stream URL, which is how the show page knows OK opens the add-on picker.
+
 The second is sync. Progress from another device can name an episode this one hasn't stored, so the
 position also carries its `seriesId`, and `WaitingProgress` fetches that series in the background
 after `SyncEngine.apply` has returned, so no sync screen waits on a provider. Each series is fetched

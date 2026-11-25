@@ -63,6 +63,17 @@ data class TmdbHit(
     val overview: String?,
 )
 
+/** One episode TMDB lists for a show; [airedMillis] is when it first aired (UTC), null if TMDB doesn't say. */
+data class TmdbEpisode(
+    val season: Int,
+    val number: Int,
+    val title: String,
+    val overview: String?,
+    val runtimeMinutes: Int?,
+    val stillUrl: String?,
+    val airedMillis: Long?,
+)
+
 /**
  * A thin, read-only TMDB v3 client used to enrich VOD detail pages when the provider's own
  * metadata is thin — the "match Plex" back-fill for posters, backdrops, synopsis, cast, director
@@ -155,6 +166,33 @@ class TmdbClient(
         }
     }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
 
+    /**
+     * Every episode TMDB lists for the show [tmdbId], Specials (season 0) left out, for a show kept from
+     * an add-on, which has no panel to list them. Empty with no key or for a show TMDB doesn't know; a
+     * failure when TMDB didn't answer, so its page can offer Try again rather than say it has none.
+     */
+    fun seasonEpisodes(tmdbId: String): Result<List<TmdbEpisode>> = runCatching {
+        val key = credential ?: return@runCatching emptyList()
+        val show = TMDB_BASE.newBuilder().addPathSegment("tv").addPathSegment(tmdbId).build()
+        val seasons = (fetch(show, key, Operation.DETAILS)?.jsonObject?.get("seasons") as? JsonArray)
+            .orEmpty()
+            .mapNotNull { (it as? JsonObject)?.int("season_number") }
+            .filter { it > 0 }
+            .distinct()
+            .sorted()
+        // Seasons appended to the show's own request, as many as TMDB takes in one, rather than one
+        // request a season: a long-running show would otherwise cost dozens on a Stick's slow network.
+        seasons.chunked(SEASONS_PER_REQUEST).flatMap { asked ->
+            val appended = asked.joinToString(",") { "season/$it" }
+            val url = show.newBuilder().addQueryParameter("append_to_response", appended).build()
+            val reply = fetch(url, key, Operation.DETAILS)?.jsonObject
+            asked.flatMap { season ->
+                (reply?.get("season/$season") as? JsonObject)?.get("episodes").let { it as? JsonArray }.orEmpty()
+                    .mapNotNull { (it as? JsonObject)?.let { o -> episodeOf(o, season) } }
+            }
+        }
+    }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+
     /** The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. */
     fun seriesId(title: String, year: Int?): String? {
         val key = credential ?: return null
@@ -166,24 +204,6 @@ class TmdbClient(
                     .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
                     .getOrNull()
             }
-    }
-
-    /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
-    private fun searchId(title: TmdbTitle, read: (HttpUrl, Operation) -> JsonElement?): String? {
-        val (isMovie, _, year) = title
-        fun run(withYear: Boolean): String? {
-            val b = TMDB_BASE.newBuilder()
-                .addPathSegment("search")
-                .addPathSegment(if (isMovie) "movie" else "tv")
-                .addQueryParameter("query", title.query)
-                .addQueryParameter("include_adult", "false")
-            if (withYear && year != null) {
-                b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
-            }
-            val results = read(b.build(), Operation.SEARCH)?.jsonObject?.get("results")?.jsonArray ?: return null
-            return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
-        }
-        return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
     }
 
     private fun details(isMovie: Boolean, id: String, read: (HttpUrl, Operation) -> JsonElement?): TmdbMeta? {
@@ -281,7 +301,6 @@ class TmdbClient(
 
     private companion object {
         const val TAG = "TmdbClient"
-        val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
         const val IMG_POSTER = "https://image.tmdb.org/t/p/w500"
         const val IMG_BACKDROP = "https://image.tmdb.org/t/p/w1280"
         const val TOP_CAST = 12
@@ -291,6 +310,26 @@ class TmdbClient(
         /** The crew jobs that count as writing it: TMDB files writers under several. */
         val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
     }
+}
+
+private val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
+
+/** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
+private fun searchId(title: TmdbTitle, read: (HttpUrl, Operation) -> JsonElement?): String? {
+    val (isMovie, _, year) = title
+    fun run(withYear: Boolean): String? {
+        val b = TMDB_BASE.newBuilder()
+            .addPathSegment("search")
+            .addPathSegment(if (isMovie) "movie" else "tv")
+            .addQueryParameter("query", title.query)
+            .addQueryParameter("include_adult", "false")
+        if (withYear && year != null) {
+            b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
+        }
+        val results = read(b.build(), Operation.SEARCH)?.jsonObject?.get("results")?.jsonArray ?: return null
+        return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
+    }
+    return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
 }
 
 /**
@@ -330,6 +369,31 @@ private fun hitOf(o: JsonObject): TmdbHit? {
         overview = text("overview"),
     )
 }
+
+private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
+
+/**
+ * One episode of a TMDB season, read by hand like [hitOf]; null without an episode number. Its still is
+ * a whole address.
+ */
+private fun episodeOf(o: JsonObject, season: Int): TmdbEpisode? {
+    fun text(key: String) = (o[key] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+    val number = o.int("episode_number") ?: return null
+    return TmdbEpisode(
+        season = season,
+        number = number,
+        title = text("name") ?: "",
+        overview = text("overview"),
+        runtimeMinutes = o.int("runtime"),
+        stillUrl = text("still_path")?.let { IMG_STILL + it },
+        airedMillis = parseReleaseDate(text("air_date")),
+    )
+}
+
+private const val IMG_STILL = "https://image.tmdb.org/t/p/w500"
+
+/** TMDB takes up to 20 appended answers on one request. */
+private const val SEASONS_PER_REQUEST = 20
 
 /** This hit with its art paths made whole addresses under [poster] and [backdrop]. */
 private fun TmdbHit.withArt(poster: String, backdrop: String) =

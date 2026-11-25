@@ -28,7 +28,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Search's Not from your provider section (#671): films TMDB knows that the Provider doesn't carry,
+ * Search's Not from your provider section (#671, #672): films and shows TMDB knows that the Provider doesn't carry,
  * which only come when an add-on is set up, so an empty list stands for none set up.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -61,7 +61,7 @@ class SearchNotFromProviderTest {
                 onPlayChannel = {},
                 onPlayMovie = {},
                 onOpenSeries = {},
-                onOpenAddonFilm = { openedFilms += it },
+                onOpenAddonTitle = { openedFilms += it },
                 onBack = {},
             )
         }
@@ -91,6 +91,20 @@ class SearchNotFromProviderTest {
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
         assertThat(openedFilms).containsExactly(LOST)
+    }
+
+    @Test
+    fun `a show the Provider doesn't carry is listed with the films, and OK opens it`() {
+        query.setTextAndPlaceCursorAtEnd("lost")
+        show(addonFilms = listOf(LOST, LOST_SHOW))
+
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNode(hasText("Lost Show") and hasClickAction()).assertIsFocused()
+        captureScreen("search_not_from_provider_show")
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertThat(openedFilms).containsExactly(LOST_SHOW)
     }
 
     @Test
@@ -125,6 +139,17 @@ class SearchNotFromProviderTest {
             posterUrl = null,
             backdropUrl = null,
             overview = null,
+        )
+
+        val LOST_SHOW = AddonTitle(
+            tmdbId = "201",
+            imdbId = "tt0000201",
+            name = "Lost Show",
+            year = 2010,
+            posterUrl = null,
+            backdropUrl = null,
+            overview = null,
+            isMovie = false,
         )
     }
 }
