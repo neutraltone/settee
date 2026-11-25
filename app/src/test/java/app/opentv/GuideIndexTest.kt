@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.core.ViewerTime
 import app.opentv.data.model.GuideProgramme
 import app.opentv.ui.GuideBuildMemory
 import app.opentv.ui.ProgrammeIndex
@@ -56,7 +57,7 @@ class GuideIndexTest {
         val seen = mutableListOf<Pair<ProgrammeIndex, Long>>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             window.guideIndex { from, _ ->
-                listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.first) "Now" else "Later")))
+                listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.startUtcMillis) "Now" else "Later")))
             }.collect { seen += it to testScheduler.currentTime }
         }
 
@@ -188,7 +189,7 @@ class GuideIndexTest {
         // A zone change moves the guide's window, which reads that window's listings afresh.
         val window = MutableStateFlow(WINDOW)
         val index = window.guideIndex { from, _ ->
-            listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.first) "Here" else "There")))
+            listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.startUtcMillis) "Here" else "There")))
         }
         val builds = mutableListOf<Build>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -230,7 +231,7 @@ class GuideIndexTest {
         }.collect {}
     }
 
-    private fun index(window: Pair<Long, Long>, count: Int) =
+    private fun index(window: ViewerTime.Window, count: Int) =
         ProgrammeIndex(window, mapOf("bbc1" to (1..count).map { programme("bbc1", "Programme $it", startMinute = it) }))
 
     private fun listingsThenWait(programmes: List<GuideProgramme>) = flow {
@@ -240,13 +241,13 @@ class GuideIndexTest {
 
     private fun programme(channel: String, title: String, startMinute: Int = 0) = GuideProgramme(
         epgChannelId = channel,
-        startUtcMillis = WINDOW.first + startMinute * 60_000L,
-        endUtcMillis = WINDOW.first + (startMinute + 1) * 60_000L,
+        startUtcMillis = WINDOW.startUtcMillis + startMinute * 60_000L,
+        endUtcMillis = WINDOW.startUtcMillis + (startMinute + 1) * 60_000L,
         title = title,
     )
 
     private companion object {
-        val WINDOW = 1_800_000_000_000L to 1_800_086_400_000L
-        val NEXT_WINDOW = 1_800_001_800_000L to 1_800_086_400_000L
+        val WINDOW = ViewerTime.Window(1_800_000_000_000L, 1_800_086_400_000L)
+        val NEXT_WINDOW = ViewerTime.Window(1_800_001_800_000L, 1_800_086_400_000L)
     }
 }

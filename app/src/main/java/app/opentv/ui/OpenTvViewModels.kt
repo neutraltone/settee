@@ -76,7 +76,6 @@ import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
-import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.TimeSource
@@ -512,24 +511,21 @@ class ChannelsViewModel @JvmOverloads constructor(
      * Each day ends where the next starts, so paging Right past today's last programme carries on
      * from midnight rather than going back over the morning. One flow, so the two never disagree.
      */
-    private val guideWindow: StateFlow<Pair<Long, Long>> =
-        combine(nowTick, _guideDayOffset, graph.zone, ::guideWindowOf)
+    private val guideWindow: StateFlow<ViewerTime.Window> =
+        combine(nowTick, _guideDayOffset, graph.zone, ViewerTime::guideWindow)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                guideWindowOf(now(), 0, graph.zone.value),
+                ViewerTime.guideWindow(now(), 0, graph.zone.value),
             )
 
-    private fun guideWindowOf(now: Long, day: Int, zone: ZoneId): Pair<Long, Long> =
-        ViewerTime.guideWindow(now, day, zone).let { it.startUtcMillis to it.endUtcMillis }
-
     /** The guide's left edge, where programme cells are measured from. */
-    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.first }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.first)
+    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.startUtcMillis }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.startUtcMillis)
 
     /** Where the guide's day ends: today's at midnight, where tomorrow's starts. */
-    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
+    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.endUtcMillis }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.endUtcMillis)
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
