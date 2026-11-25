@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Geräts nicht erst eine Anmeldung verlangt.</string>
     <string name="error_addon_lookup_tv">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieser Fernseher online ist, und versuch es dann erneut.</string>
     <string name="error_addon_lookup_device">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieses Gerät online ist, und versuch es dann erneut.</string>
+    <string name="error_addon_no_match_show">Deine Add-ons können diese Serie nicht nachschlagen, da sie auf IMDb keinen Treffer hat.</string>
+    <string name="error_addon_lookup_show_tv">Die Serie konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieser Fernseher online ist, und versuch es dann erneut.</string>
+    <string name="error_addon_lookup_show_device">Die Serie konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieses Gerät online ist, und versuch es dann erneut.</string>
     <string name="error_device_refused">Dein Anbieter hat diese Angaben nicht akzeptiert. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_guide">Dieser Guide konnte nicht heruntergeladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_guide_empty">Dieser Guide wurde heruntergeladen, enthielt aber keine Sendungen. Überprüfe, ob es der richtige Link ist.</string>

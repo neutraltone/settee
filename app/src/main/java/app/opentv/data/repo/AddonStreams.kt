@@ -72,6 +72,13 @@ class AddonStreams(
     /** The streams for the film IMDb knows as [imdbId], growing as each add-on answers. */
     fun forFilm(imdbId: String): Flow<AddonStreamResults> = streamsFor(MOVIE, imdbId)
 
+    /**
+     * The streams for episode [episode] of season [season] of the show IMDb knows as [showImdbId],
+     * asked as Stremio names an episode (`tt…:season:episode`), and only of add-ons that serve series.
+     */
+    fun forEpisode(showImdbId: String, season: Int, episode: Int): Flow<AddonStreamResults> =
+        streamsFor(SERIES, "$showImdbId:$season:$episode")
+
     private fun streamsFor(type: String, id: String): Flow<AddonStreamResults> = channelFlow {
         val asked = addons().filter { it.serves(type) }
         val answers = arrayOfNulls<Answer>(asked.size)
@@ -125,6 +132,7 @@ class AddonStreams(
 
     private companion object {
         const val MOVIE = "movie"
+        const val SERIES = "series"
         const val STREAM = "stream"
 
         val WORD = Regex("[\\p{L}\\p{N}]+")

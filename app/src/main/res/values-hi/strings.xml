@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस डिवाइस का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
     <string name="error_addon_lookup_tv">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह टीवी ऑनलाइन है, फिर कोशिश करें।</string>
     <string name="error_addon_lookup_device">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह डिवाइस ऑनलाइन है, फिर कोशिश करें।</string>
+    <string name="error_addon_no_match_show">आपके ऐड-ऑन इस शो को नहीं खोज सकते, क्योंकि IMDb पर इसका कोई मेल नहीं है।</string>
+    <string name="error_addon_lookup_show_tv">आपके ऐड-ऑन से पूछने के लिए यह शो खोजा नहीं जा सका। जांचें कि यह टीवी ऑनलाइन है, फिर कोशिश करें।</string>
+    <string name="error_addon_lookup_show_device">आपके ऐड-ऑन से पूछने के लिए यह शो खोजा नहीं जा सका। जांचें कि यह डिवाइस ऑनलाइन है, फिर कोशिश करें।</string>
     <string name="error_device_refused">आपके प्रदाता ने ये विवरण स्वीकार नहीं किए। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_guide">यह गाइड डाउनलोड नहीं हो सकी। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_guide_empty">यह गाइड डाउनलोड हो गई, लेकिन इसमें कोई प्रोग्राम नहीं था। जांचें कि यह सही लिंक है।</string>

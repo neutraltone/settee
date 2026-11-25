@@ -296,6 +296,9 @@
     <string name="error_not_an_addon_device">Esa dirección no dio un complemento. Comprueba que sea el enlace a manifest.json y que el internet de este dispositivo no te pida iniciar sesión antes.</string>
     <string name="error_addon_lookup_tv">No se pudo buscar esta película para preguntar a tus complementos. Comprueba que este televisor esté conectado a internet y vuelve a intentarlo.</string>
     <string name="error_addon_lookup_device">No se pudo buscar esta película para preguntar a tus complementos. Comprueba que este dispositivo esté conectado a internet y vuelve a intentarlo.</string>
+    <string name="error_addon_no_match_show">Tus complementos no pueden buscar esta serie, porque no tiene coincidencia en IMDb.</string>
+    <string name="error_addon_lookup_show_tv">No se pudo buscar esta serie para preguntar a tus complementos. Comprueba que este televisor esté conectado a internet y vuelve a intentarlo.</string>
+    <string name="error_addon_lookup_show_device">No se pudo buscar esta serie para preguntar a tus complementos. Comprueba que este dispositivo esté conectado a internet y vuelve a intentarlo.</string>
     <string name="error_device_refused">Tu proveedor no aceptó estos datos. Revisa los datos de tu proveedor en Ajustes.</string>
     <string name="error_guide">No se pudo descargar esta guía. Vuelve a intentarlo en un momento.</string>
     <string name="error_guide_empty">Esta guía se descargó, pero no tenía programas. Comprueba que sea el enlace correcto.</string>

@@ -297,6 +297,9 @@
     <string name="error_not_an_addon_device">Tato adresa nevrátila doplněk. Zkontrolujte, že jde o odkaz na manifest.json a že internet tohoto zařízení po vás nejdřív nechce přihlášení.</string>
     <string name="error_addon_lookup_tv">Film se nepodařilo dohledat, aby se mohly zeptat vaše doplňky. Zkontrolujte, že je tato televize připojená k internetu, a zkuste to znovu.</string>
     <string name="error_addon_lookup_device">Film se nepodařilo dohledat, aby se mohly zeptat vaše doplňky. Zkontrolujte, že je toto zařízení připojené k internetu, a zkuste to znovu.</string>
+    <string name="error_addon_no_match_show">Vaše doplňky tento seriál nemohou vyhledat, protože nemá shodu na IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Seriál se nepodařilo dohledat, aby se mohly zeptat vaše doplňky. Zkontrolujte, že je tato televize připojená k internetu, a zkuste to znovu.</string>
+    <string name="error_addon_lookup_show_device">Seriál se nepodařilo dohledat, aby se mohly zeptat vaše doplňky. Zkontrolujte, že je toto zařízení připojené k internetu, a zkuste to znovu.</string>
     <string name="error_device_refused">Poskytovatel tyto údaje nepřijal. Zkontrolujte údaje poskytovatele v Nastavení.</string>
     <string name="error_guide">Tohoto průvodce se nepodařilo stáhnout. Zkuste to za chvíli znovu.</string>
     <string name="error_guide_empty">Průvodce se stáhl, ale nejsou v něm žádné pořady. Zkontrolujte, že je to správný odkaz.</string>

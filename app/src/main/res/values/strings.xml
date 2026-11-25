@@ -834,6 +834,9 @@
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
     <string name="error_addon_lookup_device">Couldn\'t look this film up to ask your add-ons. Check this device is online, then try again.</string>
+    <string name="error_addon_no_match_show">Your add-ons can\'t look this show up, as it has no match on IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Couldn\'t look this show up to ask your add-ons. Check this TV is online, then try again.</string>
+    <string name="error_addon_lookup_show_device">Couldn\'t look this show up to ask your add-ons. Check this device is online, then try again.</string>
     <string name="test_ok_xtream">Your login works.</string>
     <string name="test_ok_xtream_user">Signed in as %1$s.</string>
     <string name="test_ok_xtream_expires">Your subscription runs until %1$s.</string>

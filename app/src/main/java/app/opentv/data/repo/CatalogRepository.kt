@@ -292,6 +292,15 @@ class CatalogRepository(
         tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
     }
 
+    /** The show's IMDb id: its own id when it already is one, as Stremio-style series are, else TMDB's. */
+    suspend fun imdbIdFor(series: Series): Result<String?> = if (IMDB_ID.matches(series.seriesId)) {
+        Result.success(series.seriesId)
+    } else {
+        withContext(dispatchers.io) {
+            tmdb.imdbId(title = series.name, year = series.year, isMovie = false, tmdbId = series.tmdbId)
+        }
+    }
+
     suspend fun episode(id: Long): Episode? = episodeDao.byId(id)
 
     suspend fun series(id: Long): app.opentv.data.model.Series? = seriesDao.byId(id)
@@ -1150,6 +1159,8 @@ class CatalogRepository(
 
     companion object {
         private const val TAG = "CatalogRepository"
+
+        private val IMDB_ID = Regex("tt\\d+")
 
         /**
          * How long a film's or show's page waits on its details before drawing from the row as stored

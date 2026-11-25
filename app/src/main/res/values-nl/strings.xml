@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van dit apparaat niet eerst vraagt om je aan te melden.</string>
     <string name="error_addon_lookup_tv">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
     <string name="error_addon_lookup_device">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_addon_no_match_show">Je add-ons kunnen deze serie niet opzoeken, omdat er geen overeenkomst op IMDb is.</string>
+    <string name="error_addon_lookup_show_tv">Kon deze serie niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_addon_lookup_show_device">Kon deze serie niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_device_refused">Je provider heeft deze gegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_guide">Kan deze gids niet downloaden. Probeer het zo opnieuw.</string>
     <string name="error_guide_empty">Deze gids is gedownload, maar er stonden geen programma\'s in. Controleer of het de juiste link is.</string>

@@ -294,6 +294,9 @@
     <string name="error_not_an_addon_device">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của thiết bị này không yêu cầu bạn đăng nhập trước.</string>
     <string name="error_addon_lookup_tv">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem TV này có đang trực tuyến không, rồi thử lại.</string>
     <string name="error_addon_lookup_device">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem thiết bị này có đang trực tuyến không, rồi thử lại.</string>
+    <string name="error_addon_no_match_show">Tiện ích bổ sung của bạn không thể tra cứu chương trình này vì không có kết quả khớp trên IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Không thể tra cứu chương trình này để hỏi các tiện ích của bạn. Kiểm tra xem TV này có đang trực tuyến không, rồi thử lại.</string>
+    <string name="error_addon_lookup_show_device">Không thể tra cứu chương trình này để hỏi các tiện ích của bạn. Kiểm tra xem thiết bị này có đang trực tuyến không, rồi thử lại.</string>
     <string name="error_device_refused">Nhà cung cấp không chấp nhận các thông tin này. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_guide">Không thể tải lịch phát này. Thử lại sau giây lát.</string>
     <string name="error_guide_empty">Đã tải lịch phát này, nhưng không có chương trình nào trong đó. Kiểm tra xem liên kết có đúng không.</string>

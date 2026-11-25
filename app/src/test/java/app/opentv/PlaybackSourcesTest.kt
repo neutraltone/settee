@@ -217,6 +217,33 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `an episode's add-on stream goes with the add-on's headers, not the provider's, kept on the episode`() =
+        testing {
+            db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+            db.episodes().upsertAll(listOf(testEpisode(1, 2)))
+            val key = MediaKey.AddonStream(
+                MediaKey.Episode(12),
+                "https://example.org/addon/s1e2.mp4",
+                mapOf("Referer" to "https://example.org/"),
+            )
+
+            val playable = sources.forWatching(key)
+
+            assertThat(key.stored).isEqualTo("ep:12")
+            assertThat(playable).isEqualTo(
+                Playable.Ready(
+                    key,
+                    "https://example.org/addon/s1e2.mp4",
+                    "OpenTV/0.1 (Android)",
+                    "S1E2 · Episode 2",
+                    isLive = false,
+                    source = ReportedSource.STREMIO,
+                    requestHeaders = mapOf("Referer" to "https://example.org/"),
+                ),
+            )
+        }
+
+    @Test
     fun `catch-up plays the programme from the panel's archive, for as long as the guide says it ran`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")

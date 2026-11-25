@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamLink
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
@@ -108,6 +109,7 @@ private fun ShowPage(
     val mainAction = remember(action, show) { action?.let(show::shownAs) }
     val status = remember(show) { viewModel.seriesStatus(show.all).loaded() }.collectAsState(initial = null).value
     val favourites = viewModel.favouriteSeries.collectAsState().value
+    val hasAddons by viewModel.hasAddons.collectAsState()
     // The whole show's Versions, as its main episode has them.
     val versionKey = (mainAction?.episode ?: show.shown.firstOrNull())?.let { MediaKey.Episode(it.id) }
     LaunchedEffect(versionKey) { versionKey?.let { versions = it to viewModel.pageVersions(it) } }
@@ -143,6 +145,13 @@ private fun ShowPage(
         onOpenSeries = onOpenSeries,
         suggestionsKnown = suggestions != null,
         episodeFetch = episodes,
+        findAddonStreams = if (hasAddons) ({ episode -> viewModel.addonStreams(series, episode) }) else null,
+        onPlayAddonStream = { episode, stream ->
+            // Only links are offered so far: torrents wait for the engine that will play them.
+            (stream.link as? StreamLink.Direct)?.let {
+                onPlayEpisode(MediaKey.AddonStream(MediaKey.Episode(episode.id), it.url, it.headers))
+            }
+        },
     )
 }
 

@@ -296,6 +296,9 @@
     <string name="error_not_an_addon_device">Cette adresse n\'a pas donné d\'extension. Vérifiez que c\'est le lien manifest.json et que la connexion de cet appareil ne demande pas de vous connecter d\'abord.</string>
     <string name="error_addon_lookup_tv">Impossible de rechercher ce film pour interroger vos extensions. Vérifiez que cette télévision est connectée, puis réessayez.</string>
     <string name="error_addon_lookup_device">Impossible de rechercher ce film pour interroger vos extensions. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_addon_no_match_show">Vos modules ne peuvent pas rechercher cette série, car elle n\'a pas de correspondance sur IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Impossible de rechercher cette série pour interroger vos extensions. Vérifiez que cette télévision est connectée, puis réessayez.</string>
+    <string name="error_addon_lookup_show_device">Impossible de rechercher cette série pour interroger vos extensions. Vérifiez que cet appareil est connecté, puis réessayez.</string>
     <string name="error_device_refused">Votre fournisseur n\'a pas accepté ces informations. Vérifiez les informations de votre fournisseur dans les Paramètres.</string>
     <string name="error_guide">Impossible de télécharger ce guide. Réessayez dans un instant.</string>
     <string name="error_guide_empty">Ce guide a été téléchargé, mais il ne contenait aucun programme. Vérifiez que c\'est le bon lien.</string>

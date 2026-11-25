@@ -255,4 +255,17 @@ class AddonStreamsTest {
         assertThat(network.hosts()).containsExactly("unknown.example.com")
         assertThat(found.outcomes.map { it.addonName }).containsExactly("Not read yet")
     }
+
+    @Test
+    fun `an episode is asked by its show's IMDb id, season and episode, and only of add-ons that serve series`() {
+        addon("films.example.com", "Films only", streams(), types = listOf("movie"))
+        addon("shows.example.com", "Shows", streams(direct("https://example.com/s2e5.mkv")))
+
+        val found = runBlocking { withTimeout(10_000) { addonStreams().forEpisode("tt0000002", 2, 5).last() } }
+
+        assertThat(network.asked.map { it.url.encodedPath }).containsExactly("/stream/series/tt0000002:2:5.json")
+        assertThat(found.outcomes.map { it.addonName }).containsExactly("Shows")
+        val links = found.streams.map { it.stream.link }
+        assertThat(links).containsExactly(StreamLink.Direct("https://example.com/s2e5.mkv"))
+    }
 }

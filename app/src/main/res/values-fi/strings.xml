@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän laitteen internetyhteys vaadi ensin kirjautumista.</string>
     <string name="error_addon_lookup_tv">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_addon_lookup_device">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_no_match_show">Lisäosasi eivät voi hakea tätä sarjaa, koska sille ei löydy vastinetta IMDb:stä.</string>
+    <string name="error_addon_lookup_show_tv">Sarjaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_lookup_show_device">Sarjaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>
