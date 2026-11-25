@@ -850,6 +850,12 @@
     <string name="manager_failed_device">Couldn\'t start the channel manager on this device. Try again in a moment.</string>
     <string name="manager_timed_out">The channel manager closed after a while unused. Open it again when you need it.</string>
     <string name="manager_too_many_codes">The channel manager closed after too many wrong codes. Open it again to start over.</string>
+    <string name="manager_page_unreachable">Couldn\'t reach the TV. Check Manage on phone or laptop is still open on it and you\'re on the same Wi-Fi, then reload this page.</string>
+    <string name="manager_page_closed">The TV closed the channel manager. Open Manage on phone or laptop on the TV again, then reload this page.</string>
+    <string name="manager_page_not_saved">The TV didn\'t save that change. Try again.</string>
+    <string name="manager_page_not_loaded">The TV couldn\'t send this list. Reload this page to try again.</string>
+    <string name="manager_page_nas_required">Add your NAS\'s address and share, then save again.</string>
+    <string name="manager_page_provider_required">Fill in every detail this kind of provider needs, then try again.</string>
     <string name="pairing_no_network_tv">This TV isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
     <string name="pairing_no_network_device">This device isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
     <string name="pairing_failed_tv">Couldn\'t start pairing on this TV. Try again in a moment.</string>

@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Kunne ikke starte kanalbehandlingen på denne enheten. Prøv igjen om litt.</string>
     <string name="manager_timed_out">Kanalbehandlingen ble lukket etter en stund uten bruk. Åpne den igjen når du trenger den.</string>
     <string name="manager_too_many_codes">Kanalbehandlingen ble lukket etter for mange feil koder. Åpne den igjen for å begynne på nytt.</string>
+    <string name="manager_page_unreachable">Fikk ikke kontakt med TV-en. Sjekk at kanalbehandlingen fortsatt er åpen på den, og at du er på samme Wi-Fi, og last inn siden på nytt.</string>
+    <string name="manager_page_closed">TV-en lukket kanalbehandlingen. Åpne den igjen på TV-en, og last inn siden på nytt.</string>
+    <string name="manager_page_not_saved">TV-en lagret ikke endringen. Prøv igjen.</string>
+    <string name="manager_page_not_loaded">TV-en kunne ikke sende listen. Last inn siden på nytt for å prøve igjen.</string>
+    <string name="manager_page_nas_required">Legg til adressen og den delte mappen til NAS-en din, og lagre på nytt.</string>
+    <string name="manager_page_provider_required">Fyll inn alle opplysningene denne typen leverandør trenger, og prøv igjen.</string>
     <string name="pairing_no_network_tv">Denne TV-en er ikke koblet til et nettverk, så mobilen din får ikke kontakt med den. Koble den til, og prøv så igjen.</string>
     <string name="pairing_no_network_device">Denne enheten er ikke koblet til et nettverk, så mobilen din får ikke kontakt med den. Koble den til, og prøv så igjen.</string>
     <string name="pairing_failed_tv">Kunne ikke starte parkobling på denne TV-en. Prøv igjen om litt.</string>

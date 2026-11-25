@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Bu cihazda kanal yöneticisi başlatılamadı. Birazdan tekrar deneyin.</string>
     <string name="manager_timed_out">Kanal yöneticisi bir süre kullanılmayınca kapandı. İhtiyacınız olduğunda yeniden açın.</string>
     <string name="manager_too_many_codes">Kanal yöneticisi çok fazla yanlış koddan sonra kapandı. Baştan başlamak için yeniden açın.</string>
+    <string name="manager_page_unreachable">Televizyona ulaşılamadı. Kanal yöneticisinin televizyonda hâlâ açık olduğunu ve aynı Wi-Fi ağında olduğunuzu kontrol edin, ardından bu sayfayı yeniden yükleyin.</string>
+    <string name="manager_page_closed">Televizyon kanal yöneticisini kapattı. Televizyonda yeniden açın, ardından bu sayfayı yeniden yükleyin.</string>
+    <string name="manager_page_not_saved">Televizyon bu değişikliği kaydetmedi. Yeniden deneyin.</string>
+    <string name="manager_page_not_loaded">Televizyon bu listeyi gönderemedi. Yeniden denemek için bu sayfayı yeniden yükleyin.</string>
+    <string name="manager_page_nas_required">NAS cihazınızın adresini ve paylaşılan klasörünü ekleyin, ardından yeniden kaydedin.</string>
+    <string name="manager_page_provider_required">Bu tür sağlayıcının gerektirdiği tüm bilgileri doldurun, ardından yeniden deneyin.</string>
     <string name="pairing_no_network_tv">Bu TV bir ağa bağlı değil, bu yüzden telefonunuz ona ulaşamıyor. Bağlayın, ardından tekrar deneyin.</string>
     <string name="pairing_no_network_device">Bu cihaz bir ağa bağlı değil, bu yüzden telefonunuz ona ulaşamıyor. Bağlayın, ardından tekrar deneyin.</string>
     <string name="pairing_failed_tv">Bu TV\'de eşleştirme başlatılamadı. Birazdan tekrar deneyin.</string>

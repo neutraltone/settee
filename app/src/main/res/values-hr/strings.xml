@@ -313,6 +313,12 @@
     <string name="manager_failed_device">Nije moguće pokrenuti upravitelja kanalima na ovom uređaju. Pokušajte ponovno za trenutak.</string>
     <string name="manager_timed_out">Upravitelj kanalima zatvorio se nakon što se neko vrijeme nije koristio. Ponovno ga otvorite kad vam zatreba.</string>
     <string name="manager_too_many_codes">Upravitelj kanalima zatvorio se nakon previše pogrešnih kodova. Ponovno ga otvorite da krenete ispočetka.</string>
+    <string name="manager_page_unreachable">Televizor nije dostupan. Provjerite je li upravitelj kanalima na njemu još otvoren i jeste li na istoj Wi-Fi mreži, a zatim ponovno učitajte ovu stranicu.</string>
+    <string name="manager_page_closed">Televizor je zatvorio upravitelj kanalima. Ponovno ga otvorite na televizoru, a zatim ponovno učitajte ovu stranicu.</string>
+    <string name="manager_page_not_saved">Televizor nije spremio tu promjenu. Pokušajte ponovno.</string>
+    <string name="manager_page_not_loaded">Televizor nije mogao poslati ovaj popis. Ponovno učitajte stranicu da biste pokušali opet.</string>
+    <string name="manager_page_nas_required">Dodajte adresu i dijeljenu mapu svog NAS-a, a zatim ponovno spremite.</string>
+    <string name="manager_page_provider_required">Ispunite sve podatke koje ova vrsta pružatelja treba, a zatim pokušajte ponovno.</string>
     <string name="pairing_no_network_tv">Ovaj TV nije spojen na mrežu, pa mu vaš telefon ne može pristupiti. Spojite ga, zatim pokušajte ponovno.</string>
     <string name="pairing_no_network_device">Ovaj uređaj nije spojen na mrežu, pa mu vaš telefon ne može pristupiti. Spojite ga, zatim pokušajte ponovno.</string>
     <string name="pairing_failed_tv">Nije moguće pokrenuti uparivanje na ovom TV-u. Pokušajte ponovno za trenutak.</string>

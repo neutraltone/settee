@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Kunne ikke starte kanaladministratoren på denne enhed. Prøv igen om lidt.</string>
     <string name="manager_timed_out">Kanaladministratoren lukkede efter et stykke tid uden brug. Åbn den igen, når du har brug for den.</string>
     <string name="manager_too_many_codes">Kanaladministratoren lukkede efter for mange forkerte koder. Åbn den igen for at starte forfra.</string>
+    <string name="manager_page_unreachable">Kunne ikke nå tv\'et. Tjek, at kanaladministratoren stadig er åben på det, og at du er på samme Wi-Fi, og genindlæs så siden.</string>
+    <string name="manager_page_closed">Tv\'et lukkede kanaladministratoren. Åbn den igen på tv\'et, og genindlæs så siden.</string>
+    <string name="manager_page_not_saved">Tv\'et gemte ikke ændringen. Prøv igen.</string>
+    <string name="manager_page_not_loaded">Tv\'et kunne ikke sende listen. Genindlæs siden for at prøve igen.</string>
+    <string name="manager_page_nas_required">Tilføj din NAS\' adresse og delte mappe, og gem så igen.</string>
+    <string name="manager_page_provider_required">Udfyld alle de oplysninger, denne type udbyder skal bruge, og prøv så igen.</string>
     <string name="pairing_no_network_tv">Dette tv er ikke på et netværk, så din telefon kan ikke nå det. Forbind det, og prøv så igen.</string>
     <string name="pairing_no_network_device">Denne enhed er ikke på et netværk, så din telefon kan ikke nå den. Forbind den, og prøv så igen.</string>
     <string name="pairing_failed_tv">Kunne ikke starte parring på dette tv. Prøv igen om lidt.</string>

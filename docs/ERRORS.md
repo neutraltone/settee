@@ -346,6 +346,30 @@ isn't a web address. Check it's typed as the guide's link shows it, such as exam
 | Diagnostics: saving a report with no NAS set up | `sync_nas_needs_setup` | Set up your NAS under Settings → Recording first, then come back here. | none | Viewer's setup |
 | Diagnostics: saving a report to the NAS failed | `sync_nas_failed` | Couldn't reach your NAS. Check it's on and the details in Recording settings are right. | exception type | The NAS, or the network |
 
+## Channel manager page
+
+The page a phone or laptop opens from Manage on phone or laptop (`pairing/ManagerPage`), served by the
+TV (`ManagerServer`). Its failures are worded on the TV from these strings, in the app's language, and
+shown on the page as a toast (or in place of a list that didn't load), with the status as its detail
+line. The page tells a request nothing answered (the browser's fetch rejected) from one the TV answered
+with something other than OK. A manager the TV closed, after 30 minutes unused or when the viewer left
+the pane, takes its socket with it, so the page sees nothing answer, and its sentence covers both that and
+the wifi. A change the TV failed with an exception is answered 500 rather than dropped (#488).
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| Nothing answered: the manager closed on the TV, the TV is off, or the phone is on another network | `manager_page_unreachable` | Couldn't reach the TV. Check Manage on phone or laptop is still open on it and you're on the same Wi-Fi, then reload this page. | none | The manager closed, or the network |
+| HTTP 403 (a token that isn't this session's, from a page left open before the manager was opened again) or 404 (the manager closing as the request came in) | `manager_page_closed` | The TV closed the channel manager. Open Manage on phone or laptop on the TV again, then reload this page. | HTTP 403 or 404 | The manager closed |
+| A change (favourite, hide, rename, reorder, NAS details, adding a provider) answered 400 or 500 | `manager_page_not_saved` | The TV didn't save that change. Try again. | HTTP 400 or 500 | The TV, or a request cut off |
+| Categories or a category's channels answered 400 or 500 | `manager_page_not_loaded` | The TV couldn't send this list. Reload this page to try again. | HTTP status | The TV |
+| Recording: Save without the NAS's address or share | `manager_page_nas_required` | Add your NAS's address and share, then save again. | none | Viewer's typing |
+| Add a provider or Test: a detail its kind needs left out, checked on the page and again on the TV | `manager_page_provider_required` | Fill in every detail this kind of provider needs, then try again. | none | Viewer's typing |
+| Recording's Test connection failing, when the TV's answer leaves out its sentence | `recset_status_failed` | As Settings | none | As Settings |
+| A provider's Test failing, when the TV's answer leaves out its sentence | `error_test_failed` | As Provider connection | none | As Provider connection |
+
+Testing the NAS or a provider and adding a provider otherwise show the TV's own sentence and detail line:
+see Settings and Provider connection.
+
 ## Add-ons
 
 Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` throws. In Settings › Add-ons,

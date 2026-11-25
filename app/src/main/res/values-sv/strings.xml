@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Det gick inte att starta kanalhanteraren på den här enheten. Försök igen om en stund.</string>
     <string name="manager_timed_out">Kanalhanteraren stängdes efter en stund utan användning. Öppna den igen när du behöver den.</string>
     <string name="manager_too_many_codes">Kanalhanteraren stängdes efter för många felaktiga koder. Öppna den igen för att börja om.</string>
+    <string name="manager_page_unreachable">Det gick inte att nå tv:n. Kontrollera att kanalhanteraren fortfarande är öppen på den och att du är på samma Wi-Fi, och läs sedan in sidan igen.</string>
+    <string name="manager_page_closed">Tv:n stängde kanalhanteraren. Öppna den igen på tv:n och läs sedan in sidan igen.</string>
+    <string name="manager_page_not_saved">Tv:n sparade inte ändringen. Försök igen.</string>
+    <string name="manager_page_not_loaded">Tv:n kunde inte skicka listan. Läs in sidan igen för att försöka igen.</string>
+    <string name="manager_page_nas_required">Lägg till adressen och den delade mappen för din NAS och spara sedan igen.</string>
+    <string name="manager_page_provider_required">Fyll i alla uppgifter som den här typen av leverantör behöver och försök sedan igen.</string>
     <string name="pairing_no_network_tv">Den här TV:n är inte ansluten till ett nätverk, så din mobil når den inte. Anslut den och försök sedan igen.</string>
     <string name="pairing_no_network_device">Den här enheten är inte ansluten till ett nätverk, så din mobil når den inte. Anslut den och försök sedan igen.</string>
     <string name="pairing_failed_tv">Det gick inte att starta parkopplingen på den här TV:n. Försök igen om en stund.</string>

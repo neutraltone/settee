@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Die Senderverwaltung konnte auf diesem Gerät nicht gestartet werden. Versuch es gleich noch einmal.</string>
     <string name="manager_timed_out">Die Senderverwaltung wurde geschlossen, weil sie eine Weile nicht genutzt wurde. Öffne sie wieder, wenn du sie brauchst.</string>
     <string name="manager_too_many_codes">Die Senderverwaltung wurde nach zu vielen falschen Codes geschlossen. Öffne sie wieder, um neu anzufangen.</string>
+    <string name="manager_page_unreachable">Der Fernseher ist nicht erreichbar. Prüfe, ob die Senderverwaltung dort noch geöffnet ist und du im selben WLAN bist, und lade die Seite dann neu.</string>
+    <string name="manager_page_closed">Der Fernseher hat die Senderverwaltung geschlossen. Öffne sie auf dem Fernseher erneut und lade die Seite dann neu.</string>
+    <string name="manager_page_not_saved">Der Fernseher hat diese Änderung nicht gespeichert. Versuch es noch einmal.</string>
+    <string name="manager_page_not_loaded">Der Fernseher konnte diese Liste nicht senden. Lade die Seite neu, um es noch einmal zu versuchen.</string>
+    <string name="manager_page_nas_required">Gib die Adresse und die Freigabe deines NAS an und speichere dann erneut.</string>
+    <string name="manager_page_provider_required">Fülle alle Angaben aus, die diese Art von Anbieter braucht, und versuch es dann noch einmal.</string>
     <string name="pairing_no_network_tv">Dieser Fernseher ist mit keinem Netzwerk verbunden, deshalb erreicht ihn dein Smartphone nicht. Verbinde ihn und versuch es dann erneut.</string>
     <string name="pairing_no_network_device">Dieses Gerät ist mit keinem Netzwerk verbunden, deshalb erreicht es dein Smartphone nicht. Verbinde es und versuch es dann erneut.</string>
     <string name="pairing_failed_tv">Die Kopplung konnte auf diesem Fernseher nicht gestartet werden. Versuch es gleich noch einmal.</string>

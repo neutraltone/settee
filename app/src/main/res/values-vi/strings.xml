@@ -311,6 +311,12 @@
     <string name="manager_failed_device">Không thể khởi động trình quản lý kênh trên thiết bị này. Thử lại sau giây lát.</string>
     <string name="manager_timed_out">Trình quản lý kênh đã đóng sau một lúc không dùng. Mở lại khi bạn cần.</string>
     <string name="manager_too_many_codes">Trình quản lý kênh đã đóng vì nhập sai mã quá nhiều lần. Mở lại để bắt đầu từ đầu.</string>
+    <string name="manager_page_unreachable">Không kết nối được với TV. Hãy kiểm tra trình quản lý kênh vẫn đang mở trên TV và bạn đang dùng cùng Wi-Fi, rồi tải lại trang này.</string>
+    <string name="manager_page_closed">TV đã đóng trình quản lý kênh. Hãy mở lại trên TV, rồi tải lại trang này.</string>
+    <string name="manager_page_not_saved">TV chưa lưu thay đổi đó. Hãy thử lại.</string>
+    <string name="manager_page_not_loaded">TV không gửi được danh sách này. Hãy tải lại trang này để thử lại.</string>
+    <string name="manager_page_nas_required">Hãy thêm địa chỉ và thư mục chia sẻ của NAS, rồi lưu lại.</string>
+    <string name="manager_page_provider_required">Hãy điền mọi thông tin mà loại nhà cung cấp này cần, rồi thử lại.</string>
     <string name="pairing_no_network_tv">TV này chưa kết nối mạng nên điện thoại của bạn không thể truy cập. Hãy kết nối, rồi thử lại.</string>
     <string name="pairing_no_network_device">Thiết bị này chưa kết nối mạng nên điện thoại của bạn không thể truy cập. Hãy kết nối, rồi thử lại.</string>
     <string name="pairing_failed_tv">Không thể bắt đầu ghép nối trên TV này. Thử lại sau giây lát.</string>

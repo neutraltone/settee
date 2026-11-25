@@ -312,6 +312,12 @@
     <string name="manager_failed_device">इस डिवाइस पर चैनल मैनेजर शुरू नहीं हो सका। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="manager_timed_out">कुछ देर इस्तेमाल न होने पर चैनल मैनेजर बंद हो गया। ज़रूरत हो तो इसे फिर से खोलें।</string>
     <string name="manager_too_many_codes">बहुत सारे गलत कोड के बाद चैनल मैनेजर बंद हो गया। फिर से शुरू करने के लिए इसे दोबारा खोलें।</string>
+    <string name="manager_page_unreachable">टीवी तक नहीं पहुँच सके। देखें कि उस पर चैनल मैनेजर अब भी खुला है और आप उसी Wi-Fi पर हैं, फिर यह पेज दोबारा लोड करें।</string>
+    <string name="manager_page_closed">टीवी ने चैनल मैनेजर बंद कर दिया। उसे टीवी पर फिर से खोलें, फिर यह पेज दोबारा लोड करें।</string>
+    <string name="manager_page_not_saved">टीवी ने यह बदलाव सेव नहीं किया। फिर से कोशिश करें।</string>
+    <string name="manager_page_not_loaded">टीवी यह सूची नहीं भेज सका। फिर से कोशिश करने के लिए यह पेज दोबारा लोड करें।</string>
+    <string name="manager_page_nas_required">अपने NAS का पता और शेयर जोड़ें, फिर दोबारा सेव करें।</string>
+    <string name="manager_page_provider_required">इस तरह के प्रोवाइडर के लिए ज़रूरी सारी जानकारी भरें, फिर से कोशिश करें।</string>
     <string name="pairing_no_network_tv">यह टीवी किसी नेटवर्क पर नहीं है, इसलिए आपका फ़ोन इस तक नहीं पहुंच सकता। इसे कनेक्ट करें, फिर कोशिश करें।</string>
     <string name="pairing_no_network_device">यह डिवाइस किसी नेटवर्क पर नहीं है, इसलिए आपका फ़ोन इस तक नहीं पहुंच सकता। इसे कनेक्ट करें, फिर कोशिश करें।</string>
     <string name="pairing_failed_tv">इस टीवी पर पेयरिंग शुरू नहीं हो सकी। थोड़ी देर में फिर कोशिश करें।</string>

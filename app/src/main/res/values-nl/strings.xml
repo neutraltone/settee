@@ -312,6 +312,12 @@
     <string name="manager_failed_device">Kan het zenderbeheer niet starten op dit apparaat. Probeer het zo opnieuw.</string>
     <string name="manager_timed_out">Het zenderbeheer is gesloten omdat het een tijd niet werd gebruikt. Open het opnieuw als je het nodig hebt.</string>
     <string name="manager_too_many_codes">Het zenderbeheer is gesloten na te veel verkeerde codes. Open het opnieuw om opnieuw te beginnen.</string>
+    <string name="manager_page_unreachable">Kan de tv niet bereiken. Controleer of het zenderbeheer daar nog open staat en je op dezelfde wifi zit, en laad deze pagina dan opnieuw.</string>
+    <string name="manager_page_closed">De tv heeft het zenderbeheer gesloten. Open het opnieuw op de tv en laad deze pagina dan opnieuw.</string>
+    <string name="manager_page_not_saved">De tv heeft deze wijziging niet opgeslagen. Probeer het opnieuw.</string>
+    <string name="manager_page_not_loaded">De tv kon deze lijst niet sturen. Laad deze pagina opnieuw om het nog eens te proberen.</string>
+    <string name="manager_page_nas_required">Vul het adres en de gedeelde map van je NAS in en sla dan opnieuw op.</string>
+    <string name="manager_page_provider_required">Vul alle gegevens in die dit soort provider nodig heeft en probeer het dan opnieuw.</string>
     <string name="pairing_no_network_tv">Deze tv is niet met een netwerk verbonden, dus je telefoon kan hem niet bereiken. Verbind hem en probeer het dan opnieuw.</string>
     <string name="pairing_no_network_device">Dit apparaat is niet met een netwerk verbonden, dus je telefoon kan het niet bereiken. Verbind het en probeer het dan opnieuw.</string>
     <string name="pairing_failed_tv">Kan koppelen niet starten op deze tv. Probeer het zo opnieuw.</string>

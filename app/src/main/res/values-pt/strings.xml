@@ -313,6 +313,12 @@
     <string name="manager_failed_device">Não foi possível iniciar o gestor de canais neste dispositivo. Tente novamente daqui a pouco.</string>
     <string name="manager_timed_out">O gestor de canais fechou depois de algum tempo sem uso. Abra-o novamente quando precisar.</string>
     <string name="manager_too_many_codes">O gestor de canais fechou depois de demasiados códigos errados. Abra-o novamente para recomeçar.</string>
+    <string name="manager_page_unreachable">Não foi possível contactar a televisão. Verifique se o gestor de canais continua aberto nela e se está na mesma rede Wi-Fi, e depois recarregue esta página.</string>
+    <string name="manager_page_closed">A televisão fechou o gestor de canais. Abra-o novamente na televisão e depois recarregue esta página.</string>
+    <string name="manager_page_not_saved">A televisão não guardou essa alteração. Tente novamente.</string>
+    <string name="manager_page_not_loaded">A televisão não conseguiu enviar esta lista. Recarregue esta página para tentar novamente.</string>
+    <string name="manager_page_nas_required">Adicione o endereço e a pasta partilhada do seu NAS e depois guarde novamente.</string>
+    <string name="manager_page_provider_required">Preencha todos os dados de que este tipo de fornecedor precisa e tente novamente.</string>
     <string name="pairing_no_network_tv">Esta televisão não está ligada a uma rede, por isso o seu telemóvel não a consegue alcançar. Ligue-a e tente novamente.</string>
     <string name="pairing_no_network_device">Este dispositivo não está ligado a uma rede, por isso o seu telemóvel não o consegue alcançar. Ligue-o e tente novamente.</string>
     <string name="pairing_failed_tv">Não foi possível iniciar o emparelhamento nesta televisão. Tente novamente daqui a pouco.</string>
