@@ -137,7 +137,7 @@ class TestGraph(
             http = http,
             settingsFile = name,
             clock = clock ?: System::currentTimeMillis,
-            zone = zone,
+            zoneOverride = zone,
             dispatchers = AppDispatchers(io, default),
             decoders = decoders ?: DeviceDecoders(),
             openRecordingFile = openRecordingFile,
