@@ -287,6 +287,7 @@
     <string name="error_addon_cant_reach_tv">Không thể kết nối tới tiện ích. Kiểm tra xem TV này có đang trực tuyến và địa chỉ có đúng không.</string>
     <string name="error_addon_cant_reach_device">Không thể kết nối tới tiện ích. Kiểm tra xem thiết bị này có đang trực tuyến và địa chỉ có đúng không.</string>
     <string name="error_addon_timed_out">Tiện ích đã ngừng phản hồi. Có thể nó đang bận, vì vậy hãy thử lại sau giây lát.</string>
+    <string name="error_addon_bad_address">Đây không phải là địa chỉ web. Hãy kiểm tra xem bạn có gõ sai không.</string>
     <string name="error_addon_trouble">Tiện ích đang gặp sự cố. Đó là vấn đề phía tiện ích, vì vậy hãy thử lại sau.</string>
     <string name="error_not_an_addon_tv">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của TV này không yêu cầu bạn đăng nhập trước.</string>
     <string name="error_not_an_addon_device">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của thiết bị này không yêu cầu bạn đăng nhập trước.</string>

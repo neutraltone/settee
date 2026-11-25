@@ -289,6 +289,7 @@
     <string name="error_addon_cant_reach_tv">Suplimentul nu poate fi contactat. Verifică dacă acest televizor este online și dacă adresa este corectă.</string>
     <string name="error_addon_cant_reach_device">Suplimentul nu poate fi contactat. Verifică dacă acest dispozitiv este online și dacă adresa este corectă.</string>
     <string name="error_addon_timed_out">Suplimentul nu mai răspunde. Poate fi ocupat, așa că încearcă din nou peste puțin timp.</string>
+    <string name="error_addon_bad_address">Aceasta nu este o adresă web. Verifică dacă ai greșit ceva la scriere.</string>
     <string name="error_addon_trouble">Suplimentul are probleme. Sunt de partea lui, așa că încearcă din nou mai târziu.</string>
     <string name="error_not_an_addon_tv">Adresa nu a dat un supliment. Verifică dacă este linkul către manifest.json și dacă internetul acestui televizor nu îți cere mai întâi să te conectezi.</string>
     <string name="error_not_an_addon_device">Adresa nu a dat un supliment. Verifică dacă este linkul către manifest.json și dacă internetul acestui dispozitiv nu îți cere mai întâi să te conectezi.</string>

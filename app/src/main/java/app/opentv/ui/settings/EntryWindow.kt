@@ -33,6 +33,7 @@ internal fun EntryWindow(
     maxLength: Int? = null,
     allowBlank: Boolean = false,
     refusal: (String) -> String? = { null },
+    error: Pair<String, String>? = null,
 ) {
     Dialog(
         onDismissRequest = onCancel,
@@ -53,6 +54,7 @@ internal fun EntryWindow(
             maxLength = maxLength,
             allowBlank = allowBlank,
             refusal = refusal,
+            error = error,
         )
     }
 }

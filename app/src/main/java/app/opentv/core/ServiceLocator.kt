@@ -21,6 +21,7 @@ import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
+import app.opentv.data.repo.AddonRepository
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryLockCarry
@@ -205,6 +206,9 @@ object ServiceLocator {
 
         /** Neutral Stremio add-on protocol client. Talks only to user-added manifest URLs. */
         val stremioClient: StremioClient by lazy { StremioClient(httpClient) }
+
+        /** The viewer's add-ons: adding one by its address, and the stored list. */
+        val addonRepository: AddonRepository by lazy { AddonRepository(settings, stremioClient, dispatchers) }
 
         val sourceRepository: SourceRepository by lazy {
             SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient, providerRenames, dispatchers)

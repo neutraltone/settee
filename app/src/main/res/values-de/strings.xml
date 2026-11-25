@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_tv">Das Add-on ist nicht erreichbar. Überprüfe, ob dieser Fernseher online ist und die Adresse stimmt.</string>
     <string name="error_addon_cant_reach_device">Das Add-on ist nicht erreichbar. Überprüfe, ob dieses Gerät online ist und die Adresse stimmt.</string>
     <string name="error_addon_timed_out">Das Add-on antwortet nicht mehr. Vielleicht ist es ausgelastet, also versuch es gleich noch einmal.</string>
+    <string name="error_addon_bad_address">Das ist keine Webadresse. Prüf, ob du dich vertippt hast.</string>
     <string name="error_addon_trouble">Das Add-on hat Probleme. Das liegt an ihm, also versuch es später erneut.</string>
     <string name="error_not_an_addon_tv">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Fernsehers nicht erst eine Anmeldung verlangt.</string>
     <string name="error_not_an_addon_device">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Geräts nicht erst eine Anmeldung verlangt.</string>

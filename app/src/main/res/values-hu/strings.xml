@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_tv">A bővítmény nem érhető el. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
     <string name="error_addon_cant_reach_device">A bővítmény nem érhető el. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
     <string name="error_addon_timed_out">A bővítmény nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
+    <string name="error_addon_bad_address">Ez nem webcím. Ellenőrizze, nem gépelte-e el.</string>
     <string name="error_addon_trouble">A bővítménynél problémák vannak. Ez az ő oldalán van, ezért próbálja újra később.</string>
     <string name="error_not_an_addon_tv">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek a TV-nek az internete nem kér-e előbb bejelentkezést.</string>
     <string name="error_not_an_addon_device">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek az eszköznek az internete nem kér-e előbb bejelentkezést.</string>

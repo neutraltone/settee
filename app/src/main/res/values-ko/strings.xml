@@ -287,6 +287,7 @@
     <string name="error_addon_cant_reach_tv">애드온에 연결할 수 없습니다. 이 TV가 온라인 상태인지, 주소가 올바른지 확인하세요.</string>
     <string name="error_addon_cant_reach_device">애드온에 연결할 수 없습니다. 이 기기가 온라인 상태인지, 주소가 올바른지 확인하세요.</string>
     <string name="error_addon_timed_out">애드온이 응답을 멈췄습니다. 사용량이 많을 수 있으니 잠시 후 다시 시도하세요.</string>
+    <string name="error_addon_bad_address">웹 주소가 아닙니다. 입력한 내용에 오타가 없는지 확인하세요.</string>
     <string name="error_addon_trouble">애드온 측에 문제가 있습니다. 애드온 쪽 문제이니 나중에 다시 시도하세요.</string>
     <string name="error_not_an_addon_tv">이 주소에서 애드온을 받지 못했습니다. manifest.json 링크인지, 이 TV의 인터넷이 먼저 로그인을 요구하지 않는지 확인하세요.</string>
     <string name="error_not_an_addon_device">이 주소에서 애드온을 받지 못했습니다. manifest.json 링크인지, 이 기기의 인터넷이 먼저 로그인을 요구하지 않는지 확인하세요.</string>

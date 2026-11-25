@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
@@ -34,6 +35,10 @@ import androidx.compose.ui.unit.dp
  * nor anything [refusal] turns down; its reason shows under the box. [hint]
  * is a quiet line under that, such as where else the setting can be typed. Text longer than
  * [maxLength] is cut to fit, however it arrives.
+ *
+ * [error] is why a save that had to be checked elsewhere was turned down, as a sentence and its
+ * detail line: the screen stays, with what was typed, so the viewer can fix it rather than type it
+ * all again.
  */
 @Composable
 fun EntryScreen(
@@ -48,6 +53,7 @@ fun EntryScreen(
     maxLength: Int? = null,
     allowBlank: Boolean = false,
     refusal: (String) -> String? = { null },
+    error: Pair<String, String>? = null,
 ) {
     val text = rememberTextFieldState(initial)
     val box = remember { FocusRequester() }
@@ -85,6 +91,10 @@ fun EntryScreen(
             refused?.let {
                 Spacer(Modifier.height(LINE_GAP))
                 Text(it, SetteeType.Body, color = SetteeColors.Accent)
+            }
+            error?.let { (sentence, detail) ->
+                Spacer(Modifier.height(LINE_GAP))
+                ErrorMessage(sentence, detail, textAlign = TextAlign.Start)
             }
             hint?.let {
                 Spacer(Modifier.height(LINE_GAP))

@@ -163,6 +163,7 @@ class ErrorWording(
             ViewerError.detailOf("NotAnAddon", failure.status?.let { "HTTP $it" }),
         )
         is AddonFailure.Http -> of(R.string.error_addon_trouble, "HTTP ${failure.status}")
+        is AddonFailure.BadAddress -> of(R.string.error_addon_bad_address, "BadAddress")
         is AddonFailure.NoLookup ->
             ofHardware(
                 R.string.error_addon_lookup_tv,

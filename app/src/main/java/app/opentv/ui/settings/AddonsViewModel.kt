@@ -11,12 +11,11 @@ import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.StremioAddon
-import app.opentv.data.remote.AddonFailure
+import app.opentv.data.repo.AddonRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Backs Add-ons: the stored add-ons, and checking a new one against the live add-on before keeping it. */
 class AddonsViewModel @JvmOverloads constructor(
@@ -38,19 +37,14 @@ class AddonsViewModel @JvmOverloads constructor(
     private val _status = MutableStateFlow<Status>(Status.Idle)
     val status: StateFlow<Status> = _status.asStateFlow()
 
-    /** Validate a pasted manifest URL against the live add-on, and store it if it checks out. */
-    fun add(rawUrl: String) {
-        val url = rawUrl.trim()
-        if (url.isBlank()) return
+    /** Checks the add-on at the address the viewer typed against the live add-on, and keeps it if it is one. */
+    fun add(typed: String) {
+        if (typed.isBlank()) return
         viewModelScope.launch {
             _status.value = Status.Checking
-            // Only an AddonFailure is caught: cancellation, or a bug, isn't "can't reach the add-on".
-            _status.value = try {
-                val name = withContext(graph.dispatchers.io) { graph.stremioClient.fetchManifest(url) }
-                graph.settings.addStremioAddon(StremioAddon(manifestUrl = url, name = name))
-                Status.Added(name)
-            } catch (failure: AddonFailure) {
-                Status.Failed(graph.errorWording.ofAddon(failure))
+            _status.value = when (val outcome = graph.addonRepository.add(typed)) {
+                is AddonRepository.Outcome.Accepted -> Status.Added(outcome.name)
+                is AddonRepository.Outcome.Refused -> Status.Failed(graph.errorWording.ofAddon(outcome.failure))
             }
         }
     }

@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_tv">Når inte tillägget. Kontrollera att den här TV:n är ansluten till internet och att adressen stämmer.</string>
     <string name="error_addon_cant_reach_device">Når inte tillägget. Kontrollera att den här enheten är ansluten till internet och att adressen stämmer.</string>
     <string name="error_addon_timed_out">Tillägget slutade svara. Det kan vara upptaget, så försök igen om en stund.</string>
+    <string name="error_addon_bad_address">Det är ingen webbadress. Kontrollera det du skrev efter fel.</string>
     <string name="error_addon_trouble">Tillägget har problem. Det ligger hos det, så försök igen senare.</string>
     <string name="error_not_an_addon_tv">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här TV:n inte kräver att du loggar in först.</string>
     <string name="error_not_an_addon_device">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här enheten inte kräver att du loggar in först.</string>

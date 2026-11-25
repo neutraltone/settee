@@ -288,6 +288,7 @@
     <string name="error_addon_cant_reach_tv">Eklentiye ulaşılamıyor. Bu TV\'nin internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
     <string name="error_addon_cant_reach_device">Eklentiye ulaşılamıyor. Bu cihazın internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
     <string name="error_addon_timed_out">Eklenti yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
+    <string name="error_addon_bad_address">Bu bir web adresi değil. Yazdığınızda hata olup olmadığını kontrol edin.</string>
     <string name="error_addon_trouble">Eklenti sorun yaşıyor. Sorun onun tarafında, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_not_an_addon_tv">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu TV\'nin internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>

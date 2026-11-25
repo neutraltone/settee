@@ -27,7 +27,7 @@ class StremioClientTest {
 
     @Test
     fun `a manifest with an id and a name gives the add-on's name`() {
-        val name = client("""{"id": "org.example.films", "name": "Films"}""").fetchManifest(manifest)
+        val name = client("""{"id": "org.example.films", "name": "Films"}""").fetchManifest(manifest).name
 
         assertThat(name).isEqualTo("Films")
     }

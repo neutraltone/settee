@@ -7,6 +7,7 @@ package app.opentv.data.remote
 
 import android.util.Log
 import app.opentv.core.HttpStatus
+import app.opentv.data.model.AddonManifest
 import app.opentv.data.model.StremioStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -44,6 +45,11 @@ sealed class AddonFailure(message: String, cause: Throwable? = null) :
      */
     class NotAnAddon(override val status: Int? = null) : AddonFailure("That isn't an add-on")
 
+    /** What was typed can't be a web address at all, so nothing was asked. */
+    class BadAddress : AddonFailure("That isn't a web address") {
+        override val status: Int? = null
+    }
+
     /**
      * A film's add-ons were never asked: TMDB, which turns the film into the IMDb id they're asked
      * by, didn't answer. Not the add-ons' fault, so worded apart from [Unreachable].
@@ -59,8 +65,8 @@ sealed class AddonFailure(message: String, cause: Throwable? = null) :
  * manifest URLs the user has pasted in themselves.
  *
  * ## What it does
- * - [fetchManifest] fetches an add-on's `manifest.json` and returns its display name if it looks
- *   like a real add-on (has an id + name), so the settings screen can validate a pasted URL, and
+ * - [fetchManifest] fetches an add-on's `manifest.json` and returns its name and what it serves if
+ *   it looks like a real add-on (has an id + name), so a pasted address can be checked, and
  *   otherwise throws an [AddonFailure] saying why not.
  * - [streams] asks an add-on for the streams it offers for a title and returns only the ones with a
  *   direct playable URL. Debrid-backed add-ons resolve a title to such a URL internally (using the
@@ -81,14 +87,20 @@ class StremioClient(
 ) {
 
     /**
-     * Fetch and lightly validate an add-on manifest: the add-on's display name, or an [AddonFailure]
+     * Fetch and lightly validate an add-on manifest: its name and what it serves, or an [AddonFailure]
      * when the address doesn't resolve to something that looks like a Stremio manifest (id + name).
      */
-    fun fetchManifest(manifestUrl: String): String {
+    fun fetchManifest(manifestUrl: String): AddonManifest {
         val url = manifestUrl.trim().toHttpUrlOrNull() ?: throw AddonFailure.NotAnAddon()
         val manifest = get(url) as? JsonObject
         val hasId = manifest?.text("id")?.isNotBlank() == true
-        return manifest?.text("name")?.takeIf { hasId && it.isNotBlank() } ?: throw AddonFailure.NotAnAddon()
+        val name = manifest?.text("name")?.takeIf { hasId && it.isNotBlank() } ?: throw AddonFailure.NotAnAddon()
+        // A resource is a name, or an object with a name and the types it serves when those differ
+        // from the add-on's own.
+        val resources = (manifest["resources"] as? JsonArray).orEmpty()
+        val names = resources.mapNotNull { (it as? JsonPrimitive)?.contentOrNull ?: (it as? JsonObject)?.text("name") }
+        val types = manifest.texts("types") + resources.flatMap { (it as? JsonObject)?.texts("types").orEmpty() }
+        return AddonManifest(name, names.distinctFilled(), types.distinctFilled())
     }
 
     /**
@@ -152,6 +164,11 @@ class StremioClient(
 
     // By hand rather than with jsonPrimitive, which throws on an object or array where text was expected (#364).
     private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
+
+    private fun List<String>.distinctFilled() = filter { it.isNotBlank() }.distinct()
+
+    private fun JsonObject.texts(key: String): List<String> =
+        (this[key] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
 
     private companion object {
         const val TAG = "StremioClient"

@@ -827,6 +827,7 @@
     <string name="error_addon_cant_reach_device">Can\'t reach the add-on. Check this device is online and the address is right.</string>
     <string name="error_addon_timed_out">The add-on stopped responding. It may be busy, so try again in a moment.</string>
     <string name="error_addon_trouble">The add-on is having problems. That\'s at its end, so try again later.</string>
+    <string name="error_addon_bad_address">That isn\'t a web address. Check what you typed for a mistake.</string>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>

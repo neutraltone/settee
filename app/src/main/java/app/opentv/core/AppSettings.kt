@@ -763,9 +763,20 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     private val _stremioAddons = MutableStateFlow(readStremioAddons())
     val stremioAddons: StateFlow<List<StremioAddon>> = _stremioAddons.asStateFlow()
 
+    /**
+     * Keeps [addon], in place of any stored one at the same address, so adding one again refreshes it
+     * without moving it: the list's order is the viewer's.
+     */
     fun addStremioAddon(addon: StremioAddon) {
-        val deduped = _stremioAddons.value.filterNot { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
-        persistStremioAddons(deduped + addon)
+        val current = _stremioAddons.value
+        val same = current.indexOfFirst { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
+        persistStremioAddons(if (same < 0) current + addon else current.toMutableList().apply { set(same, addon) })
+    }
+
+    /** Replaces the stored add-on at [addon]'s address, unless the viewer has removed it meanwhile. */
+    fun refreshStremioAddon(addon: StremioAddon) {
+        val stored = _stremioAddons.value.any { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
+        if (stored) addStremioAddon(addon)
     }
 
     fun removeStremioAddon(manifestUrl: String) {

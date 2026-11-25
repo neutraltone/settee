@@ -19,11 +19,21 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class StremioAddon(
-    /** The manifest URL the user pasted, e.g. https://…/manifest.json. Its identity for de-dup. */
+    /** The manifest URL, as https://…/manifest.json however it was typed. Its identity for de-dup. */
     val manifestUrl: String,
     /** Display name read from the add-on's manifest at add time. */
     val name: String,
+    /**
+     * What its manifest says it answers (`stream`, `catalog`, `meta`, ...), or null for one stored
+     * before Settee read them, which is read again the first time it's used.
+     */
+    val resources: List<String>? = null,
+    /** The kinds of title it serves (`movie`, `series`, ...), null as [resources] is. */
+    val types: List<String>? = null,
 )
+
+/** What an add-on's manifest says about it. */
+data class AddonManifest(val name: String, val resources: List<String>, val types: List<String>)
 
 /**
  * A single playable stream an add-on returned for a title. OpenTV keeps only streams that carry a

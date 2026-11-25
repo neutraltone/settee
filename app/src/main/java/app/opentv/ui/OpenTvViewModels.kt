@@ -1092,11 +1092,20 @@ class VodViewModel @JvmOverloads constructor(
      * only when every one failed, saying why the first did, or when TMDB didn't answer.
      */
     suspend fun addonStreams(movie: Movie): AddonStreams {
-        val addons = settings.stremioAddons.value
-        val imdb = if (addons.isEmpty()) Result.success(null) else graph.catalogRepository.imdbIdFor(movie)
+        val imdb = if (settings.stremioAddons.value.isEmpty()) {
+            Result.success(null)
+        } else {
+            graph.catalogRepository.imdbIdFor(movie)
+        }
         val answers = imdb.fold(
             onSuccess = { id ->
-                if (id == null) emptyList() else withContext(graph.dispatchers.io) { addons.map { askAddon(it, id) } }
+                if (id == null) {
+                    emptyList()
+                } else {
+                    // Only once they're to be asked: an old add-on is read again then, not before.
+                    val addons = graph.addonRepository.addons()
+                    withContext(graph.dispatchers.io) { addons.map { askAddon(it, id) } }
+                }
             },
             onFailure = { listOf(AddonAnswer.Failed(AddonFailure.NoLookup(it))) },
         )
