@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 class NasSyncTest {
 
     @get:Rule
-    val testGraph = TestGraph()
+    val testGraph = TestGraph(name = "nas-sync-test")
 
     private val graph get() = testGraph.graph
 

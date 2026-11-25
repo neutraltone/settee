@@ -35,7 +35,7 @@ class DevicesPaneTest {
     private val compose = createComposeRule()
 
     @get:Rule
-    val testGraph = TestGraph(compose)
+    val testGraph = TestGraph(compose, name = "devices-pane-test")
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
