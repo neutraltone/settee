@@ -741,11 +741,16 @@ class CatalogRepository(
 
     /**
      * Merges another device's hides and unhides, newest change wins. A dated change is kept even if
-     * the provider isn't listing that channel right now. Returns how many channels it changed here.
+     * the provider isn't listing that channel right now. Each time is taken through [ceiling] first.
+     * Returns how many channels it changed here.
      */
-    suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
+    suspend fun importHiddenChannels(
+        items: List<SyncHiddenChannel>,
+        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
+    ): Int {
         val sources = sourceDao.directory()
-        return items.count { item ->
+        return items.count { arrived ->
+            val item = arrived.copy(changedAtMillis = ceiling.clamp(arrived.changedAtMillis))
             val sourceId = sources.id(item.source) ?: return@count false
             val here = channelDao.hiddenChange(item.source, item.id)?.changedAtMillis
             if (!isNewerChange(item.changedAtMillis, here)) return@count false

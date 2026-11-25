@@ -9,8 +9,10 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.repo.ArrivalCeiling
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.data.repo.isNewerChange
 import app.opentv.sync.SyncCategoryLock
 import app.opentv.sync.SyncProfileAdd
 import app.opentv.sync.SyncProfileRename
@@ -183,20 +185,22 @@ class AppSettings private constructor(context: Context, fileName: String = "open
      * Takes each lock from another device unless it's no newer than this device's last unlock of that
      * category. An undated lock counts as the oldest possible, so only a category never unlocked
      * here takes one. Keeps the newest time, so a deliberate new lock travels on through this device.
+     * Each time is taken through [ceiling] first.
      */
-    fun importCategoryLocks(locks: List<SyncCategoryLock>) = synchronized(lockChanges) {
-        val times = categoryLockTimes().toMutableMap()
-        val taken = locks.filter { lock ->
-            val previous = times[lock.key] ?: CategoryLockTimes()
-            val unlockedAt = previous.unlockedAt
-            val takes = unlockedAt == null || lock.lockedAtMillis > unlockedAt
-            if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lock.lockedAtMillis))
-            takes
+    fun importCategoryLocks(locks: List<SyncCategoryLock>, ceiling: ArrivalCeiling = ArrivalCeiling.NONE) =
+        synchronized(lockChanges) {
+            val times = categoryLockTimes().toMutableMap()
+            val taken = locks.filter { lock ->
+                val previous = times[lock.key] ?: CategoryLockTimes()
+                val lockedAt = ceiling.clamp(lock.lockedAtMillis)
+                val takes = isNewerChange(lockedAt, previous.unlockedAt)
+                if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lockedAt))
+                takes
+            }
+            if (taken.isEmpty()) return@synchronized
+            storeCategoryLockTimes(times)
+            setHiddenCategories(hiddenCategories.value + taken.map { it.key })
         }
-        if (taken.isEmpty()) return@synchronized
-        storeCategoryLockTimes(times)
-        setHiddenCategories(hiddenCategories.value + taken.map { it.key })
-    }
 
     private fun categoryLockTimes(): Map<String, CategoryLockTimes> = runCatching {
         prefs.getString(KEY_CATEGORY_LOCK_TIMES, null)?.let {
