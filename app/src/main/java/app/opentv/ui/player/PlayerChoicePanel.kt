@@ -62,6 +62,8 @@ import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.rememberPanelSlide
+import app.opentv.ui.design.slidesInFromEnd
 
 /**
  * One row of a [PlayerChoicePanel]. [detail] is a quieter second line. [onAdjust], when set, makes
@@ -109,6 +111,7 @@ internal fun PlayerChoicePanel(
     empty: String? = null,
 ) {
     val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
+    val slide = rememberPanelSlide()
     val noRows = choices.isEmpty()
     // Whether the empty panel had the Highlight, so rows arriving (audio tracks found after the panel
     // opened) can take it over: their arrival removes what held it, and nothing else asks again.
@@ -122,6 +125,7 @@ internal fun PlayerChoicePanel(
     }
     Column(
         modifier
+            .slidesInFromEnd(slide)
             // Left to itself, Compose spends the first Back on taking focus off the row, so the
             // panel would stay up with nothing highlighted.
             .onPreviewKeyEvent { event ->
