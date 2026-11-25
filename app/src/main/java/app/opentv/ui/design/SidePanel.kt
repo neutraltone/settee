@@ -88,8 +88,10 @@ private fun SidePanelWindow(
 
 @Composable
 private fun PanelColumn(rows: FocusRequester, scrolls: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    val slide = rememberPanelSlide()
     Column(
         Modifier
+            .slidesInFromEnd(slide)
             .width(SidePanelWidth)
             .fillMaxHeight()
             .background(SetteeColors.Surface)
