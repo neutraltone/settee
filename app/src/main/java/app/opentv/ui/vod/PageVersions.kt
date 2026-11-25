@@ -31,6 +31,11 @@ data class PageVersions(
     val choices: List<VodQualities.Choice> = emptyList(),
     val otherLanguage: OtherLanguage? = null,
     val cantPlay: String? = null,
+    /**
+     * What Play stands for is a film kept from an add-on (ADR 0011), which has no stream of its own:
+     * Play opens the add-on stream picker instead.
+     */
+    val playsThroughAddons: Boolean = false,
 ) {
     /** Whether anything of the title plays here; when not, Play is turned off and [cantPlay] says why. */
     val plays: Boolean get() = cantPlay == null

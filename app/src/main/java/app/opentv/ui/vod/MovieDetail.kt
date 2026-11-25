@@ -161,7 +161,9 @@ fun MovieDetailScreen(
  * are the film's people as rows of names ([PeopleRows]), which call [onOpenPerson]. The main button resumes
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
- * Profile's Favourites have loaded, and the toggle does nothing till then. [versions] adds the Quality
+ * Profile's Favourites have loaded, and the toggle does nothing till then. When what Play stands for is a
+ * film kept from an add-on ([PageVersions.playsThroughAddons]), Play opens that picker instead, and is
+ * off with no add-on set up. [versions] adds the Quality
  * pill when the film's Versions differ, whose choice goes to [onChooseVersion]; Play asks first when only
  * another language plays, and is off, saying why, when nothing does.
  */
@@ -186,9 +188,11 @@ internal fun MovieDetailContent(
     val likeThisRow = rememberLazyListState()
     var choosingQuality by remember(movie.id) { mutableStateOf(false) }
     var askingLanguage by remember(movie.id) { mutableStateOf(false) }
-    val plays = versions.plays
     val scope = rememberCoroutineScope()
     val picker = rememberAddonPickerState(movie.id)
+    // A film kept from an add-on plays only through the picker, so with no add-on left it can't play.
+    val throughPicker = findAddonStreams.takeIf { versions.playsThroughAddons }
+    val plays = versions.plays && (!versions.playsThroughAddons || throughPicker != null)
 
     FirstHighlight(movie, spot, similar, likeThisRow, playFocus)
 
@@ -203,44 +207,29 @@ internal fun MovieDetailContent(
                 Column(Modifier.fillMaxWidth().height(heroHeight), verticalArrangement = Arrangement.Bottom) {
                     MovieHero(movie, status)
                     Spacer(Modifier.height(18.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
+                    MovieButtons(
+                        resumes = resumes,
+                        plays = plays,
+                        showsPill = versions.showsPill,
+                        favourite = favourite,
+                        onSetFavourite = onSetFavourite,
+                        onPlay = playAction(
+                            viaPicker = throughPicker?.let { find -> { picker.ask(find) } },
+                            asksLanguage = versions.otherLanguage != null,
+                            askLanguage = { askingLanguage = true },
+                            play = onPlay,
+                        ),
+                        onQuality = { choosingQuality = true },
+                        // Play is already this film's way to the picker when it's kept from an add-on.
+                        onAddonSources = findAddonStreams?.takeUnless { versions.playsThroughAddons }
+                            ?.let { find -> { picker.ask(find) } },
+                        playFocus = playFocus,
+                        spot = spot,
                         // Back on the buttons, the whole hero comes back, not just as much as shows them.
                         modifier = Modifier.onFocusChanged {
                             if (it.hasFocus) scope.launch { page.animateScrollTo(0) }
                         },
-                    ) {
-                        PillButton(
-                            label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
-                            icon = Icons.Filled.PlayArrow,
-                            onClick = { if (versions.otherLanguage != null) askingLanguage = true else onPlay() },
-                            modifier = (if (plays) Modifier.focusRequester(playFocus) else Modifier)
-                                .returnSpot(spot, null),
-                            enabled = plays,
-                        )
-                        if (versions.showsPill) {
-                            PillButton(
-                                label = stringResource(R.string.vod_quality),
-                                icon = Icons.Filled.HighQuality,
-                                onClick = { choosingQuality = true },
-                                modifier = Modifier.returnSpot(spot, null),
-                            )
-                        }
-                        // With Play off, the page opens on the star instead.
-                        FavouriteButton(
-                            favourite,
-                            onSetFavourite,
-                            (if (plays) Modifier else Modifier.focusRequester(playFocus)).returnSpot(spot, null),
-                        )
-                        if (findAddonStreams != null) {
-                            PillButton(
-                                label = stringResource(R.string.vod_addon_sources),
-                                icon = Icons.Filled.Extension,
-                                onClick = { picker.ask(findAddonStreams) },
-                                modifier = Modifier.returnSpot(spot, null),
-                            )
-                        }
-                    }
+                    )
                 }
                 versions.cantPlay?.let {
                     Text(
@@ -283,6 +272,65 @@ internal fun MovieDetailContent(
     )
 
     if (findAddonStreams != null) AddonStreamPicker(picker, findAddonStreams) { onPlayAddonStream(it.stream) }
+}
+
+/** What Play does: opens the add-on picker [viaPicker] if given, else asks about the language first, or plays. */
+private fun playAction(
+    viaPicker: (() -> Unit)?,
+    asksLanguage: Boolean,
+    askLanguage: () -> Unit,
+    play: () -> Unit,
+): () -> Unit = viaPicker ?: if (asksLanguage) askLanguage else play
+
+/**
+ * The hero's buttons: Play (Resume when [resumes]), the Quality pill when [showsPill], the star, and
+ * Add-on sources when [onAddonSources] is given. With Play off, [playFocus] goes on the star instead,
+ * so the page opens there.
+ */
+@Composable
+private fun MovieButtons(
+    resumes: Boolean,
+    plays: Boolean,
+    showsPill: Boolean,
+    favourite: Boolean?,
+    onSetFavourite: (Boolean) -> Unit,
+    onPlay: () -> Unit,
+    onQuality: () -> Unit,
+    onAddonSources: (() -> Unit)?,
+    playFocus: FocusRequester,
+    spot: ReturnSpot,
+    modifier: Modifier = Modifier,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap), modifier = modifier) {
+        PillButton(
+            label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
+            icon = Icons.Filled.PlayArrow,
+            onClick = onPlay,
+            modifier = (if (plays) Modifier.focusRequester(playFocus) else Modifier).returnSpot(spot, null),
+            enabled = plays,
+        )
+        if (showsPill) {
+            PillButton(
+                label = stringResource(R.string.vod_quality),
+                icon = Icons.Filled.HighQuality,
+                onClick = onQuality,
+                modifier = Modifier.returnSpot(spot, null),
+            )
+        }
+        FavouriteButton(
+            favourite,
+            onSetFavourite,
+            (if (plays) Modifier else Modifier.focusRequester(playFocus)).returnSpot(spot, null),
+        )
+        if (onAddonSources != null) {
+            PillButton(
+                label = stringResource(R.string.vod_addon_sources),
+                icon = Icons.Filled.Extension,
+                onClick = onAddonSources,
+                modifier = Modifier.returnSpot(spot, null),
+            )
+        }
+    }
 }
 
 /**

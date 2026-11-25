@@ -302,6 +302,8 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                 SourceKind.XTREAM -> username.isNotBlank() && password.isNotBlank()
                 SourceKind.M3U -> true
                 SourceKind.STALKER -> mac.isNotBlank()
+                // Built in, never added here.
+                SourceKind.ADDONS -> false
             }
 
     /**
@@ -356,7 +358,8 @@ private fun KindFields(details: ProviderDetails, modifier: Modifier = Modifier) 
     val (urlLabel, urlHelp) = when (details.kind) {
         SourceKind.XTREAM -> R.string.onboarding_server_address to R.string.onboarding_server_help
         SourceKind.M3U -> R.string.onboarding_playlist_url to R.string.onboarding_playlist_help
-        SourceKind.STALKER -> R.string.onboarding_portal_url to R.string.onboarding_portal_help
+        // The Add-ons source is never edited here; it only needs a branch.
+        SourceKind.STALKER, SourceKind.ADDONS -> R.string.onboarding_portal_url to R.string.onboarding_portal_help
     }
     TextField(
         value = details.name,

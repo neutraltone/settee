@@ -23,6 +23,7 @@ import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.AddonRepository
 import app.opentv.data.repo.AddonStreams
+import app.opentv.data.repo.AddonTitles
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryLockCarry
@@ -214,6 +215,11 @@ object ServiceLocator {
         /** The one thing that asks add-ons for streams, ranked for this device's decoders. */
         val addonStreams: AddonStreams by lazy {
             AddonStreams(stremioClient, decoders, dispatchers) { addonRepository.addons() }
+        }
+
+        /** Films the Provider doesn't carry, found through TMDB and kept under the Add-ons source. */
+        val addonTitles: AddonTitles by lazy {
+            AddonTitles(database, tmdb, dispatchers) { settings.stremioAddons.value.isNotEmpty() }
         }
 
         val sourceRepository: SourceRepository by lazy {

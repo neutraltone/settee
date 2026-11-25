@@ -13,8 +13,10 @@ import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.parseReleaseDate
 import java.io.IOException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
@@ -48,6 +50,17 @@ data class TmdbMeta(
     val releaseDate: Long? = null,
     /** TMDB ids of the titles TMDB recommends for this one, in its order; same kind as this title. */
     val recommendations: List<String> = emptyList(),
+)
+
+/** One title TMDB's search found: a film when [isMovie], else a show. */
+data class TmdbHit(
+    val tmdbId: String,
+    val isMovie: Boolean,
+    val name: String,
+    val year: Int?,
+    val posterUrl: String?,
+    val backdropUrl: String?,
+    val overview: String?,
 )
 
 /**
@@ -124,12 +137,35 @@ class TmdbClient(
         o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
     }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
 
+    /**
+     * TMDB's titles for what a viewer typed, films and shows alike (people left out), best match first,
+     * for search's titles the Provider doesn't carry. Empty with no key; a failure when TMDB didn't answer.
+     */
+    fun searchTitles(query: String): Result<List<TmdbHit>> = runCatching {
+        val key = credential ?: return@runCatching emptyList()
+        val url = TMDB_BASE.newBuilder()
+            .addPathSegment("search")
+            .addPathSegment("multi")
+            .addQueryParameter("query", query.trim())
+            .addQueryParameter("include_adult", "false")
+            .build()
+        val results = fetch(url, key, Operation.SEARCH)?.jsonObject?.get("results") as? JsonArray
+        results.orEmpty().mapNotNull { result ->
+            (result as? JsonObject)?.let { hitOf(it)?.withArt(IMG_POSTER, IMG_BACKDROP) }
+        }
+    }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+
     /** The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. */
     fun seriesId(title: String, year: Int?): String? {
         val key = credential ?: return null
         return TmdbTitle(isMovie = false, title, year, providersId = null)
             .takeIf { it.query.isNotBlank() }
-            ?.let { asked -> searchId(asked) { url, operation -> get(url, key, operation) } }
+            ?.let { asked ->
+                // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
+                runCatching { searchId(asked) { url, operation -> fetch(url, key, operation) } }
+                    .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+                    .getOrNull()
+            }
     }
 
     /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
@@ -211,12 +247,6 @@ class TmdbClient(
         )
     }
 
-    // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
-    private fun get(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
-        runCatching { fetch(url, key, operation) }
-            .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
-            .getOrNull()
-
     /**
      * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing.
      * Throws if TMDB didn't answer, reporting it when the failure is Settee's own (a refused key, a
@@ -275,6 +305,37 @@ private fun searchTitle(raw: String, year: Int?): String {
             ?.let { cleaned.removeRange(it.range) }
     return withoutYear?.trim()?.takeIf { it.isNotEmpty() } ?: cleaned
 }
+
+/**
+ * One result of TMDB's multi-search, read by hand, each field nullable, so one odd result doesn't cost
+ * the rest; null for a person, or a result without an id or a name. Its art paths are as TMDB gives them.
+ */
+private fun hitOf(o: JsonObject): TmdbHit? {
+    fun text(key: String) = (o[key] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+    val isMovie = when (text("media_type")) {
+        "movie" -> true
+        "tv" -> false
+        else -> null
+    }
+    val id = knownTmdbId(text("id"))
+    val name = isMovie?.let { text(if (it) "title" else "name") }
+    if (isMovie == null || id == null || name == null) return null
+    return TmdbHit(
+        tmdbId = id,
+        isMovie = isMovie,
+        name = name,
+        year = text(if (isMovie) "release_date" else "first_air_date")?.take(YEAR_DIGITS)?.toIntOrNull(),
+        posterUrl = text("poster_path"),
+        backdropUrl = text("backdrop_path"),
+        overview = text("overview"),
+    )
+}
+
+/** This hit with its art paths made whole addresses under [poster] and [backdrop]. */
+private fun TmdbHit.withArt(poster: String, backdrop: String) =
+    copy(posterUrl = posterUrl?.let { poster + it }, backdropUrl = backdropUrl?.let { backdrop + it })
+
+private const val YEAR_DIGITS = 4
 
 private val WHITESPACE = Regex("""\s+""")
 private val BRACKETED_YEAR = Regex("""\s*\((?:19|20)\d{2}\)$""")

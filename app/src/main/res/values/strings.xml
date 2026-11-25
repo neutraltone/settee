@@ -542,6 +542,8 @@
 
     <!-- ============================ Search ============================ -->
     <string name="search_type_name">Type a name</string>
+    <!-- Search's section of films TMDB knows that the viewer's provider doesn't carry, playable through add-ons. -->
+    <string name="search_not_from_provider">Not from your provider</string>
     <string name="search_start_hint">Start typing to search channels, movies and shows.</string>
     <string name="search_no_results">Nothing matches “%1$s”. Try fewer or different words.</string>
     <string name="search_recent_title">Recent searches</string>

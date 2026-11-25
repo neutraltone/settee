@@ -194,7 +194,11 @@ private class TitleVersionLookup(
     private suspend fun movie(opened: MediaKey.Movie): Versions? {
         val movie = db.movies().byId(opened.movieId) ?: return null
         val tmdbId = knownTmdbId(movie.tmdbId)
+        // A copy kept from an add-on has no stream to play: it plays through the add-on picker, so Play
+        // and the Quality pill stand for it only when there's no other copy (ADR 0011).
+        val addons = db.sources().addons()?.id
         val rows = (listOf(movie) + db.versionsOf(movie, versionIds)).distinctBy { it.id }
+            .let { all -> all.filterNot { it.sourceId == addons }.ifEmpty { all } }
         val profile = activeProfileId.value
         val candidates = rows.map { row ->
             val key = MediaKey.Movie(row.id)

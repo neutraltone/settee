@@ -39,6 +39,7 @@ import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.repo.AddonOutcome
 import app.opentv.data.repo.AddonStreamResults
+import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
@@ -61,6 +62,7 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.coverStatuses
+import app.opentv.data.repo.keptFromAddons
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.sameTmdbTitle
@@ -1370,6 +1372,29 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
+     * Films the Provider doesn't carry, for Search's last section (ADR 0011): only with an add-on set up
+     * and a TMDB Key. A flow of its own, so the Provider's results never wait on TMDB.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val addonResults: StateFlow<List<AddonTitle>> =
+        combine(vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged(), hasAddons, ::Pair)
+            .flatMapLatest { (q, addons) ->
+                if (q.length < 2 || !addons) {
+                    flowOf(emptyList())
+                } else {
+                    // Emptied as a new search starts, so the last one's films don't stay under its results.
+                    flow {
+                        emit(emptyList())
+                        emit(graph.addonTitles.search(q))
+                    }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** [film], from Search's Not from your provider, kept as a film of the Add-ons source to open. */
+    suspend fun keepAddonFilm(film: AddonTitle): Movie = graph.addonTitles.keepFilm(film)
+
+    /**
      * The active Profile's Favourite movies and series: the Favourites rows and the detail pages'
      * stars. Null until first loaded, so a star never shows "not a Favourite" for a frame and acts on it.
      */
@@ -1545,7 +1570,10 @@ class VodViewModel @JvmOverloads constructor(
     /** What a film's or show's page shows of its Versions, for the one opened at [key] (#181). */
     suspend fun pageVersions(key: MediaKey): PageVersions {
         val (plan, choices) = graph.vodQualities.pageFor(key)
-        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders))
+        val start = plan.start.key
+        val fromAddons = start is MediaKey.Movie &&
+            graph.catalogRepository.movie(start.movieId)?.let { graph.database.sources().keptFromAddons(it) } == true
+        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders)).copy(playsThroughAddons = fromAddons)
     }
 
     /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */

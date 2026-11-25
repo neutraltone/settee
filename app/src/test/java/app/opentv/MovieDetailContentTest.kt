@@ -394,6 +394,29 @@ class MovieDetailContentTest {
     }
 
     @Test
+    fun `a film kept from an add-on plays through the picker, with no button of its own for it`() {
+        versions = PageVersions(playsThroughAddons = true)
+        show(movie = film.copy(streamUrl = ""), addons = true)
+
+        compose.onNodeWithText("Play").assertIsFocused()
+        compose.onNodeWithText("Add-on sources").assertDoesNotExist()
+        captureScreen("movie_detail_addon_film")
+        press(Key.DirectionCenter)
+
+        compose.onNodeWithText("Choose a stream").assertIsDisplayed()
+        assertThat(plays).isEqualTo(0)
+    }
+
+    @Test
+    fun `with no add-on left, a film kept from one can't be played`() {
+        versions = PageVersions(playsThroughAddons = true)
+        show(movie = film.copy(streamUrl = ""), addons = false)
+
+        compose.onNodeWithText("Play").assertIsNotEnabled()
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
+
+    @Test
     fun `while no add-on has answered, the picker says it's looking`() {
         findStreams = { emptyFlow() }
         show(addons = true)

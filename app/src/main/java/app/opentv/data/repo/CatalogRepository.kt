@@ -289,6 +289,8 @@ class CatalogRepository(
      * didn't answer.
      */
     suspend fun imdbIdFor(movie: Movie): Result<String?> = withContext(dispatchers.io) {
+        // A film kept from an add-on is stored by its IMDb id: nothing to look up.
+        if (sourceDao.keptFromAddons(movie)) return@withContext Result.success(movie.streamId)
         tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
     }
 
@@ -803,6 +805,8 @@ class CatalogRepository(
                 SourceKind.XTREAM -> syncXtreamLive(source, nowUtcMillis)
                 SourceKind.M3U -> syncM3u(source, nowUtcMillis)
                 SourceKind.STALKER -> syncStalkerLive(source, nowUtcMillis)
+                // Never refreshed (enabledSources leaves it out): it has no channels, nor anywhere to ask.
+                SourceKind.ADDONS -> SyncResult.Success(channelCount = 0, movieCount = 0, seriesCount = 0)
             }
         } catch (e: CancellationException) {
             throw e

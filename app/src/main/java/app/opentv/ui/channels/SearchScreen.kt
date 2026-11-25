@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -59,6 +60,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.AddonTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
@@ -78,6 +80,7 @@ import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Search across channels, movies and shows, with matches shown live as you type.
@@ -99,7 +102,9 @@ fun SearchScreen(
     val channelResults by viewModel.searchResults.collectAsState()
     val movieResults by vodViewModel.movieResults.collectAsState()
     val seriesResults by vodViewModel.seriesResults.collectAsState()
+    val addonResults by vodViewModel.addonResults.collectAsState()
     val recent by recentSearches.shown.collectAsState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(query) {
         snapshotFlow { query.text.toString() }.collect {
@@ -129,6 +134,9 @@ fun SearchScreen(
         recentSearches = recent,
         onResultOpened = recentSearches::save,
         onClearRecentSearches = recentSearches::clear,
+        addonResults = addonResults,
+        // Kept as it's opened, then shown as any film is: its page reads it from the database.
+        onOpenAddonFilm = { film -> scope.launch { onPlayMovie(vodViewModel.keepAddonFilm(film)) } },
     )
 }
 
@@ -149,8 +157,10 @@ internal fun SearchContent(
     recentSearches: List<String>? = emptyList(),
     onResultOpened: (String) -> Unit = {},
     onClearRecentSearches: () -> Unit = {},
+    addonResults: List<AddonTitle> = emptyList(),
+    onOpenAddonFilm: (AddonTitle) -> Unit = {},
 ) {
-    val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
+    val anyResults = listOf(channelResults, movieResults, seriesResults, addonResults).any { it.isNotEmpty() }
     val searchBox = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val confirmLive = LocalConfirmLive.current
@@ -165,7 +175,9 @@ internal fun SearchContent(
     // give way to a hint as the search is cut to one letter, and retyping it mustn't pull the
     // highlight out of the box.
     var returnTo by remember {
-        mutableStateOf(openedResult?.takeIf { itemIndexOf(it, channelResults, movieResults, seriesResults) != null })
+        mutableStateOf(
+            openedResult?.takeIf { itemIndexOf(it, channelResults, movieResults, seriesResults, addonResults) != null },
+        )
     }
 
     LaunchedEffect(Unit) { if (returnTo == null) runCatching { searchBox.requestFocus() } }
@@ -173,7 +185,7 @@ internal fun SearchContent(
     LaunchedEffect(recentSearches?.isEmpty()) {
         if (recentSearches?.isEmpty() == true && typed.isBlank()) runCatching { searchBox.requestFocus() }
     }
-    LaunchedEffect(typed, channelResults, movieResults, seriesResults) {
+    LaunchedEffect(typed, channelResults, movieResults, seriesResults, addonResults) {
         val awaited = awaitingResultsOf ?: return@LaunchedEffect
         if (typed != awaited) {
             awaitingResultsOf = null
@@ -231,6 +243,7 @@ internal fun SearchContent(
                     channelResults = channelResults,
                     movieResults = movieResults,
                     seriesResults = seriesResults,
+                    addonResults = addonResults,
                     returnTo = returnTo,
                     returnFallback = searchBox,
                     onReturned = { returnTo = null },
@@ -252,6 +265,11 @@ internal fun SearchContent(
                         onResultOpened(typed)
                         onOpenSeries(it)
                     },
+                    onOpenAddonFilm = {
+                        openedResult = it.resultKey
+                        onResultOpened(typed)
+                        onOpenAddonFilm(it)
+                    },
                     onLeave = { key, go ->
                         openedResult = key
                         onResultOpened(typed)
@@ -267,6 +285,7 @@ internal fun SearchContent(
 private val ChannelsViewModel.Row.resultKey get() = "c$key"
 private val Movie.resultKey get() = "m$id"
 private val Series.resultKey get() = "s$id"
+private val AddonTitle.resultKey get() = "a$imdbId"
 
 /**
  * Where the result keyed [key] stands in [SearchResults]' list, headers counted; null if it isn't
@@ -277,11 +296,13 @@ private fun itemIndexOf(
     channelResults: List<ChannelsViewModel.Row>,
     movieResults: List<Movie>,
     seriesResults: List<Series>,
+    addonResults: List<AddonTitle>,
 ): Int? {
     val sections = listOf(
         channelResults.map { it.resultKey },
         movieResults.map { it.resultKey },
         seriesResults.map { it.resultKey },
+        addonResults.map { it.resultKey },
     )
     var start = 0
     for (section in sections) {
@@ -303,12 +324,14 @@ private fun SearchResults(
     channelResults: List<ChannelsViewModel.Row>,
     movieResults: List<Movie>,
     seriesResults: List<Series>,
+    addonResults: List<AddonTitle>,
     returnTo: String?,
     returnFallback: FocusRequester,
     onReturned: () -> Unit,
     onPlayChannel: (ChannelsViewModel.Row) -> Unit,
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
+    onOpenAddonFilm: (AddonTitle) -> Unit,
     onLeave: (key: String, go: () -> Unit) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -316,7 +339,7 @@ private fun SearchResults(
     val highlight = rememberRowHighlight(channelResults, listState, itemIndex = { 1 + it }) { it.key }
     val returnRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
-        val index = returnTo?.let { itemIndexOf(it, channelResults, movieResults, seriesResults) }
+        val index = returnTo?.let { itemIndexOf(it, channelResults, movieResults, seriesResults, addonResults) }
             ?: return@LaunchedEffect
         // A frame for the list to be laid out where its saved scroll left it.
         withFrameNanos {}
@@ -373,6 +396,22 @@ private fun SearchResults(
                     modifier = Modifier.returning(show.resultKey),
                 ) {
                     onOpenSeries(show)
+                }
+            }
+        }
+        // Last, after everything the Provider has: only there when an add-on is set up. No options:
+        // nothing is kept of these till one is opened.
+        if (addonResults.isNotEmpty()) {
+            item(contentType = "header") { SearchSectionHeader(stringResource(R.string.search_not_from_provider)) }
+            items(addonResults, key = { it.resultKey }, contentType = { "title" }) { film ->
+                VodResultRow(
+                    film.name,
+                    film.posterUrl,
+                    film.year?.toString(),
+                    onOptions = null,
+                    modifier = Modifier.returning(film.resultKey),
+                ) {
+                    onOpenAddonFilm(film)
                 }
             }
         }
