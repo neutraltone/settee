@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
     <string name="error_opensubtitles_not_saved_tv">Bu televizyonda o altyazıyı saklayacak yer yok. Biraz yer açıp tekrar deneyin.</string>
     <string name="error_opensubtitles_not_saved_device">Bu cihazda o altyazıyı saklayacak yer yok. Biraz yer açıp tekrar deneyin.</string>
+    <string name="error_opensubtitles_not_kept_tv">Bu televizyon o altyazıyı saklayamadı. Tekrar deneyin ya da başka bir altyazı seçin.</string>
+    <string name="error_opensubtitles_not_kept_device">Bu cihaz o altyazıyı saklayamadı. Tekrar deneyin ya da başka bir altyazı seçin.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles girişi kabul etti ama bu televizyon girişi kaydedemedi. Bu televizyonu yeniden başlatıp tekrar giriş yapın.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles girişi kabul etti ama bu cihaz girişi kaydedemedi. Bu cihazı yeniden başlatıp tekrar giriş yapın.</string>
     <string name="error_not_a_guide">Bu adres bir rehber değil. Doğru bağlantı olduğunu kontrol edin veya Wi-Fi isterse oturum açın.</string>

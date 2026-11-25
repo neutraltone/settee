@@ -209,8 +209,12 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             )
         is OpenSubtitlesFailure.NotSaved ->
             ofHardware(
-                R.string.error_opensubtitles_not_saved_tv,
-                R.string.error_opensubtitles_not_saved_device,
+                if (error.noRoom) R.string.error_opensubtitles_not_saved_tv else R.string.error_opensubtitles_not_kept_tv,
+                if (error.noRoom) {
+                    R.string.error_opensubtitles_not_saved_device
+                } else {
+                    R.string.error_opensubtitles_not_kept_device
+                },
                 ViewerError.detailOf("NotSaved", codeOf(error.cause ?: error)),
             )
         is OpenSubtitlesFailure.SignInNotSaved ->

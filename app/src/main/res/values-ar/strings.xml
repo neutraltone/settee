@@ -384,6 +384,8 @@
     <string name="error_opensubtitles_token_device">سجّل OpenSubtitles خروج هذا الجهاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
     <string name="error_opensubtitles_not_saved_tv">لا توجد مساحة على هذا التلفاز لحفظ هذه الترجمة. أفرغ بعض المساحة، ثم حاول مرة أخرى.</string>
     <string name="error_opensubtitles_not_saved_device">لا توجد مساحة على هذا الجهاز لحفظ هذه الترجمة. أفرغ بعض المساحة، ثم حاول مرة أخرى.</string>
+    <string name="error_opensubtitles_not_kept_tv">تعذّر على هذا التلفاز حفظ هذه الترجمة. حاول مرة أخرى، أو اختر ترجمة أخرى.</string>
+    <string name="error_opensubtitles_not_kept_device">تعذّر على هذا الجهاز حفظ هذه الترجمة. حاول مرة أخرى، أو اختر ترجمة أخرى.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">قبل OpenSubtitles تسجيل الدخول، لكن تعذّر على هذا التلفاز حفظه. أعد تشغيل هذا التلفاز، ثم سجّل الدخول مرة أخرى.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">قبل OpenSubtitles تسجيل الدخول، لكن تعذّر على هذا الجهاز حفظه. أعد تشغيل هذا الجهاز، ثم سجّل الدخول مرة أخرى.</string>
     <string name="error_not_a_guide">هذا العنوان ليس دليل برامج. تحقق من أنه الرابط الصحيح، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>

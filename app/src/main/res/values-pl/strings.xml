@@ -382,6 +382,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles wylogował to urządzenie. Zaloguj się ponownie w Ustawieniach.</string>
     <string name="error_opensubtitles_not_saved_tv">Na tym telewizorze nie ma miejsca na zapisanie tych napisów. Zwolnij trochę miejsca i spróbuj ponownie.</string>
     <string name="error_opensubtitles_not_saved_device">Na tym urządzeniu nie ma miejsca na zapisanie tych napisów. Zwolnij trochę miejsca i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_not_kept_tv">Ten telewizor nie mógł zapisać tych napisów. Spróbuj ponownie lub wybierz inne.</string>
+    <string name="error_opensubtitles_not_kept_device">To urządzenie nie mogło zapisać tych napisów. Spróbuj ponownie lub wybierz inne.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles przyjął logowanie, ale ten telewizor nie mógł go zapisać. Uruchom ponownie ten telewizor i zaloguj się jeszcze raz.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles przyjął logowanie, ale to urządzenie nie mogło go zapisać. Uruchom ponownie to urządzenie i zaloguj się jeszcze raz.</string>
     <string name="error_not_a_guide">Ten adres nie jest przewodnikiem. Sprawdź, czy to właściwy link, albo zaloguj się do Wi-Fi, jeśli o to prosi.</string>

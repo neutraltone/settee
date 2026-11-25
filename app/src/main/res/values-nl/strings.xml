@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
     <string name="error_opensubtitles_not_saved_tv">Er is geen ruimte op deze tv om die ondertitels te bewaren. Maak wat ruimte vrij en probeer het opnieuw.</string>
     <string name="error_opensubtitles_not_saved_device">Er is geen ruimte op dit apparaat om die ondertitels te bewaren. Maak wat ruimte vrij en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_not_kept_tv">Deze tv kon die ondertitels niet bewaren. Probeer het opnieuw of kies andere.</string>
+    <string name="error_opensubtitles_not_kept_device">Dit apparaat kon die ondertitels niet bewaren. Probeer het opnieuw of kies andere.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles heeft de aanmelding geaccepteerd, maar deze tv kon die niet opslaan. Start deze tv opnieuw op en log opnieuw in.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles heeft de aanmelding geaccepteerd, maar dit apparaat kon die niet opslaan. Start dit apparaat opnieuw op en log opnieuw in.</string>
     <string name="error_not_a_guide">Dat adres is geen gids. Controleer of het de juiste link is, of meld je aan bij je wifi als daarom wordt gevraagd.</string>

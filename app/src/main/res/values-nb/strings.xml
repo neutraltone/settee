@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enheten av. Logg på igjen i Innstillinger.</string>
     <string name="error_opensubtitles_not_saved_tv">Det er ikke plass på denne TV-en til å lagre de undertekstene. Frigjør litt plass, og prøv igjen.</string>
     <string name="error_opensubtitles_not_saved_device">Det er ikke plass på denne enheten til å lagre de undertekstene. Frigjør litt plass, og prøv igjen.</string>
+    <string name="error_opensubtitles_not_kept_tv">Denne TV-en klarte ikke å lagre de undertekstene. Prøv igjen, eller velg noen andre.</string>
+    <string name="error_opensubtitles_not_kept_device">Denne enheten klarte ikke å lagre de undertekstene. Prøv igjen, eller velg noen andre.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles godtok påloggingen, men denne TV-en klarte ikke å lagre den. Start denne TV-en på nytt, og logg på igjen.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles godtok påloggingen, men denne enheten klarte ikke å lagre den. Start denne enheten på nytt, og logg på igjen.</string>
     <string name="error_not_a_guide">Den adressen er ikke en programguide. Sjekk at det er riktig lenke, eller logg på Wi-Fi hvis det ber om det.</string>

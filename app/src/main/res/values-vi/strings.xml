@@ -379,6 +379,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_opensubtitles_not_saved_tv">TV này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
     <string name="error_opensubtitles_not_saved_device">Thiết bị này không còn chỗ để lưu phụ đề đó. Hãy giải phóng bớt dung lượng rồi thử lại.</string>
+    <string name="error_opensubtitles_not_kept_tv">TV này không lưu được phụ đề đó. Hãy thử lại hoặc chọn phụ đề khác.</string>
+    <string name="error_opensubtitles_not_kept_device">Thiết bị này không lưu được phụ đề đó. Hãy thử lại hoặc chọn phụ đề khác.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles đã chấp nhận đăng nhập, nhưng TV này không lưu được. Hãy khởi động lại TV này rồi đăng nhập lại.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles đã chấp nhận đăng nhập, nhưng thiết bị này không lưu được. Hãy khởi động lại thiết bị này rồi đăng nhập lại.</string>
     <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>

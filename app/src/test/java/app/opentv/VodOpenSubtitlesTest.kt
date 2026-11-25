@@ -245,8 +245,9 @@ class VodOpenSubtitlesTest {
     }
 
     @Test
-    fun `a subtitle there's no room to keep says so, not that OpenSubtitles can't be reached`() {
-        // Where the subtitles are kept is taken by a file, so the download can't be written, as on a full TV.
+    fun `a subtitle this device can't keep says so, not that OpenSubtitles can't be reached`() {
+        // Where the subtitles are kept is taken by a file, so the download can't be written. The disk
+        // isn't full, so the viewer isn't sent to free up space.
         java.io.File(app.filesDir, "subtitles").apply { deleteRecursively() }.writeText("")
         showFilm()
         until { subtitles.subject.value != null }
@@ -261,7 +262,7 @@ class VodOpenSubtitlesTest {
         }
         // The graph's wording is a phone's in these tests, so "this device".
         compose.onNode(
-            hasText("There's no room on this device to keep that subtitle. Free up some space, then try again."),
+            hasText("This device couldn't keep that subtitle. Try again, or pick a different one."),
             useUnmergedTree = true,
         ).assertIsDisplayed()
         compose.onNode(hasText("NotSaved · FileNotFound"), useUnmergedTree = true).assertIsDisplayed()

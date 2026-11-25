@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
     <string name="error_opensubtitles_not_saved_tv">Δεν υπάρχει χώρος σε αυτή την τηλεόραση για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_not_saved_device">Δεν υπάρχει χώρος σε αυτή τη συσκευή για να αποθηκευτούν αυτοί οι υπότιτλοι. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_not_kept_tv">Αυτή η τηλεόραση δεν μπόρεσε να αποθηκεύσει αυτούς τους υπότιτλους. Δοκιμάστε ξανά ή επιλέξτε άλλους.</string>
+    <string name="error_opensubtitles_not_kept_device">Αυτή η συσκευή δεν μπόρεσε να αποθηκεύσει αυτούς τους υπότιτλους. Δοκιμάστε ξανά ή επιλέξτε άλλους.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η τηλεόραση δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή την τηλεόραση και συνδεθείτε ξανά.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">Το OpenSubtitles δέχτηκε τη σύνδεση, αλλά αυτή η συσκευή δεν μπόρεσε να την αποθηκεύσει. Επανεκκινήστε αυτή τη συσκευή και συνδεθείτε ξανά.</string>
     <string name="error_not_a_guide">Αυτή η διεύθυνση δεν είναι οδηγός προγράμματος. Ελέγξτε ότι είναι ο σωστός σύνδεσμος ή συνδεθείτε στο Wi-Fi, αν σας το ζητά.</string>

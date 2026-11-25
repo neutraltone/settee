@@ -83,12 +83,27 @@ sealed class OpenSubtitlesFailure(message: String, cause: Throwable? = null) : I
     class KeyRejected(val status: Int = 403) : OpenSubtitlesFailure("OpenSubtitles turned down Settee's key")
 
     /**
-     * A subtitle downloaded, but this box couldn't keep it: storage full, the write failed, or the file
-     * is over the Downloaded Subtitles' cap. Thrown by [app.opentv.data.repo.OpenSubtitles], not this
+     * A subtitle downloaded, but this box couldn't keep it: storage full ([noRoom]), the write failed,
+     * or the file is over the Downloaded Subtitles' cap. Thrown by [app.opentv.data.repo.OpenSubtitles], not this
      * client, and kept apart from [Unreachable] so the viewer isn't sent to check a network that's fine
      * and spend another of the day's downloads on the same failure.
      */
-    class NotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't keep the subtitle on this box", cause)
+    class NotSaved(cause: Throwable) : OpenSubtitlesFailure("Couldn't keep the subtitle on this box", cause) {
+        /**
+         * The disk was full: the write failed with ENOSPC, which Android puts behind the IOException as
+         * an [android.system.ErrnoException]. Only then is the viewer sent to free up space; a write
+         * refused or a file over the cap isn't helped by that. Told by errno, never the message, which
+         * isn't the same on every device.
+         */
+        val noRoom: Boolean = generateSequence(cause) { it.cause }.take(MAX_CAUSES).any {
+            it is android.system.ErrnoException && it.errno == android.system.OsConstants.ENOSPC
+        }
+
+        private companion object {
+            /** Enough to reach the errno however it's wrapped, without following a cycle for ever. */
+            const val MAX_CAUSES = 8
+        }
+    }
 
     /**
      * OpenSubtitles accepted the sign-in, but this box couldn't seal the password to keep it (a Keystore

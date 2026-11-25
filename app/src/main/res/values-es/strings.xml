@@ -381,6 +381,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_opensubtitles_not_saved_tv">No hay espacio en esta tele para guardar esos subtítulos. Libera algo de espacio y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_not_saved_device">No hay espacio en este dispositivo para guardar esos subtítulos. Libera algo de espacio y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_not_kept_tv">Esta tele no pudo guardar esos subtítulos. Vuelve a intentarlo o elige otros.</string>
+    <string name="error_opensubtitles_not_kept_device">Este dispositivo no pudo guardar esos subtítulos. Vuelve a intentarlo o elige otros.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles aceptó el inicio de sesión, pero esta tele no pudo guardarlo. Reinicia esta tele y vuelve a iniciar sesión.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles aceptó el inicio de sesión, pero este dispositivo no pudo guardarlo. Reinicia este dispositivo y vuelve a iniciar sesión.</string>
     <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>

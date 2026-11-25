@@ -381,6 +381,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
     <string name="error_opensubtitles_not_saved_tv">Su questa TV non c\'è spazio per conservare quei sottotitoli. Libera un po\' di spazio, poi riprova.</string>
     <string name="error_opensubtitles_not_saved_device">Su questo dispositivo non c\'è spazio per conservare quei sottotitoli. Libera un po\' di spazio, poi riprova.</string>
+    <string name="error_opensubtitles_not_kept_tv">Questa TV non è riuscita a conservare quei sottotitoli. Riprova, oppure scegline altri.</string>
+    <string name="error_opensubtitles_not_kept_device">Questo dispositivo non è riuscito a conservare quei sottotitoli. Riprova, oppure scegline altri.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles ha accettato l\'accesso, ma questa TV non è riuscita a salvarlo. Riavvia questa TV, poi accedi di nuovo.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles ha accettato l\'accesso, ma questo dispositivo non è riuscito a salvarlo. Riavvia questo dispositivo, poi accedi di nuovo.</string>
     <string name="error_not_a_guide">Quell\'indirizzo non è una guida. Controlla che sia il link giusto, oppure accedi al Wi-Fi se te lo chiede.</string>

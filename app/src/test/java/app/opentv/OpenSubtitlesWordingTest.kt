@@ -118,12 +118,23 @@ class OpenSubtitlesWordingTest {
     }
 
     @Test
-    fun `a subtitle this TV couldn't keep is about this TV's storage, not reaching OpenSubtitles`() {
-        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(java.io.IOException("No space left")))
+    fun `a subtitle this TV had no room to keep is about this TV's storage, not reaching OpenSubtitles`() {
+        // How Android reports a full disk: the write's errno, ENOSPC, behind the IOException.
+        val full = java.io.IOException(android.system.ErrnoException("write", android.system.OsConstants.ENOSPC))
+
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(full))
 
         assertThat(error.sentence).isEqualTo(
             "There's no room on this TV to keep that subtitle. Free up some space, then try again.",
         )
+        assertThat(error.detail).isEqualTo("NotSaved · IO")
+    }
+
+    @Test
+    fun `a subtitle this TV couldn't keep for any other reason doesn't send the viewer to free up space`() {
+        val error = wording.ofOpenSubtitles(OpenSubtitlesFailure.NotSaved(java.io.IOException("Subtitle bigger than the cap")))
+
+        assertThat(error.sentence).isEqualTo("This TV couldn't keep that subtitle. Try again, or pick a different one.")
         assertThat(error.detail).isEqualTo("NotSaved · IO")
     }
 

@@ -381,6 +381,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
     <string name="error_opensubtitles_not_saved_tv">Na ovom televizoru nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
     <string name="error_opensubtitles_not_saved_device">Na ovom uređaju nema mjesta za spremanje tih titlova. Oslobodite malo prostora pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_not_kept_tv">Ovaj televizor nije mogao spremiti te titlove. Pokušajte ponovno ili odaberite druge.</string>
+    <string name="error_opensubtitles_not_kept_device">Ovaj uređaj nije mogao spremiti te titlove. Pokušajte ponovno ili odaberite druge.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles je prihvatio prijavu, ali je ovaj televizor nije mogao spremiti. Ponovno pokrenite ovaj televizor pa se ponovno prijavite.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles je prihvatio prijavu, ali je ovaj uređaj nije mogao spremiti. Ponovno pokrenite ovaj uređaj pa se ponovno prijavite.</string>
     <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>

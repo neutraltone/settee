@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">Az OpenSubtitles kijelentkeztette ezt az eszközt. Jelentkezz be újra a Beállításokban.</string>
     <string name="error_opensubtitles_not_saved_tv">Ezen a tévén nincs hely a felirat megtartásához. Szabadíts fel helyet, majd próbáld újra.</string>
     <string name="error_opensubtitles_not_saved_device">Ezen az eszközön nincs hely a felirat megtartásához. Szabadíts fel helyet, majd próbáld újra.</string>
+    <string name="error_opensubtitles_not_kept_tv">Ez a tévé nem tudta megtartani a feliratot. Próbáld újra, vagy válassz egy másikat.</string>
+    <string name="error_opensubtitles_not_kept_device">Ez az eszköz nem tudta megtartani a feliratot. Próbáld újra, vagy válassz egy másikat.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">Az OpenSubtitles elfogadta a bejelentkezést, de ez a tévé nem tudta menteni. Indítsd újra ezt a tévét, majd jelentkezz be újra.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">Az OpenSubtitles elfogadta a bejelentkezést, de ez az eszköz nem tudta menteni. Indítsd újra ezt az eszközt, majd jelentkezz be újra.</string>
     <string name="error_not_a_guide">Ez a cím nem műsorújság. Ellenőrizze, hogy a megfelelő hivatkozás-e, vagy jelentkezzen be a Wi-Fi-hálózatba, ha kéri.</string>

@@ -379,6 +379,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
     <string name="error_opensubtitles_not_saved_tv">Tidak ada ruang di TV ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
     <string name="error_opensubtitles_not_saved_device">Tidak ada ruang di perangkat ini untuk menyimpan subtitle itu. Kosongkan sebagian ruang, lalu coba lagi.</string>
+    <string name="error_opensubtitles_not_kept_tv">TV ini tidak dapat menyimpan subtitle itu. Coba lagi, atau pilih yang lain.</string>
+    <string name="error_opensubtitles_not_kept_device">Perangkat ini tidak dapat menyimpan subtitle itu. Coba lagi, atau pilih yang lain.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles menerima proses masuk, tetapi TV ini tidak dapat menyimpannya. Mulai ulang TV ini, lalu masuk lagi.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles menerima proses masuk, tetapi perangkat ini tidak dapat menyimpannya. Mulai ulang perangkat ini, lalu masuk lagi.</string>
     <string name="error_not_a_guide">Alamat itu bukan panduan acara. Periksa apakah tautannya benar, atau masuk ke Wi-Fi Anda jika diminta.</string>

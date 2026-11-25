@@ -380,6 +380,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
     <string name="error_opensubtitles_not_saved_tv">Tässä televisiossa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
     <string name="error_opensubtitles_not_saved_device">Tässä laitteessa ei ole tilaa näiden tekstitysten tallentamiseen. Vapauta tilaa ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_not_kept_tv">Tämä televisio ei voinut tallentaa näitä tekstityksiä. Yritä uudelleen tai valitse toiset.</string>
+    <string name="error_opensubtitles_not_kept_device">Tämä laite ei voinut tallentaa näitä tekstityksiä. Yritä uudelleen tai valitse toiset.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles hyväksyi kirjautumisen, mutta tämä televisio ei voinut tallentaa sitä. Käynnistä tämä televisio uudelleen ja kirjaudu uudelleen.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles hyväksyi kirjautumisen, mutta tämä laite ei voinut tallentaa sitä. Käynnistä tämä laite uudelleen ja kirjaudu uudelleen.</string>
     <string name="error_not_a_guide">Osoite ei ole ohjelmaopas. Tarkista, että linkki on oikea, tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>

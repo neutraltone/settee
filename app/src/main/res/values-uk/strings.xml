@@ -382,6 +382,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_opensubtitles_not_saved_tv">На цьому телевізорі немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
     <string name="error_opensubtitles_not_saved_device">На цьому пристрої немає місця, щоб зберегти ці субтитри. Звільніть місце і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_not_kept_tv">Цей телевізор не зміг зберегти ці субтитри. Спробуйте ще раз або виберіть інші.</string>
+    <string name="error_opensubtitles_not_kept_device">Цей пристрій не зміг зберегти ці субтитри. Спробуйте ще раз або виберіть інші.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles прийняв вхід, але цей телевізор не зміг його зберегти. Перезапустіть цей телевізор і увійдіть знову.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles прийняв вхід, але цей пристрій не зміг його зберегти. Перезапустіть цей пристрій і увійдіть знову.</string>
     <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>

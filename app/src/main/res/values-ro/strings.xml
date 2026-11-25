@@ -381,6 +381,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
     <string name="error_opensubtitles_not_saved_tv">Nu e loc pe acest televizor pentru a păstra aceste subtitrări. Eliberează spațiu, apoi încearcă din nou.</string>
     <string name="error_opensubtitles_not_saved_device">Nu e loc pe acest dispozitiv pentru a păstra aceste subtitrări. Eliberează spațiu, apoi încearcă din nou.</string>
+    <string name="error_opensubtitles_not_kept_tv">Acest televizor nu a putut păstra aceste subtitrări. Încearcă din nou sau alege altele.</string>
+    <string name="error_opensubtitles_not_kept_device">Acest dispozitiv nu a putut păstra aceste subtitrări. Încearcă din nou sau alege altele.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles a acceptat conectarea, dar acest televizor nu a putut-o salva. Repornește acest televizor, apoi conectează-te din nou.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles a acceptat conectarea, dar acest dispozitiv nu a putut-o salva. Repornește acest dispozitiv, apoi conectează-te din nou.</string>
     <string name="error_not_a_guide">Adresa nu este un ghid. Verifică dacă este linkul corect sau conectează-te la Wi-Fi dacă îți cere.</string>

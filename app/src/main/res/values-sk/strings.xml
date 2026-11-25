@@ -382,6 +382,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
     <string name="error_opensubtitles_not_saved_tv">Na tomto televízore nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
     <string name="error_opensubtitles_not_saved_device">Na tomto zariadení nie je miesto na uloženie týchto titulkov. Uvoľnite miesto a skúste to znova.</string>
+    <string name="error_opensubtitles_not_kept_tv">Tento televízor nedokázal uložiť tieto titulky. Skúste to znova alebo vyberte iné.</string>
+    <string name="error_opensubtitles_not_kept_device">Toto zariadenie nedokázalo uložiť tieto titulky. Skúste to znova alebo vyberte iné.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles prihlásenie prijali, ale tento televízor ho nedokázal uložiť. Reštartujte tento televízor a prihláste sa znova.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles prihlásenie prijali, ale toto zariadenie ho nedokázalo uložiť. Reštartujte toto zariadenie a prihláste sa znova.</string>
     <string name="error_not_a_guide">Táto adresa nie je sprievodca. Skontrolujte, že ide o správny odkaz, alebo sa prihláste do Wi-Fi, ak o to žiada.</string>

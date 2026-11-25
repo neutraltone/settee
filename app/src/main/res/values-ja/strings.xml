@@ -379,6 +379,8 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles がこのデバイスをサインアウトしました。設定でもう一度サインインしてください。</string>
     <string name="error_opensubtitles_not_saved_tv">このテレビに字幕を保存する空き容量がありません。空き容量を増やしてから、もう一度お試しください。</string>
     <string name="error_opensubtitles_not_saved_device">このデバイスに字幕を保存する空き容量がありません。空き容量を増やしてから、もう一度お試しください。</string>
+    <string name="error_opensubtitles_not_kept_tv">このテレビに字幕を保存できませんでした。もう一度お試しいただくか、別の字幕を選んでください。</string>
+    <string name="error_opensubtitles_not_kept_device">このデバイスに字幕を保存できませんでした。もう一度お試しいただくか、別の字幕を選んでください。</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">OpenSubtitles はサインインを受け付けましたが、このテレビに保存できませんでした。このテレビを再起動してから、もう一度サインインしてください。</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">OpenSubtitles はサインインを受け付けましたが、このデバイスに保存できませんでした。このデバイスを再起動してから、もう一度サインインしてください。</string>
     <string name="error_not_a_guide">そのアドレスは番組表ではありません。正しいリンクか確認するか、Wi-Fiのログインを求められた場合はログインしてください。</string>

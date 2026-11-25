@@ -381,6 +381,8 @@
     <string name="error_opensubtitles_token_device">O OpenSubtitles desconectou este dispositivo. Entre novamente nas Configurações.</string>
     <string name="error_opensubtitles_not_saved_tv">Não há espaço nesta TV para guardar essas legendas. Libere espaço e tente novamente.</string>
     <string name="error_opensubtitles_not_saved_device">Não há espaço neste dispositivo para guardar essas legendas. Libere espaço e tente novamente.</string>
+    <string name="error_opensubtitles_not_kept_tv">Esta TV não conseguiu guardar essas legendas. Tente novamente ou escolha outras.</string>
+    <string name="error_opensubtitles_not_kept_device">Este dispositivo não conseguiu guardar essas legendas. Tente novamente ou escolha outras.</string>
     <string name="error_opensubtitles_sign_in_not_saved_tv">O OpenSubtitles aceitou o login, mas esta TV não conseguiu salvá-lo. Reinicie esta TV e entre novamente.</string>
     <string name="error_opensubtitles_sign_in_not_saved_device">O OpenSubtitles aceitou o login, mas este dispositivo não conseguiu salvá-lo. Reinicie este dispositivo e entre novamente.</string>
     <string name="error_not_a_guide">Esse endereço não é um guia. Verifique se é a ligação certa, ou inicie sessão no Wi-Fi se este o pedir.</string>
