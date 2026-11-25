@@ -129,14 +129,19 @@ class Favourites internal constructor(
 
     /**
      * Merges another device's Favourites, newest change wins, labels going by [history]. Returns how
-     * many it starred or unstarred here.
+     * many it starred or unstarred here. Each time is taken through [ceiling] first.
      */
-    suspend fun import(items: List<SyncFavourite>, history: ProfileHistory = ProfileHistory.NONE): Int {
+    suspend fun import(
+        items: List<SyncFavourite>,
+        history: ProfileHistory = ProfileHistory.NONE,
+        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
+    ): Int {
         val names = profiles.directory()
         val placed = items.mapNotNull { item ->
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@mapNotNull null
-            val profileId = names.id(history.currentName(item.profile, item.changedAtMillis)) ?: return@mapNotNull null
-            Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed)
+            val changedAt = ceiling.clamp(item.changedAtMillis)
+            val profileId = names.id(history.currentName(item.profile, changedAt)) ?: return@mapNotNull null
+            Favourite(profileId, kind, item.source, item.id, changedAt, item.removed)
         }
         return db.mergeForProfiles(placed, { it.profileId }) { fav ->
             val here = dao.find(fav.profileId, fav.kind, fav.source, fav.itemId)

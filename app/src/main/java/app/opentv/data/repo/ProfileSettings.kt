@@ -137,7 +137,7 @@ class ProfileSettings(
     /** A setting from another device: the newer choice wins. Returns whether it was taken. */
     internal suspend fun mergeSynced(setting: ProfileSetting): Boolean {
         val local = dao.find(setting.profileId, setting.name)
-        if (local != null && local.updatedAtMillis >= setting.updatedAtMillis) return false
+        if (!isNewerChange(setting.updatedAtMillis, local?.updatedAtMillis)) return false
         dao.upsert(setting)
         return true
     }
@@ -152,12 +152,20 @@ class ProfileSettings(
         }
     }
 
-    /** Merges another device's settings, newest wins, labels going by [history]. Returns how many were taken. */
-    suspend fun import(items: List<SyncProfileSetting>, history: ProfileHistory = ProfileHistory.NONE): Int {
+    /**
+     * Merges another device's settings, newest wins, labels going by [history], each time taken
+     * through [ceiling] first. Returns how many were taken.
+     */
+    suspend fun import(
+        items: List<SyncProfileSetting>,
+        history: ProfileHistory = ProfileHistory.NONE,
+        ceiling: ArrivalCeiling = ArrivalCeiling.NONE,
+    ): Int {
         val names = profiles.directory()
         val placed = items.mapNotNull { item ->
-            names.id(history.currentName(item.profile, item.updatedAtMillis))?.let {
-                ProfileSetting(it, item.name, item.value, item.updatedAtMillis)
+            val updatedAt = ceiling.clamp(item.updatedAtMillis)
+            names.id(history.currentName(item.profile, updatedAt))?.let {
+                ProfileSetting(it, item.name, item.value, updatedAt)
             }
         }
         return db.mergeForProfiles(placed, { it.profileId }) { mergeSynced(it) }

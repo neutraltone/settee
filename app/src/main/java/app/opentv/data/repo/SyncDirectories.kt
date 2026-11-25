@@ -53,15 +53,35 @@ internal suspend fun <T> OpenTvDatabase.mergeForProfiles(
 private const val SYNC_BATCH = 200
 
 /**
- * Whether a change dated [incoming] from another device beats what's here, dated [here] (null when
- * this device has no record of the item). The newest wins and a tie keeps what's here. A time of
- * zero means the bundle had none, which counts as the oldest possible: it applies only where this
- * device has never changed the item, so an old file can't undo a change made here.
+ * The latest time a change arriving in one bundle may claim. Every store takes an incoming change's
+ * time through [clamp] before comparing it with [isNewerChange] and before storing it, so the time a
+ * row keeps, and passes on to the next device, is the one that was compared. `SyncEngine.applyOne` works
+ * out one per bundle; a time of zero (undated) stays zero, still the oldest possible.
  */
-internal fun isNewerChange(incoming: Long, here: Long?): Boolean = when {
-    here == null -> true
-    incoming == 0L -> false
-    else -> incoming > here
+@JvmInline
+value class ArrivalCeiling(val millis: Long) {
+    fun clamp(atMillis: Long): Long = minOf(atMillis, millis)
+
+    companion object {
+        /** No limit: a change keeps the time it came with. Also for merges that aren't a sync, such as two Profiles. */
+        val NONE = ArrivalCeiling(Long.MAX_VALUE)
+    }
+}
+
+/**
+ * Whether a change dated [incoming] from another device beats what's here, dated [here] (null when
+ * this device has no record of the item): the one newest-wins rule every synced store imports by.
+ * The newest wins and a tie keeps what's here. A time of zero means the bundle had none, which
+ * counts as the oldest possible: it applies only where this device has never changed the item, so
+ * an old file can't undo a change made here. [incoming] is taken through [ceiling] first.
+ */
+internal fun isNewerChange(incoming: Long, here: Long?, ceiling: ArrivalCeiling = ArrivalCeiling.NONE): Boolean {
+    val dated = ceiling.clamp(incoming)
+    return when {
+        here == null -> true
+        dated == 0L -> false
+        else -> dated > here
+    }
 }
 
 /** This device's sources by id and by name, which [SourceRepository] keeps unique (ADR 0004). */

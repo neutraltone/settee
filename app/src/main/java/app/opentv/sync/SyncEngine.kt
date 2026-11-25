@@ -6,6 +6,7 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.ArrivalCeiling
 import kotlinx.serialization.json.Json
 
 /**
@@ -71,22 +72,26 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     }
 
     private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
+        // One per bundle, handed to every store that decides newest-wins; this merges nothing itself.
+        val ceiling = ArrivalCeiling.NONE
         // First: everything else lands on a Profile by name, and these decide what the names are now.
         graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds)
         val history = graph.profiles.history
         graph.profiles.import(bundle.profiles, bundle.generatedAtMillis)
         graph.settings.importCategoryLocks(
             bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },
+            ceiling,
         )
-        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, history)
+        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, history, ceiling)
         waiting += progress.waiting
         return MergeResult(
             // Counted with positions: both are where a Profile is with its titles.
-            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, history),
-            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, history),
-            hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams),
+            positions = progress.taken +
+                graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, history, ceiling),
+            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, history, ceiling),
+            hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams, ceiling),
             recordings = graph.recordingRepository.import(bundle.recordings),
-            settings = graph.profileSettings.import(bundle.profileSettings, history),
+            settings = graph.profileSettings.import(bundle.profileSettings, history, ceiling),
         )
     }
 }
