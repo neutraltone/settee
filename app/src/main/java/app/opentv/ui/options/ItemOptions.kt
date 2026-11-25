@@ -15,6 +15,9 @@ sealed interface ItemOption {
 
     data object ShowInfo : ItemOption
 
+    /** Opens the picker of streams the viewer's add-ons offer for an episode, on the page it was opened from. */
+    data object AddonSources : ItemOption
+
     /** Marking watched or unwatched, kept apart so their labels are checked like the other groups'. */
     sealed interface MarkAction : ItemOption
 
@@ -100,10 +103,13 @@ sealed interface OptionsFor {
 
     /**
      * [earlierToMark] is whether marking up to here would mark an earlier episode; when it wouldn't,
-     * up to here would only repeat Mark watched, which sits beside it.
+     * up to here would only repeat Mark watched, which sits beside it. [addonSources] is whether the
+     * viewer has add-ons to ask for its streams, which comes after the ways of playing it.
      */
-    data class Episode(val status: WatchStatus, val earlierToMark: Boolean) : OptionsFor {
+    data class Episode(val status: WatchStatus, val earlierToMark: Boolean, val addonSources: Boolean = false) :
+        OptionsFor {
         override fun options() = playFromStart(status) + buildList {
+            if (addonSources) add(ItemOption.AddonSources)
             if (status != WatchStatus.Watched) add(ItemOption.MarkWatched)
             if (earlierToMark) add(ItemOption.MarkWatchedUpToHere)
             if (status != WatchStatus.Unwatched) add(ItemOption.MarkUnwatched)

@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_addon_lookup_tv">Eklentilerinize sormak için bu film aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_addon_lookup_device">Eklentilerinize sormak için bu film aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_no_match_show">Eklentileriniz bu diziyi arayamıyor, çünkü IMDb\'de eşleşmesi yok.</string>
+    <string name="error_addon_lookup_show_tv">Eklentilerinize sormak için bu dizi aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_lookup_show_device">Eklentilerinize sormak için bu dizi aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_device_refused">Sağlayıcınız bu bilgileri kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_guide">Bu rehber indirilemedi. Birazdan tekrar deneyin.</string>
     <string name="error_guide_empty">Bu rehber indirildi ama içinde hiç program yoktu. Doğru bağlantı olduğunu kontrol edin.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">Gönder</string>
     <string name="report_question_dont_send">Gönderme</string>
     <string name="report_question_always_send">Her zaman gönder</string>
+    <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
+    <string name="error_torrents_not_yet">Torrentler burada henüz oynatılamıyor. Torrent olmayan bir yayın seçin.</string>
 </resources>

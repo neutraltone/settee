@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek az eszköznek az internete nem kér-e előbb bejelentkezést.</string>
     <string name="error_addon_lookup_tv">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, majd próbálja újra.</string>
     <string name="error_addon_lookup_device">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, majd próbálja újra.</string>
+    <string name="error_addon_no_match_show">A bővítményei nem tudják kikeresni ezt a sorozatot, mert nincs találata az IMDb-n.</string>
+    <string name="error_addon_lookup_show_tv">Nem sikerült megkeresni a sorozatot, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, majd próbálja újra.</string>
+    <string name="error_addon_lookup_show_device">Nem sikerült megkeresni a sorozatot, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, majd próbálja újra.</string>
     <string name="error_device_refused">A szolgáltató nem fogadta el ezeket az adatokat. Ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="error_guide">Nem sikerült letölteni ezt a műsorújságot. Próbálja újra egy kicsit később.</string>
     <string name="error_guide_empty">A műsorújság letöltődött, de nem volt benne műsor. Ellenőrizze, hogy a helyes linket adta-e meg.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">Küldés</string>
     <string name="report_question_dont_send">Ne küldje</string>
     <string name="report_question_always_send">Mindig küldje</string>
+    <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
+    <string name="error_torrents_not_yet">A torrentek itt még nem játszhatók le. Válassz olyan streamet, amely nem torrent.</string>
 </resources>

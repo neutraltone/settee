@@ -288,7 +288,7 @@ object Routes {
     /** The key [vodPlayer] put in a route, from its `key`, `addon` and `headers` arguments. */
     fun vodPlayerKey(stored: String, addon: String, headers: String = ""): MediaKey? {
         val key = MediaKey.parse(stored)
-        if (key !is MediaKey.Movie || addon.isEmpty()) return key
+        if (key !is MediaKey.Title || addon.isEmpty()) return key
         val sent = headers.takeIf { it.isNotEmpty() }
             ?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
         return MediaKey.AddonStream(key, addon, sent.orEmpty())

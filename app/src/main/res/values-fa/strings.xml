@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">این نشانی افزونه‌ای نداد. بررسی کنید پیوند manifest.json باشد و اینترنت این دستگاه اول از شما درخواست ورود نکند.</string>
     <string name="error_addon_lookup_tv">جست‌وجوی این فیلم برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این تلویزیون به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
     <string name="error_addon_lookup_device">جست‌وجوی این فیلم برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این دستگاه به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
+    <string name="error_addon_no_match_show">افزونه‌های شما نمی‌توانند این سریال را جستجو کنند، چون در IMDb مطابقتی ندارد.</string>
+    <string name="error_addon_lookup_show_tv">جست‌وجوی این سریال برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این تلویزیون به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
+    <string name="error_addon_lookup_show_device">جست‌وجوی این سریال برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این دستگاه به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
     <string name="error_device_refused">ارائه‌دهنده شما این اطلاعات را نپذیرفت. اطلاعات ارائه‌دهنده خود را در تنظیمات بررسی کنید.</string>
     <string name="error_guide">دانلود این راهنما ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_guide_empty">این راهنما دانلود شد، اما هیچ برنامه‌ای در آن نبود. بررسی کنید پیوند درست باشد.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">ارسال</string>
     <string name="report_question_dont_send">ارسال نشود</string>
     <string name="report_question_always_send">همیشه ارسال</string>
+    <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
+    <string name="error_torrents_not_yet">تورنت‌ها هنوز اینجا پخش نمی‌شوند. جریانی را انتخاب کنید که تورنت نیست.</string>
 </resources>

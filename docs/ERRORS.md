@@ -381,13 +381,18 @@ see Settings and Provider connection.
 Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` (or, for an address, `AddonRepository`)
 throws. In Settings › Add-ons, inside the address window, which stays open with what was typed, when an
 address couldn't be added (a `stremio://` link or an address without a scheme is read as `https://`, and
-`manifest.json` is added when it's missing); and in a film's Add-on sources picker, drawn by
+`manifest.json` is added when it's missing); and in a film's Add-on sources picker, or an episode's (from its
+options on the show's page), drawn by
 `AddonStreamPicker` from `AddonStreams`, which asks each add-on on its own and lists streams as they arrive.
 Once every add-on has answered with no stream, the picker shows the first failure with a Try again that asks
 them again if any add-on couldn't be reached, or else says "No streams found from your add-ons for this title."
 (an empty state, not an error: no detail line). When any add-on offered a stream, the failing ones stay quiet.
-TMDB not answering also gets Try again; a film TMDB can't match to IMDb gets its own sentence, without one,
-since asking again won't change it. An add-on that answers 404 for a film's streams has nothing for it, not a failure.
+TMDB not answering also gets Try again; a film or show TMDB can't match to IMDb gets its own sentence, without
+one, since asking again won't change it. An episode is asked by its show's IMDb id plus season and episode, so
+its lookup sentences name the show. An add-on that answers 404 for a title's streams has nothing for it, not a failure.
+Torrents an add-on offers are listed after its links, greyed and passed over by the Highlight, since nothing
+plays them yet, with one quiet line under the list saying why (no detail line: nothing failed). Which line
+depends on the Torrents switch in Settings › Add-ons (`AppSettings.torrentsEnabled`, off until turned on).
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
@@ -397,7 +402,11 @@ since asking again won't change it. An add-on that answers 404 for a film's stre
 | Any other status but 2xx (a 404 for the manifest, a 401 or 403 from a personalised address), a web page or anything else that isn't JSON, or JSON with no `id` or `name` (`AddonFailure.NotAnAddon`) | `error_not_an_addon_tv` / `_device` | That address didn't give an add-on. Check it's the manifest.json link, and that this TV's internet doesn't need you to sign in first. | NotAnAddon · HTTP 404 (status when there was one) | The address or the key in it, or Wi-Fi asking to sign in |
 | Settings only: what was typed can't be a web address, such as a space in it or a scheme other than http, https or stremio; nothing is asked (`AddonFailure.BadAddress`) | `error_addon_bad_address` | That isn't a web address. Check what you typed for a mistake. | BadAddress | A typing slip |
 | Add-on sources only: TMDB answered but has no IMDb id for the film, so no add-on was asked (`VodViewModel.addonStreams`) | `error_addon_no_match` | Your add-ons can't look this film up, as it has no match on IMDb. | NoImdbMatch | The film's listing, or TMDB not knowing it |
+| Add-on sources only: torrent rows listed while the Torrents switch is off | `error_torrents_off` | Torrents are off. Turn them on in Settings, Add-ons, to play these. | none | The viewer's choice |
+| Add-on sources only: torrent rows listed while the Torrents switch is on, before Settee can play torrents | `error_torrents_not_yet` | Torrents can't play here yet. Pick a stream that isn't a torrent. | none | Settee |
 | Add-on sources only: TMDB, which turns the film into an IMDb id, didn't answer, so no add-on was asked (`AddonFailure.NoLookup`) | `error_addon_lookup_tv` / `_device` | Couldn't look this film up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
+| An episode's Add-on sources only: TMDB answered but has no IMDb id for the show (`VodViewModel.addonStreams`) | `error_addon_no_match_show` | Your add-ons can't look this show up, as it has no match on IMDb. | NoImdbMatch | The show's listing, or TMDB not knowing it |
+| An episode's Add-on sources only: TMDB, which turns the show into an IMDb id, didn't answer (`AddonFailure.NoLookup`) | `error_addon_lookup_show_tv` / `_device` | Couldn't look this show up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
 
 ## OpenSubtitles
 

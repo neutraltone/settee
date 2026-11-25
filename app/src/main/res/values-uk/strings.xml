@@ -297,6 +297,9 @@
     <string name="error_not_an_addon_device">За цією адресою немає додатка. Перевірте, що це посилання на manifest.json і що інтернет цього пристрою не вимагає спершу увійти.</string>
     <string name="error_addon_lookup_tv">Не вдалося знайти фільм, щоб запитати ваші додатки. Перевірте, що цей телевізор підключений до інтернету, і спробуйте ще раз.</string>
     <string name="error_addon_lookup_device">Не вдалося знайти фільм, щоб запитати ваші додатки. Перевірте, що цей пристрій підключений до інтернету, і спробуйте ще раз.</string>
+    <string name="error_addon_no_match_show">Ваші доповнення не можуть знайти цей серіал, бо для нього немає збігу в IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Не вдалося знайти серіал, щоб запитати ваші додатки. Перевірте, що цей телевізор підключений до інтернету, і спробуйте ще раз.</string>
+    <string name="error_addon_lookup_show_device">Не вдалося знайти серіал, щоб запитати ваші додатки. Перевірте, що цей пристрій підключений до інтернету, і спробуйте ще раз.</string>
     <string name="error_device_refused">Провайдер не прийняв ці дані. Перевірте дані провайдера в налаштуваннях.</string>
     <string name="error_guide">Не вдалося завантажити цю програму передач. Спробуйте ще раз трохи згодом.</string>
     <string name="error_guide_empty">Програма передач завантажилася, але в ній немає передач. Перевірте, що посилання правильне.</string>
@@ -407,4 +410,6 @@
     <string name="report_question_send">Надіслати</string>
     <string name="report_question_dont_send">Не надсилати</string>
     <string name="report_question_always_send">Завжди надсилати</string>
+    <string name="error_torrents_off">Торенти вимкнено. Увімкніть їх у Налаштування, Доповнення, щоб відтворити.</string>
+    <string name="error_torrents_not_yet">Торенти тут поки не відтворюються. Виберіть потік, який не є торентом.</string>
 </resources>

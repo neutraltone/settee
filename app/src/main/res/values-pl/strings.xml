@@ -297,6 +297,9 @@
     <string name="error_not_an_addon_device">Pod tym adresem nie ma dodatku. Sprawdź, czy to link do manifest.json i czy internet tego urządzenia nie wymaga najpierw zalogowania.</string>
     <string name="error_addon_lookup_tv">Nie udało się wyszukać filmu, by zapytać Twoje dodatki. Sprawdź, czy ten telewizor ma dostęp do internetu, i spróbuj ponownie.</string>
     <string name="error_addon_lookup_device">Nie udało się wyszukać filmu, by zapytać Twoje dodatki. Sprawdź, czy to urządzenie ma dostęp do internetu, i spróbuj ponownie.</string>
+    <string name="error_addon_no_match_show">Twoje dodatki nie mogą wyszukać tego serialu, bo nie ma on odpowiednika w IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Nie udało się wyszukać serialu, by zapytać Twoje dodatki. Sprawdź, czy ten telewizor ma dostęp do internetu, i spróbuj ponownie.</string>
+    <string name="error_addon_lookup_show_device">Nie udało się wyszukać serialu, by zapytać Twoje dodatki. Sprawdź, czy to urządzenie ma dostęp do internetu, i spróbuj ponownie.</string>
     <string name="error_device_refused">Dostawca nie zaakceptował tych danych. Sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="error_guide">Nie udało się pobrać tego przewodnika. Spróbuj ponownie za chwilę.</string>
     <string name="error_guide_empty">Przewodnik został pobrany, ale nie ma w nim programów. Sprawdź, czy to właściwy link.</string>
@@ -407,4 +410,6 @@
     <string name="report_question_send">Wyślij</string>
     <string name="report_question_dont_send">Nie wysyłaj</string>
     <string name="report_question_always_send">Zawsze wysyłaj</string>
+    <string name="error_torrents_off">Torrenty są wyłączone. Włącz je w Ustawienia, Dodatki, aby je odtworzyć.</string>
+    <string name="error_torrents_not_yet">Torrentów nie można tu jeszcze odtwarzać. Wybierz strumień, który nie jest torrentem.</string>
 </resources>

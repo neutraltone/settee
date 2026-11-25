@@ -294,6 +294,9 @@
     <string name="error_not_an_addon_device">이 주소에서 애드온을 받지 못했습니다. manifest.json 링크인지, 이 기기의 인터넷이 먼저 로그인을 요구하지 않는지 확인하세요.</string>
     <string name="error_addon_lookup_tv">애드온에 물어볼 영화를 찾지 못했습니다. 이 TV가 온라인 상태인지 확인한 후 다시 시도하세요.</string>
     <string name="error_addon_lookup_device">애드온에 물어볼 영화를 찾지 못했습니다. 이 기기가 온라인 상태인지 확인한 후 다시 시도하세요.</string>
+    <string name="error_addon_no_match_show">이 프로그램은 IMDb에 일치하는 항목이 없어 애드온에서 찾을 수 없습니다.</string>
+    <string name="error_addon_lookup_show_tv">애드온에 물어볼 프로그램을 찾지 못했습니다. 이 TV가 온라인 상태인지 확인한 후 다시 시도하세요.</string>
+    <string name="error_addon_lookup_show_device">애드온에 물어볼 프로그램을 찾지 못했습니다. 이 기기가 온라인 상태인지 확인한 후 다시 시도하세요.</string>
     <string name="error_device_refused">공급자가 이 정보를 거부했습니다. 설정에서 공급자 정보를 확인하세요.</string>
     <string name="error_guide">이 편성표를 다운로드하지 못했습니다. 잠시 후 다시 시도하세요.</string>
     <string name="error_guide_empty">이 편성표를 다운로드했지만 프로그램이 없었습니다. 올바른 링크인지 확인하세요.</string>
@@ -404,4 +407,6 @@
     <string name="report_question_send">보내기</string>
     <string name="report_question_dont_send">보내지 않기</string>
     <string name="report_question_always_send">항상 보내기</string>
+    <string name="error_torrents_off">토렌트가 꺼져 있습니다. 재생하려면 설정, 애드온에서 켜세요.</string>
+    <string name="error_torrents_not_yet">토렌트는 아직 여기서 재생할 수 없습니다. 토렌트가 아닌 스트림을 고르세요.</string>
 </resources>

@@ -27,7 +27,7 @@ class OpenSubtitles(
     /** What to look for when [key] plays, or null for anything that isn't a film or an episode. */
     suspend fun subjectFor(key: MediaKey): SubtitleSubject? = when (key) {
         is MediaKey.Movie -> movieSubject(key.movieId)
-        is MediaKey.AddonStream -> movieSubject(key.title.movieId)
+        is MediaKey.AddonStream -> subjectFor(key.title)
         is MediaKey.Episode -> {
             val episode = catalog.episode(key.episodeId)
             val source = episode?.let { sources.byId(it.sourceId) }

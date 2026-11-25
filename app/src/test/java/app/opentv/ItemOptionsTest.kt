@@ -65,6 +65,17 @@ class ItemOptionsTest {
     }
 
     @Test
+    fun `with add-ons an episode offers its add-on sources after playing it, before its marks`() {
+        assertThat(OptionsFor.Episode(inProgress, earlierToMark = false, addonSources = true).options())
+            .containsExactly(
+                ItemOption.PlayFromStart,
+                ItemOption.AddonSources,
+                ItemOption.MarkWatched,
+                ItemOption.MarkUnwatched,
+            ).inOrder()
+    }
+
+    @Test
     fun `a season all Unwatched can only be marked Watched`() {
         assertThat(OptionsFor.Season(listOf(WatchStatus.Unwatched, WatchStatus.Unwatched)).options())
             .containsExactly(ItemOption.MarkSeasonWatched)

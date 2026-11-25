@@ -14,9 +14,11 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
@@ -463,6 +465,55 @@ class MovieDetailContentTest {
         settle()
 
         compose.onNodeWithText("Choose a stream").assertDoesNotExist()
+    }
+
+    private val torrent = RankedStream(
+        StremioStream(StreamLink.Torrent("abc123", 1), "The Quiet Road 1080p WEB", "Torrents add-on"),
+        qualityRank = 300,
+        qualityLabel = "FHD",
+        sizeBytes = 2L shl 30,
+        playable = true,
+        sharers = 45,
+    )
+
+    @Test
+    fun `while torrents are off, their rows are greyed and passed over, with a line saying how to turn them on`() {
+        findStreams = { flowOf(AddonSearch.Results(streams + torrent, finished = true, torrentsOn = false)) }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
+        compose.onNodeWithText("Torrents add-on · FHD · 2 GB · 45 people sharing").assertIsDisplayed()
+        torrentRow.assertIsNotEnabled()
+        compose.onNodeWithText("Torrents are off. Turn them on in Settings, Add-ons, to play these.")
+            .assertIsDisplayed()
+        // The Highlight stops on the last stream that plays, rather than on one that doesn't.
+        val inPicker = isFocused() and hasAnyAncestor(isDialog())
+        repeat(2) {
+            compose.onNode(inPicker).performKeyInput { pressKey(Key.DirectionDown) }
+            settle()
+        }
+        compose.onNode(hasText("The Quiet Road 1080p") and inPicker).assertExists()
+        captureScreen("movie_detail_addon_picker_torrents_off")
+
+        torrentRow.performClick()
+        settle()
+        assertThat(playedStream).isNull()
+    }
+
+    @Test
+    fun `with torrents on, their rows say they can't play yet`() {
+        findStreams = { flowOf(AddonSearch.Results(streams + torrent, finished = true, torrentsOn = true)) }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction()).assertIsNotEnabled()
+        compose.onNodeWithText("Torrents can't play here yet. Pick a stream that isn't a torrent.").assertIsDisplayed()
+        compose.onNodeWithText("Torrents are off", substring = true).assertDoesNotExist()
     }
 
     @Test

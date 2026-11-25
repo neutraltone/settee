@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Den adressen ga ikke et tillegg. Sjekk at det er lenken til manifest.json, og at internett på denne enheten ikke krever at du logger på først.</string>
     <string name="error_addon_lookup_tv">Kunne ikke slå opp filmen for å spørre tilleggene dine. Sjekk at denne TV-en er på nett, og prøv igjen.</string>
     <string name="error_addon_lookup_device">Kunne ikke slå opp filmen for å spørre tilleggene dine. Sjekk at denne enheten er på nett, og prøv igjen.</string>
+    <string name="error_addon_no_match_show">Tilleggene dine kan ikke slå opp denne serien, fordi den ikke har noe treff på IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Kunne ikke slå opp serien for å spørre tilleggene dine. Sjekk at denne TV-en er på nett, og prøv igjen.</string>
+    <string name="error_addon_lookup_show_device">Kunne ikke slå opp serien for å spørre tilleggene dine. Sjekk at denne enheten er på nett, og prøv igjen.</string>
     <string name="error_device_refused">Leverandøren din godtok ikke disse detaljene. Sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="error_guide">Kunne ikke laste ned denne guiden. Prøv igjen om litt.</string>
     <string name="error_guide_empty">Guiden ble lastet ned, men inneholdt ingen programmer. Sjekk at det er riktig lenke.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">Send</string>
     <string name="report_question_dont_send">Ikke send</string>
     <string name="report_question_always_send">Send alltid</string>
+    <string name="error_torrents_off">Torrenter er slått av. Slå dem på under Innstillinger, Tillegg, for å spille dem av.</string>
+    <string name="error_torrents_not_yet">Torrenter kan ikke spilles av her ennå. Velg en strøm som ikke er en torrent.</string>
 </resources>

@@ -296,6 +296,9 @@
     <string name="error_not_an_addon_device">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog uređaja ne traži da se prvo prijavite.</string>
     <string name="error_addon_lookup_tv">Film nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj TV povezan s internetom, pa pokušajte ponovno.</string>
     <string name="error_addon_lookup_device">Film nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj uređaj povezan s internetom, pa pokušajte ponovno.</string>
+    <string name="error_addon_no_match_show">Vaši dodaci ne mogu potražiti ovu seriju jer nema podudaranja na IMDb-u.</string>
+    <string name="error_addon_lookup_show_tv">Seriju nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj TV povezan s internetom, pa pokušajte ponovno.</string>
+    <string name="error_addon_lookup_show_device">Seriju nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj uređaj povezan s internetom, pa pokušajte ponovno.</string>
     <string name="error_device_refused">Vaš pružatelj usluge nije prihvatio ove podatke. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_guide">Nije moguće preuzeti ovaj vodič. Pokušajte ponovno za trenutak.</string>
     <string name="error_guide_empty">Ovaj vodič je preuzet, ali u njemu nema emisija. Provjerite je li to prava poveznica.</string>
@@ -406,4 +409,6 @@
     <string name="report_question_send">Pošalji</string>
     <string name="report_question_dont_send">Nemoj slati</string>
     <string name="report_question_always_send">Uvijek pošalji</string>
+    <string name="error_torrents_off">Torrenti su isključeni. Uključite ih u Postavke, Dodaci, da biste ih reproducirali.</string>
+    <string name="error_torrents_not_yet">Torrenti se ovdje još ne mogu reproducirati. Odaberite stream koji nije torrent.</string>
 </resources>
