@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">Memuat episode…</string>
     <string name="vod_episodes_failed">Tidak dapat memuat episode serial ini. Coba lagi sebentar lagi.</string>
     <string name="vod_no_episodes">Penyedia Anda belum menambahkan episode apa pun dari serial ini.</string>
+    <string name="vod_no_episodes_addons">Belum ada episode acara ini yang terdaftar.</string>
     <string name="vod_continue_watching">Lanjutkan menonton</string>
     <string name="vod_large_provider_note">Penyedia besar bisa memakan waktu beberapa menit pada percobaan pertama.</string>
     <string name="vod_recommended">Direkomendasikan untuk Anda</string>

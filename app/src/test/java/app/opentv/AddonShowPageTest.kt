@@ -49,11 +49,15 @@ class AddonShowPageTest {
 
     private var tmdbDown = false
 
+    /** TMDB knows the show but lists no seasons of it yet. */
+    private var noSeasons = false
+
     private val network = FakeJsonHttp { request: Request ->
         when {
             request.url.encodedPath.startsWith("/stream/series/tt0000201:1:1") ->
                 """{"streams": [{"url": "https://example.com/pilot.mkv", "title": "Pilot 1080p"}]}"""
             tmdbDown -> "!"
+            noSeasons && request.url.encodedPath == "/3/tv/201" -> """{"name": "Lost Show", "seasons": []}"""
             else -> tmdbReply(request)
         }
     }
@@ -157,6 +161,16 @@ class AddonShowPageTest {
 
         compose.onAllNodes(hasText("Pilot", substring = true)).onFirst().assertExists()
         compose.onNodeWithText(failed).assertDoesNotExist()
+    }
+
+    @Test
+    fun `an add-on show TMDB lists no episodes of says so without blaming a provider`() {
+        noSeasons = true
+        openPage()
+
+        compose.onAllNodes(hasText(app.getString(R.string.vod_no_episodes_addons))).onFirst().assertExists()
+        compose.onNodeWithText(app.getString(R.string.vod_no_episodes)).assertDoesNotExist()
+        captureScreen("series_detail_addon_show_no_episodes")
     }
 
     private companion object {

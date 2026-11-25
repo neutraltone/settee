@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">正在加载分集…</string>
     <string name="vod_episodes_failed">无法加载这部剧集的分集。请稍后重试。</string>
     <string name="vod_no_episodes">你的提供商还没有添加这部剧集的任何分集。</string>
+    <string name="vod_no_episodes_addons">此节目尚未列出任何剧集。</string>
     <string name="vod_continue_watching">继续观看</string>
     <string name="vod_large_provider_note">若提供商内容较多，首次加载可能需要几分钟。</string>
     <string name="vod_recommended">为你推荐</string>

@@ -217,6 +217,7 @@
     <string name="vod_loading_episodes">Se încarcă episoadele…</string>
     <string name="vod_episodes_failed">Episoadele acestui serial nu au putut fi încărcate. Încearcă din nou peste puțin timp.</string>
     <string name="vod_no_episodes">Furnizorul tău nu a adăugat niciun episod din acest serial.</string>
+    <string name="vod_no_episodes_addons">Încă nu sunt listate episoade ale acestui serial.</string>
     <string name="vod_continue_watching">Continuă vizionarea</string>
     <string name="vod_large_provider_note">Un furnizor mare poate dura câteva minute prima dată.</string>
     <string name="vod_recommended">Recomandate pentru tine</string>

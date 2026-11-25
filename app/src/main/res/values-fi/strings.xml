@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Ladataan jaksoja…</string>
     <string name="vod_episodes_failed">Tämän sarjan jaksoja ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="vod_no_episodes">Palveluntarjoajasi ei ole lisännyt tämän sarjan jaksoja.</string>
+    <string name="vod_no_episodes_addons">Tästä sarjasta ei ole vielä listattu jaksoja.</string>
     <string name="vod_continue_watching">Jatka katselua</string>
     <string name="vod_large_provider_note">Suurella palveluntarjoajalla tämä voi kestää pari minuuttia ensimmäisellä kerralla.</string>
     <string name="vod_recommended">Suositellut sinulle</string>

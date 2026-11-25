@@ -218,6 +218,7 @@
     <string name="vod_loading_episodes">Завантаження епізодів…</string>
     <string name="vod_episodes_failed">Не вдалося завантажити епізоди цього серіалу. Спробуйте ще раз трохи згодом.</string>
     <string name="vod_no_episodes">Ваш провайдер не додав жодного епізоду цього серіалу.</string>
+    <string name="vod_no_episodes_addons">Серій цього серіалу поки немає.</string>
     <string name="vod_continue_watching">Продовжити перегляд</string>
     <string name="vod_large_provider_note">У великого провайдера це може зайняти кілька хвилин першого разу.</string>
     <string name="vod_recommended">Рекомендовано для вас</string>

@@ -218,6 +218,7 @@
     <string name="vod_loading_episodes">Načítavajú sa epizódy…</string>
     <string name="vod_episodes_failed">Epizódy tohto seriálu sa nepodarilo načítať. Skúste to o chvíľu znova.</string>
     <string name="vod_no_episodes">Váš poskytovateľ nepridal žiadne epizódy tohto seriálu.</string>
+    <string name="vod_no_episodes_addons">Pri tomto seriáli zatiaľ nie sú uvedené žiadne diely.</string>
     <string name="vod_continue_watching">Pokračovať v sledovaní</string>
     <string name="vod_large_provider_note">Pri veľkom poskytovateľovi to prvýkrát môže trvať niekoľko minút.</string>
     <string name="vod_recommended">Odporúčané pre vás</string>

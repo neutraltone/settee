@@ -217,6 +217,7 @@
     <string name="vod_loading_episodes">A carregar episódios…</string>
     <string name="vod_episodes_failed">Não foi possível carregar os episódios desta série. Tente novamente daqui a pouco.</string>
     <string name="vod_no_episodes">O seu fornecedor não adicionou nenhum episódio desta série.</string>
+    <string name="vod_no_episodes_addons">Ainda não há episódios desta série listados.</string>
     <string name="vod_continue_watching">Continuar a ver</string>
     <string name="vod_large_provider_note">Um fornecedor com muito conteúdo pode demorar alguns minutos na primeira vez.</string>
     <string name="vod_recommended">Recomendado para si</string>

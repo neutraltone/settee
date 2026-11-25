@@ -45,6 +45,7 @@ fun SeriesDetailScreen(
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var noEpisodes by remember(seriesId) { mutableStateOf(false) }
     var failure by remember(seriesId) { mutableStateOf<ViewerError?>(null) }
+    var fromAddons by remember(seriesId) { mutableStateOf(false) }
     var gone by remember(seriesId) { mutableStateOf(false) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
@@ -59,6 +60,7 @@ fun SeriesDetailScreen(
                     series = it.title.series
                     noEpisodes = it.title.noEpisodes
                     failure = it.title.failure
+                    fromAddons = it.title.fromAddons
                 }
             }
         }
@@ -72,7 +74,7 @@ fun SeriesDetailScreen(
     } else {
         // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
         val source = ReportedSource.of(sources.find { it.id == s.sourceId }?.kind)
-        val episodes = EpisodeFetch(noEpisodes, failure, source) {
+        val episodes = EpisodeFetch(noEpisodes, failure, source, fromAddons) {
             noEpisodes = false
             failure = null
             attempt++

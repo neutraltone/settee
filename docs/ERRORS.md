@@ -251,6 +251,7 @@ sentence about "your provider" fits a show that has none.
 | Every fetch failed with nothing more specific (an empty or broken reply, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
 | No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
+| The same, for a show kept from an add-on, whose episodes TMDB lists (#672) | `vod_no_episodes_addons` | No episodes of this show are listed yet. | none | TMDB's: none aired or listed yet |
 
 ## Movies and Shows lists
 

@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">एपिसोड लोड हो रहे हैं…</string>
     <string name="vod_episodes_failed">इस सीरीज़ के एपिसोड लोड नहीं हो सके। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="vod_no_episodes">आपके प्रदाता ने इस सीरीज़ का कोई एपिसोड नहीं जोड़ा है।</string>
+    <string name="vod_no_episodes_addons">इस शो का अभी तक कोई एपिसोड सूचीबद्ध नहीं है।</string>
     <string name="vod_continue_watching">देखना जारी रखें</string>
     <string name="vod_large_provider_note">बड़े प्रदाता के लिए पहली बार में कुछ मिनट लग सकते हैं।</string>
     <string name="vod_recommended">आपके लिए अनुशंसित</string>

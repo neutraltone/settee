@@ -893,6 +893,8 @@ data class OpenedShow(
     val fetched: Boolean,
     val noEpisodes: Boolean = false,
     val failure: ViewerError? = null,
+    /** Kept from an add-on: its episodes come from TMDB, and no sentence about it may mention a provider. */
+    val fromAddons: Boolean = false,
 )
 
 /**
@@ -1441,7 +1443,9 @@ class VodViewModel @JvmOverloads constructor(
                 timedOut -> episodesFailure(listOf(Result.failure(SocketTimeoutException())), fromAddons)
                 else -> episodesFailure(outcomes, fromAddons)
             }
-            send(Opened.Found(OpenedShow(series, fetched = true, noEpisodes = none, failure = failure)))
+            val shown =
+                OpenedShow(series, fetched = true, noEpisodes = none, failure = failure, fromAddons = fromAddons)
+            send(Opened.Found(shown))
         } finally {
             // Nothing's waiting for them any more; past the limit they carry on, and store what they find.
             if (!outlived) fetching.forEach { it.cancel() }

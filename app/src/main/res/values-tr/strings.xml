@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Bölümler yükleniyor…</string>
     <string name="vod_episodes_failed">Bu dizinin bölümleri yüklenemedi. Birazdan tekrar deneyin.</string>
     <string name="vod_no_episodes">Sağlayıcınız bu dizinin hiçbir bölümünü eklemedi.</string>
+    <string name="vod_no_episodes_addons">Bu dizinin henüz listelenen bölümü yok.</string>
     <string name="vod_continue_watching">İzlemeye devam et</string>
     <string name="vod_large_provider_note">Büyük bir sağlayıcıda ilk seferde bu birkaç dakika sürebilir.</string>
     <string name="vod_recommended">Size özel öneriler</string>

@@ -218,6 +218,7 @@
     <string name="vod_loading_episodes">Wczytywanie odcinków…</string>
     <string name="vod_episodes_failed">Nie udało się wczytać odcinków tego serialu. Spróbuj ponownie za chwilę.</string>
     <string name="vod_no_episodes">Twój dostawca nie dodał żadnych odcinków tego serialu.</string>
+    <string name="vod_no_episodes_addons">Nie ma jeszcze żadnych odcinków tego serialu.</string>
     <string name="vod_continue_watching">Kontynuuj oglądanie</string>
     <string name="vod_large_provider_note">W przypadku dużego dostawcy może to potrwać kilka minut za pierwszym razem.</string>
     <string name="vod_recommended">Polecane dla Ciebie</string>

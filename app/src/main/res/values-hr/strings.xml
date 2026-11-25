@@ -217,6 +217,7 @@
     <string name="vod_loading_episodes">Učitavanje epizoda…</string>
     <string name="vod_episodes_failed">Epizode ove serije nije bilo moguće učitati. Pokušajte ponovno za trenutak.</string>
     <string name="vod_no_episodes">Vaš pružatelj usluge nije dodao nijednu epizodu ove serije.</string>
+    <string name="vod_no_episodes_addons">Za ovu seriju još nisu navedene epizode.</string>
     <string name="vod_continue_watching">Nastavi gledati</string>
     <string name="vod_large_provider_note">Kod velikog pružatelja usluge prvi put može potrajati nekoliko minuta.</string>
     <string name="vod_recommended">Preporučeno za vas</string>

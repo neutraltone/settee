@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">에피소드를 불러오는 중…</string>
     <string name="vod_episodes_failed">이 시리즈의 에피소드를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</string>
     <string name="vod_no_episodes">공급자가 이 시리즈의 에피소드를 추가하지 않았습니다.</string>
+    <string name="vod_no_episodes_addons">이 프로그램의 에피소드가 아직 없습니다.</string>
     <string name="vod_continue_watching">이어보기</string>
     <string name="vod_large_provider_note">콘텐츠가 많은 공급자는 처음 로드할 때 몇 분 정도 걸릴 수 있습니다.</string>
     <string name="vod_recommended">회원님을 위한 추천</string>

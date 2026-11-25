@@ -377,6 +377,8 @@ class EpisodeFetch(
     val failure: ViewerError? = null,
     /** The kind of the show's Source, for its [failure]'s Error Report. */
     val source: ReportedSource? = null,
+    /** A show kept from an add-on, which has no provider to say has listed none of its episodes. */
+    val fromAddons: Boolean = false,
     val onTryAgain: () -> Unit = {},
 )
 
@@ -388,7 +390,8 @@ class EpisodeFetch(
 private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
     val failure = fetch.failure
     if (failure == null) {
-        Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
+        val none = if (fetch.fromAddons) R.string.vod_no_episodes_addons else R.string.vod_no_episodes
+        Text(stringResource(none), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
     val report = rememberErrorReport(failure, fetch.source)

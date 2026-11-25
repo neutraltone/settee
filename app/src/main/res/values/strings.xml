@@ -577,6 +577,7 @@
     <string name="vod_loading_episodes">Loading episodes…</string>
     <string name="vod_episodes_failed">Couldn\'t load the episodes of this series. Try again in a moment.</string>
     <string name="vod_no_episodes">Your provider hasn\'t added any episodes of this series.</string>
+    <string name="vod_no_episodes_addons">No episodes of this show are listed yet.</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
     <string name="vod_favourites">Favourites</string>

@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Indlæser episoder…</string>
     <string name="vod_episodes_failed">Afsnittene af denne serie kunne ikke indlæses. Prøv igen om lidt.</string>
     <string name="vod_no_episodes">Din udbyder har ikke tilføjet nogen afsnit af denne serie.</string>
+    <string name="vod_no_episodes_addons">Der er endnu ikke angivet nogen afsnit af dette program.</string>
     <string name="vod_continue_watching">Fortsæt visning</string>
     <string name="vod_large_provider_note">En stor udbyder kan tage et par minutter første gang.</string>
     <string name="vod_recommended">Anbefalet til dig</string>

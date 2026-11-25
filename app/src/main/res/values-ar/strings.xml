@@ -220,6 +220,7 @@
     <string name="vod_loading_episodes">جارٍ تحميل الحلقات…</string>
     <string name="vod_episodes_failed">تعذّر تحميل حلقات هذا المسلسل. أعد المحاولة بعد قليل.</string>
     <string name="vod_no_episodes">لم يُضف مزوّدك أي حلقات من هذا المسلسل.</string>
+    <string name="vod_no_episodes_addons">لا توجد حلقات مدرجة لهذا المسلسل بعد.</string>
     <string name="vod_continue_watching">متابعة المشاهدة</string>
     <string name="vod_large_provider_note">قد يستغرق ذلك بضع دقائق في المرة الأولى مع مزوّد كبير.</string>
     <string name="vod_recommended">موصى به لك</string>
