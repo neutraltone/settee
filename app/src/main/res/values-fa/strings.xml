@@ -408,4 +408,6 @@
     <string name="report_question_send">ارسال</string>
     <string name="report_question_dont_send">ارسال نشود</string>
     <string name="report_question_always_send">همیشه ارسال</string>
+    <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
+    <string name="error_torrents_not_yet">تورنت‌ها هنوز اینجا پخش نمی‌شوند. جریانی را انتخاب کنید که تورنت نیست.</string>
 </resources>

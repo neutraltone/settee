@@ -407,4 +407,6 @@
     <string name="report_question_send">送信</string>
     <string name="report_question_dont_send">送信しない</string>
     <string name="report_question_always_send">常に送信</string>
+    <string name="error_torrents_off">トレントはオフです。再生するには、設定のアドオンでオンにしてください。</string>
+    <string name="error_torrents_not_yet">トレントはまだここで再生できません。トレント以外のストリームを選んでください。</string>
 </resources>

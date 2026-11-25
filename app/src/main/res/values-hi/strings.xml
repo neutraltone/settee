@@ -408,4 +408,6 @@
     <string name="report_question_send">भेजें</string>
     <string name="report_question_dont_send">न भेजें</string>
     <string name="report_question_always_send">हमेशा भेजें</string>
+    <string name="error_torrents_off">टोरेंट बंद हैं। इन्हें चलाने के लिए सेटिंग्स, ऐड-ऑन में इन्हें चालू करें।</string>
+    <string name="error_torrents_not_yet">टोरेंट अभी यहाँ नहीं चल सकते। ऐसी स्ट्रीम चुनें जो टोरेंट न हो।</string>
 </resources>

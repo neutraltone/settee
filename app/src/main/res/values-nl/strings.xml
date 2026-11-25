@@ -408,4 +408,6 @@
     <string name="report_question_send">Sturen</string>
     <string name="report_question_dont_send">Niet sturen</string>
     <string name="report_question_always_send">Altijd sturen</string>
+    <string name="error_torrents_off">Torrents staan uit. Zet ze aan bij Instellingen, Add-ons, om deze af te spelen.</string>
+    <string name="error_torrents_not_yet">Torrents kunnen hier nog niet worden afgespeeld. Kies een stream die geen torrent is.</string>
 </resources>

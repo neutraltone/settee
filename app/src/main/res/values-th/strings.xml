@@ -407,4 +407,6 @@
     <string name="report_question_send">ส่ง</string>
     <string name="report_question_dont_send">ไม่ส่ง</string>
     <string name="report_question_always_send">ส่งทุกครั้ง</string>
+    <string name="error_torrents_off">ทอร์เรนต์ปิดอยู่ เปิดได้ที่ การตั้งค่า ส่วนเสริม เพื่อเล่นรายการเหล่านี้</string>
+    <string name="error_torrents_not_yet">ยังเล่นทอร์เรนต์ที่นี่ไม่ได้ เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
 </resources>

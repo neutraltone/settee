@@ -408,4 +408,6 @@
     <string name="report_question_send">Αποστολή</string>
     <string name="report_question_dont_send">Χωρίς αποστολή</string>
     <string name="report_question_always_send">Πάντα αποστολή</string>
+    <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
+    <string name="error_torrents_not_yet">Τα torrent δεν παίζουν ακόμα εδώ. Διαλέξτε μια ροή που δεν είναι torrent.</string>
 </resources>

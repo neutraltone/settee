@@ -408,4 +408,6 @@
     <string name="report_question_send">Send</string>
     <string name="report_question_dont_send">Ikke send</string>
     <string name="report_question_always_send">Send alltid</string>
+    <string name="error_torrents_off">Torrenter er slått av. Slå dem på under Innstillinger, Tillegg, for å spille dem av.</string>
+    <string name="error_torrents_not_yet">Torrenter kan ikke spilles av her ennå. Velg en strøm som ikke er en torrent.</string>
 </resources>

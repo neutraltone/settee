@@ -408,4 +408,6 @@
     <string name="report_question_send">Senden</string>
     <string name="report_question_dont_send">Nicht senden</string>
     <string name="report_question_always_send">Immer senden</string>
+    <string name="error_torrents_off">Torrents sind aus. Schalte sie unter Einstellungen, Add-ons ein, um sie abzuspielen.</string>
+    <string name="error_torrents_not_yet">Torrents lassen sich hier noch nicht abspielen. Wähle einen Stream, der kein Torrent ist.</string>
 </resources>

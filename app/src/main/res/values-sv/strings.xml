@@ -408,4 +408,6 @@
     <string name="report_question_send">Skicka</string>
     <string name="report_question_dont_send">Skicka inte</string>
     <string name="report_question_always_send">Skicka alltid</string>
+    <string name="error_torrents_off">Torrenter är avstängda. Slå på dem under Inställningar, Tillägg, för att spela upp dem.</string>
+    <string name="error_torrents_not_yet">Torrenter kan inte spelas upp här än. Välj en ström som inte är en torrent.</string>
 </resources>

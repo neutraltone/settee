@@ -409,4 +409,6 @@
     <string name="report_question_send">Trimite</string>
     <string name="report_question_dont_send">Nu trimite</string>
     <string name="report_question_always_send">Trimite mereu</string>
+    <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
+    <string name="error_torrents_not_yet">Torrentele nu pot fi redate aici încă. Alege un flux care nu este torrent.</string>
 </resources>

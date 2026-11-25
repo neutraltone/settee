@@ -409,4 +409,6 @@
     <string name="report_question_send">Pošalji</string>
     <string name="report_question_dont_send">Nemoj slati</string>
     <string name="report_question_always_send">Uvijek pošalji</string>
+    <string name="error_torrents_off">Torrenti su isključeni. Uključite ih u Postavke, Dodaci, da biste ih reproducirali.</string>
+    <string name="error_torrents_not_yet">Torrenti se ovdje još ne mogu reproducirati. Odaberite stream koji nije torrent.</string>
 </resources>

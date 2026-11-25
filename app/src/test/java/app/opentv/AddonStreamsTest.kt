@@ -158,6 +158,30 @@ class AddonStreamsTest {
     }
 
     @Test
+    fun `torrents come after direct links, those more people are sharing first, labelled with how many`() {
+        addon(
+            "films.example.com",
+            "Films",
+            streams(
+                """{"infoHash": "aaa", "name": "1080p", "title": "A film 2.1 GB"}""",
+                """{"infoHash": "bbb", "name": "1080p", "title": "A film\nSeeders: 120"}""",
+                """{"infoHash": "ccc", "name": "1080p", "title": "A film \uD83D\uDC64 37"}""",
+                direct("https://example.com/sd.mkv", name = "SD"),
+            ),
+        )
+
+        val ranked = results().streams
+
+        assertThat(ranked.map { it.stream.link }).containsExactly(
+            StreamLink.Direct("https://example.com/sd.mkv"),
+            StreamLink.Torrent("bbb"),
+            StreamLink.Torrent("ccc"),
+            StreamLink.Torrent("aaa"),
+        ).inOrder()
+        assertThat(ranked.map { it.sharers }).containsExactly(null, 120, 37, null).inOrder()
+    }
+
+    @Test
     fun `streams come highest Quality first, with what this device can't play last`() {
         addon(
             "films.example.com",

@@ -408,4 +408,6 @@
     <string name="report_question_send">Küldés</string>
     <string name="report_question_dont_send">Ne küldje</string>
     <string name="report_question_always_send">Mindig küldje</string>
+    <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
+    <string name="error_torrents_not_yet">A torrentek itt még nem játszhatók le. Válassz olyan streamet, amely nem torrent.</string>
 </resources>

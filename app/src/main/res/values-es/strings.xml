@@ -409,4 +409,6 @@
     <string name="report_question_send">Enviar</string>
     <string name="report_question_dont_send">No enviar</string>
     <string name="report_question_always_send">Enviar siempre</string>
+    <string name="error_torrents_off">Los torrents están desactivados. Actívalos en Ajustes, Complementos, para reproducirlos.</string>
+    <string name="error_torrents_not_yet">Los torrents aún no se pueden reproducir aquí. Elige una transmisión que no sea un torrent.</string>
 </resources>

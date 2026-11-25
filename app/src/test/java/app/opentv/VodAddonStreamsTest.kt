@@ -72,6 +72,7 @@ class VodAddonStreamsTest {
     @After
     fun close() {
         graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
+        graph.settings.setTorrentsEnabled(false)
     }
 
     private fun addon(host: String, name: String, reply: String, types: List<String> = listOf("movie")) {
@@ -174,10 +175,16 @@ class VodAddonStreamsTest {
     }
 
     @Test
-    fun `torrents aren't offered yet, so an add-on with only torrents found nothing to play`() = runBlocking {
+    fun `torrents are offered, with whether the Torrents switch is on`() = runBlocking {
         addon("films.example.com", "Films", """{"streams": [{"infoHash": "abc", "name": "1080p"}]}""")
 
-        assertThat(search(heat)).isEqualTo(AddonSearch.Results(emptyList(), finished = true))
+        val off = search(heat) as AddonSearch.Results
+        graph.settings.setTorrentsEnabled(true)
+        val on = search(heat) as AddonSearch.Results
+
+        assertThat(off.streams.map { it.stream.link }).containsExactly(StreamLink.Torrent("abc"))
+        assertThat(off.torrentsOn).isFalse()
+        assertThat(on.torrentsOn).isTrue()
     }
 
     @Test

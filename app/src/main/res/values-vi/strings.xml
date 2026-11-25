@@ -407,4 +407,6 @@
     <string name="report_question_send">Gửi</string>
     <string name="report_question_dont_send">Không gửi</string>
     <string name="report_question_always_send">Luôn gửi</string>
+    <string name="error_torrents_off">Torrent đang tắt. Bật trong Cài đặt, Tiện ích bổ sung để phát các mục này.</string>
+    <string name="error_torrents_not_yet">Chưa thể phát torrent ở đây. Hãy chọn luồng không phải torrent.</string>
 </resources>

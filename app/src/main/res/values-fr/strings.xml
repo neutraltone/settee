@@ -409,4 +409,6 @@
     <string name="report_question_send">Envoyer</string>
     <string name="report_question_dont_send">Ne pas envoyer</string>
     <string name="report_question_always_send">Toujours envoyer</string>
+    <string name="error_torrents_off">Les torrents sont désactivés. Activez-les dans Paramètres, Modules, pour les lire.</string>
+    <string name="error_torrents_not_yet">Les torrents ne peuvent pas encore être lus ici. Choisissez un flux qui n\'est pas un torrent.</string>
 </resources>

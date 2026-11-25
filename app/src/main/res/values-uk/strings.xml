@@ -410,4 +410,6 @@
     <string name="report_question_send">Надіслати</string>
     <string name="report_question_dont_send">Не надсилати</string>
     <string name="report_question_always_send">Завжди надсилати</string>
+    <string name="error_torrents_off">Торенти вимкнено. Увімкніть їх у Налаштування, Доповнення, щоб відтворити.</string>
+    <string name="error_torrents_not_yet">Торенти тут поки не відтворюються. Виберіть потік, який не є торентом.</string>
 </resources>

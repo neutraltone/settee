@@ -407,4 +407,6 @@
     <string name="report_question_send">보내기</string>
     <string name="report_question_dont_send">보내지 않기</string>
     <string name="report_question_always_send">항상 보내기</string>
+    <string name="error_torrents_off">토렌트가 꺼져 있습니다. 재생하려면 설정, 애드온에서 켜세요.</string>
+    <string name="error_torrents_not_yet">토렌트는 아직 여기서 재생할 수 없습니다. 토렌트가 아닌 스트림을 고르세요.</string>
 </resources>
