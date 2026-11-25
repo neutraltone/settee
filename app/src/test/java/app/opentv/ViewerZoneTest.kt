@@ -54,4 +54,28 @@ class ViewerZoneTest {
 
         assertThat(device.zone.value).isEqualTo(tokyo)
     }
+
+    @Test
+    fun `the zone Android's broadcast names wins over a default the process hasn't caught up with yet`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val device = DeviceZone(app) { london }
+
+        app.sendBroadcast(Intent(Intent.ACTION_TIMEZONE_CHANGED).putExtra(Intent.EXTRA_TIMEZONE, "Asia/Tokyo"))
+        testGraph.awaitIdle()
+
+        assertThat(device.zone.value).isEqualTo(tokyo)
+    }
+
+    @Test
+    fun `a broadcast naming no zone Java knows falls back to the device's`() {
+        var system = london
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val device = DeviceZone(app) { system }
+
+        system = tokyo
+        app.sendBroadcast(Intent(Intent.ACTION_TIMEZONE_CHANGED).putExtra(Intent.EXTRA_TIMEZONE, "Not/A_Zone"))
+        testGraph.awaitIdle()
+
+        assertThat(device.zone.value).isEqualTo(tokyo)
+    }
 }
