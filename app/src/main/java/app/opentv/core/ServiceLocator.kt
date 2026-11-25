@@ -498,9 +498,9 @@ object ServiceLocator {
             WaitingProgress(
                 viewerLibrary,
                 catalogRepository,
-                database.sources(),
-                database.episodes(),
+                database,
                 settings,
+                addonTitles,
                 dispatchers,
             )
         }

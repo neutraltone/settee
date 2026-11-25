@@ -104,6 +104,34 @@ class AddonTitles(
     }
 
     /**
+     * The film kept from an add-on with the IMDb id [imdbId], kept now from TMDB if this device never kept
+     * it: a title synced from another device arrives as no more than its id (ADR 0011). Add-ons or not,
+     * so Continue Watching and Favourites match the other device. Null when TMDB doesn't know it; a
+     * failure without a TMDB Key or when TMDB didn't answer, for a later sync to try again.
+     */
+    suspend fun keepSyncedFilm(imdbId: String): Result<Movie?> =
+        keptOrLookedUp(imdbId, isMovie = true, kept = { db.movies().byProviderId(it, imdbId) }, keep = ::keepFilm)
+
+    /** As [keepSyncedFilm], for a show. Its episodes aren't fetched: `ensureEpisodes` does that. */
+    suspend fun keepSyncedShow(imdbId: String): Result<Series?> =
+        keptOrLookedUp(imdbId, isMovie = false, kept = { db.series().byProviderId(it, imdbId) }, keep = ::keepShow)
+
+    private suspend fun <T : Any> keptOrLookedUp(
+        imdbId: String,
+        isMovie: Boolean,
+        kept: suspend (sourceId: Long) -> T?,
+        keep: suspend (AddonTitle) -> T,
+    ): Result<T?> = withContext(dispatchers.io) {
+        val already = db.sources().addons()?.let { kept(it.id) }
+        when {
+            already != null -> Result.success(already)
+            !tmdb.isConfigured() -> Result.failure(IllegalStateException("No TMDB Key"))
+            else -> tmdb.titleByImdbId(imdbId, isMovie)
+                .fold({ hit -> Result.success(hit?.let { keep(it.toTitle(imdbId)) }) }, { Result.failure(it) })
+        }
+    }
+
+    /**
      * The IMDb id for a film, for Stremio add-on stream lookups: a film kept from an add-on is stored by
      * it, any other is resolved through Settee's TMDB key (the provider's TMDB id when present, else a
      * title+year search). Null without a key or a match, so the add-on feature stays inert rather than
@@ -125,9 +153,6 @@ class AddonTitles(
             tmdb.imdbId(title = series.name, year = series.year, isMovie = false, tmdbId = series.tmdbId)
         }
     }
-
-    private suspend fun List<TmdbHit>.storedBy(picks: suspend (List<String>) -> List<TitlePick>): Set<String> =
-        if (isEmpty()) emptySet() else picks(map { it.tmdbId }).mapNotNullTo(HashSet()) { it.tmdbId }
 
     private suspend fun addonsSource(): Source = db.sources().addons() ?: run {
         val id = db.sources().insert(Source(name = Source.ADDONS_NAME, kind = SourceKind.ADDONS, url = ""))
@@ -188,6 +213,9 @@ internal suspend fun TmdbClient.storeAddonEpisodes(
 }
 
 private const val SECONDS_PER_MINUTE = 60
+
+private suspend fun List<TmdbHit>.storedBy(picks: suspend (List<String>) -> List<TitlePick>): Set<String> =
+    if (isEmpty()) emptySet() else picks(map { it.tmdbId }).mapNotNullTo(HashSet()) { it.tmdbId }
 
 private fun TmdbHit.toTitle(imdbId: String) =
     AddonTitle(tmdbId, imdbId, name, year, posterUrl, backdropUrl, overview, isMovie)

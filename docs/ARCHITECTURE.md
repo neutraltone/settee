@@ -277,6 +277,14 @@ later sync tries again. Only an episode the provider's answer left out is noted,
 asked for. The fetched episodes are dated back to the position rather than now, because they're new
 to this device, not to the viewer, and mustn't show as New Episodes (ADR 0004).
 
+A title kept from an add-on travels the same way, under the Add-ons source's name and its IMDb id.
+A receiver that never kept it, even one with no add-ons and so no Add-ons source yet, hands its film
+positions, episode positions and starred Favourites to `WaitingProgress`, which keeps the title from
+TMDB's look-up by IMDb id (`AddonTitles.keepSyncedFilm`/`keepSyncedShow`), fetches a show's episodes
+from TMDB when a position is on one, then merges the positions. A Favourite is stored by name and id
+on arrival already and lists once its title is kept. TMDB down, or no TMDB Key, stops the run for a
+later sync; an IMDb id TMDB doesn't know is noted, like a missing episode, so it isn't asked again.
+
 Episode lists carry no time the provider added each episode, so each row records when this device
 first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile
 Watched the episode before it. That is worked out on the fly rather than stored per Profile, so it
