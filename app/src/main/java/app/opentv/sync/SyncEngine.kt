@@ -7,6 +7,7 @@ package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.ArrivalCeiling
+import app.opentv.data.repo.SourceDirectory
 import kotlinx.serialization.json.Json
 
 /**
@@ -46,6 +47,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         profiles = graph.profiles.export(),
         profileRenames = graph.profiles.history.renames,
         profileAdds = graph.profiles.history.adds,
+        providerRenames = graph.sourceRepository.renames(),
         progress = graph.viewerLibrary.syncedProgress.export(),
         dismissals = graph.viewerLibrary.syncedDismissals.export(),
         favourites = graph.viewerLibrary.favourites.export(),
@@ -71,16 +73,19 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         return merged
     }
 
-    private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
+    private suspend fun applyOne(received: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
         // One per bundle, handed to every store that decides newest-wins; this merges nothing itself.
-        val ceiling = ArrivalCeiling.of(graph.clock(), bundle.generatedAtMillis)
+        val ceiling = ArrivalCeiling.of(graph.clock(), received.generatedAtMillis)
         // First: everything else lands on a Profile by name, and these decide what the names are now.
-        // Rename and add records keep the times they came with: each applies once, matched on its
-        // time, and a time clamped differently on every sync would make the same record new again.
-        // So the stores look an item's Profile up by its own time too, on the clock those records
-        // share, and clamp it only to compare and store: a clamped time on a TV whose clock is
-        // behind would file a new Tom's progress under the Tom who became Thomas.
-        graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds)
+        // Rename and add records, Profiles' and providers', keep the times they came with: each applies
+        // once, matched on its time, and a time clamped differently on every sync would make the same
+        // record new again. So the stores look an item's Profile up by its own time too, on the clock
+        // those records share, and clamp it only to compare and store: a clamped time on a TV whose
+        // clock is behind would file a new Tom's progress under the Tom who became Thomas.
+        graph.profiles.importChanges(received.profileRenames, received.profileAdds)
+        // Then the providers' names, so each item below carries the exact name its provider has here.
+        graph.sourceRepository.importRenames(received.providerRenames)
+        val bundle = received.labelledFor(graph.sourceRepository.directory())
         val history = graph.profiles.history
         graph.profiles.import(bundle.profiles, bundle.generatedAtMillis)
         graph.settings.importCategoryLocks(
@@ -99,4 +104,20 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
             settings = graph.profileSettings.import(bundle.profileSettings, history, ceiling),
         )
     }
+}
+
+/**
+ * This bundle with every item's provider named as this device names it: "Sky " or an old name from
+ * before a rename become this device's "Sky". The stores then match names exactly, and a Favourite is
+ * kept under the name its provider's rows are joined by.
+ */
+private fun SyncBundle.labelledFor(sources: SourceDirectory): SyncBundle {
+    val names = mutableMapOf<String, String>()
+    fun name(label: String) = names.getOrPut(label) { sources.currentName(label) }
+    return copy(
+        progress = progress.map { it.copy(source = name(it.source)) },
+        dismissals = dismissals.map { it.copy(source = name(it.source)) },
+        favourites = favourites.map { it.copy(source = name(it.source)) },
+        hiddenStreams = hiddenStreams.map { it.copy(source = name(it.source)) },
+    )
 }

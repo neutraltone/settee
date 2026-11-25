@@ -148,7 +148,8 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 - **Catalogue refresh merges, never wipes.** `ChannelDao.replaceCatalogue` carries `hidden`, `sortIndex`,
   custom names and EPG overrides across by `streamId`; M3U `streamId`s are stable FNV-1a hashes.
   Favourites aren't on the rows: they match by source name plus `streamId` (series: `seriesId`), so
-  anything that changes those ids, or renaming a source, silently drops them.
+  anything that changes those ids silently drops them. Renaming a source goes through `SourceDao`'s
+  `carryName`, which moves every row kept by source name, and travels as a dated provider rename (ADR 0004).
 - **EPG never deletes before it has the replacement**: batched writes of 500 that replace each stored slot, pruning by age only after
   success. Times are UTC epoch millis everywhere; convert to local only when drawing.
 - **SQLite bound-variable limit:** never write `IN (:hugeList)` / `NOT IN (:everyId)` over catalogue-sized

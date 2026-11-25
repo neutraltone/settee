@@ -44,7 +44,8 @@ class SyncedProgress internal constructor(
     /**
      * Merges progress from another device, newest wins, labels going by [history]. An episode this
      * device hasn't fetched comes back in [ProgressImport.waiting], labelled with the Profile's name
-     * now; anything else it can't place is dropped. Each time is taken through [ceiling] first.
+     * now; anything else it can't place is dropped, as is a position with a mark this version doesn't
+     * know. Each time is taken through [ceiling] first.
      */
     suspend fun import(
         items: List<SyncPosition>,
@@ -55,7 +56,10 @@ class SyncedProgress internal constructor(
         val sourceIds = sources.directory()
         val placed = mutableListOf<PlaybackPosition>()
         val waiting = mutableListOf<SyncPosition>()
-        for (arrived in items) {
+        // A mark a newer version added can't be shown here, and storing it as no mark would pass
+        // that on with the original time, where it ties with, and beats, the real mark (#340).
+        val readable = items.filter { it.mark == null || it.handMark() != null }
+        for (arrived in readable) {
             val item = arrived.copy(updatedAtMillis = ceiling.clamp(arrived.updatedAtMillis))
             val profile = history.currentName(item.profile, arrived.updatedAtMillis)
             val profileId = names.id(profile)
@@ -103,8 +107,10 @@ class SyncedProgress internal constructor(
         positionMillis = positionMillis,
         durationMillis = durationMillis,
         updatedAtMillis = updatedAtMillis,
-        mark = mark?.let { runCatching { HandMark.valueOf(it) }.getOrNull() },
+        mark = handMark(),
     )
+
+    private fun SyncPosition.handMark(): HandMark? = HandMark.entries.firstOrNull { it.name == mark }
 }
 
 /**

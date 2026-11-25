@@ -9,6 +9,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
+import app.opentv.data.model.Movie
+import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -23,7 +25,8 @@ import org.robolectric.annotation.Config
 
 /**
  * Deleting a source takes what was set on its channels with it, so a source added later under the
- * same name starts afresh rather than reviving them by name (#333).
+ * same name starts afresh rather than reviving them by name (#333), and takes its films' and episodes'
+ * watch progress with it (#337).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -122,5 +125,51 @@ class SourceDeletionTest {
         // Gone before any refresh, which would otherwise clear it up itself.
         assertThat(db.epgFeeds().forProvider(first)).isNull()
         assertThat(test.guide.syncAll(nowUtcMillis = now).feedsFailed).isEqualTo(0)
+    }
+
+    private fun film(sourceId: Long, streamId: String) = Movie(
+        sourceId = sourceId,
+        streamId = streamId,
+        name = "Film $streamId",
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
+        durationSeconds = null,
+        containerExtension = "mp4",
+        streamUrl = "https://example.com/movie/$streamId.mp4",
+    )
+
+    @Test
+    fun `deleting a source takes its films' and episodes' progress and leaves the other source's alone`() = testing {
+        val first = home()
+        val second = away()
+        val (homeFilm, awayFilm) = db.movies().insertRows(listOf(film(first, "1"), film(second, "2")))
+        val homeEpisode = testEpisode(1, 1).copy(sourceId = first)
+        val awayEpisode = testEpisode(1, 2).copy(sourceId = second)
+        db.episodes().upsertAll(listOf(homeEpisode, awayEpisode))
+        val library = test.viewerLibrary
+        library.recordProgress("movie:$homeFilm", positionMillis = 600_000, durationMillis = 1_000_000)
+        library.recordProgress("movie:$awayFilm", positionMillis = 600_000, durationMillis = 1_000_000)
+        library.recordProgress("ep:${homeEpisode.id}", positionMillis = 600_000, durationMillis = 1_000_000)
+        library.recordProgress("ep:${awayEpisode.id}", positionMillis = 600_000, durationMillis = 1_000_000)
+        // Another Profile's progress on the removed source's film goes too.
+        db.positions().upsert(
+            PlaybackPosition(
+                profileId = 2,
+                mediaKey = "movie:$homeFilm",
+                positionMillis = 600_000,
+                durationMillis = 1_000_000,
+                updatedAtMillis = 0,
+            ),
+        )
+
+        test.catalog.deleteSource(first)
+
+        assertThat(db.positions().all().map { it.profileId to it.mediaKey }).containsExactly(
+            1L to "movie:$awayFilm",
+            1L to "ep:${awayEpisode.id}",
+        )
     }
 }

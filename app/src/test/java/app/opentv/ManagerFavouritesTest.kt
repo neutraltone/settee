@@ -45,7 +45,13 @@ class ManagerFavouritesTest {
         scope,
         test.catalog,
         AppSettings.get(context),
-        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http),
+        SourceRepository(
+            db.sources(),
+            XtreamApi(test.panel.http),
+            StalkerApi(test.panel.http),
+            test.panel.http,
+            test.settings,
+        ),
         test.lineup,
         test.refresh(),
     )

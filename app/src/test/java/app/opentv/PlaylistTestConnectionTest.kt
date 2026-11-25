@@ -47,7 +47,13 @@ class PlaylistTestConnectionTest {
         answer().request(chain.request()).protocol(Protocol.HTTP_1_1).build()
     }.build()
 
-    private val sources = SourceRepository(test.db.sources(), XtreamApi(http), StalkerApi(http), http)
+    private val sources = SourceRepository(
+        test.db.sources(),
+        XtreamApi(http),
+        StalkerApi(http),
+        http,
+        test.settings,
+    )
 
     private val playlist = Source(name = "Playlist", kind = SourceKind.M3U, url = "http://example.com/list.m3u")
 
