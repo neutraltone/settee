@@ -1597,6 +1597,22 @@ interface PlaybackPositionDao {
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
+
+    /**
+     * Deletes every Profile's positions on [sourceId]'s films and episodes, for removing that source
+     * (#337). Run before its titles go, since afterwards nothing says which keys were its. A subquery
+     * rather than a list of ids, which a big catalogue would push past SQLite's bound-variable limit.
+     */
+    @Query(
+        """
+        DELETE FROM playback_positions WHERE
+          (substr(mediaKey, 1, 6) = 'movie:'
+            AND CAST(substr(mediaKey, 7) AS INTEGER) IN (SELECT id FROM movies WHERE sourceId = :sourceId))
+          OR (substr(mediaKey, 1, 3) = 'ep:'
+            AND CAST(substr(mediaKey, 4) AS INTEGER) IN (SELECT id FROM episodes WHERE sourceId = :sourceId))
+        """,
+    )
+    suspend fun deleteForSource(sourceId: Long)
 }
 
 @Dao
