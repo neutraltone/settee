@@ -8,7 +8,6 @@ package app.opentv
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ErrorWording
-import app.opentv.core.LocaleUtils
 import app.opentv.core.ofOpenSubtitles
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
@@ -90,13 +89,14 @@ class OpenSubtitlesWordingTest {
         try {
             val app = ApplicationProvider.getApplicationContext<android.app.Application>()
             Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, deviceClock)
-            // The app in British English, as MainActivity's attachBaseContext puts its chosen language on
-            // every context. Not through AppSettings.get: that's one per process, and may still hold an
-            // earlier test's application, whose settings this test's context never reads.
-            val british = LocaleUtils.wrap(app, "en-GB")
+            // The app in British English, saved as Settings > Language saves it. Not through
+            // AppSettings.get: that's one per process, and may still hold an earlier test's
+            // application, whose settings this test's context never reads.
+            app.getSharedPreferences("opentv_settings", android.content.Context.MODE_PRIVATE)
+                .edit().putString("language_tag", "en-GB").commit()
             val midnightUtc = java.time.Instant.parse("2026-11-14T00:00:00Z").toEpochMilli()
             // The graph's zone, not the JVM's: Tokyo is nine hours on from UTC.
-            return ErrorWording(british, onTelevision = true) { ZoneId.of("Asia/Tokyo") }.ofOpenSubtitles(
+            return ErrorWording(app, onTelevision = true) { ZoneId.of("Asia/Tokyo") }.ofOpenSubtitles(
                 OpenSubtitlesFailure.DownloadLimit(signedIn = true, resetsAt = midnightUtc),
             ).sentence
         } finally {

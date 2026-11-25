@@ -8,6 +8,7 @@ package app.opentv
 import android.app.Application
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.LocaleUtils
 import app.opentv.core.ViewerClock
 import com.google.common.truth.Truth.assertThat
 import java.time.LocalDateTime
@@ -89,6 +90,21 @@ class ViewerClockTest {
 
         assertThat(before).isEqualTo("Sat, 4 Jul")
         assertThat(clock.formatDay(saturdayEvening)).isEqualTo("Sa., 4. Juli")
+    }
+
+    @Test
+    fun `choosing System after German gives the system's day names, without a new process`() {
+        // The app was started in German, so its own context carries German until the process ends.
+        val startedInGerman = LocaleUtils.wrap(context, "de")
+        val clock = ViewerClock.of(startedInGerman) { london }
+        appLanguage("de")
+        val before = clock.formatDay(saturdayEvening)
+
+        appLanguage("")
+
+        assertThat(before).isEqualTo("Sa., 4. Juli")
+        assertThat(clock.formatDay(saturdayEvening)).isEqualTo("Sat, 4 Jul")
+        assertThat(Locale.getDefault()).isEqualTo(Locale.forLanguageTag("en-GB"))
     }
 
     @Test
