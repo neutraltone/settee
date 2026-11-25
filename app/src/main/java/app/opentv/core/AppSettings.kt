@@ -171,21 +171,32 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     /**
      * The viewer locked or unlocked a category here. The only thing that records a time: a lock that
      * arrived from another device keeps the time it was first made, or an old lock passed around
-     * would look new and re-lock a device that has since unlocked (ADR 0005).
+     * would look new and re-lock a device that has since unlocked (ADR 0005). A lock keeps [names], the
+     * categories' names as the provider sends them, so a new normaliser can move it (`CategoryLockCarry`).
      */
-    fun setCategoryLocked(key: String, locked: Boolean, now: Long = System.currentTimeMillis()) =
-        synchronized(lockChanges) {
-            val times = categoryLockTimes()
-            val previous = times[key] ?: CategoryLockTimes()
-            val updated = if (locked) previous.copy(lockedAt = now) else previous.copy(unlockedAt = now)
-            storeCategoryLockTimes(times + (key to updated))
-            setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+    fun setCategoryLocked(
+        key: String,
+        locked: Boolean,
+        names: Collection<String> = emptyList(),
+        now: Long = System.currentTimeMillis(),
+    ) = synchronized(lockChanges) {
+        val times = categoryLockTimes()
+        val previous = times[key] ?: CategoryLockTimes()
+        val updated = if (locked) {
+            previous.copy(lockedAt = now, names = previous.names + names)
+        } else {
+            previous.copy(unlockedAt = now)
         }
+        storeCategoryLockTimes(times + (key to updated))
+        setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+    }
 
     /** The locks in force here, each with the time it was made, as they travel to the other side. */
     fun exportCategoryLocks(): List<SyncCategoryLock> {
         val times = categoryLockTimes()
-        return hiddenCategories.value.map { SyncCategoryLock(it, times[it]?.lockedAt ?: 0) }
+        return hiddenCategories.value.map {
+            SyncCategoryLock(it, times[it]?.lockedAt ?: 0, times[it]?.names?.toList().orEmpty())
+        }
     }
 
     /**
@@ -201,13 +212,45 @@ class AppSettings private constructor(context: Context, fileName: String = "open
                 val previous = times[lock.key] ?: CategoryLockTimes()
                 val lockedAt = ceiling.clamp(lock.lockedAtMillis)
                 val takes = isNewerChange(lockedAt, previous.unlockedAt)
-                if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lockedAt))
+                if (takes) {
+                    times[lock.key] = previous.copy(
+                        lockedAt = maxOf(previous.lockedAt, lockedAt),
+                        names = previous.names + lock.names,
+                    )
+                }
                 takes
             }
             if (taken.isEmpty()) return@synchronized
             storeCategoryLockTimes(times)
             setHiddenCategories(hiddenCategories.value + taken.map { it.key })
         }
+
+    /**
+     * Moves every lock, and its unlock, to the key [newKey] gives it, as a provider rename moves a
+     * nameless category's (`NamelessCategory`). A key that lands on one already here keeps the newer
+     * of each time, and stays locked if either was.
+     */
+    fun rekeyCategoryLocks(newKey: (String) -> String) = synchronized(lockChanges) {
+        val times = categoryLockTimes()
+        val moved = mutableMapOf<String, CategoryLockTimes>()
+        for ((key, time) in times) {
+            val target = newKey(key)
+            val there = moved[target]
+            moved[target] = if (there == null) {
+                time
+            } else {
+                CategoryLockTimes(
+                    lockedAt = maxOf(there.lockedAt, time.lockedAt),
+                    unlockedAt = listOfNotNull(there.unlockedAt, time.unlockedAt).maxOrNull(),
+                    names = there.names + time.names,
+                )
+            }
+        }
+        val hidden = hiddenCategories.value.mapTo(HashSet(), newKey)
+        if (moved == times && hidden == hiddenCategories.value) return@synchronized
+        storeCategoryLockTimes(moved)
+        setHiddenCategories(hidden)
+    }
 
     private fun categoryLockTimes(): Map<String, CategoryLockTimes> = runCatching {
         prefs.getString(KEY_CATEGORY_LOCK_TIMES, null)?.let {
@@ -219,7 +262,11 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { putString(KEY_CATEGORY_LOCK_TIMES, addonJson.encodeToString(times)) }
 
     @Serializable
-    private data class CategoryLockTimes(val lockedAt: Long = 0, val unlockedAt: Long? = null)
+    private data class CategoryLockTimes(
+        val lockedAt: Long = 0,
+        val unlockedAt: Long? = null,
+        val names: Set<String> = emptySet(),
+    )
 
     fun setHiddenUnlocked(unlocked: Boolean) {
         _hiddenUnlocked.value = unlocked

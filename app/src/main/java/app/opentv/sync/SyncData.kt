@@ -13,9 +13,10 @@ import kotlinx.serialization.Serializable
  * Nothing here is keyed by a local database id — those differ from one install to the next. An
  * item is identified by something stable for the same provider: a watch position, hidden channel
  * or Favourite by its **source name and provider id** (ADR 0004), a profile by its **name**, a
- * category by its **group key**, a NAS recording by its **smb:// locator**. So a bundle from one
- * device makes sense on another. A stream URL never travels: an Xtream one holds the account's
- * username and password, and this bundle is left as a plain file on the NAS.
+ * category by its **group key** (one with no name by its source name and provider category id), a NAS
+ * recording by its **smb:// locator**. So a bundle from one device makes sense on another. A stream
+ * URL never travels: an Xtream one holds the account's username and password, and this bundle is
+ * left as a plain file on the NAS.
  *
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
@@ -89,7 +90,12 @@ data class SyncProfileAdd(val name: String, val atMillis: Long)
 
 /** A locked category: [key] is its group key, [lockedAtMillis] when the lock was first made. */
 @Serializable
-data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
+data class SyncCategoryLock(
+    val key: String,
+    val lockedAtMillis: Long,
+    /** The categories' names as the provider sends them, so a device whose normaliser changes can move the lock. */
+    val names: List<String> = emptyList(),
+)
 
 /** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
 @Serializable

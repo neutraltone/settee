@@ -1199,6 +1199,11 @@ class CatalogRepository(
          * Bump this whenever the normaliser changes in a way that should re-process
          * already-imported channels. The app compares it against a stored value on launch
          * and runs [renormalizeAll] once when it moves.
+         *
+         * Parental Lock keys categories by the normaliser's group key too, worked out on every
+         * read, so a change that moves a category's key lifts its lock unless this moves:
+         * [CategoryLockCarry.carry] then re-keys every lock from the category names it kept.
+         * A change that alters any category's key without a bump shows locked ones with no PIN.
          */
         const val NORMALIZER_VERSION = 4
     }

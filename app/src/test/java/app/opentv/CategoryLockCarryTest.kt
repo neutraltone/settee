@@ -7,14 +7,23 @@ package app.opentv
 
 import app.opentv.data.model.Category
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.LAST_ASCII_KEY_NORMALIZER
+import app.opentv.data.repo.SourceDirectory
 import app.opentv.data.repo.carriedCategoryLocks
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.sync.SyncCategoryLock
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
-/** A category locked before #345 changed its key stays locked under the new one. */
+/** A category locked before #345 changed its key, with no names kept, stays locked under the new one. */
 class CategoryLockCarryTest {
+
+    private val sources = SourceDirectory(emptyList())
+
+    private fun categoryGroupKey(category: Category) = categoryGroupKey(category, sources)
+
+    private fun carriedCategoryLocks(categories: List<Category>, locks: List<SyncCategoryLock>) =
+        carriedCategoryLocks(categories, sources, locks, from = LAST_ASCII_KEY_NORMALIZER)
 
     private fun category(id: String, name: String) =
         Category(id = id, sourceId = 1, name = name, kind = StreamKind.LIVE)
@@ -26,7 +35,8 @@ class CategoryLockCarryTest {
         // Before #345 the key dropped every Cyrillic letter, leaving the region: `ru`.
         val carried = carriedCategoryLocks(listOf(adult), listOf(SyncCategoryLock("ru", lockedAtMillis = 5)))
 
-        assertThat(carried).containsExactly(SyncCategoryLock(categoryGroupKey(adult), lockedAtMillis = 5))
+        val expected = SyncCategoryLock(categoryGroupKey(adult), lockedAtMillis = 5, names = listOf("RU| Для взрослых"))
+        assertThat(carried).containsExactly(expected)
         assertThat(categoryGroupKey(adult)).isNotEqualTo("ru")
     }
 

@@ -62,6 +62,7 @@ class SourceRepository(
                 settings.setProviderRenames(
                     settings.providerRenames() + SyncProviderRename(before, normalised.name, clock()),
                 )
+                carryLocks(before, normalised.name)
             }
             source.id
         }
@@ -109,6 +110,13 @@ class SourceRepository(
         val clash = sources.any { it.id != from.id && sameName(it.name, to) }
         if (clash || from.name == to || (namedHereAt != null && namedHereAt > rename.atMillis)) return
         dao.rename(from.id, to)
+        carryLocks(from.name, to)
+    }
+
+    // The database's rows keyed by a provider's name move with SourceDao.carryName; Parental Lock's
+    // keys for nameless categories hold the name too, and live in settings.
+    private fun carryLocks(from: String, to: String) = settings.rekeyCategoryLocks { key ->
+        NamelessCategory.relabelled(key) { name -> if (name == from) to else name }
     }
 
     /** Checks the details work before the user is committed to them. */

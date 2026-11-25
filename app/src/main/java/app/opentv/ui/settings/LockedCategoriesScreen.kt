@@ -61,6 +61,8 @@ fun LockedCategoriesScreen(
 ) {
     val loaded by categories.collectAsState(initial = null)
     val entries = remember(loaded) { loaded?.map { SidebarEntry(it.key, it.label) } }
+    // A lock keeps the names of the categories it was set on (CategoryLockCarry).
+    val namesByKey = remember(loaded) { loaded?.associate { it.key to it.names }.orEmpty() }
     val hidden by settings.hiddenCategories.collectAsState()
     val firstRow = remember { FocusRequester() }
     // Once, when the categories arrive. Not startsFocused on the first row: a lazy row is composed
@@ -112,7 +114,9 @@ fun LockedCategoriesScreen(
                 val locked = entry.key in hidden
                 ListRow(
                     entry.label,
-                    onClick = { settings.setCategoryLocked(entry.key, !locked) },
+                    onClick = {
+                        settings.setCategoryLocked(entry.key, !locked, names = namesByKey[entry.key].orEmpty())
+                    },
                     switch = locked,
                     modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
                 )

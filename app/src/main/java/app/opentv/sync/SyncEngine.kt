@@ -7,6 +7,7 @@ package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.ArrivalCeiling
+import app.opentv.data.repo.NamelessCategory
 import app.opentv.data.repo.SourceDirectory
 import kotlinx.serialization.json.Json
 
@@ -114,5 +115,8 @@ private fun SyncBundle.labelledFor(sources: SourceDirectory): SyncBundle {
         dismissals = dismissals.map { it.copy(source = name(it.source)) },
         favourites = favourites.map { it.copy(source = name(it.source)) },
         hiddenStreams = hiddenStreams.map { it.copy(source = name(it.source)) },
+        // A nameless category's lock is keyed by its provider's name too (#338).
+        hiddenCategories = hiddenCategories.map { NamelessCategory.relabelled(it, ::name) },
+        categoryLocks = categoryLocks.map { it.copy(key = NamelessCategory.relabelled(it.key, ::name)) },
     )
 }

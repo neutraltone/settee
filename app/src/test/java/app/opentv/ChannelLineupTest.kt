@@ -225,6 +225,21 @@ class ChannelLineupTest {
         assertThat(all().single().primary.name).isEqualTo("UK| ITV FHD")
     }
 
+    // Pinned, because Parental Lock stores these keys: a normaliser change that moves one must bump
+    // NORMALIZER_VERSION so the lock is carried (#338).
+    @Test
+    fun `typical locked categories keep the keys their locks are stored under`() = testing {
+        category(sourceId = 1, id = "1", name = "Adult")
+        category(sourceId = 1, id = "2", name = "XXX")
+        category(sourceId = 1, id = "3", name = "18+")
+        category(sourceId = 1, id = "4", name = "FR| ADULTES")
+        category(sourceId = 1, id = "5", name = "UK| Adult")
+        category(sourceId = 2, id = "6", name = "-----")
+
+        assertThat(lineup.categoryGroups(includeLocked = true).first().map { it.key })
+            .containsExactly("adult", "xxx", "18", "adultes", "@10:Provider B:6")
+    }
+
     @Test
     fun `a locked category leaves every scope a viewer browses, and every channel's qualities`() = testing {
         category(sourceId = 1, id = "10", name = "UK| News")

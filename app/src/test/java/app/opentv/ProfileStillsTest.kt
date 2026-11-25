@@ -10,6 +10,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.Profiles
+import app.opentv.data.repo.SourceDirectory
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.ui.ProfilesViewModel
 import com.google.common.truth.Truth.assertThat
@@ -90,7 +91,7 @@ class ProfileStillsTest {
     fun `a title in a Parental-Locked category is passed over for the one played before it`() = runBlocking<Unit> {
         graph.database.categories().upsertAll(listOf(films, adult))
         graph.database.movies().upsertAll(listOf(film(1, films), film(2, adult)))
-        graph.settings.setHiddenCategories(setOf(categoryGroupKey(adult)))
+        graph.settings.setHiddenCategories(setOf(categoryGroupKey(adult, SourceDirectory(emptyList()))))
         played(Profiles.BASE_PROFILE_ID, movieId = 1, at = 1_000)
         played(Profiles.BASE_PROFILE_ID, movieId = 2, at = 2_000)
 

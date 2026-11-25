@@ -24,6 +24,11 @@ internal class NormaliserCatchUp(
      * catalogue isn't.
      */
     private val carryLocks: suspend (from: Int) -> Unit = {},
+    /**
+     * With the normaliser unchanged: has the locks remember the names of the categories they lock,
+     * while today's keys still find them, so the next change can carry them.
+     */
+    private val rememberLocks: suspend () -> Unit = {},
 ) {
     // Opened here rather than passed in, so the file is read on the launch work's thread, not the
     // main one that builds it as the first screen opens.
@@ -34,6 +39,8 @@ internal class NormaliserCatchUp(
             carryLocks(from)
             renormalise()
             prefs.edit { putInt(KEY, CatalogRepository.NORMALIZER_VERSION) }
+        } else {
+            rememberLocks()
         }
     }
 
