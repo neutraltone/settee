@@ -296,6 +296,9 @@
     <string name="error_not_an_addon_device">Quell\'indirizzo non ha dato un add-on. Controlla che sia il link a manifest.json e che la connessione di questo dispositivo non ti chieda prima di accedere.</string>
     <string name="error_addon_lookup_tv">Impossibile cercare questo film per chiederlo ai tuoi add-on. Controlla che questo televisore sia online, poi riprova.</string>
     <string name="error_addon_lookup_device">Impossibile cercare questo film per chiederlo ai tuoi add-on. Controlla che questo dispositivo sia online, poi riprova.</string>
+    <string name="error_addon_no_match_show">I tuoi componenti aggiuntivi non possono cercare questa serie, perché non ha corrispondenze su IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Impossibile cercare questa serie per chiederla ai tuoi add-on. Controlla che questo televisore sia online, poi riprova.</string>
+    <string name="error_addon_lookup_show_device">Impossibile cercare questa serie per chiederla ai tuoi add-on. Controlla che questo dispositivo sia online, poi riprova.</string>
     <string name="error_device_refused">Il tuo provider non ha accettato questi dati. Controlla i dati del tuo provider in Impostazioni.</string>
     <string name="error_guide">Impossibile scaricare questa guida. Riprova tra un momento.</string>
     <string name="error_guide_empty">Questa guida è stata scaricata, ma non conteneva programmi. Controlla che sia il link giusto.</string>
@@ -406,4 +409,6 @@
     <string name="report_question_send">Invia</string>
     <string name="report_question_dont_send">Non inviare</string>
     <string name="report_question_always_send">Invia sempre</string>
+    <string name="error_torrents_off">I torrent sono disattivati. Attivali in Impostazioni, Componenti aggiuntivi, per riprodurli.</string>
+    <string name="error_torrents_not_yet">I torrent non si possono ancora riprodurre qui. Scegli uno stream che non sia un torrent.</string>
 </resources>

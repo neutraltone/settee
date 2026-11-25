@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här enheten inte kräver att du loggar in först.</string>
     <string name="error_addon_lookup_tv">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här TV:n är ansluten till internet och försök igen.</string>
     <string name="error_addon_lookup_device">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här enheten är ansluten till internet och försök igen.</string>
+    <string name="error_addon_no_match_show">Dina tillägg kan inte slå upp den här serien, eftersom den saknar träff på IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Kunde inte slå upp serien för att fråga dina tillägg. Kontrollera att den här TV:n är ansluten till internet och försök igen.</string>
+    <string name="error_addon_lookup_show_device">Kunde inte slå upp serien för att fråga dina tillägg. Kontrollera att den här enheten är ansluten till internet och försök igen.</string>
     <string name="error_device_refused">Din leverantör godkände inte uppgifterna. Kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="error_guide">Det gick inte att ladda ner guiden. Försök igen om en stund.</string>
     <string name="error_guide_empty">Guiden laddades ner men innehöll inga program. Kontrollera att det är rätt länk.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">Skicka</string>
     <string name="report_question_dont_send">Skicka inte</string>
     <string name="report_question_always_send">Skicka alltid</string>
+    <string name="error_torrents_off">Torrenter är avstängda. Slå på dem under Inställningar, Tillägg, för att spela upp dem.</string>
+    <string name="error_torrents_not_yet">Torrenter kan inte spelas upp här än. Välj en ström som inte är en torrent.</string>
 </resources>

@@ -58,6 +58,7 @@ import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
+import app.opentv.data.model.StremioStream
 import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
@@ -78,6 +79,7 @@ import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -91,7 +93,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
  * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
- * page says why ([episodeFetch]).
+ * page says why ([episodeFetch]). With [findAddonStreams], each episode's options offer its add-on streams
+ * in a picker, and the one picked calls [onPlayAddonStream].
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -110,6 +113,8 @@ internal fun SeriesDetailContent(
     onOpenSeries: (Long) -> Unit = {},
     suggestionsKnown: Boolean = true,
     episodeFetch: EpisodeFetch = EpisodeFetch(),
+    findAddonStreams: ((Episode) -> Flow<AddonSearch>)? = null,
+    onPlayAddonStream: (Episode, StremioStream) -> Unit = { _, _ -> },
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -125,6 +130,7 @@ internal fun SeriesDetailContent(
         }
     }
     val seasons = remember(episodes) { seasonsOf(episodes) }
+    val addons = rememberEpisodeAddons(series.id, findAddonStreams)
     val nav = remember(series.id) { ShowPageNav() }
     val spot = rememberReturnSpot(series.id)
     val hasLikeThis = suggestions.isNotEmpty()
@@ -199,7 +205,7 @@ internal fun SeriesDetailContent(
                 if (shown.selected == null && episodeFetch.noEpisodes) {
                     NoEpisodes(nav, episodeFetch)
                 } else {
-                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions)
+                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions, addons.ask)
                 }
             }
         }
@@ -216,6 +222,8 @@ internal fun SeriesDetailContent(
             askingFor = null
         },
     )
+
+    EpisodeAddonPicker(addons, onPlayAddonStream)
 
     if (castShown) {
         CastPanel(
@@ -418,6 +426,7 @@ private fun EpisodeList(
     episodeList: LazyListState,
     onPlayEpisode: (MediaKey) -> Unit,
     suggestions: List<TitleCover>,
+    onAddonSources: ((Episode) -> Unit)?,
 ) {
     val season = shown.selected
     // A one-season show's wait for its suggestions too, rather than be pushed down a row when More like
@@ -450,6 +459,7 @@ private fun EpisodeList(
                 status = statuses[ep.id],
                 seriesArt = listOfNotNull(series.backdropUrl, series.posterUrl),
                 onPlay = onPlayEpisode,
+                onAddonSources = onAddonSources?.let { ask -> { ask(ep) } },
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
                     .returnSpot(spot, PageSpot.Episode(ep.id))

@@ -294,6 +294,9 @@
     <string name="error_not_an_addon_device">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet perangkat ini tidak meminta Anda masuk terlebih dahulu.</string>
     <string name="error_addon_lookup_tv">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
     <string name="error_addon_lookup_device">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
+    <string name="error_addon_no_match_show">Add-on Anda tidak dapat mencari serial ini, karena tidak ada kecocokan di IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Tidak dapat mencari serial ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
+    <string name="error_addon_lookup_show_device">Tidak dapat mencari serial ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
     <string name="error_device_refused">Penyedia Anda tidak menerima detail ini. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_guide">Gagal mengunduh panduan ini. Coba lagi sebentar lagi.</string>
     <string name="error_guide_empty">Panduan ini berhasil diunduh, tetapi tidak berisi acara. Periksa apakah tautannya benar.</string>
@@ -404,4 +407,6 @@
     <string name="report_question_send">Kirim</string>
     <string name="report_question_dont_send">Jangan kirim</string>
     <string name="report_question_always_send">Selalu kirim</string>
+    <string name="error_torrents_off">Torrent nonaktif. Aktifkan di Pengaturan, Add-on, untuk memutarnya.</string>
+    <string name="error_torrents_not_yet">Torrent belum bisa diputar di sini. Pilih stream yang bukan torrent.</string>
 </resources>

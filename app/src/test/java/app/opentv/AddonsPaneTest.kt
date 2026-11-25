@@ -12,12 +12,15 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
@@ -236,6 +239,34 @@ class AddonsPaneTest {
         compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
         // The graph's settings are the process's, which the other tests here start from.
         graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
+    }
+
+    @Test
+    fun `torrents are off until turned on, after a panel says who can see your address`() {
+        show(SettingsMemory(SettingsSection.Addons))
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val torrents = hasText("Torrents") and isToggleable()
+        compose.onNode(torrents).assertIsOff()
+        assertThat(graph.settings.torrentsEnabled.value).isFalse()
+
+        compose.onNode(torrents).requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNode(hasText("internet address", substring = true) and hasAnyAncestor(isDialog())).assertExists()
+        captureScreen("settings_addons_torrents_panel")
+        // The Highlight starts on keeping them off, so a stray OK changes nothing.
+        pressInPanel("Keep them off", Key.DirectionUp)
+        pressInPanel("Turn on torrents", Key.DirectionCenter)
+
+        compose.onNode(isDialog()).assertDoesNotExist()
+        compose.onNode(torrents).assertIsOn()
+        assertThat(graph.settings.torrentsEnabled.value).isTrue()
+
+        // Turning them off needs no asking.
+        compose.onNode(torrents).requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNode(isDialog()).assertDoesNotExist()
+        compose.onNode(torrents).assertIsOff()
+        assertThat(graph.settings.torrentsEnabled.value).isFalse()
     }
 
     private companion object {

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.StremioAddon
+import app.opentv.ui.design.ConfirmPanel
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
@@ -69,6 +70,7 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
             modifier = Modifier.padding(top = 12.dp),
         )
     }
+    TorrentsRow(viewModel)
 
     details?.let { addon ->
         SidePanel(onBack = { details = null }) {
@@ -114,6 +116,35 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
                     viewModel.clearStatus()
                 })
             },
+        )
+    }
+}
+
+/**
+ * The Torrents switch. Turning it on asks first, since everyone sharing a file can see this box's
+ * internet address; the Highlight starts on keeping them off. Turning it off needs no asking.
+ */
+@Composable
+private fun TorrentsRow(viewModel: AddonsViewModel) {
+    val on by viewModel.torrentsEnabled.collectAsState()
+    var asking by remember { mutableStateOf(false) }
+    ListRow(
+        stringResource(R.string.settings_addons_torrents),
+        onClick = { if (on) viewModel.setTorrentsEnabled(false) else asking = true },
+        switch = on,
+        note = stringResource(if (on) R.string.settings_addons_torrents_on else R.string.settings_addons_torrents_off),
+    )
+    if (asking) {
+        ConfirmPanel(
+            confirm = stringResource(R.string.settings_addons_torrents_confirm),
+            keep = stringResource(R.string.settings_addons_torrents_keep),
+            onConfirm = {
+                asking = false
+                viewModel.setTorrentsEnabled(true)
+            },
+            onKeep = { asking = false },
+            title = stringResource(R.string.settings_addons_torrents_title),
+            body = stringResource(R.string.settings_addons_torrents_body),
         )
     }
 }

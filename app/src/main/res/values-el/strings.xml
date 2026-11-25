@@ -295,6 +295,9 @@
     <string name="error_not_an_addon_device">Αυτή η διεύθυνση δεν έδωσε πρόσθετο. Ελέγξτε ότι είναι ο σύνδεσμος manifest.json και ότι το διαδίκτυο αυτής της συσκευής δεν ζητά πρώτα σύνδεση.</string>
     <string name="error_addon_lookup_tv">Δεν ήταν δυνατή η αναζήτηση της ταινίας για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
     <string name="error_addon_lookup_device">Δεν ήταν δυνατή η αναζήτηση της ταινίας για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
+    <string name="error_addon_no_match_show">Τα πρόσθετά σας δεν μπορούν να αναζητήσουν αυτήν τη σειρά, γιατί δεν έχει αντιστοίχιση στο IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Δεν ήταν δυνατή η αναζήτηση της σειράς για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
+    <string name="error_addon_lookup_show_device">Δεν ήταν δυνατή η αναζήτηση της σειράς για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
     <string name="error_device_refused">Ο πάροχός σας δεν δέχτηκε αυτά τα στοιχεία. Ελέγξτε τα στοιχεία του παρόχου σας στις Ρυθμίσεις.</string>
     <string name="error_guide">Δεν ήταν δυνατή η λήψη αυτού του οδηγού. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_guide_empty">Ο οδηγός λήφθηκε, αλλά δεν περιείχε προγράμματα. Ελέγξτε ότι είναι ο σωστός σύνδεσμος.</string>
@@ -405,4 +408,6 @@
     <string name="report_question_send">Αποστολή</string>
     <string name="report_question_dont_send">Χωρίς αποστολή</string>
     <string name="report_question_always_send">Πάντα αποστολή</string>
+    <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
+    <string name="error_torrents_not_yet">Τα torrent δεν παίζουν ακόμα εδώ. Διαλέξτε μια ροή που δεν είναι torrent.</string>
 </resources>

@@ -233,6 +233,24 @@ class PlayerNavigationTest {
     }
 
     @Test
+    fun `an add-on stream's page is its title's, a film's or an episode's series'`() = runTest {
+        val seriesOfEpisode: suspend (Long) -> Long? = { episodeId -> if (episodeId == 5L) 3L else null }
+        fun addon(title: MediaKey.Title) = MediaKey.AddonStream(title, "https://example.com/a.mkv")
+
+        assertThat(titlePageFor(addon(MediaKey.Movie(9)), seriesOfEpisode)).isEqualTo(Routes.movieDetail(9))
+        assertThat(titlePageFor(addon(MediaKey.Episode(5)), seriesOfEpisode)).isEqualTo(Routes.seriesDetail(3))
+    }
+
+    @Test
+    fun `an episode's add-on stream comes back from the player's route as it went`() {
+        val key = MediaKey.AddonStream(MediaKey.Episode(12), "https://example.com/s1e2.mkv", mapOf("Referer" to "r"))
+        val route = android.net.Uri.parse(Routes.vodPlayer(key))
+        fun arg(name: String) = route.getQueryParameter(name).orEmpty()
+
+        assertThat(Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"))).isEqualTo(key)
+    }
+
+    @Test
     fun `recordings, catch-up and an episode whose series is gone have no page`() = runTest {
         val seriesOfEpisode: suspend (Long) -> Long? = { null }
 

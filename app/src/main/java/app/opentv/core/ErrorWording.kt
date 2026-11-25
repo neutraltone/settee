@@ -154,9 +154,10 @@ class ErrorWording(
 
     /**
      * Why a Stremio add-on couldn't be used, in its own words rather than [ofProvider]'s: an add-on
-     * isn't "your provider", and the viewer pasted its address themselves.
+     * isn't "your provider", and the viewer pasted its address themselves. [aboutShow] words a failed
+     * TMDB lookup as about a show, for an episode's streams, rather than a film.
      */
-    fun ofAddon(failure: AddonFailure): ViewerError = when (failure) {
+    fun ofAddon(failure: AddonFailure, aboutShow: Boolean = false): ViewerError = when (failure) {
         is AddonFailure.NotAnAddon -> ofHardware(
             R.string.error_not_an_addon_tv,
             R.string.error_not_an_addon_device,
@@ -166,8 +167,8 @@ class ErrorWording(
         is AddonFailure.BadAddress -> of(R.string.error_addon_bad_address, "BadAddress")
         is AddonFailure.NoLookup ->
             ofHardware(
-                R.string.error_addon_lookup_tv,
-                R.string.error_addon_lookup_device,
+                if (aboutShow) R.string.error_addon_lookup_show_tv else R.string.error_addon_lookup_tv,
+                if (aboutShow) R.string.error_addon_lookup_show_device else R.string.error_addon_lookup_device,
                 codeOf(failure.cause ?: failure),
             )
         is AddonFailure.Unreachable -> {

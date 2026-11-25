@@ -29,7 +29,6 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
-import app.opentv.data.model.StreamLink
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
@@ -1081,27 +1080,46 @@ class VodViewModel @JvmOverloads constructor(
      * What the viewer's add-ons offer for [movie], growing as each answers. The film is matched to IMDb
      * through TMDB first, since that's what add-ons are asked by; with no match they can't be asked.
      */
-    fun addonStreams(movie: Movie): Flow<AddonSearch> = flow {
-        graph.catalogRepository.imdbIdFor(movie).fold(
+    fun addonStreams(movie: Movie): Flow<AddonSearch> =
+        addonSearch(aboutShow = false, { graph.catalogRepository.imdbIdFor(movie) }) { graph.addonStreams.forFilm(it) }
+
+    /**
+     * What the viewer's add-ons offer for [episode] of [series], as for a film: add-ons are asked by the
+     * show's IMDb id plus the episode's season and number, so with no IMDb match they can't be asked.
+     */
+    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> =
+        addonSearch(aboutShow = true, { graph.catalogRepository.imdbIdFor(series) }) {
+            graph.addonStreams.forEpisode(it, episode.season, episode.episodeNumber)
+        }
+
+    private fun addonSearch(
+        aboutShow: Boolean,
+        imdbId: suspend () -> Result<String?>,
+        ask: (imdbId: String) -> Flow<AddonStreamResults>,
+    ): Flow<AddonSearch> = flow {
+        imdbId().fold(
             onSuccess = { imdb ->
                 if (imdb == null) {
                     // IMDb's id is what add-ons are asked by, so with none they can't be asked at all.
-                    val noMatch = graph.errorWording.of(R.string.error_addon_no_match, "NoImdbMatch")
+                    val sentence = if (aboutShow) R.string.error_addon_no_match_show else R.string.error_addon_no_match
+                    val noMatch = graph.errorWording.of(sentence, "NoImdbMatch")
                     emit(AddonSearch.CantAsk(noMatch, canRetry = false))
                 } else {
-                    emitAll(graph.addonStreams.forFilm(imdb).map { it.toSearch() })
+                    emitAll(ask(imdb).map { it.toSearch() })
                 }
             },
             onFailure = {
-                emit(AddonSearch.CantAsk(graph.errorWording.ofAddon(AddonFailure.NoLookup(it)), canRetry = true))
+                val failure = graph.errorWording.ofAddon(AddonFailure.NoLookup(it), aboutShow)
+                emit(AddonSearch.CantAsk(failure, canRetry = true))
             },
         )
     }
 
     private fun AddonStreamResults.toSearch() = AddonSearch.Results(
-        // Torrents are read but not offered yet: nothing here plays them so far.
-        streams = streams.filter { it.stream.link is StreamLink.Direct },
+        streams = streams,
         finished = finished,
+        // Read as each answer lands rather than watched: the switch can't change under an open picker.
+        torrentsOn = settings.torrentsEnabled.value,
         failure = outcomes.firstNotNullOfOrNull { (it as? AddonOutcome.Unreachable)?.failure }
             ?.let(graph.errorWording::ofAddon),
     )

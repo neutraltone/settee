@@ -296,6 +296,9 @@
     <string name="error_not_an_addon_device">Adresa nu a dat un supliment. Verifică dacă este linkul către manifest.json și dacă internetul acestui dispozitiv nu îți cere mai întâi să te conectezi.</string>
     <string name="error_addon_lookup_tv">Filmul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_addon_lookup_device">Filmul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
+    <string name="error_addon_no_match_show">Suplimentele tale nu pot căuta acest serial, deoarece nu are nicio potrivire pe IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Serialul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
+    <string name="error_addon_lookup_show_device">Serialul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
     <string name="error_device_refused">Furnizorul tău nu a acceptat aceste detalii. Verifică detaliile furnizorului în Setări.</string>
     <string name="error_guide">Acest ghid nu a putut fi descărcat. Încearcă din nou peste puțin timp.</string>
     <string name="error_guide_empty">Ghidul s-a descărcat, dar nu conținea nicio emisiune. Verifică dacă este linkul corect.</string>
@@ -406,4 +409,6 @@
     <string name="report_question_send">Trimite</string>
     <string name="report_question_dont_send">Nu trimite</string>
     <string name="report_question_always_send">Trimite mereu</string>
+    <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
+    <string name="error_torrents_not_yet">Torrentele nu pot fi redate aici încă. Alege un flux care nu este torrent.</string>
 </resources>

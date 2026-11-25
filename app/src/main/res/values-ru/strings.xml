@@ -297,6 +297,9 @@
     <string name="error_not_an_addon_device">По этому адресу нет дополнения. Проверьте, что это ссылка на manifest.json и что интернет этого устройства не требует сначала войти.</string>
     <string name="error_addon_lookup_tv">Не удалось найти фильм, чтобы спросить ваши дополнения. Проверьте, что этот телевизор подключён к интернету, и повторите попытку.</string>
     <string name="error_addon_lookup_device">Не удалось найти фильм, чтобы спросить ваши дополнения. Проверьте, что это устройство подключено к интернету, и повторите попытку.</string>
+    <string name="error_addon_no_match_show">Ваши дополнения не могут найти этот сериал, потому что для него нет совпадения в IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Не удалось найти сериал, чтобы спросить ваши дополнения. Проверьте, что этот телевизор подключён к интернету, и повторите попытку.</string>
+    <string name="error_addon_lookup_show_device">Не удалось найти сериал, чтобы спросить ваши дополнения. Проверьте, что это устройство подключено к интернету, и повторите попытку.</string>
     <string name="error_device_refused">Провайдер не принял эти данные. Проверьте данные провайдера в настройках.</string>
     <string name="error_guide">Не удалось загрузить этот телегид. Повторите попытку чуть позже.</string>
     <string name="error_guide_empty">Телегид загрузился, но в нём нет передач. Проверьте, что ссылка правильная.</string>
@@ -407,4 +410,6 @@
     <string name="report_question_send">Отправить</string>
     <string name="report_question_dont_send">Не отправлять</string>
     <string name="report_question_always_send">Всегда отправлять</string>
+    <string name="error_torrents_off">Торренты выключены. Включите их в Настройки, Дополнения, чтобы воспроизвести.</string>
+    <string name="error_torrents_not_yet">Торренты здесь пока не воспроизводятся. Выберите поток, который не является торрентом.</string>
 </resources>

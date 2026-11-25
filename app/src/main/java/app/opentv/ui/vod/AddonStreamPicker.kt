@@ -30,12 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import app.opentv.R
 import app.opentv.core.ViewerError
+import app.opentv.data.model.StreamLink
 import app.opentv.data.repo.RankedStream
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
@@ -62,9 +64,14 @@ sealed interface AddonSearch {
     /**
      * What the add-ons have offered so far, best first, and whether every one has answered. [failure]
      * says why the first add-on that couldn't be reached couldn't, or is null when every one answered.
+     * [torrentsOn] is the Torrents switch, which decides what the line under torrent rows says.
      */
-    data class Results(val streams: List<RankedStream>, val finished: Boolean, val failure: ViewerError? = null) :
-        AddonSearch
+    data class Results(
+        val streams: List<RankedStream>,
+        val finished: Boolean,
+        val failure: ViewerError? = null,
+        val torrentsOn: Boolean = false,
+    ) : AddonSearch
 }
 
 /**
@@ -131,6 +138,12 @@ fun AddonStreamPicker(state: AddonPickerState, find: () -> Flow<AddonSearch>, on
                             state.close()
                             onPick(it)
                         }
+                        if (search.streams.any { !it.pickable }) {
+                            QuietLine(
+                                if (search.torrentsOn) R.string.error_torrents_not_yet else R.string.error_torrents_off,
+                                Modifier.padding(top = 12.dp),
+                            )
+                        }
                         if (!search.finished) {
                             QuietLine(R.string.vod_addon_still_asking, Modifier.padding(top = 12.dp))
                         }
@@ -180,12 +193,20 @@ private fun AddonsFailed(error: ViewerError, onRetry: (() -> Unit)?) {
 }
 
 /**
- * One row per stream. Until the viewer moves, the Highlight stays on the top row as better streams
- * arrive above it; once they have, a stream arriving leaves it where they put it.
+ * Whether a row can be picked. Torrents are listed, greyed, so the viewer sees an add-on found
+ * something, but nothing here plays them yet, whether or not the Torrents switch is on.
+ */
+private val RankedStream.pickable: Boolean get() = stream.link !is StreamLink.Torrent
+
+/**
+ * One row per stream, greyed and passed over by the Highlight for one that can't be picked. Until the
+ * viewer moves, the Highlight stays on the top row that can be picked as better streams arrive above
+ * it; once they have, a stream arriving leaves it where they put it.
  */
 @Composable
 private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Unit) {
     val first = remember { FocusRequester() }
+    val firstPickable = streams.indexOfFirst { it.pickable }
     val list = rememberLazyListState()
     var moved by remember { mutableStateOf(false) }
     LaunchedEffect(streams) {
@@ -204,20 +225,25 @@ private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Un
             HighlightSurface(
                 onClick = { onPick(stream) },
                 style = HighlightStyle.Row,
+                enabled = stream.pickable,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (index == 0) Modifier.focusRequester(first) else Modifier)
-                    .onFocusChanged { if (it.isFocused && index != 0) moved = true },
+                    .then(if (index == firstPickable) Modifier.focusRequester(first) else Modifier)
+                    .onFocusChanged { if (it.isFocused && index != firstPickable) moved = true },
             ) { highlighted ->
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                     Text(
                         stream.stream.title,
                         style = SetteeType.RowTitle,
-                        color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
+                        color = when {
+                            highlighted -> SetteeColors.OnAccent
+                            stream.pickable -> SetteeColors.Text
+                            else -> SetteeColors.QuietText
+                        },
                         maxLines = 2,
                     )
                     Text(
-                        streamLabel(stream),
+                        streamLabel(stream, sharersText(stream.sharers)),
                         style = SetteeType.Body,
                         color = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText,
                         maxLines = 1,
@@ -228,12 +254,20 @@ private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Un
     }
 }
 
-/** Which add-on sent [stream], its Quality and its size, where known: `Films · FHD · 2.1 GB`. */
-private fun streamLabel(stream: RankedStream): String = listOfNotNull(
+/**
+ * Which add-on sent [stream], its Quality, its size and, for a torrent, how many are sharing it
+ * ([sharers]), where known: `Films · FHD · 2.1 GB · 45 people sharing`.
+ */
+private fun streamLabel(stream: RankedStream, sharers: String?): String = listOfNotNull(
     stream.stream.addonName,
     stream.qualityLabel.ifEmpty { null },
     stream.sizeBytes?.let(::sizeText),
+    sharers,
 ).joinToString(" · ")
+
+@Composable
+private fun sharersText(sharers: Int?): String? =
+    sharers?.let { pluralStringResource(R.plurals.vod_addon_sharers, it, it) }
 
 /** A size as add-ons and Stremio write them, in binary gigabytes or megabytes, in the viewer's digits. */
 private fun sizeText(bytes: Long): String {
