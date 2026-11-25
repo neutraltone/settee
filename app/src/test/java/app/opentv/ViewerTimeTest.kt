@@ -44,6 +44,36 @@ class ViewerTimeTest {
     }
 
     @Test
+    fun `two days on from the Saturday the clocks go back is Monday, midnight to midnight`() {
+        val now = at(london, "2025-10-25T12:00")
+
+        val window = ViewerTime.guideWindow(now, dayOffset = 2, zone = london)
+
+        assertThat(window.startUtcMillis).isEqualTo(at(london, "2025-10-27T00:00"))
+        assertThat(window.endUtcMillis).isEqualTo(at(london, "2025-10-28T00:00"))
+    }
+
+    @Test
+    fun `the day the clocks go back, today runs to Monday's midnight, 25 hours after Sunday's`() {
+        val now = at(london, "2025-10-26T12:00")
+
+        val window = ViewerTime.guideWindow(now, dayOffset = 0, zone = london)
+
+        assertThat(window.endUtcMillis).isEqualTo(at(london, "2025-10-27T00:00"))
+        assertThat(window.endUtcMillis - at(london, "2025-10-26T00:00")).isEqualTo(25 * 60 * 60 * 1000L)
+    }
+
+    @Test
+    fun `today starts on the viewer's half hour, not UTC's, where the zone is 45 minutes off it`() {
+        val kathmandu = ZoneId.of("Asia/Kathmandu")
+        val now = at(kathmandu, "2026-03-28T21:47")
+
+        val window = ViewerTime.guideWindow(now, dayOffset = 0, zone = kathmandu)
+
+        assertThat(window.startUtcMillis).isEqualTo(at(kathmandu, "2026-03-28T21:30"))
+    }
+
+    @Test
     fun `a localised time and date are in the locale given, and the zone`() {
         val instant = at(london, "2026-07-04T21:30")
 
