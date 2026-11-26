@@ -242,12 +242,19 @@ class PlayerNavigationTest {
     }
 
     @Test
-    fun `an episode's add-on stream comes back from the player's route as it went`() {
-        val key = MediaKey.AddonStream(MediaKey.Episode(12), "https://example.com/s1e2.mkv", mapOf("Referer" to "r"))
+    fun `an episode's add-on stream comes back from the player's route as it went, add-on and bingeGroup too`() {
+        val key = MediaKey.AddonStream(
+            MediaKey.Episode(12),
+            "https://example.com/s1e2.mkv",
+            mapOf("Referer" to "r"),
+            addonName = "Shows & more",
+            bingeGroup = "shows|1080p",
+        )
         val route = android.net.Uri.parse(Routes.vodPlayer(key))
         fun arg(name: String) = route.getQueryParameter(name).orEmpty()
 
-        assertThat(Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"))).isEqualTo(key)
+        val back = Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"), arg("addonName"), arg("binge"))
+        assertThat(back).isEqualTo(key)
     }
 
     @Test

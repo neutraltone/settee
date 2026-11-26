@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Movie
-import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
@@ -137,12 +136,7 @@ fun MovieDetailScreen(
         onOpenMovie = onOpenMovie,
         onOpenPerson = onOpenPerson,
         onPlay = { onPlay(m) },
-        onPlayAddonStream = { stream ->
-            // Only links are offered so far: torrents wait for the engine that will play them.
-            (stream.link as? StreamLink.Direct)?.let {
-                onPlayAddonStream(MediaKey.AddonStream(MediaKey.Movie(m.id), it.url, it.headers))
-            }
-        },
+        onPlayAddonStream = { stream -> stream.keyFor(MediaKey.Movie(m.id))?.let(onPlayAddonStream) },
         onSetFavourite = { viewModel.setMovieFavourite(m, it) },
         versions = versions,
         onChooseVersion = { chosen ->

@@ -115,7 +115,8 @@ class VodPlayerAddonPickTest {
         compose.onNodeWithText("Lost Film 1080p").performKeyInput { pressKey(Key.DirectionCenter) }
         compose.waitForIdle()
 
-        assertThat(playback.played).containsExactly(MediaKey.AddonStream(MediaKey.Movie(filmId), STREAM) to 600_000L)
+        assertThat(playback.played)
+            .containsExactly(MediaKey.AddonStream(MediaKey.Movie(filmId), STREAM, addonName = "Films") to 600_000L)
         compose.onNodeWithText("Choose a stream").assertDoesNotExist()
         assertThat(backs).isEqualTo(0)
     }

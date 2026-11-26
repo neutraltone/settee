@@ -133,7 +133,11 @@ class AddonShowPageTest {
             val addons = checkNotNull(graph.database.sources().addons())
             checkNotNull(graph.database.episodes().byProviderId(addons.id, "tt0000201:1:1"))
         }
-        val picked = MediaKey.AddonStream(MediaKey.Episode(pilot.id), "https://example.com/pilot.mkv")
+        val picked = MediaKey.AddonStream(
+            MediaKey.Episode(pilot.id),
+            "https://example.com/pilot.mkv",
+            addonName = "Example",
+        )
         assertThat(played).containsExactly(picked)
     }
 

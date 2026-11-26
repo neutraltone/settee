@@ -11,7 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import app.opentv.data.model.StreamLink
+import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.MediaKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -32,19 +32,21 @@ internal fun PlayerAddonPick(viewModel: VodPlayerViewModel, onBack: () -> Unit) 
     val scope = rememberCoroutineScope()
     LaunchedEffect(title) { if (title != null) picker.ask(find) }
     AddonStreamPicker(picker, find, onDismiss = onBack) { ranked ->
-        // Only links are offered so far: torrents wait for the engine that will play them.
-        (ranked.stream.link as? StreamLink.Direct)?.let { scope.launch { viewModel.playAddonStream(it) } }
+        scope.launch { viewModel.playAddonStream(ranked.stream) }
     }
 }
 
-/** The stream the viewer picked for the title waiting in [VodPlayerViewModel.addonPick], from its resume point. */
-suspend fun VodPlayerViewModel.playAddonStream(link: StreamLink.Direct) {
-    val title = addonPick.value ?: return
-    start(MediaKey.AddonStream(title, link.url, link.headers), fromMillis = pickFrom)
+/**
+ * The stream picked for the title waiting in [VodPlayerViewModel.addonPick], by the viewer or by carrying
+ * on, from its resume point. Nothing once the title's no longer waiting, and nothing for a torrent yet.
+ */
+suspend fun VodPlayerViewModel.playAddonStream(stream: StremioStream) {
+    val key = addonPick.value?.let { stream.keyFor(it) } ?: return
+    start(key, fromMillis = pickFrom)
 }
 
 /** What the add-ons offer for [title], for the player's picker while [VodPlayerViewModel.addonPick] names it. */
-fun VodPlayerViewModel.addonStreams(title: MediaKey.Title): Flow<AddonSearch> = addonSearches.forTitle(title)
+fun VodPlayerViewModel.addonStreams(title: MediaKey.Title): Flow<AddonSearch> = carryOn.streamsFor(title)
 
 /**
  * Plays [planned], or, while the player [waits] on an add-on stream being picked, stops whatever was

@@ -147,8 +147,8 @@ class VodPlayerViewModel(
     internal var pickFrom: Long? = null
         private set
 
-    /** What [addonStreams] asks. */
-    internal val addonSearches = AddonSearches(graph)
+    /** What [addonStreams] asks, and carrying on after an add-on episode with the same add-on. */
+    internal val carryOn = AddonCarryOn(AddonSearches(graph), viewModelScope)
 
     private val _finished = MutableStateFlow(false)
 
@@ -294,15 +294,16 @@ class VodPlayerViewModel(
     private suspend fun act(decision: Decision?) {
         _overlay.value = countdown.overlay
         when (decision) {
-            // After an add-on episode the next one opens its picker (start), rather than playing the same
-            // add-on's stream by its bingeGroup: the route carries only the stream's address, not the hint,
-            // and a stream taken on a hint the viewer never saw could be another language or a torrent.
-            // The picker opens on the best stream, so carrying on is still one press of OK.
+            // After an add-on's stream of an episode, a next one kept from an add-on plays the same
+            // add-on's stream with the same bingeGroup as soon as it offers one, as Stremio carries on. Its
+            // picker shows meanwhile, and stays when there's no such stream (ADR 0011).
             Decision.PlayNext -> next?.let { next ->
-                _current.value?.let {
-                    graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0)
-                }
-                start(MediaKey.Episode(next.id))
+                val after = _current.value
+                after?.let { graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0) }
+                val title = MediaKey.Episode(next.id)
+                carryOn.ready(after, title)
+                start(title)
+                if (_addonPick.value == title) carryOn.carryOn(title) { playAddonStream(it) } else carryOn.stop()
             }
             Decision.Pause -> playback?.pause()
             Decision.StopStream -> playback?.stop()

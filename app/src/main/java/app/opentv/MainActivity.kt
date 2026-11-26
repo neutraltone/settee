@@ -259,10 +259,12 @@ object Routes {
 
     // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
     // the account password), title or user agent sits in the back stack. An add-on's stream isn't in
-    // the catalogue, so its URL and the request headers it asks for are the one thing carried besides.
+    // the catalogue, so its URL and the request headers it asks for are the one thing carried besides,
+    // with which add-on sent it and its bingeGroup, for the Next Episode to carry on with.
     // Whether to start at 0 can't be looked up either; the player's view model makes sure it only
     // applies once.
-    const val VOD_PLAYER = "vod?key={key}&addon={addon}&headers={headers}&fromStart={fromStart}"
+    const val VOD_PLAYER =
+        "vod?key={key}&addon={addon}&headers={headers}&addonName={addonName}&binge={binge}&fromStart={fromStart}"
 
     fun player(channelId: Long) = "player/$channelId"
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
@@ -275,7 +277,14 @@ object Routes {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
         val addon = key as? MediaKey.AddonStream
         val headers = addon?.headers?.takeIf { it.isNotEmpty() }?.let { Json.encodeToString(it) }.orEmpty()
-        return "vod?key=${e(key.stored)}&addon=${e(addon?.url.orEmpty())}&headers=${e(headers)}&fromStart=$fromStart"
+        val args = listOf(
+            "key" to key.stored,
+            "addon" to addon?.url.orEmpty(),
+            "headers" to headers,
+            "addonName" to addon?.addonName.orEmpty(),
+            "binge" to addon?.bingeGroup.orEmpty(),
+        )
+        return "vod?" + args.joinToString("&") { (name, value) -> "$name=${e(value)}" } + "&fromStart=$fromStart"
     }
 
     /** The route of where the options panel is leaving for. */
@@ -285,13 +294,19 @@ object Routes {
         is OptionsDestination.SeriesPage -> seriesDetail(destination.seriesId)
     }
 
-    /** The key [vodPlayer] put in a route, from its `key`, `addon` and `headers` arguments. */
-    fun vodPlayerKey(stored: String, addon: String, headers: String = ""): MediaKey? {
+    /** The key [vodPlayer] put in a route, from its `key`, `addon`, `headers`, `addonName` and `binge` arguments. */
+    fun vodPlayerKey(
+        stored: String,
+        addon: String,
+        headers: String = "",
+        addonName: String = "",
+        binge: String = "",
+    ): MediaKey? {
         val key = MediaKey.parse(stored)
         if (key !is MediaKey.Title || addon.isEmpty()) return key
         val sent = headers.takeIf { it.isNotEmpty() }
             ?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
-        return MediaKey.AddonStream(key, addon, sent.orEmpty())
+        return MediaKey.AddonStream(key, addon, sent.orEmpty(), addonName.ifEmpty { null }, binge.ifEmpty { null })
     }
 }
 
@@ -556,7 +571,13 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             fun arg(name: String) = entry.arguments?.getString(name)
                                 ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
                             val mediaKey =
-                                Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers")) ?: return@composable
+                                Routes.vodPlayerKey(
+                                    arg("key"),
+                                    arg("addon"),
+                                    arg("headers"),
+                                    arg("addonName"),
+                                    arg("binge"),
+                                ) ?: return@composable
                             val leaveScope = rememberCoroutineScope()
                             VodPlayerScreen(
                                 mediaKey = mediaKey,

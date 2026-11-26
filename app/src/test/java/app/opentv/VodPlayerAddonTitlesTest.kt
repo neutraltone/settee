@@ -11,6 +11,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamLink
+import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.vod.VodPlayerViewModel
@@ -55,11 +56,11 @@ class VodPlayerAddonTitlesTest {
             assertThat(playback.played).isEmpty()
             assertThat(vm.addonPick.value).isEqualTo(MediaKey.Movie(film.id))
 
-            vm.playAddonStream(StreamLink.Direct(STREAM, mapOf("Referer" to "https://example.com/")))
+            val headers = mapOf("Referer" to "https://example.com/")
+            vm.playAddonStream(StremioStream(StreamLink.Direct(STREAM, headers), "Lost Film 1080p", "Films"))
 
             assertThat(playback.played).containsExactly(
-                MediaKey.AddonStream(MediaKey.Movie(film.id), STREAM, mapOf("Referer" to "https://example.com/")) to
-                    600_000L,
+                MediaKey.AddonStream(MediaKey.Movie(film.id), STREAM, headers, addonName = "Films") to 600_000L,
             )
             assertThat(vm.addonPick.value).isNull()
         }

@@ -50,10 +50,17 @@ sealed interface MediaKey {
     /**
      * A stream a Stremio add-on offered for [title], a film or an episode. Its [url] and the request
      * [headers] the add-on asks for aren't in the catalogue, so the key carries them; progress is kept on
-     * the title, the same as playing it from the panel, so [stored] is the title's.
+     * the title, the same as playing it from the panel, so [stored] is the title's. [addonName] and
+     * [bingeGroup] say which add-on sent it and the kind of stream it is, so the Next Episode can carry on
+     * with that add-on's stream of the same kind (ADR 0011).
      */
-    data class AddonStream(val title: Title, val url: String, val headers: Map<String, String> = emptyMap()) :
-        MediaKey {
+    data class AddonStream(
+        val title: Title,
+        val url: String,
+        val headers: Map<String, String> = emptyMap(),
+        val addonName: String? = null,
+        val bingeGroup: String? = null,
+    ) : MediaKey {
         override val stored get() = title.stored
     }
 

@@ -19,7 +19,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
-import app.opentv.data.model.StreamLink
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
@@ -148,12 +147,7 @@ private fun ShowPage(
         suggestionsKnown = suggestions != null,
         episodeFetch = episodes,
         findAddonStreams = if (hasAddons) ({ episode -> viewModel.addonStreams(series, episode) }) else null,
-        onPlayAddonStream = { episode, stream ->
-            // Only links are offered so far: torrents wait for the engine that will play them.
-            (stream.link as? StreamLink.Direct)?.let {
-                onPlayEpisode(MediaKey.AddonStream(MediaKey.Episode(episode.id), it.url, it.headers))
-            }
-        },
+        onPlayAddonStream = { episode, stream -> stream.keyFor(MediaKey.Episode(episode.id))?.let(onPlayEpisode) },
         keptFromAddons = show.addons,
     )
 }

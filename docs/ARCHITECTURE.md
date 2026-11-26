@@ -265,7 +265,8 @@ appended to one show request rather than one request a season, and stores them t
 `storeEpisodes`, so local ids, `firstSeenMillis` and retired episodes behave as a Provider's do. Each
 episode's id is the show's IMDb id plus season and episode (`tt…:1:3`), what add-ons are asked with;
 Specials and episodes not yet aired are left out, as no add-on has them and Up Next mustn't point at
-one. They have no stream URL, which is how the show page knows OK opens the add-on picker.
+one. They have no stream URL, but what tells the show page that OK opens the add-on picker is their
+source (`AddonsSourceId`), since a Provider's episode can lack one too.
 
 The second is sync. Progress from another device can name an episode this one hasn't stored, so the
 position also carries its `seriesId`, and `WaitingProgress` fetches that series in the background
