@@ -604,6 +604,7 @@ fun VodPlayerContent(
                 onRetry = controller::retry,
                 onBack = onBack,
                 reportedSource = reportedSource,
+                onPickAnother = viewModel::pickAnotherStream,
             )
 
             else -> Unit

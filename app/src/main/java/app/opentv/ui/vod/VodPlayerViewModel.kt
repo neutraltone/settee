@@ -44,6 +44,7 @@ import kotlinx.coroutines.withContext
  * the episode it was showing. The screen keeps the [Playback] (its PlayerController) and hands it
  * over in [attach], so moving on swaps the media item in the same player instead of navigating.
  */
+@Suppress("TooManyFunctions") // Each is something the screen asks; the rest are extensions already.
 class VodPlayerViewModel(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
@@ -146,6 +147,15 @@ class VodPlayerViewModel(
     /** Where the title waiting in [addonPick] is to start once a stream is picked; null for its resume point. */
     internal var pickFrom: Long? = null
         private set
+
+    /**
+     * Pick another stream, on an add-on's stream that failed: opens the picker over the player for [title], and
+     * the stream picked starts where the failed one was to.
+     */
+    fun pickAnotherStream(title: MediaKey.Title) {
+        pickFrom = lastKnown
+        _addonPick.value = title
+    }
 
     /** What [addonStreams] asks, and carrying on after an add-on episode with the same add-on. */
     internal val carryOn = AddonCarryOn(AddonSearches(graph), viewModelScope)

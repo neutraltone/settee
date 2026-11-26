@@ -263,6 +263,10 @@
     <string name="error_live_ended">Tämä kanava pysähtyi. Yritä uudelleen tai valitse toinen kanava.</string>
     <string name="error_timed_out">Palveluntarjoajasi lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
     <string name="error_web_page">Palveluntarjoajasi lähetti verkkosivun videon sijaan. Linkki on ehkä vanhentunut, joten kokeile päivittää palveluntarjoajasi Asetuksista.</string>
+    <string name="error_unplayable_file">Palveluntarjoajasi lähetti tiedoston muodossa, jota Settee ei voi toistaa, joten kokeile jotain muuta.</string>
+    <string name="error_addon_web_page">Tämän lisäosan linkki avasi verkkosivun videon sijaan. Valitse toinen virta.</string>
+    <string name="error_addon_unplayable_file">Tämän lisäosan linkki avasi tiedoston muodossa, jota Settee ei voi toistaa. Valitse toinen virta.</string>
+    <string name="playback_pick_another_stream">Valitse toinen virta</string>
     <string name="error_damaged">Tämä video on vioittunut eikä toistu. Vika on palveluntarjoajasi päässä, joten kokeile jotain muuta.</string>
     <string name="error_behind_live">Tämä kanava jäi liian kauas jälkeen suorasta lähetyksestä. Yritä uudelleen, niin pääset ajan tasalle.</string>
     <string name="error_gone">Tätä ei enää ole palveluntarjoajallasi. Kokeile päivittää palveluntarjoajasi Asetuksista.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Lähetä aina</string>
     <string name="error_torrents_off">Torrentit ovat pois päältä. Laita ne päälle kohdassa Asetukset, Lisäosat, niin voit toistaa nämä.</string>
     <string name="error_torrents_not_yet">Torrentteja ei voi vielä toistaa täällä. Valitse virta, joka ei ole torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentit</string>
     <string name="settings_addons_torrents_off">Pois päältä. Lisäosiesi löytämät torrentit näytetään, mutta niitä ei toisteta.</string>
     <string name="settings_addons_torrents_on">Päällä. Kaikki, jotka jakavat toistamaasi torrentia, näkevät internet-osoitteesi.</string>

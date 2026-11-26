@@ -263,6 +263,10 @@
     <string name="error_live_ended">Kanalen stoppede. Prøv igen, eller vælg en anden kanal.</string>
     <string name="error_timed_out">Din udbyder holdt op med at svare. Den har måske travlt, så prøv igen om lidt.</string>
     <string name="error_web_page">Din udbyder sendte en webside i stedet for video. Linket er måske udløbet, så prøv at opdatere din udbyder i Indstillinger.</string>
+    <string name="error_unplayable_file">Din udbyder sendte en fil i et format, Settee ikke kan afspille, så prøv noget andet.</string>
+    <string name="error_addon_web_page">Tilføjelsens link åbnede en webside i stedet for video. Vælg en anden stream.</string>
+    <string name="error_addon_unplayable_file">Tilføjelsens link åbnede en fil i et format, Settee ikke kan afspille. Vælg en anden stream.</string>
+    <string name="playback_pick_another_stream">Vælg en anden stream</string>
     <string name="error_damaged">Denne video er beskadiget og kan ikke afspilles. Det er hos din udbyder, så prøv noget andet.</string>
     <string name="error_behind_live">Kanalen kom for langt bagud i forhold til live. Prøv igen for at indhente den.</string>
     <string name="error_gone">Det findes ikke længere hos din udbyder. Prøv at opdatere din udbyder i Indstillinger.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Send altid</string>
     <string name="error_torrents_off">Torrents er slået fra. Slå dem til under Indstillinger, Tilføjelser, for at afspille dem.</string>
     <string name="error_torrents_not_yet">Torrents kan ikke afspilles her endnu. Vælg en stream, der ikke er en torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Fra. Torrents, som dine tilføjelser finder, vises, men afspilles ikke.</string>
     <string name="settings_addons_torrents_on">Til. Alle, der deler en torrent, du afspiller, kan se din internetadresse.</string>

@@ -262,6 +262,10 @@
     <string name="error_live_ended">このチャンネルは停止しました。もう一度お試しいただくか、別のチャンネルを選んでください。</string>
     <string name="error_timed_out">プロバイダーからの応答がなくなりました。混み合っている可能性があるので、少し待ってからもう一度お試しください。</string>
     <string name="error_web_page">プロバイダーから動画ではなくウェブページが届きました。リンクの期限が切れている可能性があるので、「設定」でプロバイダーを更新してみてください。</string>
+    <string name="error_unplayable_file">プロバイダーから Settee で再生できない形式のファイルが届きました。別のものをお試しください。</string>
+    <string name="error_addon_web_page">このアドオンのリンクを開くと、動画ではなくウェブページが表示されました。別のストリームを選んでください。</string>
+    <string name="error_addon_unplayable_file">このアドオンのリンクを開くと、Settee で再生できない形式のファイルでした。別のストリームを選んでください。</string>
+    <string name="playback_pick_another_stream">別のストリームを選ぶ</string>
     <string name="error_damaged">この動画は破損しているため再生できません。プロバイダー側の問題なので、別のものをお試しください。</string>
     <string name="error_behind_live">このチャンネルはライブから大きく遅れました。もう一度お試しいただくと追いつきます。</string>
     <string name="error_gone">これはもうプロバイダーにありません。「設定」でプロバイダーを更新してみてください。</string>
@@ -410,6 +414,7 @@
     <string name="report_question_always_send">常に送信</string>
     <string name="error_torrents_off">トレントはオフです。再生するには、設定のアドオンでオンにしてください。</string>
     <string name="error_torrents_not_yet">トレントはまだここで再生できません。トレント以外のストリームを選んでください。</string>
+    <string name="vod_addon_torrent">トレント</string>
     <string name="settings_addons_torrents">トレント</string>
     <string name="settings_addons_torrents_off">オフ。アドオンが見つけたトレントは一覧に表示されますが、再生されません。</string>
     <string name="settings_addons_torrents_on">オン。再生中のトレントを共有している全員に、あなたのインターネットアドレスが見えます。</string>

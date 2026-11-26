@@ -265,6 +265,10 @@
     <string name="error_live_ended">Tento kanál přestal vysílat. Zkuste to znovu, nebo vyberte jiný kanál.</string>
     <string name="error_timed_out">Poskytovatel přestal odpovídat. Možná je vytížený, zkuste to proto za chvíli znovu.</string>
     <string name="error_web_page">Poskytovatel místo videa poslal webovou stránku. Odkaz možná vypršel, zkuste proto obnovit poskytovatele v Nastavení.</string>
+    <string name="error_unplayable_file">Poskytovatel poslal soubor ve formátu, který Settee neumí přehrát, vyberte proto něco jiného.</string>
+    <string name="error_addon_web_page">Odkaz tohoto doplňku otevřel webovou stránku místo videa. Vyberte jiný stream.</string>
+    <string name="error_addon_unplayable_file">Odkaz tohoto doplňku otevřel soubor ve formátu, který Settee neumí přehrát. Vyberte jiný stream.</string>
+    <string name="playback_pick_another_stream">Vybrat jiný stream</string>
     <string name="error_damaged">Toto video je poškozené a nepřehraje se. Je to na straně poskytovatele, vyberte proto něco jiného.</string>
     <string name="error_behind_live">Tento kanál se příliš opozdil za živým vysíláním. Zkuste to znovu, aby se dorovnal.</string>
     <string name="error_gone">Tohle už u vašeho poskytovatele není. Zkuste obnovit poskytovatele v Nastavení.</string>
@@ -413,6 +417,7 @@
     <string name="report_question_always_send">Vždy odeslat</string>
     <string name="error_torrents_off">Torrenty jsou vypnuté. Zapněte je v Nastavení, Doplňky, abyste je mohli přehrát.</string>
     <string name="error_torrents_not_yet">Torrenty tu zatím nejdou přehrát. Vyberte stream, který není torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenty</string>
     <string name="settings_addons_torrents_off">Vypnuto. Torrenty, které vaše doplňky najdou, se zobrazí, ale nepřehrají se.</string>
     <string name="settings_addons_torrents_on">Zapnuto. Každý, kdo sdílí torrent, který přehráváte, uvidí vaši internetovou adresu.</string>

@@ -264,6 +264,10 @@
     <string name="error_live_ended">Ovaj se kanal zaustavio. Pokušajte ponovno ili odaberite drugi kanal.</string>
     <string name="error_timed_out">Vaš pružatelj usluge prestao je odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
     <string name="error_web_page">Vaš pružatelj usluge poslao je web-stranicu umjesto videa. Poveznica je možda istekla, pa pokušajte osvježiti pružatelja usluge u Postavkama.</string>
+    <string name="error_unplayable_file">Vaš pružatelj usluge poslao je datoteku u formatu koji Settee ne može reproducirati, pa pokušajte nešto drugo.</string>
+    <string name="error_addon_web_page">Poveznica ovog dodatka otvorila je web-stranicu umjesto videa. Odaberite drugi stream.</string>
+    <string name="error_addon_unplayable_file">Poveznica ovog dodatka otvorila je datoteku u formatu koji Settee ne može reproducirati. Odaberite drugi stream.</string>
+    <string name="playback_pick_another_stream">Odaberi drugi stream</string>
     <string name="error_damaged">Ovaj video je oštećen i neće se reproducirati. To je na strani vašeg pružatelja usluge, pa pokušajte nešto drugo.</string>
     <string name="error_behind_live">Ovaj kanal previše je zaostao za prijenosom uživo. Pokušajte ponovno da ga sustignete.</string>
     <string name="error_gone">Ovoga više nema kod vašeg pružatelja usluge. Pokušajte osvježiti pružatelja usluge u Postavkama.</string>
@@ -412,6 +416,7 @@
     <string name="report_question_always_send">Uvijek pošalji</string>
     <string name="error_torrents_off">Torrenti su isključeni. Uključite ih u Postavke, Dodaci, da biste ih reproducirali.</string>
     <string name="error_torrents_not_yet">Torrenti se ovdje još ne mogu reproducirati. Odaberite stream koji nije torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenti</string>
     <string name="settings_addons_torrents_off">Isključeno. Torrenti koje vaši dodaci pronađu prikazuju se, ali se ne reproduciraju.</string>
     <string name="settings_addons_torrents_on">Uključeno. Svi koji dijele torrent koji reproducirate mogu vidjeti vašu internetsku adresu.</string>

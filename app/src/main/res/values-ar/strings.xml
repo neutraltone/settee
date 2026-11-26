@@ -267,6 +267,10 @@
     <string name="error_live_ended">توقفت هذه القناة. أعد المحاولة، أو اختر قناة أخرى.</string>
     <string name="error_timed_out">توقف مزوّدك عن الاستجابة. ربما يكون مشغولًا، لذا أعد المحاولة بعد قليل.</string>
     <string name="error_web_page">أرسل مزوّدك صفحة ويب بدلًا من الفيديو. ربما انتهت صلاحية الرابط، لذا جرّب تحديث مزوّدك في الإعدادات.</string>
+    <string name="error_unplayable_file">أرسل مزوّدك ملفًا بصيغة لا يستطيع Settee تشغيلها، لذا جرّب شيئًا آخر.</string>
+    <string name="error_addon_web_page">فتح رابط هذه الإضافة صفحة ويب بدلًا من الفيديو. اختر بثًا آخر.</string>
+    <string name="error_addon_unplayable_file">فتح رابط هذه الإضافة ملفًا بصيغة لا يستطيع Settee تشغيلها. اختر بثًا آخر.</string>
+    <string name="playback_pick_another_stream">اختر بثًا آخر</string>
     <string name="error_damaged">هذا الفيديو تالف ولن يعمل. المشكلة من جهة مزوّدك، لذا جرّب شيئًا آخر.</string>
     <string name="error_behind_live">تأخرت هذه القناة كثيرًا عن البث المباشر. أعد المحاولة للّحاق به.</string>
     <string name="error_gone">لم يعد هذا متوفرًا لدى مزوّدك. جرّب تحديث مزوّدك في الإعدادات.</string>
@@ -415,6 +419,7 @@
     <string name="report_question_always_send">الإرسال دائمًا</string>
     <string name="error_torrents_off">التورنت متوقف. شغّله من الإعدادات، الإضافات، لتشغيل هذه.</string>
     <string name="error_torrents_not_yet">لا يمكن تشغيل التورنت هنا بعد. اختر بثًا ليس تورنت.</string>
+    <string name="vod_addon_torrent">تورنت</string>
     <string name="settings_addons_torrents">التورنت</string>
     <string name="settings_addons_torrents_off">متوقف. تظهر التورنتات التي تجدها إضافاتك، لكنها لا تُشغَّل.</string>
     <string name="settings_addons_torrents_on">مُشغَّل. يمكن لكل من يشارك تورنت تشغّله أن يرى عنوانك على الإنترنت.</string>

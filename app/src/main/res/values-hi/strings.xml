@@ -263,6 +263,10 @@
     <string name="error_live_ended">यह चैनल रुक गया। फिर कोशिश करें, या कोई और चैनल चुनें।</string>
     <string name="error_timed_out">आपके प्रदाता ने जवाब देना बंद कर दिया। हो सकता है वह व्यस्त हो, इसलिए थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_web_page">आपके प्रदाता ने वीडियो की जगह एक वेब पेज भेजा। हो सकता है लिंक की अवधि खत्म हो गई हो, इसलिए सेटिंग्स में अपना प्रदाता रीफ्रेश करके देखें।</string>
+    <string name="error_unplayable_file">आपके प्रदाता ने ऐसे फ़ॉर्मैट की फ़ाइल भेजी जिसे Settee नहीं चला सकता, इसलिए कुछ और आज़माएं।</string>
+    <string name="error_addon_web_page">इस ऐड-ऑन के लिंक से वीडियो की जगह एक वेब पेज खुला। कोई दूसरी स्ट्रीम चुनें।</string>
+    <string name="error_addon_unplayable_file">इस ऐड-ऑन के लिंक से ऐसे फ़ॉर्मैट की फ़ाइल खुली जिसे Settee नहीं चला सकता। कोई दूसरी स्ट्रीम चुनें।</string>
+    <string name="playback_pick_another_stream">दूसरी स्ट्रीम चुनें</string>
     <string name="error_damaged">यह वीडियो खराब है और नहीं चलेगा। यह आपके प्रदाता की तरफ़ की समस्या है, इसलिए कुछ और आज़माएं।</string>
     <string name="error_behind_live">यह चैनल लाइव से बहुत पीछे रह गया। लाइव तक पहुंचने के लिए फिर कोशिश करें।</string>
     <string name="error_gone">यह अब आपके प्रदाता पर नहीं है। सेटिंग्स में अपना प्रदाता रीफ्रेश करके देखें।</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">हमेशा भेजें</string>
     <string name="error_torrents_off">टोरेंट बंद हैं। इन्हें चलाने के लिए सेटिंग्स, ऐड-ऑन में इन्हें चालू करें।</string>
     <string name="error_torrents_not_yet">टोरेंट अभी यहाँ नहीं चल सकते। ऐसी स्ट्रीम चुनें जो टोरेंट न हो।</string>
+    <string name="vod_addon_torrent">टोरेंट</string>
     <string name="settings_addons_torrents">टोरेंट</string>
     <string name="settings_addons_torrents_off">बंद। आपके ऐड-ऑन जो टोरेंट ढूंढते हैं, वे सूची में दिखते हैं, पर चलते नहीं।</string>
     <string name="settings_addons_torrents_on">चालू। आप जो टोरेंट चलाते हैं, उसे शेयर करने वाला हर व्यक्ति आपका इंटरनेट पता देख सकता है।</string>

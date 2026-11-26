@@ -263,6 +263,10 @@
     <string name="error_live_ended">این کانال متوقف شد. دوباره تلاش کنید، یا کانال دیگری انتخاب کنید.</string>
     <string name="error_timed_out">ارائه‌دهنده شما دیگر پاسخ نمی‌دهد. ممکن است مشغول باشد، پس کمی بعد دوباره تلاش کنید.</string>
     <string name="error_web_page">ارائه‌دهنده شما به جای ویدیو یک صفحه وب فرستاد. ممکن است پیوند منقضی شده باشد، پس بازخوانی ارائه‌دهنده را در تنظیمات امتحان کنید.</string>
+    <string name="error_unplayable_file">ارائه‌دهنده شما فایلی با قالبی فرستاد که Settee نمی‌تواند پخش کند، پس چیز دیگری را امتحان کنید.</string>
+    <string name="error_addon_web_page">پیوند این افزونه به جای ویدیو یک صفحه وب باز کرد. جریان دیگری را انتخاب کنید.</string>
+    <string name="error_addon_unplayable_file">پیوند این افزونه فایلی با قالبی باز کرد که Settee نمی‌تواند پخش کند. جریان دیگری را انتخاب کنید.</string>
+    <string name="playback_pick_another_stream">انتخاب جریان دیگر</string>
     <string name="error_damaged">این ویدیو آسیب دیده است و پخش نمی‌شود. مشکل از طرف ارائه‌دهنده شماست، پس چیز دیگری را امتحان کنید.</string>
     <string name="error_behind_live">این کانال خیلی از پخش زنده عقب افتاد. برای رسیدن به آن دوباره تلاش کنید.</string>
     <string name="error_gone">این دیگر در ارائه‌دهنده شما موجود نیست. بازخوانی ارائه‌دهنده را در تنظیمات امتحان کنید.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">همیشه ارسال</string>
     <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
     <string name="error_torrents_not_yet">تورنت‌ها هنوز اینجا پخش نمی‌شوند. جریانی را انتخاب کنید که تورنت نیست.</string>
+    <string name="vod_addon_torrent">تورنت</string>
     <string name="settings_addons_torrents">تورنت‌ها</string>
     <string name="settings_addons_torrents_off">خاموش. تورنت‌هایی که افزونه‌های شما پیدا می‌کنند فهرست می‌شوند، اما پخش نمی‌شوند.</string>
     <string name="settings_addons_torrents_on">روشن. هر کسی که تورنتی را که پخش می‌کنید به اشتراک می‌گذارد، می‌تواند نشانی اینترنتی شما را ببیند.</string>

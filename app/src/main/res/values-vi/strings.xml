@@ -262,6 +262,10 @@
     <string name="error_live_ended">Kênh này đã dừng. Thử lại, hoặc chọn kênh khác.</string>
     <string name="error_timed_out">Nhà cung cấp đã ngừng phản hồi. Có thể họ đang bận, vì vậy hãy thử lại sau giây lát.</string>
     <string name="error_web_page">Nhà cung cấp đã gửi một trang web thay vì video. Liên kết có thể đã hết hạn, vì vậy hãy thử làm mới nhà cung cấp trong Cài đặt.</string>
+    <string name="error_unplayable_file">Nhà cung cấp đã gửi một tệp ở định dạng Settee không phát được, vì vậy hãy thử nội dung khác.</string>
+    <string name="error_addon_web_page">Liên kết của tiện ích này mở ra một trang web thay vì video. Hãy chọn luồng khác.</string>
+    <string name="error_addon_unplayable_file">Liên kết của tiện ích này mở ra một tệp ở định dạng Settee không phát được. Hãy chọn luồng khác.</string>
+    <string name="playback_pick_another_stream">Chọn luồng khác</string>
     <string name="error_damaged">Video này bị hỏng và không phát được. Đó là vấn đề phía nhà cung cấp, vì vậy hãy thử nội dung khác.</string>
     <string name="error_behind_live">Kênh này bị chậm quá xa so với trực tiếp. Thử lại để theo kịp.</string>
     <string name="error_gone">Nội dung này không còn trên nhà cung cấp của bạn. Thử làm mới nhà cung cấp trong Cài đặt.</string>
@@ -410,6 +414,7 @@
     <string name="report_question_always_send">Luôn gửi</string>
     <string name="error_torrents_off">Torrent đang tắt. Bật trong Cài đặt, Tiện ích bổ sung để phát các mục này.</string>
     <string name="error_torrents_not_yet">Chưa thể phát torrent ở đây. Hãy chọn luồng không phải torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Tắt. Torrent mà tiện ích của bạn tìm thấy vẫn hiện trong danh sách nhưng không phát được.</string>
     <string name="settings_addons_torrents_on">Bật. Mọi người đang chia sẻ torrent bạn phát đều có thể thấy địa chỉ internet của bạn.</string>

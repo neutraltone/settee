@@ -263,6 +263,10 @@
     <string name="error_live_ended">Den här kanalen stannade. Försök igen, eller välj en annan kanal.</string>
     <string name="error_timed_out">Din leverantör slutade svara. Den kan vara upptagen, så försök igen om en stund.</string>
     <string name="error_web_page">Din leverantör skickade en webbsida i stället för video. Länken kan ha gått ut, så prova att uppdatera din leverantör i Inställningar.</string>
+    <string name="error_unplayable_file">Din leverantör skickade en fil i ett format som Settee inte kan spela upp, så prova något annat.</string>
+    <string name="error_addon_web_page">Tilläggets länk öppnade en webbsida i stället för video. Välj en annan ström.</string>
+    <string name="error_addon_unplayable_file">Tilläggets länk öppnade en fil i ett format som Settee inte kan spela upp. Välj en annan ström.</string>
+    <string name="playback_pick_another_stream">Välj en annan ström</string>
     <string name="error_damaged">Den här videon är skadad och kan inte spelas upp. Det ligger hos din leverantör, så prova något annat.</string>
     <string name="error_behind_live">Den här kanalen hamnade för långt efter direktsändningen. Försök igen för att komma ikapp.</string>
     <string name="error_gone">Det här finns inte längre hos din leverantör. Prova att uppdatera din leverantör i Inställningar.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Skicka alltid</string>
     <string name="error_torrents_off">Torrenter är avstängda. Slå på dem under Inställningar, Tillägg, för att spela upp dem.</string>
     <string name="error_torrents_not_yet">Torrenter kan inte spelas upp här än. Välj en ström som inte är en torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenter</string>
     <string name="settings_addons_torrents_off">Av. Torrenter som dina tillägg hittar visas i listan men spelas inte upp.</string>
     <string name="settings_addons_torrents_on">På. Alla som delar en torrent du spelar upp kan se din internetadress.</string>

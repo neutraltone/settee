@@ -263,6 +263,10 @@
     <string name="error_live_ended">Αυτό το κανάλι σταμάτησε. Δοκιμάστε ξανά ή επιλέξτε άλλο κανάλι.</string>
     <string name="error_timed_out">Ο πάροχός σας σταμάτησε να αποκρίνεται. Μπορεί να είναι απασχολημένος, οπότε δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_web_page">Ο πάροχός σας έστειλε μια ιστοσελίδα αντί για βίντεο. Ο σύνδεσμος μπορεί να έχει λήξει, οπότε δοκιμάστε να ανανεώσετε τον πάροχό σας στις Ρυθμίσεις.</string>
+    <string name="error_unplayable_file">Ο πάροχός σας έστειλε ένα αρχείο σε μορφή που το Settee δεν μπορεί να αναπαράγει, οπότε δοκιμάστε κάτι άλλο.</string>
+    <string name="error_addon_web_page">Ο σύνδεσμος αυτού του πρόσθετου άνοιξε μια ιστοσελίδα αντί για βίντεο. Διαλέξτε άλλη ροή.</string>
+    <string name="error_addon_unplayable_file">Ο σύνδεσμος αυτού του πρόσθετου άνοιξε ένα αρχείο σε μορφή που το Settee δεν μπορεί να αναπαράγει. Διαλέξτε άλλη ροή.</string>
+    <string name="playback_pick_another_stream">Διαλέξτε άλλη ροή</string>
     <string name="error_damaged">Αυτό το βίντεο είναι κατεστραμμένο και δεν αναπαράγεται. Αυτό είναι από την πλευρά του παρόχου σας, οπότε δοκιμάστε κάτι άλλο.</string>
     <string name="error_behind_live">Αυτό το κανάλι έμεινε πολύ πίσω από τη ζωντανή μετάδοση. Δοκιμάστε ξανά για να το προλάβετε.</string>
     <string name="error_gone">Αυτό δεν υπάρχει πια στον πάροχό σας. Δοκιμάστε να ανανεώσετε τον πάροχό σας στις Ρυθμίσεις.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Πάντα αποστολή</string>
     <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
     <string name="error_torrents_not_yet">Τα torrent δεν παίζουν ακόμα εδώ. Διαλέξτε μια ροή που δεν είναι torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Ανενεργά. Τα torrent που βρίσκουν τα πρόσθετά σας εμφανίζονται, αλλά δεν παίζουν.</string>
     <string name="settings_addons_torrents_on">Ενεργά. Όποιος μοιράζεται ένα torrent που παίζετε μπορεί να δει τη διεύθυνσή σας στο διαδίκτυο.</string>

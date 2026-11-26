@@ -265,6 +265,10 @@
     <string name="error_live_ended">Канал остановился. Повторите попытку или выберите другой канал.</string>
     <string name="error_timed_out">Провайдер перестал отвечать. Возможно, он перегружен, поэтому повторите попытку чуть позже.</string>
     <string name="error_web_page">Провайдер прислал веб-страницу вместо видео. Возможно, ссылка устарела, поэтому попробуйте обновить провайдера в настройках.</string>
+    <string name="error_unplayable_file">Провайдер прислал файл в формате, который Settee не может воспроизвести, поэтому выберите что-нибудь другое.</string>
+    <string name="error_addon_web_page">Ссылка этого дополнения открыла веб-страницу вместо видео. Выберите другой поток.</string>
+    <string name="error_addon_unplayable_file">Ссылка этого дополнения открыла файл в формате, который Settee не может воспроизвести. Выберите другой поток.</string>
+    <string name="playback_pick_another_stream">Выбрать другой поток</string>
     <string name="error_damaged">Это видео повреждено и не воспроизводится. Проблема на стороне провайдера, поэтому выберите что-нибудь другое.</string>
     <string name="error_behind_live">Канал слишком отстал от прямого эфира. Повторите попытку, чтобы догнать его.</string>
     <string name="error_gone">Этого больше нет у вашего провайдера. Попробуйте обновить провайдера в настройках.</string>
@@ -413,6 +417,7 @@
     <string name="report_question_always_send">Всегда отправлять</string>
     <string name="error_torrents_off">Торренты выключены. Включите их в Настройки, Дополнения, чтобы воспроизвести.</string>
     <string name="error_torrents_not_yet">Торренты здесь пока не воспроизводятся. Выберите поток, который не является торрентом.</string>
+    <string name="vod_addon_torrent">Торрент</string>
     <string name="settings_addons_torrents">Торренты</string>
     <string name="settings_addons_torrents_off">Выключены. Торренты, найденные вашими дополнениями, показываются в списке, но не воспроизводятся.</string>
     <string name="settings_addons_torrents_on">Включены. Все, кто раздаёт торрент, который вы смотрите, видят ваш интернет-адрес.</string>

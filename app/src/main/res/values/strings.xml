@@ -815,6 +815,10 @@
     <string name="error_live_ended">This channel stopped. Try again, or pick another channel.</string>
     <string name="error_timed_out">Your provider stopped responding. It may be busy, so try again in a moment.</string>
     <string name="error_web_page">Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings.</string>
+    <string name="error_unplayable_file">Your provider sent a file in a format Settee can\'t play, so try something else.</string>
+    <string name="error_addon_web_page">This add-on\'s link opened a web page instead of video. Pick another stream.</string>
+    <string name="error_addon_unplayable_file">This add-on\'s link opened a file in a format Settee can\'t play. Pick another stream.</string>
+    <string name="playback_pick_another_stream">Pick another stream</string>
     <string name="error_damaged">This video is damaged and won\'t play. That\'s at your provider\'s end, so try something else.</string>
     <string name="error_behind_live">This channel fell too far behind live. Try again to catch up.</string>
     <string name="error_gone">This isn\'t on your provider any more. Try refreshing your provider in Settings.</string>
@@ -852,6 +856,7 @@
     </plurals>
     <string name="error_torrents_off">Torrents are off. Turn them on in Settings, Add-ons, to play these.</string>
     <string name="error_torrents_not_yet">Torrents can\'t play here yet. Pick a stream that isn\'t a torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
