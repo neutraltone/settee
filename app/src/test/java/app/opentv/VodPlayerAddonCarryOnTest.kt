@@ -6,6 +6,9 @@
 package app.opentv
 
 import app.opentv.data.model.Episode
+import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.MediaKey
@@ -90,6 +93,91 @@ class VodPlayerAddonCarryOnTest {
 
         assertThat(playback.played.map { it.first }).hasSize(1)
         assertThat(vm.addonPick.value).isEqualTo(second.key)
+    }
+
+    @Test
+    fun `after the Provider's last season, the Next Episode is the first season only an add-on has`() {
+        lateinit var finale: Episode
+        lateinit var opener: Episode
+        testGraph.runOnMain {
+            graph.settings.addStremioAddon(
+                StremioAddon(SHOWS, "Shows", listOf("stream"), listOf("series"), listOf("series")),
+            )
+            finale = providerSeasonOne()
+            opener = addonSeasonTwo()
+            vm = testGraph.track(VodPlayerViewModel(app, graph))
+            vm.attach(finale.key, playback)
+
+            assertThat(vm.nextEpisode.value?.let { it.season to it.episode }).isEqualTo(2 to 1)
+            vm.playToEnd(playback)
+        }
+
+        // As picking it from the show's Season 2 does: its add-on picker, as nothing else plays it (#683).
+        assertThat(vm.current.value).isEqualTo(opener.key)
+        assertThat(vm.addonPick.value).isEqualTo(opener.key)
+        assertThat(playback.played.map { it.first }).containsExactly(finale.key)
+    }
+
+    /** A Provider's "Lost Show", TMDB id 201, with only Season 1's one episode; returns that episode. */
+    private suspend fun providerSeasonOne(): Episode {
+        val db = graph.database
+        val sourceId = db.sources().insert(
+            Source(name = "Provider", kind = SourceKind.M3U, url = "https://example.com/list"),
+        )
+        db.series().upsertAll(
+            listOf(
+                Series(
+                    sourceId = sourceId,
+                    seriesId = "77",
+                    name = "Lost Show",
+                    categoryId = null,
+                    posterUrl = null,
+                    rating = null,
+                    year = 2010,
+                    plot = null,
+                    tmdbId = "201",
+                ),
+            ),
+        )
+        db.episodes().upsertAll(
+            listOf(
+                Episode(
+                    sourceId = sourceId,
+                    seriesId = "77",
+                    episodeId = "p1",
+                    season = 1,
+                    episodeNumber = 1,
+                    title = "Finale",
+                    plot = null,
+                    durationSeconds = 2_400,
+                    stillUrl = null,
+                    streamUrl = "https://example.com/s1e1.mkv",
+                ),
+            ),
+        )
+        return db.episodes().forSeries(sourceId, "77").single()
+    }
+
+    /** Season 2 of the show, kept as its Add-ons copy's as AddonSeasons keeps it; returns its first episode. */
+    private suspend fun addonSeasonTwo(): Episode {
+        val show = graph.addonTitles.keepShow(SHOW)
+        graph.database.episodes().upsertAll(
+            listOf(
+                Episode(
+                    sourceId = show.sourceId,
+                    seriesId = show.seriesId,
+                    episodeId = "${show.seriesId}:2:1",
+                    season = 2,
+                    episodeNumber = 1,
+                    title = "Opener",
+                    plot = null,
+                    durationSeconds = 2_400,
+                    stillUrl = null,
+                    streamUrl = "",
+                ),
+            ),
+        )
+        return graph.database.episodes().forSeries(show.sourceId, show.seriesId).single()
     }
 
     private suspend fun keptEpisodes(): Pair<Episode, Episode> {

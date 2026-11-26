@@ -153,7 +153,9 @@ class ViewerLibrary(
     val live = LiveWatching(db.livePlayback(), activeProfileId, clock)
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
-    val nextEpisodes = NextEpisodes(episodes, ::savePosition)
+    val nextEpisodes = NextEpisodes(episodes, ::savePosition) { episode, own ->
+        db.addonSeasonsAfter(episode, own, versionIds)
+    }
 
     /** Looks for New Episodes in the series a catalogue refresh says the provider updated. */
     val newEpisodes = NewEpisodes(positions, episodes)
@@ -523,6 +525,8 @@ class NewEpisodes internal constructor(private val positions: PlaybackPositionDa
 class NextEpisodes internal constructor(
     private val episodes: EpisodeDao,
     private val savePosition: suspend (mediaKey: String, positionMillis: Long, durationMillis: Long) -> Unit,
+    /** The episodes of an episode's show only its Add-ons copy has, beside its own series' (#683). */
+    private val addonSeasons: suspend (Episode, own: List<Episode>) -> List<Episode>,
 ) {
     /**
      * The Next Episode after [episode]: the one that follows it in season then episode order,
@@ -542,7 +546,10 @@ class NextEpisodes internal constructor(
      * episode, or its series' episodes aren't loaded.
      */
     suspend fun around(episode: Episode?): Pair<Episode?, Episode?> {
-        val ordered = episode?.let { episodes.forSeries(it.sourceId, it.seriesId).sortedWith(EPISODE_ORDER) }.orEmpty()
+        // With the seasons only the show's Add-ons copy has, which its page lists after the Provider's, so
+        // the Provider's last episode carries on into them (#683) rather than ending the show there.
+        val own = episode?.let { episodes.forSeries(it.sourceId, it.seriesId) }.orEmpty()
+        val ordered = episode?.let { (own + addonSeasons(it, own)).sortedWith(EPISODE_ORDER) }.orEmpty()
         val at = ordered.indexOfFirst { it.id == episode?.id }
         return if (at < 0) null to null else ordered.getOrNull(at - 1) to ordered.getOrNull(at + 1)
     }

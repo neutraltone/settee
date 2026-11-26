@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import app.opentv.core.AppDispatchers
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.model.knownTmdbId
@@ -77,6 +78,25 @@ internal suspend fun OpenTvDatabase.addonSeasonsKept(series: Series): (Int) -> B
     val own = episodes().forSeries(series.sourceId, series.seriesId).mapTo(HashSet()) { it.season }
     val carried = providerSeasons(series, sources().addonsSourceId())
     return { it in own || it !in carried }
+}
+
+/**
+ * The episodes [episode]'s show has from its Add-ons copy in the seasons [own], its Provider series'
+ * episodes, lacks (#683): what the show's page lists after the Provider's seasons, so the Next Episode
+ * carries on into them. None for an episode kept from an add-on, or a show with no such copy.
+ */
+internal suspend fun OpenTvDatabase.addonSeasonsAfter(
+    episode: Episode,
+    own: List<Episode>,
+    ids: VersionIds,
+): List<Episode> {
+    // Before any title is kept from an add-on there's no copy to look for: the usual case, kept to one read.
+    val addons = sources().addons()?.id?.let(::AddonsSourceId)?.takeUnless { it.keeps(episode.sourceId) }
+    val series = addons?.let { series().bySeriesId(episode.sourceId, episode.seriesId) } ?: return emptyList()
+    val carried = own.mapTo(HashSet()) { it.season }
+    return versionsOf(series, ids).filter { addons.keeps(it.sourceId) }
+        .flatMap { copy -> episodes().forSeries(copy.sourceId, copy.seriesId) }
+        .filter { it.season !in carried }
 }
 
 /** The seasons stored for [series]' Versions from a Provider, itself included when it's one. */
