@@ -7,6 +7,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- jlibtorrent asks for API 26. Settee still runs from API 24: LibtorrentEngine never loads the
+         library below 26 and fails the torrent as an unsupported device instead (ADR 0012). -->
+    <uses-sdk tools:overrideLibrary="com.frostwire.jlibtorrent" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

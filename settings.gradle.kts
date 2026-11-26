@@ -17,6 +17,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // jlibtorrent, the torrent engine's library (ADR 0012), is published only here (the files
+        // themselves are served from the project's release downloads). Limited to its group, so
+        // nothing else can be resolved from it.
+        maven("https://dl.frostwire.com/maven") {
+            content { includeGroup("com.frostwire") }
+        }
     }
 }
 
