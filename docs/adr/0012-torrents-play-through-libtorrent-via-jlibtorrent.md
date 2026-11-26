@@ -39,5 +39,5 @@ Stored uncompressed instead, the APK was 39,410,075 B (31.7 MB added).
 
 - #670's `DataSource` and its tests use `TorrentEngine` and the test fake (`FakeTorrentEngine`), never the library.
 - `UNSUPPORTED_DEVICE` needs a sentence of its own in #670, beside nobody sharing, not enough space and didn't start in time.
-- Pieces aren't evicted while a torrent plays (libtorrent has no call to drop a verified piece), so the whole file must fit under the piece cache cap and the free space less what's kept back. A bigger file fails with `NOT_ENOUGH_SPACE` before it starts.
+- Pieces aren't evicted while a torrent plays (libtorrent has no call to drop a verified piece), so the whole file must fit under the piece cache cap and the free space less what's kept back. The stream picker leaves out a torrent whose add-on says it's bigger, counting them on a line with the room there is (`TorrentCache.room`); one whose size nobody said can still be picked, and fails with `NOT_ENOUGH_SPACE` before it starts.
 - Moving to another library means a new `TorrentEngine` implementation and a new ADR; nothing outside `LibtorrentEngine` changes.

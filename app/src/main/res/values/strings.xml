@@ -854,6 +854,11 @@
         <item quantity="one">%1$d person sharing</item>
         <item quantity="other">%1$d people sharing</item>
     </plurals>
+    <!-- Under the add-on stream list: torrents left out because the whole file wouldn't fit. %2$s is a size such as 2.5 GB. -->
+    <plurals name="vod_addon_too_big">
+        <item quantity="one">%1$d more won\'t fit. This device has room for %2$s.</item>
+        <item quantity="other">%1$d more won\'t fit. This device has room for %2$s.</item>
+    </plurals>
     <string name="error_torrents_off">Torrents are off. Turn them on in Settings, Add-ons, to play these.</string>
     <string name="error_torrent_nobody_sharing">Nobody is sharing this torrent right now, so it can\'t play. Pick another stream.</string>
     <string name="error_torrent_no_space">There isn\'t enough free space to play this torrent. Pick a smaller stream, or free up some space.</string>

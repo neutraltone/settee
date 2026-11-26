@@ -190,6 +190,22 @@ class VodAddonStreamsTest {
     }
 
     @Test
+    fun `with torrents offered, the picker is told how big a torrent this device has room for`() = runBlocking {
+        addon("films.example.com", "Films", """{"streams": [{"infoHash": "abc", "name": "1080p"}]}""")
+
+        val found = search(heat) as AddonSearch.Results
+
+        assertThat(found.torrentRoom).isEqualTo(graph.torrentCache.room())
+    }
+
+    @Test
+    fun `with no torrents offered, nobody looks at the free space`() = runBlocking {
+        addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
+
+        assertThat((search(heat) as AddonSearch.Results).torrentRoom).isNull()
+    }
+
+    @Test
     fun `an episode's add-ons are asked by the show's IMDb id from TMDB, with its season and episode`() =
         runBlocking<Unit> {
             addon("shows.example.com", "Shows", streams("https://example.com/s2e5.mkv"), types = listOf("series"))

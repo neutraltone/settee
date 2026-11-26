@@ -10,6 +10,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamLink
 import app.opentv.data.remote.AddonFailure
 import app.opentv.data.repo.AddonOutcome
 import app.opentv.data.repo.AddonStreamResults
@@ -80,6 +81,8 @@ class AddonSearches(private val graph: ServiceLocator.Graph) {
         finished = finished,
         // Read as each answer lands rather than watched: the switch can't change under an open picker.
         torrentsOn = graph.settings.torrentsEnabled.value,
+        // Only asked when there's a torrent to measure against it: it reads the disk.
+        torrentRoom = if (streams.any { it.stream.link is StreamLink.Torrent }) graph.torrentCache.room() else null,
         failure = outcomes.firstNotNullOfOrNull { (it as? AddonOutcome.Unreachable)?.failure }
             ?.let(graph.errorWording::ofAddon),
     )

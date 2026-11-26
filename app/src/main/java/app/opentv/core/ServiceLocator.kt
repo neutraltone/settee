@@ -332,9 +332,13 @@ object ServiceLocator {
          * while it plays; turning Torrents off in Settings stops one that's running, as nothing should
          * be fetched or shared once the viewer has said no.
          */
+        /** Where a playing torrent's pieces go, and how big a one there's room for (ADR 0012). */
+        val torrentCache: TorrentCache by lazy {
+            TorrentCache(TorrentCache.dirIn(appContext.cacheDir), TorrentEngineConfig())
+        }
+
         val torrentEngine: TorrentEngine by lazy {
-            val cache = TorrentCache(TorrentCache.dirIn(appContext.cacheDir), TorrentEngineConfig())
-            val engine = makeTorrentEngine?.invoke() ?: LibtorrentEngine(cache)
+            val engine = makeTorrentEngine?.invoke() ?: LibtorrentEngine(torrentCache)
             appScope.launch { settings.torrentsEnabled.collect { on -> if (!on) engine.stop() } }
             engine
         }

@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -17,13 +18,12 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -490,9 +490,9 @@ class MovieDetailContentTest {
         val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
         compose.onNodeWithText("Torrents add-on · FHD · 2 GB · 45 people sharing").assertIsDisplayed()
         torrentRow.assertIsNotEnabled()
-        // Marked at a glance, and only the torrent: the direct streams above it carry no mark.
-        compose.onAllNodesWithContentDescription("Torrent").assertCountEquals(1)
-        compose.onNode(hasContentDescription("Torrent") and hasText("The Quiet Road 1080p WEB")).assertIsDisplayed()
+        // Marked at a glance, and only the torrent: the direct streams above it carry no badge.
+        compose.onAllNodesWithText("Torrent").assertCountEquals(1)
+        torrentRow.assert(hasText("Torrent"))
         compose.onNodeWithText("Torrents are off. Turn them on in Settings, Add-ons, to play these.")
             .assertIsDisplayed()
         // The Highlight stops on the last stream that plays, rather than on one that doesn't.
@@ -532,6 +532,40 @@ class MovieDetailContentTest {
         torrentRow.performClick()
         settle()
         assertThat(playedStream).isEqualTo(torrent.stream)
+    }
+
+    @Test
+    fun `torrents too big for this device are left out, with a line saying how many and how much room there is`() {
+        val tooBig = torrent.copy(
+            stream = StremioStream(StreamLink.Torrent("def456", 1), "The Quiet Road 2160p REMUX", "Torrents add-on"),
+            sizeBytes = 40L shl 30,
+        )
+        val unknownSize = torrent.copy(
+            stream = StremioStream(StreamLink.Torrent("789abc", 1), "The Quiet Road 720p", "Torrents add-on"),
+            sizeBytes = null,
+        )
+        findStreams = {
+            flowOf(
+                AddonSearch.Results(
+                    listOf(tooBig) + streams + torrent + unknownSize,
+                    finished = true,
+                    torrentsOn = true,
+                    torrentRoom = 5L shl 29,
+                ),
+            )
+        }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNodeWithText("The Quiet Road 2160p REMUX").assertDoesNotExist()
+        // One that fits stays, and so does one whose size nobody said.
+        compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction()).assertIsEnabled()
+        compose.onNode(hasText("The Quiet Road 720p") and hasClickAction()).assertIsEnabled()
+        compose.onNodeWithText("1 more won't fit. This device has room for 2.5 GB.").assertIsDisplayed()
+        compose.onNode(hasText("The Quiet Road 2160p") and isFocused()).assertExists()
+        captureScreen("movie_detail_addon_picker_torrent_too_big")
     }
 
     @Test

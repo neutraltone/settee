@@ -30,10 +30,13 @@ class TorrentCache(
      * plays (libtorrent has no call to drop a verified piece), so the whole file has to fit, under
      * the cache cap and without eating into the space kept free for the system.
      */
-    fun roomFor(fileSize: Long): Boolean {
+    fun roomFor(fileSize: Long): Boolean = fileSize <= room()
+
+    /** The biggest file [roomFor] would take right now, in bytes. */
+    fun room(): Long {
         dir.mkdirs()
         val usable = freeBytes(dir) - config.keepFreeBytes
-        return fileSize <= config.pieceCacheCapBytes && fileSize <= usable
+        return usable.coerceIn(0, config.pieceCacheCapBytes)
     }
 
     /** The folder for one torrent's pieces, named by its info hash. */

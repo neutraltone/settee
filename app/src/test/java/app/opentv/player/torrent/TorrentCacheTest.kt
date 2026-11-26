@@ -80,6 +80,13 @@ class TorrentCacheTest {
     }
 
     @Test
+    fun `the room a torrent has is the free space less what's kept back, up to the cache cap`() {
+        assertThat(cache(freeBytes = 3 * gib).room()).isEqualTo(gib * 5 / 2)
+        assertThat(cache(freeBytes = 100 * gib).room()).isEqualTo(4 * gib)
+        assertThat(cache(freeBytes = gib / 4).room()).isEqualTo(0)
+    }
+
+    @Test
     fun `each torrent's pieces go in their own folder inside the cache`() {
         val folder = cache().folderFor("0123456789ABCDEF0123456789ABCDEF01234567")
 
