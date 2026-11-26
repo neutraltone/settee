@@ -105,12 +105,13 @@ class LibtorrentEngine(
             if (run.stopped) return
             when (alert.type()) {
                 AlertType.ADD_TORRENT -> {
-                    val handle = (alert as TorrentAlert<*>).handle()
+                    val handle = ownedHandle(run, alert as TorrentAlert<*>) ?: return
                     run.handle = handle
                     // A torrent libtorrent already had the file list for sends no METADATA_RECEIVED.
                     if (handle.isValid) onFileList(run, handle)
                 }
-                AlertType.METADATA_RECEIVED -> onFileList(run, (alert as TorrentAlert<*>).handle())
+                AlertType.METADATA_RECEIVED ->
+                    ownedHandle(run, alert as TorrentAlert<*>)?.let { onFileList(run, it) }
                 AlertType.TORRENT_ERROR ->
                     fail(run, TorrentFailure.ENGINE_ERROR, (alert as TorrentErrorAlert).error().message())
                 else -> Unit
@@ -118,6 +119,15 @@ class LibtorrentEngine(
             lock.withLock { changed.signalAll() }
         }
     }
+
+    /**
+     * The torrent an alert is about, as a handle that outlives the alert. An alert's own `handle()`
+     * points into the alert, which libtorrent frees once it has been handled, so keeping it crashed the
+     * Stick in native code a second later, when [watch] asked whether it was still valid. The session's
+     * `find` returns a copy that stays valid until the torrent is removed.
+     */
+    private fun ownedHandle(run: RunningTorrent, alert: TorrentAlert<*>): TorrentHandle? =
+        run.session?.find(alert.handle().infoHash())?.takeIf { it.isValid }
 
     private fun onFileList(run: RunningTorrent, handle: TorrentHandle) {
         val info = handle.torrentFile()
