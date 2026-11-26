@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Nicht senden</string>
     <string name="report_question_always_send">Immer senden</string>
     <string name="error_torrents_off">Torrents sind aus. Schalte sie unter Einstellungen, Add-ons ein, um sie abzuspielen.</string>
-    <string name="error_torrents_not_yet">Torrents lassen sich hier noch nicht abspielen. Wähle einen Stream, der kein Torrent ist.</string>
+    <string name="error_torrent_nobody_sharing">Gerade teilt niemand diesen Torrent, daher kann er nicht abgespielt werden. Wähle einen anderen Stream.</string>
+    <string name="error_torrent_no_space">Es ist nicht genug Speicher frei, um diesen Torrent abzuspielen. Wähle einen kleineren Stream oder schaffe Platz.</string>
+    <string name="error_torrent_timed_out">Der Torrent hat Leute gefunden, die ihn teilen, ist aber nicht rechtzeitig gestartet. Versuche es erneut oder wähle einen anderen Stream.</string>
+    <string name="error_torrent_unsupported">Torrents brauchen Android 8.0 oder neuer. Wähle einen Stream, der kein Torrent ist.</string>
+    <string name="error_torrent_failed">Der Torrent ist mit einem eigenen Fehler stehen geblieben. Versuche es erneut oder wähle einen anderen Stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Aus. Torrents, die deine Add-ons finden, werden angezeigt, aber nicht abgespielt.</string>

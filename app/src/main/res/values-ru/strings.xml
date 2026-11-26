@@ -416,7 +416,11 @@
     <string name="report_question_dont_send">Не отправлять</string>
     <string name="report_question_always_send">Всегда отправлять</string>
     <string name="error_torrents_off">Торренты выключены. Включите их в Настройки, Дополнения, чтобы воспроизвести.</string>
-    <string name="error_torrents_not_yet">Торренты здесь пока не воспроизводятся. Выберите поток, который не является торрентом.</string>
+    <string name="error_torrent_nobody_sharing">Сейчас этот торрент никто не раздаёт, поэтому его нельзя воспроизвести. Выберите другой поток.</string>
+    <string name="error_torrent_no_space">Недостаточно свободного места для этого торрента. Выберите поток поменьше или освободите место.</string>
+    <string name="error_torrent_timed_out">Торрент нашёл раздающих, но не запустился вовремя. Попробуйте ещё раз или выберите другой поток.</string>
+    <string name="error_torrent_unsupported">Для торрентов нужен Android 8.0 или новее. Выберите поток, который не является торрентом.</string>
+    <string name="error_torrent_failed">Торрент остановился из-за собственного сбоя. Попробуйте ещё раз или выберите другой поток.</string>
     <string name="vod_addon_torrent">Торрент</string>
     <string name="settings_addons_torrents">Торренты</string>
     <string name="settings_addons_torrents_off">Выключены. Торренты, найденные вашими дополнениями, показываются в списке, но не воспроизводятся.</string>

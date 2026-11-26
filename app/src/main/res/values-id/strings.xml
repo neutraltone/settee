@@ -413,7 +413,11 @@
     <string name="report_question_dont_send">Jangan kirim</string>
     <string name="report_question_always_send">Selalu kirim</string>
     <string name="error_torrents_off">Torrent nonaktif. Aktifkan di Pengaturan, Add-on, untuk memutarnya.</string>
-    <string name="error_torrents_not_yet">Torrent belum bisa diputar di sini. Pilih stream yang bukan torrent.</string>
+    <string name="error_torrent_nobody_sharing">Tidak ada yang membagikan torrent ini sekarang, jadi tidak bisa diputar. Pilih stream lain.</string>
+    <string name="error_torrent_no_space">Ruang kosong tidak cukup untuk memutar torrent ini. Pilih stream yang lebih kecil, atau kosongkan ruang.</string>
+    <string name="error_torrent_timed_out">Torrent ini menemukan orang yang membagikannya, tetapi tidak mulai tepat waktu. Coba lagi, atau pilih stream lain.</string>
+    <string name="error_torrent_unsupported">Torrent memerlukan Android 8.0 atau yang lebih baru. Pilih stream yang bukan torrent.</string>
+    <string name="error_torrent_failed">Torrent berhenti karena masalahnya sendiri. Coba lagi, atau pilih stream lain.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Nonaktif. Torrent yang ditemukan add-on Anda tetap tercantum, tetapi tidak diputar.</string>

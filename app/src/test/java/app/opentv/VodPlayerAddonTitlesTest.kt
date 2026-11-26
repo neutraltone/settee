@@ -14,6 +14,9 @@ import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.MediaKey
+import app.opentv.player.torrent.TorrentRequest
+import app.opentv.player.torrent.torrentRequestOf
+import app.opentv.player.torrent.uri
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.chooseVersion
 import app.opentv.ui.vod.playAddonStream
@@ -64,6 +67,33 @@ class VodPlayerAddonTitlesTest {
             )
             assertThat(vm.addonPick.value).isNull()
         }
+
+    @Test
+    fun `a torrent picked for an add-on film plays from where it stopped, through the torrent engine`() = testing {
+        val film = graph.addonTitles.keepFilm(FILM)
+        graph.viewerLibrary.recordProgress("movie:${film.id}", positionMillis = 600_000, EPISODE_MILLIS)
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+        vm.attach(MediaKey.Movie(film.id), playback)
+
+        val torrent = StreamLink.Torrent(
+            HASH,
+            fileIdx = 3,
+            sources = listOf("tracker:udp://tracker.example.org:1337", "dht:$HASH"),
+        )
+        vm.playAddonStream(StremioStream(torrent, "Lost Film 1080p", "Films", bingeGroup = "films-1080p"))
+
+        val request = TorrentRequest(HASH, fileIndex = 3, trackers = listOf("udp://tracker.example.org:1337"))
+        assertThat(playback.played).containsExactly(
+            MediaKey.AddonStream(
+                MediaKey.Movie(film.id),
+                request.uri,
+                addonName = "Films",
+                bingeGroup = "films-1080p",
+            ) to
+                600_000L,
+        )
+        assertThat(torrentRequestOf(request.uri)).isEqualTo(request)
+    }
 
     @Test
     fun `an add-on episode opened from Continue Watching asks for that episode's stream`() = testing {
@@ -239,6 +269,7 @@ class VodPlayerAddonTitlesTest {
 
     private companion object {
         const val STREAM = "https://example.com/stream.mkv"
+        const val HASH = "0123456789abcdef0123456789abcdef01234567"
         const val FORTY_PERCENT = EPISODE_MILLIS * 2 / 5
 
         val PROVIDER = Source(id = 50, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com")

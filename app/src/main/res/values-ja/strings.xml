@@ -413,7 +413,11 @@
     <string name="report_question_dont_send">送信しない</string>
     <string name="report_question_always_send">常に送信</string>
     <string name="error_torrents_off">トレントはオフです。再生するには、設定のアドオンでオンにしてください。</string>
-    <string name="error_torrents_not_yet">トレントはまだここで再生できません。トレント以外のストリームを選んでください。</string>
+    <string name="error_torrent_nobody_sharing">今このトレントを共有している人がいないため、再生できません。別のストリームを選んでください。</string>
+    <string name="error_torrent_no_space">このトレントを再生する空き容量が足りません。小さいストリームを選ぶか、空き容量を増やしてください。</string>
+    <string name="error_torrent_timed_out">共有している人は見つかりましたが、トレントが時間内に始まりませんでした。もう一度試すか、別のストリームを選んでください。</string>
+    <string name="error_torrent_unsupported">トレントの再生には Android 8.0 以降が必要です。トレント以外のストリームを選んでください。</string>
+    <string name="error_torrent_failed">トレント自体の問題で停止しました。もう一度試すか、別のストリームを選んでください。</string>
     <string name="vod_addon_torrent">トレント</string>
     <string name="settings_addons_torrents">トレント</string>
     <string name="settings_addons_torrents_off">オフ。アドオンが見つけたトレントは一覧に表示されますが、再生されません。</string>

@@ -123,7 +123,8 @@ class LibtorrentEngine(
         val info = handle.torrentFile()
         if (info == null || _status.value is TorrentStatus.Ready) return
         val files = info.files()
-        val index = run.request.fileIndex
+        // Stremio's rule for a stream that names no file: the largest one.
+        val index = run.request.fileIndex ?: (0 until files.numFiles()).maxByOrNull { files.fileSize(it) } ?: 0
         val size = if (index < files.numFiles()) files.fileSize(index) else -1L
         when {
             size < 0 -> fail(run, TorrentFailure.ENGINE_ERROR, "No file $index of ${files.numFiles()}")

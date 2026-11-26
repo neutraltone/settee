@@ -855,8 +855,21 @@
         <item quantity="other">%1$d people sharing</item>
     </plurals>
     <string name="error_torrents_off">Torrents are off. Turn them on in Settings, Add-ons, to play these.</string>
-    <string name="error_torrents_not_yet">Torrents can\'t play here yet. Pick a stream that isn\'t a torrent.</string>
+    <string name="error_torrent_nobody_sharing">Nobody is sharing this torrent right now, so it can\'t play. Pick another stream.</string>
+    <string name="error_torrent_no_space">There isn\'t enough free space to play this torrent. Pick a smaller stream, or free up some space.</string>
+    <string name="error_torrent_timed_out">This torrent found people sharing it, but didn\'t start in time. Try again, or pick another stream.</string>
+    <string name="error_torrent_unsupported">Torrents need Android 8.0 or later to play. Pick a stream that isn\'t a torrent.</string>
+    <string name="error_torrent_failed">The torrent stopped with a fault of its own. Try again, or pick another stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
+    <string name="player_torrent_connecting">Looking for people sharing this torrent</string>
+    <plurals name="player_torrent_found">
+        <item quantity="one">Found %1$d person sharing it</item>
+        <item quantity="other">Found %1$d people sharing it</item>
+    </plurals>
+    <plurals name="player_torrent_fetching">
+        <item quantity="one">Fetching it from %1$d person</item>
+        <item quantity="other">Fetching it from %1$d people</item>
+    </plurals>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>

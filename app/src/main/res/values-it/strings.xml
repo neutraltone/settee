@@ -415,7 +415,11 @@
     <string name="report_question_dont_send">Non inviare</string>
     <string name="report_question_always_send">Invia sempre</string>
     <string name="error_torrents_off">I torrent sono disattivati. Attivali in Impostazioni, Componenti aggiuntivi, per riprodurli.</string>
-    <string name="error_torrents_not_yet">I torrent non si possono ancora riprodurre qui. Scegli uno stream che non sia un torrent.</string>
+    <string name="error_torrent_nobody_sharing">Nessuno sta condividendo questo torrent in questo momento, quindi non si può riprodurre. Scegli un altro flusso.</string>
+    <string name="error_torrent_no_space">Non c\'è abbastanza spazio libero per riprodurre questo torrent. Scegli un flusso più piccolo o libera spazio.</string>
+    <string name="error_torrent_timed_out">Il torrent ha trovato persone che lo condividono, ma non è partito in tempo. Riprova o scegli un altro flusso.</string>
+    <string name="error_torrent_unsupported">I torrent richiedono Android 8.0 o versioni successive. Scegli un flusso che non sia un torrent.</string>
+    <string name="error_torrent_failed">Il torrent si è fermato per un problema suo. Riprova o scegli un altro flusso.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Disattivati. I torrent trovati dai tuoi add-on compaiono nell\'elenco, ma non si riproducono.</string>

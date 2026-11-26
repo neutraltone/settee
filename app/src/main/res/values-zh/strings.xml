@@ -413,7 +413,11 @@
     <string name="report_question_dont_send">不发送</string>
     <string name="report_question_always_send">始终发送</string>
     <string name="error_torrents_off">种子已关闭。在设置的附加组件中开启后即可播放这些。</string>
-    <string name="error_torrents_not_yet">这里还不能播放种子。请选择不是种子的流。</string>
+    <string name="error_torrent_nobody_sharing">现在没有人分享这个种子，所以无法播放。请选择其他流。</string>
+    <string name="error_torrent_no_space">可用空间不足，无法播放这个种子。请选择更小的流，或腾出一些空间。</string>
+    <string name="error_torrent_timed_out">这个种子找到了分享者，但没能及时开始。请重试，或选择其他流。</string>
+    <string name="error_torrent_unsupported">种子需要 Android 8.0 或更高版本才能播放。请选择不是种子的流。</string>
+    <string name="error_torrent_failed">种子因自身故障而停止。请重试，或选择其他流。</string>
     <string name="vod_addon_torrent">种子</string>
     <string name="settings_addons_torrents">种子</string>
     <string name="settings_addons_torrents_off">已关闭。插件找到的种子会列出，但无法播放。</string>

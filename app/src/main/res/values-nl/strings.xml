@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Niet sturen</string>
     <string name="report_question_always_send">Altijd sturen</string>
     <string name="error_torrents_off">Torrents staan uit. Zet ze aan bij Instellingen, Add-ons, om deze af te spelen.</string>
-    <string name="error_torrents_not_yet">Torrents kunnen hier nog niet worden afgespeeld. Kies een stream die geen torrent is.</string>
+    <string name="error_torrent_nobody_sharing">Niemand deelt deze torrent op dit moment, dus hij kan niet worden afgespeeld. Kies een andere stream.</string>
+    <string name="error_torrent_no_space">Er is niet genoeg vrije ruimte om deze torrent af te spelen. Kies een kleinere stream of maak ruimte vrij.</string>
+    <string name="error_torrent_timed_out">Deze torrent vond mensen die hem delen, maar startte niet op tijd. Probeer het opnieuw of kies een andere stream.</string>
+    <string name="error_torrent_unsupported">Torrents hebben Android 8.0 of nieuwer nodig. Kies een stream die geen torrent is.</string>
+    <string name="error_torrent_failed">De torrent stopte door een eigen fout. Probeer het opnieuw of kies een andere stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Uit. Torrents die je add-ons vinden, staan in de lijst, maar spelen niet af.</string>

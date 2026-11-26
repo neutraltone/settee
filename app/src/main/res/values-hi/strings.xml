@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">न भेजें</string>
     <string name="report_question_always_send">हमेशा भेजें</string>
     <string name="error_torrents_off">टोरेंट बंद हैं। इन्हें चलाने के लिए सेटिंग्स, ऐड-ऑन में इन्हें चालू करें।</string>
-    <string name="error_torrents_not_yet">टोरेंट अभी यहाँ नहीं चल सकते। ऐसी स्ट्रीम चुनें जो टोरेंट न हो।</string>
+    <string name="error_torrent_nobody_sharing">अभी कोई भी इस टोरेंट को शेयर नहीं कर रहा, इसलिए यह नहीं चल सकता। कोई दूसरी स्ट्रीम चुनें।</string>
+    <string name="error_torrent_no_space">इस टोरेंट को चलाने के लिए पर्याप्त खाली जगह नहीं है। कोई छोटी स्ट्रीम चुनें, या कुछ जगह खाली करें।</string>
+    <string name="error_torrent_timed_out">इस टोरेंट को शेयर करने वाले लोग मिले, पर यह समय पर शुरू नहीं हुआ। फिर से कोशिश करें, या कोई दूसरी स्ट्रीम चुनें।</string>
+    <string name="error_torrent_unsupported">टोरेंट चलाने के लिए Android 8.0 या उसके बाद का वर्शन चाहिए। ऐसी स्ट्रीम चुनें जो टोरेंट न हो।</string>
+    <string name="error_torrent_failed">टोरेंट अपनी ही किसी खराबी से रुक गया। फिर से कोशिश करें, या कोई दूसरी स्ट्रीम चुनें।</string>
     <string name="vod_addon_torrent">टोरेंट</string>
     <string name="settings_addons_torrents">टोरेंट</string>
     <string name="settings_addons_torrents_off">बंद। आपके ऐड-ऑन जो टोरेंट ढूंढते हैं, वे सूची में दिखते हैं, पर चलते नहीं।</string>

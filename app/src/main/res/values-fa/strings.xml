@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">ارسال نشود</string>
     <string name="report_question_always_send">همیشه ارسال</string>
     <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
-    <string name="error_torrents_not_yet">تورنت‌ها هنوز اینجا پخش نمی‌شوند. جریانی را انتخاب کنید که تورنت نیست.</string>
+    <string name="error_torrent_nobody_sharing">در حال حاضر کسی این تورنت را به اشتراک نمی‌گذارد، پس پخش نمی‌شود. جریان دیگری انتخاب کنید.</string>
+    <string name="error_torrent_no_space">فضای خالی کافی برای پخش این تورنت نیست. جریان کوچک‌تری انتخاب کنید یا کمی فضا آزاد کنید.</string>
+    <string name="error_torrent_timed_out">این تورنت کسانی را پیدا کرد که آن را به اشتراک می‌گذارند، اما به‌موقع شروع نشد. دوباره امتحان کنید یا جریان دیگری انتخاب کنید.</string>
+    <string name="error_torrent_unsupported">تورنت‌ها برای پخش به Android 8.0 یا جدیدتر نیاز دارند. جریانی انتخاب کنید که تورنت نباشد.</string>
+    <string name="error_torrent_failed">تورنت به‌خاطر خطای خودش متوقف شد. دوباره امتحان کنید یا جریان دیگری انتخاب کنید.</string>
     <string name="vod_addon_torrent">تورنت</string>
     <string name="settings_addons_torrents">تورنت‌ها</string>
     <string name="settings_addons_torrents_off">خاموش. تورنت‌هایی که افزونه‌های شما پیدا می‌کنند فهرست می‌شوند، اما پخش نمی‌شوند.</string>

@@ -150,15 +150,12 @@ fun AddonStreamPicker(
                 is AddonSearch.CantAsk -> AddonsFailed(search.error, askAgain.takeIf { search.canRetry })
                 is AddonSearch.Results -> when {
                     search.streams.isNotEmpty() -> {
-                        StreamList(search.streams) {
+                        StreamList(search.streams, search.torrentsOn) {
                             state.close()
                             onPick(it)
                         }
-                        if (search.streams.any { !it.pickable }) {
-                            QuietLine(
-                                if (search.torrentsOn) R.string.error_torrents_not_yet else R.string.error_torrents_off,
-                                Modifier.padding(top = 12.dp),
-                            )
+                        if (search.streams.any { !it.pickable(search.torrentsOn) }) {
+                            QuietLine(R.string.error_torrents_off, Modifier.padding(top = 12.dp))
                         }
                         if (!search.finished) {
                             QuietLine(R.string.vod_addon_still_asking, Modifier.padding(top = 12.dp))
@@ -209,10 +206,10 @@ private fun AddonsFailed(error: ViewerError, onRetry: (() -> Unit)?) {
 }
 
 /**
- * Whether a row can be picked. Torrents are listed, greyed, so the viewer sees an add-on found
- * something, but nothing here plays them yet, whether or not the Torrents switch is on.
+ * Whether a row can be picked: every link, and torrents while the Torrents switch is on ([torrentsOn]).
+ * Off, torrents are still listed, greyed, so the viewer sees an add-on found something and how to play it.
  */
-private val RankedStream.pickable: Boolean get() = stream.link !is StreamLink.Torrent
+private fun RankedStream.pickable(torrentsOn: Boolean): Boolean = torrentsOn || stream.link !is StreamLink.Torrent
 
 /**
  * One row per stream, greyed and passed over by the Highlight for one that can't be picked. Until the
@@ -220,9 +217,9 @@ private val RankedStream.pickable: Boolean get() = stream.link !is StreamLink.To
  * it; once they have, a stream arriving leaves it where they put it.
  */
 @Composable
-private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Unit) {
+private fun StreamList(streams: List<RankedStream>, torrentsOn: Boolean, onPick: (RankedStream) -> Unit) {
     val first = remember { FocusRequester() }
-    val firstPickable = streams.indexOfFirst { it.pickable }
+    val firstPickable = streams.indexOfFirst { it.pickable(torrentsOn) }
     val list = rememberLazyListState()
     var moved by remember { mutableStateOf(false) }
     LaunchedEffect(streams) {
@@ -241,7 +238,7 @@ private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Un
             HighlightSurface(
                 onClick = { onPick(stream) },
                 style = HighlightStyle.Row,
-                enabled = stream.pickable,
+                enabled = stream.pickable(torrentsOn),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (index == firstPickable) Modifier.focusRequester(first) else Modifier)
@@ -249,14 +246,14 @@ private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Un
             ) { highlighted ->
                 val titleColour = when {
                     highlighted -> SetteeColors.OnAccent
-                    stream.pickable -> SetteeColors.Text
+                    stream.pickable(torrentsOn) -> SetteeColors.Text
                     else -> SetteeColors.QuietText
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 ) {
-                    // Torrents are told apart at a glance, before their greyed title is even read.
+                    // Torrents are told apart at a glance, before their title is even read.
                     if (stream.stream.link is StreamLink.Torrent) {
                         Icon(
                             Icons.Filled.Hub,

@@ -415,7 +415,11 @@
     <string name="report_question_dont_send">Nu trimite</string>
     <string name="report_question_always_send">Trimite mereu</string>
     <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
-    <string name="error_torrents_not_yet">Torrentele nu pot fi redate aici încă. Alege un flux care nu este torrent.</string>
+    <string name="error_torrent_nobody_sharing">Nimeni nu partajează acest torrent acum, așa că nu poate fi redat. Alege alt stream.</string>
+    <string name="error_torrent_no_space">Nu este destul spațiu liber pentru a reda acest torrent. Alege un stream mai mic sau eliberează spațiu.</string>
+    <string name="error_torrent_timed_out">Torrentul a găsit oameni care îl partajează, dar nu a pornit la timp. Încearcă din nou sau alege alt stream.</string>
+    <string name="error_torrent_unsupported">Torrentele au nevoie de Android 8.0 sau mai nou. Alege un stream care nu este torrent.</string>
+    <string name="error_torrent_failed">Torrentul s-a oprit din cauza unei probleme proprii. Încearcă din nou sau alege alt stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrente</string>
     <string name="settings_addons_torrents_off">Oprite. Torrentele găsite de suplimentele tale apar în listă, dar nu pot fi redate.</string>

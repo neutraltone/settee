@@ -418,7 +418,11 @@
     <string name="report_question_dont_send">عدم الإرسال</string>
     <string name="report_question_always_send">الإرسال دائمًا</string>
     <string name="error_torrents_off">التورنت متوقف. شغّله من الإعدادات، الإضافات، لتشغيل هذه.</string>
-    <string name="error_torrents_not_yet">لا يمكن تشغيل التورنت هنا بعد. اختر بثًا ليس تورنت.</string>
+    <string name="error_torrent_nobody_sharing">لا أحد يشارك هذا التورنت الآن، لذا لا يمكن تشغيله. اختر بثًا آخر.</string>
+    <string name="error_torrent_no_space">لا توجد مساحة فارغة كافية لتشغيل هذا التورنت. اختر بثًا أصغر، أو أفرغ بعض المساحة.</string>
+    <string name="error_torrent_timed_out">عثر هذا التورنت على أشخاص يشاركونه، لكنه لم يبدأ في الوقت المناسب. حاول مرة أخرى، أو اختر بثًا آخر.</string>
+    <string name="error_torrent_unsupported">تحتاج ملفات التورنت إلى Android 8.0 أو أحدث لتشغيلها. اختر بثًا ليس تورنت.</string>
+    <string name="error_torrent_failed">توقف التورنت بسبب خلل فيه. حاول مرة أخرى، أو اختر بثًا آخر.</string>
     <string name="vod_addon_torrent">تورنت</string>
     <string name="settings_addons_torrents">التورنت</string>
     <string name="settings_addons_torrents_off">متوقف. تظهر التورنتات التي تجدها إضافاتك، لكنها لا تُشغَّل.</string>

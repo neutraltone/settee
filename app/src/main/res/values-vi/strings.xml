@@ -413,7 +413,11 @@
     <string name="report_question_dont_send">Không gửi</string>
     <string name="report_question_always_send">Luôn gửi</string>
     <string name="error_torrents_off">Torrent đang tắt. Bật trong Cài đặt, Tiện ích bổ sung để phát các mục này.</string>
-    <string name="error_torrents_not_yet">Chưa thể phát torrent ở đây. Hãy chọn luồng không phải torrent.</string>
+    <string name="error_torrent_nobody_sharing">Hiện không ai chia sẻ torrent này nên không thể phát. Hãy chọn luồng khác.</string>
+    <string name="error_torrent_no_space">Không đủ dung lượng trống để phát torrent này. Hãy chọn luồng nhỏ hơn hoặc giải phóng dung lượng.</string>
+    <string name="error_torrent_timed_out">Torrent này đã tìm thấy người chia sẻ nhưng không bắt đầu kịp. Hãy thử lại hoặc chọn luồng khác.</string>
+    <string name="error_torrent_unsupported">Torrent cần Android 8.0 trở lên để phát. Hãy chọn luồng không phải torrent.</string>
+    <string name="error_torrent_failed">Torrent đã dừng do lỗi của chính nó. Hãy thử lại hoặc chọn luồng khác.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Tắt. Torrent mà tiện ích của bạn tìm thấy vẫn hiện trong danh sách nhưng không phát được.</string>

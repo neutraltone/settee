@@ -57,6 +57,10 @@ import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
+import app.opentv.player.torrent.LibtorrentEngine
+import app.opentv.player.torrent.TorrentCache
+import app.opentv.player.torrent.TorrentEngine
+import app.opentv.player.torrent.TorrentEngineConfig
 import app.opentv.recording.BookingSpace
 import app.opentv.recording.FreeSpace
 import app.opentv.recording.RecordingEngine
@@ -75,6 +79,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /**
@@ -114,6 +119,7 @@ object ServiceLocator {
      * [dispatchers] are the threads repositories and view models run their background work on, so a
      * test can tell when that work has finished. [crashReportsTo] is where Crash Reports go: Settee's
      * Sentry project by default (none, in a build without its DSN), or a test's own outbox.
+     * [makeTorrentEngine] replaces libtorrent, so a test can play a torrent from a fake.
      */
     @Suppress("LongParameterList") // All but context are only passed by tests.
     class Graph(
@@ -127,6 +133,7 @@ object ServiceLocator {
         private val openRecordingFile: ((String) -> RecordingStorage.Sink)? = null,
         val captureReconnectMillis: Long = StreamCapture.RECONNECT_BACKOFF_MILLIS,
         private val crashReportsTo: CrashReports.Destination = CrashReports.Destination(BuildConfig.SENTRY_DSN),
+        private val makeTorrentEngine: (() -> TorrentEngine)? = null,
         // Last, so a test can pass it as a trailing lambda.
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
@@ -315,7 +322,22 @@ object ServiceLocator {
             )
         }
 
-        val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
+        val playbackSources: PlaybackSources by lazy {
+            val torrentsOn = { settings.torrentsEnabled.value }
+            PlaybackSources(database, xtreamApi, stalkerApi, channelLineup, torrentsOn = torrentsOn)
+        }
+
+        /**
+         * The one torrent engine (ADR 0012), for the film and episode player. It runs one torrent, only
+         * while it plays; turning Torrents off in Settings stops one that's running, as nothing should
+         * be fetched or shared once the viewer has said no.
+         */
+        val torrentEngine: TorrentEngine by lazy {
+            val cache = TorrentCache(TorrentCache.dirIn(appContext.cacheDir), TorrentEngineConfig())
+            val engine = makeTorrentEngine?.invoke() ?: LibtorrentEngine(cache)
+            appScope.launch { settings.torrentsEnabled.collect { on -> if (!on) engine.stop() } }
+            engine
+        }
 
         val epgRepository: EpgRepository by lazy {
             EpgRepository(

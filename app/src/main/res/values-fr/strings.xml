@@ -415,7 +415,11 @@
     <string name="report_question_dont_send">Ne pas envoyer</string>
     <string name="report_question_always_send">Toujours envoyer</string>
     <string name="error_torrents_off">Les torrents sont désactivés. Activez-les dans Paramètres, Modules, pour les lire.</string>
-    <string name="error_torrents_not_yet">Les torrents ne peuvent pas encore être lus ici. Choisissez un flux qui n\'est pas un torrent.</string>
+    <string name="error_torrent_nobody_sharing">Personne ne partage ce torrent pour le moment, il ne peut donc pas être lu. Choisissez un autre flux.</string>
+    <string name="error_torrent_no_space">Il n\'y a pas assez d\'espace libre pour lire ce torrent. Choisissez un flux plus petit ou libérez de l\'espace.</string>
+    <string name="error_torrent_timed_out">Ce torrent a trouvé des personnes qui le partagent, mais n\'a pas démarré à temps. Réessayez ou choisissez un autre flux.</string>
+    <string name="error_torrent_unsupported">Les torrents nécessitent Android 8.0 ou une version ultérieure. Choisissez un flux qui n\'est pas un torrent.</string>
+    <string name="error_torrent_failed">Le torrent s\'est arrêté à cause d\'un problème qui lui est propre. Réessayez ou choisissez un autre flux.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Désactivés. Les torrents trouvés par vos extensions s\'affichent, mais ne se lisent pas.</string>

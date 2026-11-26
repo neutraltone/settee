@@ -21,6 +21,8 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.RecordedOn
 import app.opentv.isRunningOnTelevision
+import app.opentv.player.torrent.TorrentFailedException
+import app.opentv.player.torrent.TorrentFailure
 import java.util.Locale
 
 /**
@@ -51,6 +53,7 @@ object PlaybackErrors {
         recordedOn: RecordedOn? = null,
         stream: FailedStream = FailedStream(),
     ): ViewerError {
+        torrentFailureOf(error)?.let { return torrentError(context, it) }
         val status = (error.cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return ViewerError(
             sentence = recordingSentenceOf(error, recordedOn)?.let(context::getString)
@@ -222,6 +225,7 @@ object PlaybackErrors {
                 Playable.Failure.NO_CATCHUP -> R.string.playback_no_catchup
                 Playable.Failure.GONE -> R.string.error_gone
                 Playable.Failure.BAD_ADDRESS -> R.string.error_bad_address
+                Playable.Failure.TORRENTS_OFF -> R.string.error_torrents_off
             },
         ),
         cause?.let(ErrorWording::codeOf) ?: ErrorWording.codeName(failure.name),
@@ -268,9 +272,38 @@ private val FailedStream.unreadableSentence: Int
  */
 fun isUnreadable(error: PlaybackException): Boolean = error.errorCode in UNREADABLE
 
-/** The title to pick another stream of, when [key] is an add-on's stream that [isUnreadable]; else null. */
+/**
+ * The title to pick another stream of, when [key] is an add-on's stream that [isUnreadable], or a torrent that
+ * couldn't play; else null.
+ */
 fun anotherStreamOf(error: PlaybackException, key: MediaKey?): MediaKey.Title? =
-    (key as? MediaKey.AddonStream)?.title?.takeIf { isUnreadable(error) }
+    (key as? MediaKey.AddonStream)?.title?.takeIf { isUnreadable(error) || torrentFailureOf(error) != null }
+
+/**
+ * Why a torrent couldn't play (#670). The engine's limit on finding people does the start-up limit's job,
+ * so its sentences say what it found: nobody, or people but no file list in time. The detail line names
+ * the failure and what the engine said, such as how many people it found, never Media3's code, which for
+ * every one of these would be the same unspecified input error.
+ */
+private fun torrentError(context: Context, failure: TorrentFailedException): ViewerError = ViewerError(
+    context.getString(
+        when (failure.reason) {
+            TorrentFailure.NOBODY_SHARING -> R.string.error_torrent_nobody_sharing
+            TorrentFailure.NOT_ENOUGH_SPACE -> R.string.error_torrent_no_space
+            TorrentFailure.START_TIMED_OUT -> R.string.error_torrent_timed_out
+            TorrentFailure.UNSUPPORTED_DEVICE -> R.string.error_torrent_unsupported
+            TorrentFailure.ENGINE_ERROR -> R.string.error_torrent_failed
+        },
+    ),
+    ViewerError.detailOf(ErrorWording.codeName(failure.reason.name), failure.detail),
+)
+
+/** Why a torrent couldn't play, however deep the loader and player wrapped it; null for anything else. */
+fun torrentFailureOf(error: Throwable): TorrentFailedException? =
+    generateSequence(error) { it.cause }.take(MAX_TORRENT_CAUSE_DEPTH).filterIsInstance<TorrentFailedException>()
+        .firstOrNull()
+
+private const val MAX_TORRENT_CAUSE_DEPTH = 10
 
 private val UNREADABLE = setOf(
     PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,

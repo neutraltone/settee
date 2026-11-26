@@ -416,7 +416,11 @@
     <string name="report_question_dont_send">Не надсилати</string>
     <string name="report_question_always_send">Завжди надсилати</string>
     <string name="error_torrents_off">Торенти вимкнено. Увімкніть їх у Налаштування, Доповнення, щоб відтворити.</string>
-    <string name="error_torrents_not_yet">Торенти тут поки не відтворюються. Виберіть потік, який не є торентом.</string>
+    <string name="error_torrent_nobody_sharing">Зараз цей торент ніхто не роздає, тому його не можна відтворити. Виберіть інший потік.</string>
+    <string name="error_torrent_no_space">Недостатньо вільного місця для цього торента. Виберіть менший потік або звільніть місце.</string>
+    <string name="error_torrent_timed_out">Торент знайшов тих, хто роздає, але не запустився вчасно. Спробуйте ще раз або виберіть інший потік.</string>
+    <string name="error_torrent_unsupported">Для торентів потрібен Android 8.0 або новіший. Виберіть потік, який не є торентом.</string>
+    <string name="error_torrent_failed">Торент зупинився через власний збій. Спробуйте ще раз або виберіть інший потік.</string>
     <string name="vod_addon_torrent">Торент</string>
     <string name="settings_addons_torrents">Торенти</string>
     <string name="settings_addons_torrents_off">Вимкнено. Торенти, які знаходять ваші додатки, показуються в списку, але не відтворюються.</string>

@@ -38,7 +38,7 @@ internal fun PlayerAddonPick(viewModel: VodPlayerViewModel, onBack: () -> Unit) 
 
 /**
  * The stream picked for the title waiting in [VodPlayerViewModel.addonPick], by the viewer or by carrying
- * on, from its resume point. Nothing once the title's no longer waiting, and nothing for a torrent yet.
+ * on, from its resume point. Nothing once the title's no longer waiting.
  */
 suspend fun VodPlayerViewModel.playAddonStream(stream: StremioStream) {
     val key = addonPick.value?.let { stream.keyFor(it) } ?: return

@@ -34,6 +34,7 @@ import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.player.PlayerController
+import app.opentv.player.torrent.TorrentEngine
 import java.io.IOException
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -204,13 +205,15 @@ class TestPlayers(private val context: Context) {
     /**
      * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
      * stream at a placeholder address). The first [failing] streams fail with [failure].
-     * [preview] makes it the controller a preview pane uses.
+     * [preview] makes it the controller a preview pane uses; [torrentEngine] is what it plays torrents with.
      */
+    @Suppress("LongParameterList") // Each is a way a test sets up the player; all default to the usual.
     fun controller(
         window: FakeTimeline.TimelineWindowDefinition = FILM,
         dvr: Boolean = false,
         failing: Int = 0,
         preview: Boolean = false,
+        torrentEngine: TorrentEngine? = null,
         resolve: suspend (MediaKey) -> Playable = ::placeholder,
     ) = PlayerController(
         context,
@@ -236,6 +239,7 @@ class TestPlayers(private val context: Context) {
                     .build()
             },
             decoders = decoders,
+            torrentEngine = torrentEngine,
         ),
     )
 

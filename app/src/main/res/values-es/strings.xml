@@ -415,7 +415,11 @@
     <string name="report_question_dont_send">No enviar</string>
     <string name="report_question_always_send">Enviar siempre</string>
     <string name="error_torrents_off">Los torrents están desactivados. Actívalos en Ajustes, Complementos, para reproducirlos.</string>
-    <string name="error_torrents_not_yet">Los torrents aún no se pueden reproducir aquí. Elige una transmisión que no sea un torrent.</string>
+    <string name="error_torrent_nobody_sharing">Ahora mismo nadie comparte este torrent, así que no se puede reproducir. Elige otra fuente.</string>
+    <string name="error_torrent_no_space">No hay suficiente espacio libre para reproducir este torrent. Elige una fuente más pequeña o libera espacio.</string>
+    <string name="error_torrent_timed_out">Este torrent encontró gente que lo comparte, pero no empezó a tiempo. Vuelve a intentarlo o elige otra fuente.</string>
+    <string name="error_torrent_unsupported">Los torrents necesitan Android 8.0 o posterior. Elige una fuente que no sea un torrent.</string>
+    <string name="error_torrent_failed">El torrent se detuvo por un fallo propio. Vuelve a intentarlo o elige otra fuente.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Desactivados. Los torrents que encuentran tus complementos aparecen, pero no se reproducen.</string>

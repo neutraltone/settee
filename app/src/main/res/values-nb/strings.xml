@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Ikke send</string>
     <string name="report_question_always_send">Send alltid</string>
     <string name="error_torrents_off">Torrenter er slått av. Slå dem på under Innstillinger, Tillegg, for å spille dem av.</string>
-    <string name="error_torrents_not_yet">Torrenter kan ikke spilles av her ennå. Velg en strøm som ikke er en torrent.</string>
+    <string name="error_torrent_nobody_sharing">Ingen deler denne torrenten akkurat nå, så den kan ikke spilles av. Velg en annen strøm.</string>
+    <string name="error_torrent_no_space">Det er ikke nok ledig plass til å spille av denne torrenten. Velg en mindre strøm, eller frigjør plass.</string>
+    <string name="error_torrent_timed_out">Torrenten fant noen som deler den, men startet ikke i tide. Prøv igjen, eller velg en annen strøm.</string>
+    <string name="error_torrent_unsupported">Torrenter krever Android 8.0 eller nyere. Velg en strøm som ikke er en torrent.</string>
+    <string name="error_torrent_failed">Torrenten stoppet på grunn av en feil i seg selv. Prøv igjen, eller velg en annen strøm.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenter</string>
     <string name="settings_addons_torrents_off">Av. Torrenter tilleggene dine finner, vises i listen, men spilles ikke av.</string>

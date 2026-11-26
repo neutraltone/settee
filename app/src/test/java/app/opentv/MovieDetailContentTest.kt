@@ -510,16 +510,28 @@ class MovieDetailContentTest {
     }
 
     @Test
-    fun `with torrents on, their rows say they can't play yet`() {
+    fun `with torrents on, their rows can be picked to play`() {
         findStreams = { flowOf(AddonSearch.Results(streams + torrent, finished = true, torrentsOn = true)) }
         show(addons = true)
 
         compose.onNodeWithText("Add-on sources").performClick()
         settle()
 
-        compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction()).assertIsNotEnabled()
-        compose.onNodeWithText("Torrents can't play here yet. Pick a stream that isn't a torrent.").assertIsDisplayed()
+        val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
+        torrentRow.assertIsEnabled()
         compose.onNodeWithText("Torrents are off", substring = true).assertDoesNotExist()
+        // The Highlight reaches it from the streams above, as it does any row.
+        val inPicker = isFocused() and hasAnyAncestor(isDialog())
+        repeat(streams.size) {
+            compose.onNode(inPicker).performKeyInput { pressKey(Key.DirectionDown) }
+            settle()
+        }
+        compose.onNode(hasText("The Quiet Road 1080p WEB") and inPicker).assertExists()
+        captureScreen("movie_detail_addon_picker_torrents_on")
+
+        torrentRow.performClick()
+        settle()
+        assertThat(playedStream).isEqualTo(torrent.stream)
     }
 
     @Test

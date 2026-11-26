@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Älä lähetä</string>
     <string name="report_question_always_send">Lähetä aina</string>
     <string name="error_torrents_off">Torrentit ovat pois päältä. Laita ne päälle kohdassa Asetukset, Lisäosat, niin voit toistaa nämä.</string>
-    <string name="error_torrents_not_yet">Torrentteja ei voi vielä toistaa täällä. Valitse virta, joka ei ole torrent.</string>
+    <string name="error_torrent_nobody_sharing">Kukaan ei jaa tätä torrentia juuri nyt, joten sitä ei voi toistaa. Valitse toinen striimi.</string>
+    <string name="error_torrent_no_space">Vapaata tilaa ei ole tarpeeksi tämän torrentin toistamiseen. Valitse pienempi striimi tai vapauta tilaa.</string>
+    <string name="error_torrent_timed_out">Torrent löysi jakajia, mutta ei käynnistynyt ajoissa. Yritä uudelleen tai valitse toinen striimi.</string>
+    <string name="error_torrent_unsupported">Torrentit vaativat Android 8.0:n tai uudemman. Valitse striimi, joka ei ole torrent.</string>
+    <string name="error_torrent_failed">Torrent pysähtyi omaan vikaansa. Yritä uudelleen tai valitse toinen striimi.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentit</string>
     <string name="settings_addons_torrents_off">Pois päältä. Lisäosiesi löytämät torrentit näytetään, mutta niitä ei toisteta.</string>

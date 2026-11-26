@@ -409,6 +409,24 @@ down, a zap finishing or a link arriving after Home was pressed would otherwise 
 again behind the other app. Neither releases the player. It collects the lifecycle rather than
 reading it in composition, because Compose draws no frames while the activity is stopped.
 
+### Torrents play through the engine, not a local server
+
+An add-on's torrent (#670, ADR 0012) reaches the player as an ordinary `MediaKey.AddonStream` whose
+link is a magnet link, the file to play as its `so`, so it travels through routes, carry-on and the
+error panel exactly as a web link does. `PlaybackSources` hands it on as a `Playable.Ready` carrying its
+`TorrentRequest`, and refuses it while the Torrents switch is off. The film and episode player's
+`PlayerController` starts the app's one `TorrentEngine` on it and routes `magnet:` to
+`TorrentDataSource`, which reads byte ranges straight from the engine; each read raises the pieces under
+the read position, so a seek fetches where it landed. The usual approach, a local HTTP server the player
+fetches from, was rejected: any app on the box could reach it, and it's one more thing to run and stop.
+
+The engine runs only while a torrent plays: the controller stops it, which deletes its pieces, when it
+plays something else, stops or is released, but only if it started it, since the engine is the app's.
+Turning Torrents off stops it too (`ServiceLocator.torrentEngine`), and leftovers from a crash go at the
+next start (`OpenTvApp`). A torrent has no start-up limit and no restarts by itself: the engine has its
+own limit on finding people and its file list, and its failures (`TorrentFailedException`) have their
+own sentences, Pick another stream and, but on a device that can't run it, Try again.
+
 ### Retries are tuned for IPTV, not for CDNs
 
 ExoPlayer's default policy gives up almost immediately on a 403 or a 5xx. That is right for a

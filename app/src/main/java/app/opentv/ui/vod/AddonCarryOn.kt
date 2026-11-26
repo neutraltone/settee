@@ -8,6 +8,8 @@ package app.opentv.ui.vod
 import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.MediaKey
+import app.opentv.player.torrent.toRequest
+import app.opentv.player.torrent.uri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -20,19 +22,22 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 /**
- * The stream [this] is, as the player's key for [title]: null for a torrent, as only links play so far,
- * and torrents wait for the engine that will play them. It names its add-on and its bingeGroup, so the
- * Next Episode can carry on with the same add-on's stream of the same kind ([AddonCarryOn]).
+ * The stream [this] is, as the player's key for [title]: a link with its headers, or a torrent as its magnet
+ * link, which the player plays through the torrent engine (#670); null for a torrent whose info hash isn't
+ * one. It names its add-on and its bingeGroup, so the Next Episode can carry on with the same add-on's
+ * stream of the same kind ([AddonCarryOn]).
  */
-internal fun StremioStream.keyFor(title: MediaKey.Title): MediaKey.AddonStream? = (link as? StreamLink.Direct)?.let {
-    MediaKey.AddonStream(title, it.url, it.headers, addonName, bingeGroup)
+internal fun StremioStream.keyFor(title: MediaKey.Title): MediaKey.AddonStream? = when (val link = link) {
+    is StreamLink.Direct -> MediaKey.AddonStream(title, link.url, link.headers, addonName, bingeGroup)
+    is StreamLink.Torrent ->
+        link.toRequest()?.let { MediaKey.AddonStream(title, it.uri, addonName = addonName, bingeGroup = bingeGroup) }
 }
 
 /**
  * Carrying on after an add-on's stream of an episode to the next one, kept from an add-on (ADR 0011): its
  * add-ons are asked for it, and the stream from the same add-on with the same bingeGroup plays as soon as
- * it's offered, as Stremio does. The player shows the add-on picker over itself meanwhile, fed by the same
- * search ([streamsFor]), so the add-ons are asked once; with no such stream, or none that's a link, the
+ * it's offered, as Stremio does, a torrent as well as a link. The player shows the add-on picker over itself
+ * meanwhile, fed by the same search ([streamsFor]), so the add-ons are asked once; with no such stream the
  * picker stays for the viewer.
  */
 internal class AddonCarryOn(private val searches: AddonSearches, private val scope: CoroutineScope) {
@@ -85,5 +90,5 @@ internal class AddonCarryOn(private val searches: AddonSearches, private val sco
     }.firstOrNull()
 
     private fun StremioStream.continues(from: MediaKey.AddonStream) =
-        link is StreamLink.Direct && addonName == from.addonName && bingeGroup == from.bingeGroup
+        addonName == from.addonName && bingeGroup == from.bingeGroup
 }

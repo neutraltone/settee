@@ -415,7 +415,11 @@
     <string name="report_question_dont_send">Não enviar</string>
     <string name="report_question_always_send">Sempre enviar</string>
     <string name="error_torrents_off">Os torrents estão desligados. Ligue-os em Definições, Extras, para os reproduzir.</string>
-    <string name="error_torrents_not_yet">Os torrents ainda não podem ser reproduzidos aqui. Escolha uma transmissão que não seja um torrent.</string>
+    <string name="error_torrent_nobody_sharing">Ninguém está partilhando este torrent agora, por isso ele não pode tocar. Escolha outro stream.</string>
+    <string name="error_torrent_no_space">Não há espaço livre suficiente para reproduzir este torrent. Escolha um stream menor ou libere espaço.</string>
+    <string name="error_torrent_timed_out">Este torrent encontrou pessoas compartilhando, mas não começou a tempo. Tente de novo ou escolha outro stream.</string>
+    <string name="error_torrent_unsupported">Torrents precisam do Android 8.0 ou mais recente. Escolha um stream que não seja torrent.</string>
+    <string name="error_torrent_failed">O torrent parou por uma falha própria. Tente de novo ou escolha outro stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Desligado. Os torrents que os seus add-ons encontram aparecem na lista, mas não são reproduzidos.</string>

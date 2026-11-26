@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Не изпращай</string>
     <string name="report_question_always_send">Винаги изпращай</string>
     <string name="error_torrents_off">Торентите са изключени. Включете ги от Настройки, Добавки, за да пуснете тези.</string>
-    <string name="error_torrents_not_yet">Торентите още не могат да се пускат тук. Изберете поток, който не е торент.</string>
+    <string name="error_torrent_nobody_sharing">В момента никой не споделя този торент, така че не може да се пусне. Изберете друг поток.</string>
+    <string name="error_torrent_no_space">Няма достатъчно свободно място за този торент. Изберете по-малък поток или освободете място.</string>
+    <string name="error_torrent_timed_out">Торентът откри хора, които го споделят, но не тръгна навреме. Опитайте отново или изберете друг поток.</string>
+    <string name="error_torrent_unsupported">Торентите изискват Android 8.0 или по-нов. Изберете поток, който не е торент.</string>
+    <string name="error_torrent_failed">Торентът спря заради собствен проблем. Опитайте отново или изберете друг поток.</string>
     <string name="vod_addon_torrent">Торент</string>
     <string name="settings_addons_torrents">Торенти</string>
     <string name="settings_addons_torrents_off">Изключени. Торентите, които добавките ви намерят, се показват, но не се пускат.</string>

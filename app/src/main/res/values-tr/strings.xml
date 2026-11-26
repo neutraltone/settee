@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Gönderme</string>
     <string name="report_question_always_send">Her zaman gönder</string>
     <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
-    <string name="error_torrents_not_yet">Torrentler burada henüz oynatılamıyor. Torrent olmayan bir yayın seçin.</string>
+    <string name="error_torrent_nobody_sharing">Şu anda bu torrenti kimse paylaşmıyor, bu yüzden oynatılamıyor. Başka bir yayın seçin.</string>
+    <string name="error_torrent_no_space">Bu torrenti oynatmak için yeterli boş alan yok. Daha küçük bir yayın seçin veya yer açın.</string>
+    <string name="error_torrent_timed_out">Bu torrent paylaşan kişiler buldu ama zamanında başlamadı. Yeniden deneyin veya başka bir yayın seçin.</string>
+    <string name="error_torrent_unsupported">Torrentler için Android 8.0 veya üstü gerekir. Torrent olmayan bir yayın seçin.</string>
+    <string name="error_torrent_failed">Torrent kendi sorunu yüzünden durdu. Yeniden deneyin veya başka bir yayın seçin.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentler</string>
     <string name="settings_addons_torrents_off">Kapalı. Eklentilerinizin bulduğu torrentler listelenir ama oynatılmaz.</string>

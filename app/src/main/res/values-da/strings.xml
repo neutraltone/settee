@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Send ikke</string>
     <string name="report_question_always_send">Send altid</string>
     <string name="error_torrents_off">Torrents er slået fra. Slå dem til under Indstillinger, Tilføjelser, for at afspille dem.</string>
-    <string name="error_torrents_not_yet">Torrents kan ikke afspilles her endnu. Vælg en stream, der ikke er en torrent.</string>
+    <string name="error_torrent_nobody_sharing">Ingen deler denne torrent lige nu, så den kan ikke afspilles. Vælg en anden stream.</string>
+    <string name="error_torrent_no_space">Der er ikke nok ledig plads til at afspille denne torrent. Vælg en mindre stream, eller frigør plads.</string>
+    <string name="error_torrent_timed_out">Denne torrent fandt nogen, der deler den, men startede ikke i tide. Prøv igen, eller vælg en anden stream.</string>
+    <string name="error_torrent_unsupported">Torrents kræver Android 8.0 eller nyere. Vælg en stream, der ikke er en torrent.</string>
+    <string name="error_torrent_failed">Torrenten stoppede på grund af en fejl i den. Prøv igen, eller vælg en anden stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Fra. Torrents, som dine tilføjelser finder, vises, men afspilles ikke.</string>

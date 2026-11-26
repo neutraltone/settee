@@ -151,6 +151,8 @@ fun VodPlayerScreen(
                 liveRecording = growingRec,
                 diagnostics = graph.diagnosticsLog,
                 journeys = graph.journeys,
+                // An add-on's torrent plays through the app's one engine, stopped when this player goes.
+                torrentEngine = graph.torrentEngine,
             ),
         )
     }
@@ -596,6 +598,7 @@ fun VodPlayerContent(
                         AerialTv(stringResource(R.string.player_loading))
                         Spacer(Modifier.height(16.dp))
                         Text(current.title, SetteeType.Body)
+                        TorrentProgress(controller.torrent)
                     }
                 }
 

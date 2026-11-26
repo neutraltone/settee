@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Χωρίς αποστολή</string>
     <string name="report_question_always_send">Πάντα αποστολή</string>
     <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
-    <string name="error_torrents_not_yet">Τα torrent δεν παίζουν ακόμα εδώ. Διαλέξτε μια ροή που δεν είναι torrent.</string>
+    <string name="error_torrent_nobody_sharing">Κανείς δεν μοιράζεται αυτό το torrent αυτή τη στιγμή, οπότε δεν μπορεί να παιχτεί. Διαλέξτε άλλη ροή.</string>
+    <string name="error_torrent_no_space">Δεν υπάρχει αρκετός ελεύθερος χώρος για αυτό το torrent. Διαλέξτε μικρότερη ροή ή ελευθερώστε χώρο.</string>
+    <string name="error_torrent_timed_out">Το torrent βρήκε άτομα που το μοιράζονται, αλλά δεν ξεκίνησε εγκαίρως. Δοκιμάστε ξανά ή διαλέξτε άλλη ροή.</string>
+    <string name="error_torrent_unsupported">Τα torrent χρειάζονται Android 8.0 ή νεότερο. Διαλέξτε ροή που δεν είναι torrent.</string>
+    <string name="error_torrent_failed">Το torrent σταμάτησε λόγω δικού του σφάλματος. Δοκιμάστε ξανά ή διαλέξτε άλλη ροή.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Ανενεργά. Τα torrent που βρίσκουν τα πρόσθετά σας εμφανίζονται, αλλά δεν παίζουν.</string>

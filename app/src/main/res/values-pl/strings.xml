@@ -416,7 +416,11 @@
     <string name="report_question_dont_send">Nie wysyłaj</string>
     <string name="report_question_always_send">Zawsze wysyłaj</string>
     <string name="error_torrents_off">Torrenty są wyłączone. Włącz je w Ustawienia, Dodatki, aby je odtworzyć.</string>
-    <string name="error_torrents_not_yet">Torrentów nie można tu jeszcze odtwarzać. Wybierz strumień, który nie jest torrentem.</string>
+    <string name="error_torrent_nobody_sharing">Nikt teraz nie udostępnia tego torrenta, więc nie można go odtworzyć. Wybierz inny strumień.</string>
+    <string name="error_torrent_no_space">Brakuje wolnego miejsca, by odtworzyć ten torrent. Wybierz mniejszy strumień lub zwolnij trochę miejsca.</string>
+    <string name="error_torrent_timed_out">Torrent znalazł osoby, które go udostępniają, ale nie ruszył na czas. Spróbuj ponownie lub wybierz inny strumień.</string>
+    <string name="error_torrent_unsupported">Torrenty wymagają Androida 8.0 lub nowszego. Wybierz strumień, który nie jest torrentem.</string>
+    <string name="error_torrent_failed">Torrent zatrzymał się z powodu własnego błędu. Spróbuj ponownie lub wybierz inny strumień.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenty</string>
     <string name="settings_addons_torrents_off">Wyłączone. Torrenty znalezione przez Twoje dodatki są widoczne na liście, ale się nie odtwarzają.</string>

@@ -414,7 +414,11 @@
     <string name="report_question_dont_send">Ne küldje</string>
     <string name="report_question_always_send">Mindig küldje</string>
     <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
-    <string name="error_torrents_not_yet">A torrentek itt még nem játszhatók le. Válassz olyan streamet, amely nem torrent.</string>
+    <string name="error_torrent_nobody_sharing">Ezt a torrentet most senki sem osztja meg, ezért nem játszható le. Válassz másik streamet.</string>
+    <string name="error_torrent_no_space">Nincs elég szabad hely a torrent lejátszásához. Válassz kisebb streamet, vagy szabadíts fel helyet.</string>
+    <string name="error_torrent_timed_out">A torrent talált megosztókat, de nem indult el időben. Próbáld újra, vagy válassz másik streamet.</string>
+    <string name="error_torrent_unsupported">A torrentekhez Android 8.0 vagy újabb kell. Válassz olyan streamet, amely nem torrent.</string>
+    <string name="error_torrent_failed">A torrent egy saját hiba miatt leállt. Próbáld újra, vagy válassz másik streamet.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentek</string>
     <string name="settings_addons_torrents_off">Ki. A bővítmények által talált torrentek megjelennek a listában, de nem játszhatók le.</string>

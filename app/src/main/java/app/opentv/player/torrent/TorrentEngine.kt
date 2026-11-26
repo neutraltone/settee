@@ -44,14 +44,15 @@ interface TorrentEngine {
 
 /**
  * One file of a torrent, as an add-on's stream gives it: the info hash (40 hex characters), the
- * file's index in the torrent, and any trackers the add-on listed besides the DHT.
+ * file's index in the torrent (null when the add-on leaves it to the largest file, as Stremio does),
+ * and any trackers the add-on listed besides the DHT.
  */
-data class TorrentRequest(val infoHash: String, val fileIndex: Int, val trackers: List<String> = emptyList()) {
+data class TorrentRequest(val infoHash: String, val fileIndex: Int?, val trackers: List<String> = emptyList()) {
     init {
         require(infoHash.length == INFO_HASH_LENGTH && infoHash.all { it.isHexDigit() }) {
             "An info hash is 40 hex characters"
         }
-        require(fileIndex >= 0) { "A file index can't be negative" }
+        require(fileIndex == null || fileIndex >= 0) { "A file index can't be negative" }
     }
 
     private fun Char.isHexDigit() = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'

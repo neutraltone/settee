@@ -413,7 +413,11 @@
     <string name="report_question_dont_send">ไม่ส่ง</string>
     <string name="report_question_always_send">ส่งทุกครั้ง</string>
     <string name="error_torrents_off">ทอร์เรนต์ปิดอยู่ เปิดได้ที่ การตั้งค่า ส่วนเสริม เพื่อเล่นรายการเหล่านี้</string>
-    <string name="error_torrents_not_yet">ยังเล่นทอร์เรนต์ที่นี่ไม่ได้ เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
+    <string name="error_torrent_nobody_sharing">ตอนนี้ไม่มีใครแชร์ทอร์เรนต์นี้ จึงเล่นไม่ได้ เลือกสตรีมอื่น</string>
+    <string name="error_torrent_no_space">พื้นที่ว่างไม่พอสำหรับเล่นทอร์เรนต์นี้ เลือกสตรีมที่เล็กกว่า หรือเพิ่มพื้นที่ว่าง</string>
+    <string name="error_torrent_timed_out">ทอร์เรนต์นี้พบคนที่แชร์อยู่ แต่เริ่มไม่ทันเวลา ลองอีกครั้ง หรือเลือกสตรีมอื่น</string>
+    <string name="error_torrent_unsupported">ทอร์เรนต์ต้องใช้ Android 8.0 ขึ้นไป เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
+    <string name="error_torrent_failed">ทอร์เรนต์หยุดเพราะปัญหาของตัวเอง ลองอีกครั้ง หรือเลือกสตรีมอื่น</string>
     <string name="vod_addon_torrent">ทอร์เรนต์</string>
     <string name="settings_addons_torrents">ทอร์เรนต์</string>
     <string name="settings_addons_torrents_off">ปิด ทอร์เรนต์ที่แอดออนของคุณพบจะแสดงในรายการ แต่เล่นไม่ได้</string>

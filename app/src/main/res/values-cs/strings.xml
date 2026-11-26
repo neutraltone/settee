@@ -416,7 +416,11 @@
     <string name="report_question_dont_send">Neodesílat</string>
     <string name="report_question_always_send">Vždy odeslat</string>
     <string name="error_torrents_off">Torrenty jsou vypnuté. Zapněte je v Nastavení, Doplňky, abyste je mohli přehrát.</string>
-    <string name="error_torrents_not_yet">Torrenty tu zatím nejdou přehrát. Vyberte stream, který není torrent.</string>
+    <string name="error_torrent_nobody_sharing">Tento torrent teď nikdo nesdílí, takže ho nelze přehrát. Vyberte jiný stream.</string>
+    <string name="error_torrent_no_space">Na přehrání tohoto torrentu není dost volného místa. Vyberte menší stream nebo uvolněte místo.</string>
+    <string name="error_torrent_timed_out">Tento torrent našel lidi, kteří ho sdílejí, ale nespustil se včas. Zkuste to znovu nebo vyberte jiný stream.</string>
+    <string name="error_torrent_unsupported">Torrenty potřebují Android 8.0 nebo novější. Vyberte stream, který není torrent.</string>
+    <string name="error_torrent_failed">Torrent se zastavil kvůli vlastní chybě. Zkuste to znovu nebo vyberte jiný stream.</string>
     <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenty</string>
     <string name="settings_addons_torrents_off">Vypnuto. Torrenty, které vaše doplňky najdou, se zobrazí, ale nepřehrají se.</string>
