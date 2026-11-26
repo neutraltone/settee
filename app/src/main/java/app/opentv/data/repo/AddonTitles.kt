@@ -219,17 +219,24 @@ private fun TmdbEpisode.toEpisode(series: Series) = Episode(
 )
 
 /**
- * [addonEpisodes] for [series], handed to [store] when TMDB lists any: an empty answer stores nothing, as
- * an empty panel reply doesn't, so it never retires the episodes already kept. Nothing for no series.
+ * [addonEpisodes] for [series], of the seasons it [keeps] (#683), handed to [store] when TMDB lists any: an
+ * empty answer stores nothing, as an empty panel reply doesn't, so it never retires the episodes already
+ * kept. Nothing for no series.
  */
 internal suspend fun TmdbClient.storeAddonEpisodes(
     series: Series?,
     nowUtcMillis: Long,
+    keeps: suspend (Series) -> (Int) -> Boolean,
     store: suspend (List<Episode>) -> Unit,
 ): Result<Unit> {
     series ?: return Result.success(Unit)
     return addonEpisodes(series, nowUtcMillis)
-        .mapCatching { if (it.isNotEmpty()) store(it) }
+        .mapCatching { listed ->
+            // Asked once TMDB has answered: the Provider's episodes may have been stored meanwhile.
+            val season = keeps(series)
+            val kept = listed.filter { season(it.season) }
+            if (kept.isNotEmpty()) store(kept)
+        }
         .onFailure { if (it is CancellationException) throw it }
 }
 

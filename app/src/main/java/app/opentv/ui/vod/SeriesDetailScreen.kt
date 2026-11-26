@@ -45,6 +45,7 @@ fun SeriesDetailScreen(
     var noEpisodes by remember(seriesId) { mutableStateOf(false) }
     var failure by remember(seriesId) { mutableStateOf<ViewerError?>(null) }
     var fromAddons by remember(seriesId) { mutableStateOf(false) }
+    var addonSeasons by remember(seriesId) { mutableStateOf(false) }
     var gone by remember(seriesId) { mutableStateOf(false) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
@@ -60,6 +61,7 @@ fun SeriesDetailScreen(
                     noEpisodes = it.title.noEpisodes
                     failure = it.title.failure
                     fromAddons = it.title.fromAddons
+                    addonSeasons = it.title.addonSeasons
                 }
             }
         }
@@ -78,15 +80,19 @@ fun SeriesDetailScreen(
             failure = null
             attempt++
         }
-        ShowPage(s, episodes, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
+        ShowPage(s, episodes, addonSeasons, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
     }
 }
 
-/** [series]' page once its row is read, with how the fetch of its episodes on opening went ([episodes]). */
+/**
+ * [series]' page once its row is read, with how the fetch of its episodes on opening went ([episodes]), and
+ * whether the seasons its Provider lacks have been looked for since ([addonSeasons]).
+ */
 @Composable
 private fun ShowPage(
     series: Series,
     episodes: EpisodeFetch,
+    addonSeasons: Boolean,
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
     onOpenSeries: (Long) -> Unit,
@@ -102,7 +108,10 @@ private fun ShowPage(
     // One row per episode across the show's Versions, and each Version's for what's been watched (#181).
     // Not collectAsState: the series is shown again once TMDB has filled it in, and a fresh read
     // would start from nothing, emptying the episode list for a moment under the highlight.
-    val read = produceState<ShowEpisodes?>(null, series) { viewModel.showEpisodes(series).collect { value = it } }.value
+    // Read again once the seasons the Provider lacks have been looked for, as an Add-ons copy may be new (#683).
+    val read = produceState<ShowEpisodes?>(null, series, addonSeasons) {
+        viewModel.showEpisodes(series).collect { value = it }
+    }.value
     val show = read ?: ShowEpisodes()
     val played by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
     val statuses = remember(show, played) { show.statusesFrom(played) }

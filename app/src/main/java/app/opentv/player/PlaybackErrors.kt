@@ -17,6 +17,7 @@ import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.core.hardware
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.RecordedOn
 import app.opentv.isRunningOnTelevision
@@ -38,19 +39,22 @@ object PlaybackErrors {
     /**
      * The sentence and detail line for [error]. [onTelevision] picks "this TV" over "this device";
      * [format] is the stream's, for the detail line, when the error doesn't name its own. [recordedOn] is
-     * where a finished recording is kept, null for anything else.
+     * where a finished recording is kept, null for anything else. [stream] is what's known of the stream that
+     * failed, so an add-on's is worded as the add-on's.
      */
+    @Suppress("LongParameterList") // The last three are each known only for some streams, and default to nothing.
     fun describe(
         context: Context,
         error: PlaybackException,
         onTelevision: Boolean,
         format: Format? = null,
         recordedOn: RecordedOn? = null,
+        stream: FailedStream = FailedStream(),
     ): ViewerError {
         val status = (error.cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return ViewerError(
             sentence = recordingSentenceOf(error, recordedOn)?.let(context::getString)
-                ?: sentenceOf(context, error, onTelevision),
+                ?: sentenceOf(context, error, onTelevision, stream),
             detail = ViewerError.detailOf(
                 readableCodeName(error.errorCodeName),
                 status?.let { "HTTP $it" },
@@ -59,7 +63,12 @@ object PlaybackErrors {
         )
     }
 
-    private fun sentenceOf(context: Context, error: PlaybackException, onTelevision: Boolean): String = when (
+    private fun sentenceOf(
+        context: Context,
+        error: PlaybackException,
+        onTelevision: Boolean,
+        stream: FailedStream,
+    ): String = when (
         val cause = error.cause
     ) {
         is HttpDataSource.InvalidResponseCodeException -> describeHttpStatus(context, cause.responseCode)
@@ -73,52 +82,57 @@ object PlaybackErrors {
             ) + " " +
                 context.getString(R.string.playback_try_other_quality)
 
-        else -> describeErrorCode(context, error, onTelevision)
+        else -> describeErrorCode(context, error, onTelevision, stream)
     }
 
-    private fun describeErrorCode(context: Context, error: PlaybackException, onTelevision: Boolean): String =
-        when (error.errorCode) {
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
-                context.getString(
-                    hardware(onTelevision, R.string.error_cant_reach_tv, R.string.error_cant_reach_device),
-                )
+    private fun describeErrorCode(
+        context: Context,
+        error: PlaybackException,
+        onTelevision: Boolean,
+        stream: FailedStream,
+    ): String = when (error.errorCode) {
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
+            context.getString(
+                hardware(onTelevision, R.string.error_cant_reach_tv, R.string.error_cant_reach_device),
+            )
 
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> context.getString(R.string.error_timed_out)
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> context.getString(R.string.error_timed_out)
 
-            // The player's data source checks no content type, so an expired or blocked account's
-            // HTML page (sent with a 200) only fails when it's parsed. A text/html check was
-            // rejected: some panels label real streams wrongly, and it would stop those (#462).
-            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
-            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
-            ->
-                context.getString(R.string.error_web_page)
+        // The player's data source checks no content type, so an expired or blocked account's
+        // HTML page (sent with a 200) only fails when it's parsed, as a file in a container the
+        // player can't read does. StreamPeek's look at the bytes tells them apart; one that
+        // couldn't be looked at is taken for the web page it most often is (#462).
+        PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+        ->
+            context.getString(stream.unreadableSentence)
 
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
-            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
-            ->
-                context.getString(R.string.error_damaged)
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+        ->
+            context.getString(R.string.error_damaged)
 
-            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
-            PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
-            PlaybackException.ERROR_CODE_DECODING_FAILED,
-            ->
-                describeUnplayable(context, (error as? ExoPlaybackException)?.rendererFormat, onTelevision)
+        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+        PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FAILED,
+        ->
+            describeUnplayable(context, (error as? ExoPlaybackException)?.rendererFormat, onTelevision)
 
-            PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-            PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
-            ->
-                describeUnplayable(
-                    context,
-                    (error as? ExoPlaybackException)?.rendererFormat,
-                    onTelevision,
-                    suggestQuality = true,
-                )
+        PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+        PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+        ->
+            describeUnplayable(
+                context,
+                (error as? ExoPlaybackException)?.rendererFormat,
+                onTelevision,
+                suggestQuality = true,
+            )
 
-            PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> context.getString(R.string.error_behind_live)
+        PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> context.getString(R.string.error_behind_live)
 
-            else -> context.getString(R.string.error_anything_else)
-        }
+        else -> context.getString(R.string.error_anything_else)
+    }
 
     /** Why a video that [DecoderList.refuses] won't play: no other quality or Retry is on offer here. */
     fun tooBig(context: Context, format: Format, onTelevision: Boolean): ViewerError = ViewerError(
@@ -228,6 +242,41 @@ object PlaybackErrors {
     /** Far deeper than Media3 wraps anything, and stops a cause that loops back on itself. */
     private const val MAX_CAUSE_DEPTH = 10
 }
+
+/**
+ * What's known of a stream that failed, for [PlaybackErrors.describe]: what was playing ([key]), so an add-on's
+ * stream is worded as the add-on's, and what [StreamPeek] found it started with ([start]), when [isUnreadable]
+ * had it looked at.
+ */
+data class FailedStream(val key: MediaKey? = null, val start: StreamStart? = null)
+
+/** Why a stream [isUnreadable]: a web page unless its bytes said otherwise, and the add-on's if one sent it. */
+private val FailedStream.unreadableSentence: Int
+    get() {
+        val fromAddon = key is MediaKey.AddonStream
+        return when {
+            start == StreamStart.SOMETHING_ELSE ->
+                if (fromAddon) R.string.error_addon_unplayable_file else R.string.error_unplayable_file
+            fromAddon -> R.string.error_addon_web_page
+            else -> R.string.error_web_page
+        }
+    }
+
+/**
+ * Whether [error] is the player failing to read what it was sent, which is either a web page or a file in a
+ * container it can't play: [StreamPeek] tells which.
+ */
+fun isUnreadable(error: PlaybackException): Boolean = error.errorCode in UNREADABLE
+
+/** The title to pick another stream of, when [key] is an add-on's stream that [isUnreadable]; else null. */
+fun anotherStreamOf(error: PlaybackException, key: MediaKey?): MediaKey.Title? =
+    (key as? MediaKey.AddonStream)?.title?.takeIf { isUnreadable(error) }
+
+private val UNREADABLE = setOf(
+    PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+    PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+)
 
 /**
  * Why a finished recording kept on [recordedOn] couldn't be read, worded for where it's kept; null for anything

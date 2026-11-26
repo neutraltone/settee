@@ -263,6 +263,10 @@
     <string name="error_live_ended">Bu kanal durdu. Tekrar deneyin veya başka bir kanal seçin.</string>
     <string name="error_timed_out">Sağlayıcınız yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
     <string name="error_web_page">Sağlayıcınız video yerine bir web sayfası gönderdi. Bağlantının süresi dolmuş olabilir, bu yüzden Ayarlar\'dan sağlayıcınızı yenilemeyi deneyin.</string>
+    <string name="error_unplayable_file">Sağlayıcınız Settee\'nin oynatamadığı bir biçimde dosya gönderdi, bu yüzden başka bir şey deneyin.</string>
+    <string name="error_addon_web_page">Bu eklentinin bağlantısı video yerine bir web sayfası açtı. Başka bir yayın seçin.</string>
+    <string name="error_addon_unplayable_file">Bu eklentinin bağlantısı Settee\'nin oynatamadığı bir biçimde dosya açtı. Başka bir yayın seçin.</string>
+    <string name="playback_pick_another_stream">Başka bir yayın seç</string>
     <string name="error_damaged">Bu video bozuk ve oynatılamıyor. Sorun sağlayıcınızın tarafında, bu yüzden başka bir şey deneyin.</string>
     <string name="error_behind_live">Bu kanal canlı yayının çok gerisinde kaldı. Yetişmek için tekrar deneyin.</string>
     <string name="error_gone">Bu artık sağlayıcınızda yok. Ayarlar\'dan sağlayıcınızı yenilemeyi deneyin.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Her zaman gönder</string>
     <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
     <string name="error_torrents_not_yet">Torrentler burada henüz oynatılamıyor. Torrent olmayan bir yayın seçin.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentler</string>
     <string name="settings_addons_torrents_off">Kapalı. Eklentilerinizin bulduğu torrentler listelenir ama oynatılmaz.</string>
     <string name="settings_addons_torrents_on">Açık. Oynattığınız bir torrenti paylaşan herkes internet adresinizi görebilir.</string>

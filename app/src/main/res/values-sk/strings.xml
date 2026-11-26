@@ -265,6 +265,10 @@
     <string name="error_live_ended">Tento kanál prestal vysielať. Skúste to znova alebo vyberte iný kanál.</string>
     <string name="error_timed_out">Poskytovateľ prestal odpovedať. Možno je vyťažený, preto to skúste o chvíľu znova.</string>
     <string name="error_web_page">Poskytovateľ namiesto videa poslal webovú stránku. Odkaz možno vypršal, preto skúste obnoviť poskytovateľa v Nastaveniach.</string>
+    <string name="error_unplayable_file">Poskytovateľ poslal súbor vo formáte, ktorý Settee nevie prehrať, preto vyberte niečo iné.</string>
+    <string name="error_addon_web_page">Odkaz tohto doplnku otvoril webovú stránku namiesto videa. Vyberte iný stream.</string>
+    <string name="error_addon_unplayable_file">Odkaz tohto doplnku otvoril súbor vo formáte, ktorý Settee nevie prehrať. Vyberte iný stream.</string>
+    <string name="playback_pick_another_stream">Vybrať iný stream</string>
     <string name="error_damaged">Toto video je poškodené a neprehrá sa. Je to na strane poskytovateľa, preto vyberte niečo iné.</string>
     <string name="error_behind_live">Tento kanál príliš zaostal za živým vysielaním. Skúste to znova, aby ho dobehol.</string>
     <string name="error_gone">Toto už u vášho poskytovateľa nie je. Skúste obnoviť poskytovateľa v Nastaveniach.</string>
@@ -413,6 +417,7 @@
     <string name="report_question_always_send">Vždy odoslať</string>
     <string name="error_torrents_off">Torrenty sú vypnuté. Zapnite ich v Nastavenia, Doplnky, aby ste ich mohli prehrať.</string>
     <string name="error_torrents_not_yet">Torrenty sa tu zatiaľ nedajú prehrať. Vyberte stream, ktorý nie je torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenty</string>
     <string name="settings_addons_torrents_off">Vypnuté. Torrenty, ktoré nájdu vaše doplnky, sa zobrazia v zozname, ale neprehrajú sa.</string>
     <string name="settings_addons_torrents_on">Zapnuté. Každý, kto zdieľa torrent, ktorý prehrávate, môže vidieť vašu internetovú adresu.</string>

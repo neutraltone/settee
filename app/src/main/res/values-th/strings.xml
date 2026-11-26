@@ -262,6 +262,10 @@
     <string name="error_live_ended">ช่องนี้หยุดเล่น ลองอีกครั้ง หรือเลือกช่องอื่น</string>
     <string name="error_timed_out">ผู้ให้บริการของคุณหยุดตอบสนอง อาจกำลังมีผู้ใช้มาก ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_web_page">ผู้ให้บริการของคุณส่งหน้าเว็บมาแทนวิดีโอ ลิงก์อาจหมดอายุแล้ว ลองรีเฟรชผู้ให้บริการของคุณในการตั้งค่า</string>
+    <string name="error_unplayable_file">ผู้ให้บริการของคุณส่งไฟล์ในรูปแบบที่ Settee เล่นไม่ได้ ลองเลือกรายการอื่น</string>
+    <string name="error_addon_web_page">ลิงก์ของแอดออนนี้เปิดหน้าเว็บแทนวิดีโอ เลือกสตรีมอื่น</string>
+    <string name="error_addon_unplayable_file">ลิงก์ของแอดออนนี้เปิดไฟล์ในรูปแบบที่ Settee เล่นไม่ได้ เลือกสตรีมอื่น</string>
+    <string name="playback_pick_another_stream">เลือกสตรีมอื่น</string>
     <string name="error_damaged">วิดีโอนี้เสียหายและเล่นไม่ได้ ปัญหานี้อยู่ฝั่งผู้ให้บริการของคุณ ลองเลือกรายการอื่น</string>
     <string name="error_behind_live">ช่องนี้ช้ากว่าการถ่ายทอดสดมากเกินไป ลองอีกครั้งเพื่อตามให้ทัน</string>
     <string name="error_gone">รายการนี้ไม่มีอยู่ในผู้ให้บริการของคุณแล้ว ลองรีเฟรชผู้ให้บริการของคุณในการตั้งค่า</string>
@@ -410,6 +414,7 @@
     <string name="report_question_always_send">ส่งทุกครั้ง</string>
     <string name="error_torrents_off">ทอร์เรนต์ปิดอยู่ เปิดได้ที่ การตั้งค่า ส่วนเสริม เพื่อเล่นรายการเหล่านี้</string>
     <string name="error_torrents_not_yet">ยังเล่นทอร์เรนต์ที่นี่ไม่ได้ เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
+    <string name="vod_addon_torrent">ทอร์เรนต์</string>
     <string name="settings_addons_torrents">ทอร์เรนต์</string>
     <string name="settings_addons_torrents_off">ปิด ทอร์เรนต์ที่แอดออนของคุณพบจะแสดงในรายการ แต่เล่นไม่ได้</string>
     <string name="settings_addons_torrents_on">เปิด ทุกคนที่แชร์ทอร์เรนต์ที่คุณเล่นจะเห็นที่อยู่อินเทอร์เน็ตของคุณ</string>

@@ -264,6 +264,10 @@
     <string name="error_live_ended">Este canal se detuvo. Vuelve a intentarlo, o elige otro canal.</string>
     <string name="error_timed_out">Tu proveedor dejó de responder. Puede que esté ocupado, así que vuelve a intentarlo en un momento.</string>
     <string name="error_web_page">Tu proveedor envió una página web en lugar de un video. Puede que el enlace haya caducado, así que prueba a actualizar tu proveedor en Ajustes.</string>
+    <string name="error_unplayable_file">Tu proveedor envió un archivo en un formato que Settee no puede reproducir, así que elige otra cosa.</string>
+    <string name="error_addon_web_page">El enlace de este complemento abrió una página web en lugar de un video. Elige otra transmisión.</string>
+    <string name="error_addon_unplayable_file">El enlace de este complemento abrió un archivo en un formato que Settee no puede reproducir. Elige otra transmisión.</string>
+    <string name="playback_pick_another_stream">Elegir otra transmisión</string>
     <string name="error_damaged">Este video está dañado y no se puede reproducir. Es cosa de tu proveedor, así que elige otra cosa.</string>
     <string name="error_behind_live">Este canal se quedó demasiado atrás respecto a la emisión en vivo. Vuelve a intentarlo para ponerte al día.</string>
     <string name="error_gone">Esto ya no está en tu proveedor. Prueba a actualizar tu proveedor en Ajustes.</string>
@@ -412,6 +416,7 @@
     <string name="report_question_always_send">Enviar siempre</string>
     <string name="error_torrents_off">Los torrents están desactivados. Actívalos en Ajustes, Complementos, para reproducirlos.</string>
     <string name="error_torrents_not_yet">Los torrents aún no se pueden reproducir aquí. Elige una transmisión que no sea un torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Desactivados. Los torrents que encuentran tus complementos aparecen, pero no se reproducen.</string>
     <string name="settings_addons_torrents_on">Activados. Todos los que comparten un torrent que reproduces pueden ver tu dirección de internet.</string>

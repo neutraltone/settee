@@ -263,6 +263,10 @@
     <string name="error_live_ended">Deze zender is gestopt. Probeer het opnieuw, of kies een andere zender.</string>
     <string name="error_timed_out">Je provider reageert niet meer. Misschien is het er druk, dus probeer het zo opnieuw.</string>
     <string name="error_web_page">Je provider stuurde een webpagina in plaats van video. De link is misschien verlopen, dus probeer je provider te vernieuwen in Instellingen.</string>
+    <string name="error_unplayable_file">Je provider stuurde een bestand in een formaat dat Settee niet kan afspelen, dus kies iets anders.</string>
+    <string name="error_addon_web_page">De link van deze add-on opende een webpagina in plaats van video. Kies een andere stream.</string>
+    <string name="error_addon_unplayable_file">De link van deze add-on opende een bestand in een formaat dat Settee niet kan afspelen. Kies een andere stream.</string>
+    <string name="playback_pick_another_stream">Kies een andere stream</string>
     <string name="error_damaged">Deze video is beschadigd en speelt niet af. Dat ligt aan de kant van je provider, dus kies iets anders.</string>
     <string name="error_behind_live">Deze zender liep te ver achter op live. Probeer het opnieuw om bij te komen.</string>
     <string name="error_gone">Dit staat niet meer bij je provider. Probeer je provider te vernieuwen in Instellingen.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Altijd sturen</string>
     <string name="error_torrents_off">Torrents staan uit. Zet ze aan bij Instellingen, Add-ons, om deze af te spelen.</string>
     <string name="error_torrents_not_yet">Torrents kunnen hier nog niet worden afgespeeld. Kies een stream die geen torrent is.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Uit. Torrents die je add-ons vinden, staan in de lijst, maar spelen niet af.</string>
     <string name="settings_addons_torrents_on">Aan. Iedereen die een torrent deelt die jij afspeelt, kan je internetadres zien.</string>

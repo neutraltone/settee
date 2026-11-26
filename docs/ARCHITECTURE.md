@@ -268,6 +268,14 @@ Specials and episodes not yet aired are left out, as no add-on has them and Up N
 one. They have no stream URL, but what tells the show page that OK opens the add-on picker is their
 source (`AddonsSourceId`), since a Provider's episode can lack one too.
 
+A Provider's show gets the seasons TMDB lists that it doesn't carry the same way (#683): once the
+Provider's episodes are stored on opening its page, `AddonSeasons` keeps an Add-ons copy of the show,
+keyed by IMDb id and with the Provider's TMDB id, so ADR 0007 groups it, and only when TMDB lists a
+season none of the Provider's Versions has. The copy keeps the seasons no Provider's Version carries
+plus those it kept before (`addonSeasonsKept`), so it never duplicates the Provider's seasons, and a
+season the Provider adds later stays as the copy's Version of it, progress and all. The page's Versions
+fetch leaves a Provider's show's copy to `AddonSeasons`, so it never races the Provider's own fetch.
+
 The second is sync. Progress from another device can name an episode this one hasn't stored, so the
 position also carries its `seriesId`, and `WaitingProgress` fetches that series in the background
 after `SyncEngine.apply` has returned, so no sync screen waits on a provider. Each series is fetched

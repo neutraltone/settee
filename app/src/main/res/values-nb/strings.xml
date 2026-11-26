@@ -263,6 +263,10 @@
     <string name="error_live_ended">Denne kanalen stoppet. Prøv igjen, eller velg en annen kanal.</string>
     <string name="error_timed_out">Leverandøren din sluttet å svare. Den kan være opptatt, så prøv igjen om litt.</string>
     <string name="error_web_page">Leverandøren din sendte en nettside i stedet for video. Lenken kan ha utløpt, så prøv å oppdatere leverandøren din i Innstillinger.</string>
+    <string name="error_unplayable_file">Leverandøren din sendte en fil i et format Settee ikke kan spille av, så prøv noe annet.</string>
+    <string name="error_addon_web_page">Lenken fra dette tillegget åpnet en nettside i stedet for video. Velg en annen strøm.</string>
+    <string name="error_addon_unplayable_file">Lenken fra dette tillegget åpnet en fil i et format Settee ikke kan spille av. Velg en annen strøm.</string>
+    <string name="playback_pick_another_stream">Velg en annen strøm</string>
     <string name="error_damaged">Denne videoen er skadet og kan ikke spilles av. Det er på leverandørens side, så prøv noe annet.</string>
     <string name="error_behind_live">Denne kanalen kom for langt bak direktesendingen. Prøv igjen for å ta den igjen.</string>
     <string name="error_gone">Dette finnes ikke lenger hos leverandøren din. Prøv å oppdatere leverandøren din i Innstillinger.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Send alltid</string>
     <string name="error_torrents_off">Torrenter er slått av. Slå dem på under Innstillinger, Tillegg, for å spille dem av.</string>
     <string name="error_torrents_not_yet">Torrenter kan ikke spilles av her ennå. Velg en strøm som ikke er en torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenter</string>
     <string name="settings_addons_torrents_off">Av. Torrenter tilleggene dine finner, vises i listen, men spilles ikke av.</string>
     <string name="settings_addons_torrents_on">På. Alle som deler en torrent du spiller av, kan se internettadressen din.</string>

@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -16,11 +17,13 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -487,6 +490,9 @@ class MovieDetailContentTest {
         val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
         compose.onNodeWithText("Torrents add-on · FHD · 2 GB · 45 people sharing").assertIsDisplayed()
         torrentRow.assertIsNotEnabled()
+        // Marked at a glance, and only the torrent: the direct streams above it carry no mark.
+        compose.onAllNodesWithContentDescription("Torrent").assertCountEquals(1)
+        compose.onNode(hasContentDescription("Torrent") and hasText("The Quiet Road 1080p WEB")).assertIsDisplayed()
         compose.onNodeWithText("Torrents are off. Turn them on in Settings, Add-ons, to play these.")
             .assertIsDisplayed()
         // The Highlight stops on the last stream that plays, rather than on one that doesn't.
