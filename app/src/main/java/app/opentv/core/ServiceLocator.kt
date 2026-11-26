@@ -22,6 +22,7 @@ import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.AddonRepository
+import app.opentv.data.repo.AddonSeasons
 import app.opentv.data.repo.AddonStreams
 import app.opentv.data.repo.AddonTitles
 import app.opentv.data.repo.CatalogRepository
@@ -220,6 +221,11 @@ object ServiceLocator {
         /** Films the Provider doesn't carry, found through TMDB and kept under the Add-ons source. */
         val addonTitles: AddonTitles by lazy {
             AddonTitles(database, tmdb, dispatchers) { settings.stremioAddons.value }
+        }
+
+        /** The seasons of a Provider's show it doesn't carry, from TMDB, kept under the Add-ons source (#683). */
+        val addonSeasons: AddonSeasons by lazy {
+            AddonSeasons(database, tmdb, addonTitles, catalogRepository, dispatchers) { settings.stremioAddons.value }
         }
 
         val sourceRepository: SourceRepository by lazy {

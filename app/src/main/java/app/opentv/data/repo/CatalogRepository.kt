@@ -757,10 +757,13 @@ class CatalogRepository(
         else -> fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true).map {}
     }
 
-    /** A show kept from an add-on has no panel: TMDB lists its episodes, stored as a Provider's are (ADR 0011). */
+    /**
+     * A show kept from an add-on has no panel: TMDB lists its episodes, stored as a Provider's are (ADR 0011),
+     * of the seasons no Provider's Version of it carries (#683).
+     */
     private suspend fun fetchAddonEpisodes(source: Source, seriesId: String, now: Long): Result<Unit> =
         withContext(dispatchers.io) {
-            tmdb.storeAddonEpisodes(seriesDao.byProviderId(source.id, seriesId), now) {
+            tmdb.storeAddonEpisodes(seriesDao.byProviderId(source.id, seriesId), now, database::addonSeasonsKept) {
                 storeEpisodes(source, seriesId, it, now)
             }
         }

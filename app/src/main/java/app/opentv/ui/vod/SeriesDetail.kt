@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
@@ -194,7 +195,7 @@ internal fun SeriesDetailContent(
             }
             Spacer(Modifier.height(SetteeSpace.RowGap))
             if (shown.hasPills) {
-                SeasonPills(nav, spot, shown, pillRow, showingLikeThis)
+                SeasonPills(nav, spot, shown, pillRow, showingLikeThis, keptFromAddons)
                 Spacer(Modifier.height(SetteeSpace.RowGap))
             }
             if (showingLikeThis) {
@@ -328,7 +329,10 @@ private fun SeasonPills(
     shown: ShowSeasons,
     pillRow: LazyListState,
     showingLikeThis: Boolean,
+    keptFromAddons: AddonsSourceId,
 ) {
+    val fromAddons = remember(shown.all, keptFromAddons) { seasonsFromAddons(shown.all, keptFromAddons) }
+    val addonsMark = stringResource(R.string.settings_pane_addons)
     LazyRow(
         state = pillRow,
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -344,6 +348,8 @@ private fun SeasonPills(
                 selected = isSelected,
                 onClick = { openOptions?.invoke() },
                 onOptions = openOptions,
+                icon = Icons.Filled.Extension.takeIf { season.number in fromAddons },
+                iconDescription = addonsMark.takeIf { season.number in fromAddons },
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(nav.focus.pill) else Modifier)
                     .returnSpot(spot, null)

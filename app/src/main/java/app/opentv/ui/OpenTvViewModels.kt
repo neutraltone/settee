@@ -895,6 +895,11 @@ data class OpenedShow(
     val failure: ViewerError? = null,
     /** Kept from an add-on: its episodes come from TMDB, and no sentence about it may mention a provider. */
     val fromAddons: Boolean = false,
+    /**
+     * The seasons TMDB lists that the Provider's show lacks have been looked for, and any stored under its
+     * Add-ons copy (#683): the page reads the show's Versions again, as that copy may be new.
+     */
+    val addonSeasons: Boolean = false,
 )
 
 /**
@@ -1082,8 +1087,17 @@ class VodViewModel @JvmOverloads constructor(
     /** What the viewer's add-ons offer for [movie], growing as each answers. */
     fun addonStreams(movie: Movie): Flow<AddonSearch> = addonSearches.forFilm(movie)
 
-    /** What the viewer's add-ons offer for [episode] of [series], as for a film. */
-    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> = addonSearches.forEpisode(series, episode)
+    /**
+     * What the viewer's add-ons offer for [episode] of [series], as for a film. An episode of another of the
+     * show's Versions, such as a season only its Add-ons copy has (#683), is asked about by its own series,
+     * whose IMDb id it's keyed by, rather than by a TMDB look-up for the Provider's.
+     */
+    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> =
+        if (episode.sourceId == series.sourceId && episode.seriesId == series.seriesId) {
+            addonSearches.forEpisode(series, episode)
+        } else {
+            addonSearches.forTitle(MediaKey.Episode(episode.id))
+        }
 
     // ---- Netflix-style home rows ----------------------------------------------------------------
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds
@@ -1446,6 +1460,9 @@ class VodViewModel @JvmOverloads constructor(
             val shown =
                 OpenedShow(series, fetched = true, noEpisodes = none, failure = failure, fromAddons = fromAddons)
             send(Opened.Found(shown))
+            // Last, once the Provider's episodes are stored, as they're what TMDB's seasons are compared with
+            // (#683). A failure changes nothing: the Provider's seasons are all there.
+            if (graph.addonSeasons.fill(series).isSuccess) send(Opened.Found(shown.copy(addonSeasons = true)))
         } finally {
             // Nothing's waiting for them any more; past the limit they carry on, and store what they find.
             if (!outlived) fetching.forEach { it.cancel() }
@@ -1458,7 +1475,11 @@ class VodViewModel @JvmOverloads constructor(
      */
     private fun fetchVersions(series: Series, asked: MutableSet<Long>): Deferred<List<Result<Unit>>> =
         viewModelScope.async {
-            val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
+            val addons = graph.database.sources().addonsSourceId()
+            // A Provider's show's Add-ons copy is left to addonSeasons, once the Provider's episodes are in (#683).
+            val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds)
+                .filter { addons.keeps(series.sourceId) || !addons.keeps(it.sourceId) }
+                .filter { asked.add(it.id) }
             versions.map { version ->
                 async {
                     val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
