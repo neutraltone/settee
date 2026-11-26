@@ -101,9 +101,21 @@ class StremioClient(
         // A resource is a name, or an object with a name and the types it serves when those differ
         // from the add-on's own.
         val resources = (manifest["resources"] as? JsonArray).orEmpty()
-        val names = resources.mapNotNull { (it as? JsonPrimitive)?.contentOrNull ?: (it as? JsonObject)?.text("name") }
-        val types = manifest.texts("types") + resources.flatMap { (it as? JsonObject)?.texts("types").orEmpty() }
-        return AddonManifest(name, names.distinctFilled(), types.distinctFilled())
+        val topTypes = manifest.texts("types")
+        val served = resources.mapNotNull { resource ->
+            (resource as? JsonPrimitive)?.contentOrNull?.let { it to topTypes }
+                ?: (resource as? JsonObject)?.text("name")?.let { it to (resource.textsOrNull("types") ?: topTypes) }
+        }
+        // Each resource's own types, not all of them merged: an add-on whose catalogue lists shows may
+        // still only have streams for films, and asking it for an episode only wastes the viewer's wait.
+        val streamTypes = served.filter { it.first == STREAM }.flatMap { it.second }
+        val types = topTypes + served.flatMap { it.second }
+        return AddonManifest(
+            name,
+            served.map { it.first }.distinctFilled(),
+            types.distinctFilled(),
+            streamTypes.distinctFilled(),
+        )
     }
 
     /**
@@ -203,8 +215,12 @@ class StremioClient(
     private fun JsonObject.texts(key: String): List<String> =
         (this[key] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
 
+    // Null when a resource names no types of its own, so it takes the manifest's.
+    private fun JsonObject.textsOrNull(key: String): List<String>? = if (this[key] is JsonArray) texts(key) else null
+
     private companion object {
         const val TAG = "StremioClient"
+        const val STREAM = "stream"
         val SUCCESS = 200..299
         val SERVER_ERRORS = 500..599
     }

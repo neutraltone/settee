@@ -51,11 +51,11 @@ class AddonRepository(
 
     /**
      * The stored add-ons, in the viewer's order, each knowing what it serves. One stored before Settee
-     * read that is read again here, once; if it can't be read now it's used as it is, and tried again
-     * next time.
+     * read that, or what each of its resources serves, is read again here, once; if it can't be read now
+     * it's used as it is, and tried again next time.
      */
     suspend fun addons(): List<StremioAddon> = rereading.withLock {
-        settings.stremioAddons.value.filter { it.resources == null }.forEach { old ->
+        settings.stremioAddons.value.filter { it.resources == null || it.streamTypes == null }.forEach { old ->
             val manifest = try {
                 withContext(dispatchers.io) { client.fetchManifest(old.manifestUrl) }
             } catch (_: AddonFailure) {
@@ -67,7 +67,7 @@ class AddonRepository(
     }
 
     private fun AddonManifest.toAddon(address: String) =
-        StremioAddon(manifestUrl = address, name = name, resources = resources, types = types)
+        StremioAddon(manifestUrl = address, name = name, resources = resources, types = types, streamTypes = streamTypes)
 
     companion object {
         private const val STREMIO_SCHEME = "stremio://"

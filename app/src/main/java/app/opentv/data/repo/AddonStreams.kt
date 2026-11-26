@@ -82,7 +82,7 @@ class AddonStreams(
         streamsFor(SERIES, "$showImdbId:$season:$episode")
 
     private fun streamsFor(type: String, id: String): Flow<AddonStreamResults> = channelFlow {
-        val asked = addons().filter { it.serves(type) }
+        val asked = addons().filter { it.servesStreams(type) }
         val answers = arrayOfNulls<Answer>(asked.size)
         // Answers land from several threads; one at a time keeps every result sent a whole one.
         val landing = Mutex()
@@ -136,7 +136,6 @@ class AddonStreams(
     private companion object {
         const val MOVIE = "movie"
         const val SERIES = "series"
-        const val STREAM = "stream"
 
         val WORD = Regex("[\\p{L}\\p{N}]+")
         val SIZE = Regex("(\\d+(?:[.,]\\d+)?)\\s*(TB|GB|MB|TiB|GiB|MiB)\\b", RegexOption.IGNORE_CASE)
@@ -152,13 +151,6 @@ class AddonStreams(
             .thenBy { it.stream.link is StreamLink.Torrent }
             .thenByDescending { it.qualityRank }
             .thenByDescending { it.sharers ?: 0 }
-
-        /**
-         * An add-on that says what it serves is asked only for that. One stored before Settee read
-         * that, and still not read again, is asked anyway: it's the add-on that knows.
-         */
-        fun StremioAddon.serves(type: String): Boolean =
-            resources?.let { STREAM in it } != false && types?.takeIf { it.isNotEmpty() }?.let { type in it } != false
 
         /** A size written in [text], such as `2.1 GB`, in bytes. Add-ons write them binary, as Stremio does. */
         fun sizeIn(text: String): Long? = SIZE.find(text)?.let { match ->

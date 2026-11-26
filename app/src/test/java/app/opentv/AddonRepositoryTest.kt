@@ -10,7 +10,9 @@ import app.opentv.data.remote.AddonFailure
 import app.opentv.data.repo.AddonRepository
 import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.Request
 import org.junit.Rule
 import org.junit.Test
@@ -100,6 +102,43 @@ class AddonRepositoryTest {
         val stored = graph.settings.stremioAddons.value.single()
         assertThat(stored.resources).containsExactly("catalog", "stream")
         assertThat(stored.types).containsExactly("movie", "series")
+    }
+
+    @Test
+    fun `an add-on whose streams are films only isn't asked for an episode, though its catalogue lists shows`() {
+        replies["https://example.com/films/manifest.json"] = """
+            {"id": "org.example.films", "name": "Films",
+             "resources": [{"name": "catalog", "types": ["movie", "series"]}, {"name": "stream", "types": ["movie"]}]}
+        """.trimIndent()
+        replies["https://example.com/both/manifest.json"] = """
+            {"id": "org.example.both", "name": "Both", "types": ["movie", "series"], "resources": ["stream"]}
+        """.trimIndent()
+        add("example.com/films")
+        add("example.com/both")
+
+        val askedForEpisode = runBlocking {
+            withTimeout(10_000) { graph.addonStreams.forEpisode("tt0000002", 1, 1).last() }
+        }.outcomes.map { it.addonName }
+        val askedForFilm = runBlocking {
+            withTimeout(10_000) { graph.addonStreams.forFilm("tt0000003").last() }
+        }.outcomes.map { it.addonName }
+
+        assertThat(askedForEpisode).containsExactly("Both")
+        assertThat(askedForFilm).containsExactly("Films", "Both").inOrder()
+    }
+
+    @Test
+    fun `an add-on stored before Settee read what each resource serves is read again, the first time it's used`() {
+        graph.settings.addStremioAddon(
+            StremioAddon("https://example.com/films/manifest.json", "Films", listOf("stream"), listOf("movie")),
+        )
+        replies["https://example.com/films/manifest.json"] = films
+
+        val read = runBlocking { addons.addons() }
+        runBlocking { addons.addons() }
+
+        assertThat(read.single().streamTypes).containsExactly("movie")
+        assertThat(network.asked).hasSize(1)
     }
 
     @Test

@@ -30,10 +30,33 @@ data class StremioAddon(
     val resources: List<String>? = null,
     /** The kinds of title it serves (`movie`, `series`, ...), null as [resources] is. */
     val types: List<String>? = null,
-)
+    /**
+     * The kinds of title its `stream` resource serves, empty when it has none; null for one stored before
+     * Settee read each resource's own types, which is read again the first time it's used.
+     */
+    val streamTypes: List<String>? = null,
+) {
+    /**
+     * Whether to ask it for streams of [type] (`movie` or `series`). One stored before Settee read what
+     * it serves is judged by what it did store, and one stored with nothing is asked anyway: it's the
+     * add-on that knows.
+     */
+    fun servesStreams(type: String): Boolean {
+        streamTypes?.let { return type in it }
+        val hasStreams = resources?.let { STREAM_RESOURCE in it } != false
+        return hasStreams && types?.takeIf { it.isNotEmpty() }?.let { type in it } != false
+    }
+}
 
-/** What an add-on's manifest says about it. */
-data class AddonManifest(val name: String, val resources: List<String>, val types: List<String>)
+private const val STREAM_RESOURCE = "stream"
+
+/** What an add-on's manifest says about it: [streamTypes] are those of its `stream` resource alone. */
+data class AddonManifest(
+    val name: String,
+    val resources: List<String>,
+    val types: List<String>,
+    val streamTypes: List<String> = emptyList(),
+)
 
 /** Where an add-on's stream is: a link to play, or a torrent to fetch. */
 sealed interface StreamLink {
