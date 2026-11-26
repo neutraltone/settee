@@ -14,9 +14,13 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StremioAddon
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.TmdbEpisode
 import app.opentv.data.remote.TmdbHit
+import app.opentv.data.remote.searchTitles
+import app.opentv.data.remote.seasonEpisodes
+import app.opentv.data.remote.titleByImdbId
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -49,25 +53,31 @@ class AddonTitles(
     private val db: OpenTvDatabase,
     private val tmdb: TmdbClient,
     private val dispatchers: AppDispatchers,
-    /** Whether the viewer has any add-on: without one, nothing found here could play. */
-    private val hasAddons: () -> Boolean,
+    /** The viewer's add-ons: what they have streams for is all search offers, as nothing else could play. */
+    private val addons: () -> List<StremioAddon>,
 ) {
     // Two titles kept at once mustn't each make an Add-ons source.
     private val keeping = Mutex()
 
     /**
      * TMDB's films and shows for [query] that this device has no row for, by TMDB id, each with the IMDb
-     * id add-ons are asked by; one without is left out, since no add-on could be asked about it. Empty
-     * without an add-on or a TMDB Key, and when TMDB doesn't answer: the Provider's results are still there.
+     * id add-ons are asked by; one without is left out, since no add-on could be asked about it. Films
+     * only when some add-on has film streams, shows only when some has show streams. Empty without such
+     * an add-on or a TMDB Key, and when TMDB doesn't answer: the Provider's results are still there.
      */
     suspend fun search(query: String): List<AddonTitle> {
-        if (!hasAddons() || !tmdb.isConfigured()) return emptyList()
+        val current = addons()
+        val films = current.any { it.servesStreams(MOVIE) }
+        val shows = current.any { it.servesStreams(SERIES) }
+        if (!(films || shows) || !tmdb.isConfigured()) return emptyList()
         val hits = withContext(dispatchers.io) { tmdb.searchTitles(query) }.getOrNull().orEmpty()
+            .filter { if (it.isMovie) films else shows }
             .take(MAX_RESULTS)
         // Films and shows apart: TMDB numbers each on its own, so a film can share a show's id.
-        val (films, shows) = hits.partition { it.isMovie }
+        val (filmHits, showHits) = hits.partition { it.isMovie }
         val (storedFilms, storedShows) = withContext(dispatchers.io) {
-            films.storedBy { db.movies().picksWithTmdbIds(it) } to shows.storedBy { db.series().picksWithTmdbIds(it) }
+            filmHits.storedBy { db.movies().picksWithTmdbIds(it) } to
+                showHits.storedBy { db.series().picksWithTmdbIds(it) }
         }
         val wanted = hits.filter { it.tmdbId !in (if (it.isMovie) storedFilms else storedShows) }
         // Side by side: one request per title, and the viewer is waiting on the slowest.
@@ -165,6 +175,8 @@ class AddonTitles(
     private companion object {
         /** A screen's worth: each costs a request for its IMDb id. */
         const val MAX_RESULTS = 10
+        const val MOVIE = "movie"
+        const val SERIES = "series"
         val IMDB_ID = Regex("tt\\d+")
     }
 }

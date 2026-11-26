@@ -60,6 +60,38 @@ class AddonShowsTest {
     }
 
     @Test
+    fun `search offers films only when an add-on has film streams, and shows only when one has show streams`(): Unit =
+        runBlocking {
+            val films = StremioAddon("https://films.example.com/manifest.json", "Films", streamTypes = listOf("movie"))
+            val shows = StremioAddon("https://shows.example.com/manifest.json", "Shows", streamTypes = listOf("series"))
+
+            graph.settings.addStremioAddon(films)
+            val withFilmStreams = graph.addonTitles.search("lost").map { it.name }
+            graph.settings.removeStremioAddon(films.manifestUrl)
+            graph.settings.addStremioAddon(shows)
+            val withShowStreams = graph.addonTitles.search("lost").map { it.name }
+
+            assertThat(withFilmStreams).containsExactly("Lost Film")
+            assertThat(withShowStreams).containsExactly("Lost Show")
+        }
+
+    @Test
+    fun `an add-on whose catalogue lists shows but has no streams offers nothing in search`(): Unit = runBlocking {
+        graph.settings.addStremioAddon(
+            StremioAddon(
+                "https://lists.example.com/manifest.json",
+                "Lists",
+                resources = listOf("catalog"),
+                types = listOf("movie", "series"),
+                streamTypes = emptyList(),
+            ),
+        )
+
+        assertThat(graph.addonTitles.search("lost")).isEmpty()
+        assertThat(network.asked).isEmpty()
+    }
+
+    @Test
     fun `opening a show keeps it under the Add-ons source by its IMDb id, with its TMDB id`(): Unit = runBlocking {
         val kept = graph.addonTitles.keepShow(LOST_SHOW)
 

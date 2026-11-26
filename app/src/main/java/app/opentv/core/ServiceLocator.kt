@@ -219,7 +219,7 @@ object ServiceLocator {
 
         /** Films the Provider doesn't carry, found through TMDB and kept under the Add-ons source. */
         val addonTitles: AddonTitles by lazy {
-            AddonTitles(database, tmdb, dispatchers) { settings.stremioAddons.value.isNotEmpty() }
+            AddonTitles(database, tmdb, dispatchers) { settings.stremioAddons.value }
         }
 
         val sourceRepository: SourceRepository by lazy {
