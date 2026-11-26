@@ -265,6 +265,10 @@
     <string name="error_live_ended">Ten kanał przestał działać. Spróbuj ponownie lub wybierz inny kanał.</string>
     <string name="error_timed_out">Dostawca przestał odpowiadać. Może być przeciążony, więc spróbuj ponownie za chwilę.</string>
     <string name="error_web_page">Dostawca przesłał stronę internetową zamiast wideo. Link mógł wygasnąć, więc spróbuj odświeżyć dostawcę w Ustawieniach.</string>
+    <string name="error_unplayable_file">Dostawca przesłał plik w formacie, którego Settee nie potrafi odtworzyć, więc wybierz coś innego.</string>
+    <string name="error_addon_web_page">Link tego dodatku otworzył stronę internetową zamiast wideo. Wybierz inny strumień.</string>
+    <string name="error_addon_unplayable_file">Link tego dodatku otworzył plik w formacie, którego Settee nie potrafi odtworzyć. Wybierz inny strumień.</string>
+    <string name="playback_pick_another_stream">Wybierz inny strumień</string>
     <string name="error_damaged">To wideo jest uszkodzone i nie da się go odtworzyć. Problem leży po stronie dostawcy, więc wybierz coś innego.</string>
     <string name="error_behind_live">Ten kanał zbyt mocno opóźnił się względem transmisji na żywo. Spróbuj ponownie, aby go dogonić.</string>
     <string name="error_gone">Tego nie ma już u Twojego dostawcy. Spróbuj odświeżyć dostawcę w Ustawieniach.</string>
@@ -413,6 +417,7 @@
     <string name="report_question_always_send">Zawsze wysyłaj</string>
     <string name="error_torrents_off">Torrenty są wyłączone. Włącz je w Ustawienia, Dodatki, aby je odtworzyć.</string>
     <string name="error_torrents_not_yet">Torrentów nie można tu jeszcze odtwarzać. Wybierz strumień, który nie jest torrentem.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrenty</string>
     <string name="settings_addons_torrents_off">Wyłączone. Torrenty znalezione przez Twoje dodatki są widoczne na liście, ale się nie odtwarzają.</string>
     <string name="settings_addons_torrents_on">Włączone. Każdy, kto udostępnia odtwarzany przez Ciebie torrent, widzi Twój adres internetowy.</string>

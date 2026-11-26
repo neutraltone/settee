@@ -81,8 +81,17 @@ class PlayerController(
         data class Buffering(val title: String) : State
         data class Playing(val title: String) : State
 
-        /** Playback stopped and retries are exhausted. [reason] is the sentence and detail line to show. */
-        data class Error(val title: String, val reason: ViewerError, val canRetry: Boolean) : State
+        /**
+         * Playback stopped and retries are exhausted. [reason] is the sentence and detail line to show.
+         * [anotherStreamOf] is the title an add-on's stream was of, when another of its streams is worth
+         * picking instead; null otherwise.
+         */
+        data class Error(
+            val title: String,
+            val reason: ViewerError,
+            val canRetry: Boolean,
+            val anotherStreamOf: MediaKey.Title? = null,
+        ) : State
     }
 
     /** How this controller's player is set up, for what it will be asked to play. */
@@ -246,6 +255,12 @@ class PlayerController(
     /** Where the stream on the player is kept, if it's a finished recording, so its failures say so. */
     private var recordedOn: RecordedOn? = null
 
+    /** The stream handed to the player last, for a look at what it sent should the player fail to read it. */
+    private var onPlayer: Playable.Ready? = null
+
+    /** Counts [play]s, so a sentence worked out after a failure can tell it's been overtaken. */
+    private var tunes = 0
+
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
@@ -371,21 +386,36 @@ class PlayerController(
                     DecoderLog.logFailure(error)
                     val request = current
                     val recovery = counts.failed(error, hadPlayed, recordedOn)
-                    states.publish(
-                        State.Error(
-                            title = _title.value,
-                            // The last stream's format lingers until this one's tracks are known, so only a
-                            // selected video track's counts.
-                            reason = PlaybackErrors.describe(
-                                strings,
-                                error,
-                                onTelevision,
-                                player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
-                                recordedOn,
-                            ),
-                            canRetry = recovery.canRetry,
+                    val title = _title.value
+                    // The last stream's format lingers until this one's tracks are known, so only a
+                    // selected video track's counts.
+                    val format = player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) }
+                    val stream = onPlayer
+                    val failedRecordedOn = recordedOn
+                    fun failed(start: StreamStart?) = State.Error(
+                        title = title,
+                        reason = PlaybackErrors.describe(
+                            strings,
+                            error,
+                            onTelevision,
+                            format,
+                            failedRecordedOn,
+                            FailedStream(stream?.key, start),
                         ),
+                        canRetry = recovery.canRetry,
+                        anotherStreamOf = anotherStreamOf(error, stream?.key),
                     )
+                    if (stream != null && isUnreadable(error) && stream.isWebAddress) {
+                        // Whether it was a web page or a file the player can't read is only in the bytes it sent.
+                        val tune = tunes
+                        scope.launch {
+                            val start = StreamPeek.startOf(httpClient, stream.url, stream.headersSent)
+                            // Anything asked for meanwhile, a restart included, has a sentence of its own.
+                            if (tune == tunes) states.publish(failed(start))
+                        }
+                    } else {
+                        states.publish(failed(start = null))
+                    }
                     if (recovery.canRestart && request != null) restartLater(request)
                 }
 
@@ -449,6 +479,7 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
+        tunes++
         // An automatic restart keeps counting, so a stream that keeps dropping stops after a couple
         // of restarts rather than retrying (and, on a portal, minting a link) forever. Anything else
         // is asked for, even the same channel picked again, so it gets restarts of its own.
@@ -491,7 +522,8 @@ class PlayerController(
             _title.value = playable.title
             titled = request.key
             // The whole set is replaced, so an add-on's headers never ride along on the next stream.
-            httpFactory.setDefaultRequestProperties(playable.requestHeaders + ("User-Agent" to playable.userAgent))
+            httpFactory.setDefaultRequestProperties(playable.headersSent)
+            onPlayer = playable
             states.publish(State.Buffering(playable.title))
 
             val mediaItem = playable.mediaItem()
@@ -738,5 +770,12 @@ private fun Playable.Ready.mediaItem(): MediaItem = MediaItem.Builder()
         }
     }
     .build()
+
+/** Every header the stream is fetched with: what an add-on asks for, and the User-Agent. */
+private val Playable.Ready.headersSent: Map<String, String> get() = requestHeaders + ("User-Agent" to userAgent)
+
+/** Whether [Playable.Ready.url] is fetched over the web, rather than from a file or a NAS. */
+private val Playable.Ready.isWebAddress: Boolean
+    get() = url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
 
 private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L

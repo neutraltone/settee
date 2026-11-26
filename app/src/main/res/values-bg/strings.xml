@@ -263,6 +263,10 @@
     <string name="error_live_ended">Този канал спря. Опитайте отново или изберете друг канал.</string>
     <string name="error_timed_out">Доставчикът ви спря да отговаря. Може да е претоварен, затова опитайте отново след малко.</string>
     <string name="error_web_page">Доставчикът ви изпрати уеб страница вместо видео. Връзката може да е изтекла, затова опитайте да опресните доставчика в Настройки.</string>
+    <string name="error_unplayable_file">Доставчикът ви изпрати файл във формат, който Settee не може да пусне, затова изберете нещо друго.</string>
+    <string name="error_addon_web_page">Връзката на тази добавка отвори уеб страница вместо видео. Изберете друг поток.</string>
+    <string name="error_addon_unplayable_file">Връзката на тази добавка отвори файл във формат, който Settee не може да пусне. Изберете друг поток.</string>
+    <string name="playback_pick_another_stream">Изберете друг поток</string>
     <string name="error_damaged">Това видео е повредено и не може да се възпроизведе. Проблемът е при доставчика ви, затова изберете нещо друго.</string>
     <string name="error_behind_live">Този канал изостана твърде много от живото излъчване. Опитайте отново, за да го настигнете.</string>
     <string name="error_gone">Това вече го няма при доставчика ви. Опитайте да опресните доставчика в Настройки.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Винаги изпращай</string>
     <string name="error_torrents_off">Торентите са изключени. Включете ги от Настройки, Добавки, за да пуснете тези.</string>
     <string name="error_torrents_not_yet">Торентите още не могат да се пускат тук. Изберете поток, който не е торент.</string>
+    <string name="vod_addon_torrent">Торент</string>
     <string name="settings_addons_torrents">Торенти</string>
     <string name="settings_addons_torrents_off">Изключени. Торентите, които добавките ви намерят, се показват, но не се пускат.</string>
     <string name="settings_addons_torrents_on">Включени. Всеки, който споделя торент, който пускате, може да види интернет адреса ви.</string>

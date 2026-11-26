@@ -263,6 +263,10 @@
     <string name="error_live_ended">Ez a csatorna leállt. Próbálja újra, vagy válasszon másik csatornát.</string>
     <string name="error_timed_out">A szolgáltató nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
     <string name="error_web_page">A szolgáltató videó helyett egy weboldalt küldött. Lehet, hogy a link lejárt, ezért próbálja frissíteni a szolgáltatót a Beállításokban.</string>
+    <string name="error_unplayable_file">A szolgáltató olyan formátumú fájlt küldött, amelyet a Settee nem tud lejátszani, ezért válasszon mást.</string>
+    <string name="error_addon_web_page">A bővítmény linkje videó helyett egy weboldalt nyitott meg. Válasszon másik streamet.</string>
+    <string name="error_addon_unplayable_file">A bővítmény linkje olyan formátumú fájlt nyitott meg, amelyet a Settee nem tud lejátszani. Válasszon másik streamet.</string>
+    <string name="playback_pick_another_stream">Másik stream választása</string>
     <string name="error_damaged">Ez a videó sérült, és nem játszható le. Ez a szolgáltató oldalán van, ezért válasszon mást.</string>
     <string name="error_behind_live">Ez a csatorna túlságosan lemaradt az élő adástól. Próbálja újra, hogy utolérje.</string>
     <string name="error_gone">Ez már nem érhető el a szolgáltatónál. Próbálja frissíteni a szolgáltatót a Beállításokban.</string>
@@ -411,6 +415,7 @@
     <string name="report_question_always_send">Mindig küldje</string>
     <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
     <string name="error_torrents_not_yet">A torrentek itt még nem játszhatók le. Válassz olyan streamet, amely nem torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrentek</string>
     <string name="settings_addons_torrents_off">Ki. A bővítmények által talált torrentek megjelennek a listában, de nem játszhatók le.</string>
     <string name="settings_addons_torrents_on">Be. Mindenki, aki megoszt egy Ön által lejátszott torrentet, látja az Ön internetcímét.</string>

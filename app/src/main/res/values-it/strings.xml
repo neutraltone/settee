@@ -264,6 +264,10 @@
     <string name="error_live_ended">Questo canale si è fermato. Riprova, oppure scegli un altro canale.</string>
     <string name="error_timed_out">Il tuo provider ha smesso di rispondere. Potrebbe essere sovraccarico, quindi riprova tra un momento.</string>
     <string name="error_web_page">Il tuo provider ha inviato una pagina web invece del video. Il link potrebbe essere scaduto, quindi prova ad aggiornare il tuo provider in Impostazioni.</string>
+    <string name="error_unplayable_file">Il tuo provider ha inviato un file in un formato che Settee non può riprodurre, quindi scegli qualcos\'altro.</string>
+    <string name="error_addon_web_page">Il link di questo add-on ha aperto una pagina web invece del video. Scegli un altro stream.</string>
+    <string name="error_addon_unplayable_file">Il link di questo add-on ha aperto un file in un formato che Settee non può riprodurre. Scegli un altro stream.</string>
+    <string name="playback_pick_another_stream">Scegli un altro stream</string>
     <string name="error_damaged">Questo video è danneggiato e non si può riprodurre. Dipende dal tuo provider, quindi scegli qualcos\'altro.</string>
     <string name="error_behind_live">Questo canale è rimasto troppo indietro rispetto alla diretta. Riprova per rimetterti in pari.</string>
     <string name="error_gone">Questo contenuto non è più disponibile sul tuo provider. Prova ad aggiornare il tuo provider in Impostazioni.</string>
@@ -412,6 +416,7 @@
     <string name="report_question_always_send">Invia sempre</string>
     <string name="error_torrents_off">I torrent sono disattivati. Attivali in Impostazioni, Componenti aggiuntivi, per riprodurli.</string>
     <string name="error_torrents_not_yet">I torrent non si possono ancora riprodurre qui. Scegli uno stream che non sia un torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrent</string>
     <string name="settings_addons_torrents_off">Disattivati. I torrent trovati dai tuoi add-on compaiono nell\'elenco, ma non si riproducono.</string>
     <string name="settings_addons_torrents_on">Attivati. Chiunque condivida un torrent che riproduci può vedere il tuo indirizzo internet.</string>

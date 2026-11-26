@@ -36,6 +36,12 @@ import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -219,8 +225,94 @@ class PlayerErrorPanelTest {
         assertThat(resolves).isEqualTo(1)
     }
 
+    /** Every request [serving] was asked, the player's and the look at what it sent alike. */
+    private val asked = mutableListOf<Request>()
+
+    /** A web host that answers every request with [body], whatever it's labelled. */
+    private fun serving(body: ByteArray) = OkHttpClient.Builder().addInterceptor { chain ->
+        synchronized(asked) { asked += chain.request() }
+        Response.Builder()
+            .request(chain.request())
+            .protocol(Protocol.HTTP_1_1)
+            .code(200)
+            .message("OK")
+            .body(body.toResponseBody("video/mp2t".toMediaType()))
+            .build()
+    }.build()
+
+    /** Plays [key] from [body] through the app's own data sources until it fails, and returns why. */
+    private fun failOn(key: MediaKey, body: ByteArray): PlayerController.State.Error {
+        val controller = players.realSourceController(serving(body)) { asked ->
+            val headers = if (asked is MediaKey.AddonStream) asked.headers else emptyMap()
+            Playable.Ready(asked, STREAM, "Settee", "Film", isLive = false, requestHeaders = headers)
+        }
+        toRelease += controller
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
+        controller.play(PlayerController.Request(key), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+        return controller.state.value as PlayerController.State.Error
+    }
+
+    @Test
+    fun `a provider's web page sent instead of video still says so, with no other stream to pick`() {
+        val error = failOn(MediaKey.Movie(1), WEB_PAGE)
+
+        assertThat(error.reason.sentence).isEqualTo(app.getString(R.string.error_web_page))
+        assertThat(error.anotherStreamOf).isNull()
+        waitForSentence("web page")
+        compose.onNodeWithText("Pick another stream").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a provider's file the player can't read says it's in a format Settee can't play, not a web page`() {
+        val error = failOn(MediaKey.Movie(1), NOT_VIDEO)
+
+        assertThat(error.reason.sentence).isEqualTo(app.getString(R.string.error_unplayable_file))
+        assertThat(error.reason.sentence).doesNotContain("web page")
+    }
+
+    @Test
+    fun `an add-on's web page blames its link, not the provider, and lands on Pick another stream`() {
+        val title = MediaKey.Movie(1)
+        val key = MediaKey.AddonStream(title, STREAM, mapOf("Referer" to "https://example.com/"), "Torrentio")
+
+        val error = failOn(key, WEB_PAGE)
+
+        assertThat(error.reason.sentence).isEqualTo(app.getString(R.string.error_addon_web_page))
+        assertThat(error.anotherStreamOf).isEqualTo(title)
+        // The look at what it sent goes as the stream did, or a host that checks would answer it otherwise.
+        val look = synchronized(asked) { asked.last() }
+        assertThat(look.header("Referer")).isEqualTo("https://example.com/")
+        assertThat(look.header("User-Agent")).isEqualTo("Settee")
+        waitFor(hasText("Pick another stream"))
+        compose.onNodeWithText("Pick another stream").assertIsFocused()
+        compose.onNodeWithText("Back").assertExists()
+        captureScreen("vod_player_addon_web_page")
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        assertThat(viewModel.addonPick.value).isEqualTo(title)
+    }
+
+    @Test
+    fun `an add-on's file the player can't read says so, and offers another stream`() {
+        val title = MediaKey.Episode(3)
+        val error = failOn(MediaKey.AddonStream(title, STREAM, addonName = "Torrentio"), NOT_VIDEO)
+
+        assertThat(error.reason.sentence).isEqualTo(app.getString(R.string.error_addon_unplayable_file))
+        assertThat(error.anotherStreamOf).isEqualTo(title)
+    }
+
     private companion object {
         /** Well under the 15 seconds the load's backoffs add up to, and over handing a stream to the player. */
         const val SOON_MILLIS = 3_000L
+
+        const val STREAM = "https://example.com/film"
+
+        /** What an expired account's panel sends with a 200: a byte order mark, a blank line, then HTML. */
+        val WEB_PAGE = "﻿\n  <!doctype HTML><html><body>Account expired</body></html>".toByteArray()
+
+        /** Bytes no extractor knows, as a file in a container the player can't read starts. */
+        val NOT_VIDEO = ByteArray(4096) { (it * 31 + 7).toByte() }
     }
 }

@@ -264,6 +264,10 @@
     <string name="error_live_ended">Acest canal s-a oprit. Încearcă din nou sau alege alt canal.</string>
     <string name="error_timed_out">Furnizorul tău nu mai răspunde. Poate fi ocupat, așa că încearcă din nou peste puțin timp.</string>
     <string name="error_web_page">Furnizorul tău a trimis o pagină web în loc de video. Este posibil ca linkul să fi expirat, așa că încearcă să reîmprospătezi furnizorul în Setări.</string>
+    <string name="error_unplayable_file">Furnizorul tău a trimis un fișier într-un format pe care Settee nu îl poate reda, așa că încearcă altceva.</string>
+    <string name="error_addon_web_page">Linkul acestui supliment a deschis o pagină web în loc de video. Alege alt flux.</string>
+    <string name="error_addon_unplayable_file">Linkul acestui supliment a deschis un fișier într-un format pe care Settee nu îl poate reda. Alege alt flux.</string>
+    <string name="playback_pick_another_stream">Alege alt flux</string>
     <string name="error_damaged">Acest videoclip este deteriorat și nu poate fi redat. Problema e la furnizorul tău, așa că încearcă altceva.</string>
     <string name="error_behind_live">Acest canal a rămas prea mult în urma transmisiunii live. Încearcă din nou ca să recuperezi.</string>
     <string name="error_gone">Acest conținut nu mai există la furnizorul tău. Încearcă să reîmprospătezi furnizorul în Setări.</string>
@@ -412,6 +416,7 @@
     <string name="report_question_always_send">Trimite mereu</string>
     <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
     <string name="error_torrents_not_yet">Torrentele nu pot fi redate aici încă. Alege un flux care nu este torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrente</string>
     <string name="settings_addons_torrents_off">Oprite. Torrentele găsite de suplimentele tale apar în listă, dar nu pot fi redate.</string>
     <string name="settings_addons_torrents_on">Pornite. Oricine distribuie un torrent pe care îl redai îți poate vedea adresa de internet.</string>

@@ -262,6 +262,10 @@
     <string name="error_live_ended">此频道已停止。请重试，或选择其他频道。</string>
     <string name="error_timed_out">你的提供商停止了响应。它可能正忙，请稍后重试。</string>
     <string name="error_web_page">你的提供商发送的是网页而不是视频。链接可能已过期，请尝试在“设置”中刷新你的提供商。</string>
+    <string name="error_unplayable_file">你的提供商发送的文件格式 Settee 无法播放，请换个内容试试。</string>
+    <string name="error_addon_web_page">此插件的链接打开的是网页而不是视频。请选择其他流。</string>
+    <string name="error_addon_unplayable_file">此插件的链接打开的文件格式 Settee 无法播放。请选择其他流。</string>
+    <string name="playback_pick_another_stream">选择其他流</string>
     <string name="error_damaged">此视频已损坏，无法播放。这是你的提供商那边的问题，请换个内容试试。</string>
     <string name="error_behind_live">此频道落后直播太多。请重试以追上直播。</string>
     <string name="error_gone">你的提供商已不再提供此内容。请尝试在“设置”中刷新你的提供商。</string>
@@ -410,6 +414,7 @@
     <string name="report_question_always_send">始终发送</string>
     <string name="error_torrents_off">种子已关闭。在设置的附加组件中开启后即可播放这些。</string>
     <string name="error_torrents_not_yet">这里还不能播放种子。请选择不是种子的流。</string>
+    <string name="vod_addon_torrent">种子</string>
     <string name="settings_addons_torrents">种子</string>
     <string name="settings_addons_torrents_off">已关闭。插件找到的种子会列出，但无法播放。</string>
     <string name="settings_addons_torrents_on">已开启。分享你所播放种子的所有人都能看到你的网络地址。</string>

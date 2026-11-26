@@ -264,6 +264,10 @@
     <string name="error_live_ended">Cette chaîne s\'est arrêtée. Réessayez, ou choisissez une autre chaîne.</string>
     <string name="error_timed_out">Votre fournisseur ne répond plus. Il est peut-être surchargé, alors réessayez dans un instant.</string>
     <string name="error_web_page">Votre fournisseur a envoyé une page web au lieu d\'une vidéo. Le lien a peut-être expiré, alors essayez d\'actualiser votre fournisseur dans les Paramètres.</string>
+    <string name="error_unplayable_file">Votre fournisseur a envoyé un fichier dans un format que Settee ne peut pas lire, alors choisissez autre chose.</string>
+    <string name="error_addon_web_page">Le lien de cette extension a ouvert une page web au lieu d\'une vidéo. Choisissez un autre flux.</string>
+    <string name="error_addon_unplayable_file">Le lien de cette extension a ouvert un fichier dans un format que Settee ne peut pas lire. Choisissez un autre flux.</string>
+    <string name="playback_pick_another_stream">Choisir un autre flux</string>
     <string name="error_damaged">Cette vidéo est endommagée et ne peut pas être lue. Cela vient de votre fournisseur, alors choisissez autre chose.</string>
     <string name="error_behind_live">Cette chaîne a pris trop de retard sur le direct. Réessayez pour la rattraper.</string>
     <string name="error_gone">Ce contenu n\'est plus disponible chez votre fournisseur. Essayez d\'actualiser votre fournisseur dans les Paramètres.</string>
@@ -412,6 +416,7 @@
     <string name="report_question_always_send">Toujours envoyer</string>
     <string name="error_torrents_off">Les torrents sont désactivés. Activez-les dans Paramètres, Modules, pour les lire.</string>
     <string name="error_torrents_not_yet">Les torrents ne peuvent pas encore être lus ici. Choisissez un flux qui n\'est pas un torrent.</string>
+    <string name="vod_addon_torrent">Torrent</string>
     <string name="settings_addons_torrents">Torrents</string>
     <string name="settings_addons_torrents_off">Désactivés. Les torrents trouvés par vos extensions s\'affichent, mais ne se lisent pas.</string>
     <string name="settings_addons_torrents_on">Activés. Toute personne qui partage un torrent que vous lisez peut voir votre adresse internet.</string>

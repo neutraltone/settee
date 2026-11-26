@@ -265,6 +265,10 @@
     <string name="error_live_ended">Канал зупинився. Спробуйте ще раз або виберіть інший канал.</string>
     <string name="error_timed_out">Провайдер перестав відповідати. Можливо, він перевантажений, тож спробуйте ще раз трохи згодом.</string>
     <string name="error_web_page">Провайдер надіслав вебсторінку замість відео. Можливо, посилання застаріло, тож спробуйте оновити провайдера в налаштуваннях.</string>
+    <string name="error_unplayable_file">Провайдер надіслав файл у форматі, який Settee не може відтворити, тож виберіть щось інше.</string>
+    <string name="error_addon_web_page">Посилання цього додатка відкрило вебсторінку замість відео. Виберіть інший потік.</string>
+    <string name="error_addon_unplayable_file">Посилання цього додатка відкрило файл у форматі, який Settee не може відтворити. Виберіть інший потік.</string>
+    <string name="playback_pick_another_stream">Вибрати інший потік</string>
     <string name="error_damaged">Це відео пошкоджене і не відтворюється. Проблема на боці провайдера, тож виберіть щось інше.</string>
     <string name="error_behind_live">Канал надто відстав від прямого ефіру. Спробуйте ще раз, щоб наздогнати його.</string>
     <string name="error_gone">Цього більше немає у вашого провайдера. Спробуйте оновити провайдера в налаштуваннях.</string>
@@ -413,6 +417,7 @@
     <string name="report_question_always_send">Завжди надсилати</string>
     <string name="error_torrents_off">Торенти вимкнено. Увімкніть їх у Налаштування, Доповнення, щоб відтворити.</string>
     <string name="error_torrents_not_yet">Торенти тут поки не відтворюються. Виберіть потік, який не є торентом.</string>
+    <string name="vod_addon_torrent">Торент</string>
     <string name="settings_addons_torrents">Торенти</string>
     <string name="settings_addons_torrents_off">Вимкнено. Торенти, які знаходять ваші додатки, показуються в списку, але не відтворюються.</string>
     <string name="settings_addons_torrents_on">Увімкнено. Усі, хто роздає торент, який ви дивитеся, бачать вашу інтернет-адресу.</string>
