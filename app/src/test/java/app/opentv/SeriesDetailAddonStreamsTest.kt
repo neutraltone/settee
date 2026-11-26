@@ -11,12 +11,11 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -139,8 +138,8 @@ class SeriesDetailAddonStreamsTest {
 
         askAddonsForEpisodeThree()
 
-        compose.onNode(hasContentDescription("Torrent") and hasText("Episode 3 2160p")).assertIsDisplayed()
-        compose.onAllNodesWithContentDescription("Torrent").assertCountEquals(1)
+        compose.onNode(hasText("Torrent") and hasText("Episode 3 2160p")).assertIsDisplayed()
+        compose.onAllNodesWithText("Torrent").assertCountEquals(1)
         captureScreen("series_detail_addon_picker_torrent")
     }
 
