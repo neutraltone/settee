@@ -23,6 +23,7 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.RankedStream
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.ui.design.ERROR_DETAIL_TAG
@@ -56,7 +57,8 @@ class SeriesDetailAddonStreamsTest {
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private val episodes = (1..5).map { testEpisode(1, it) }
+    private var episodes = (1..5).map { testEpisode(1, it) }
+    private val opened = mutableListOf<MediaKey>()
 
     private fun ranked(url: String, title: String, addon: String, label: String) =
         RankedStream(StremioStream(StreamLink.Direct(url), title, addon), 0, label, null, playable = true)
@@ -80,7 +82,7 @@ class SeriesDetailAddonStreamsTest {
                     mainAction = SeriesMainAction.Play(episodes.first()),
                     status = null,
                     favourite = false,
-                    onPlayEpisode = {},
+                    onPlayEpisode = { opened += it },
                     onSetFavourite = {},
                     onOpenPerson = {},
                     findAddonStreams = if (addons) {
@@ -128,6 +130,19 @@ class SeriesDetailAddonStreamsTest {
 
         compose.onNodeWithText("Mark watched").assertIsDisplayed()
         compose.onNodeWithText("Add-on sources").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a Provider's episode with no stream address of its own opens the player on OK, not the add-on picker`() {
+        episodes = episodes.map { it.copy(streamUrl = "") }
+        show()
+
+        compose.episodeRow(1, 3).requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.settleShowPage()
+
+        assertThat(opened).containsExactly(MediaKey.Episode(episodes[2].id))
+        assertThat(askedFor).isEmpty()
+        compose.onNodeWithText("Choose a stream").assertDoesNotExist()
     }
 
     @Test

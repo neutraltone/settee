@@ -6,11 +6,15 @@
 package app.opentv
 
 import app.opentv.data.model.Episode
+import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamLink
 import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.vod.VodPlayerViewModel
+import app.opentv.ui.vod.chooseVersion
 import app.opentv.ui.vod.playAddonStream
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -98,6 +102,118 @@ class VodPlayerAddonTitlesTest {
         assertThat(playback.stopped).isTrue()
     }
 
+    @Test
+    fun `a film watched through an add-on resumes where it stopped once the Provider carries it too`() = testing {
+        val kept = graph.addonTitles.keepFilm(FILM)
+        graph.viewerLibrary.recordProgress("movie:${kept.id}", positionMillis = FORTY_PERCENT, EPISODE_MILLIS)
+        val carried = providerCopyOfFilm()
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+
+        // As its Continue Watching card, and the page's Resume, open it.
+        vm.attach(MediaKey.Movie(kept.id), playback)
+
+        assertThat(playback.played).containsExactly(MediaKey.Movie(carried.id) to FORTY_PERCENT)
+        assertThat(vm.addonPick.value).isNull()
+    }
+
+    @Test
+    fun `the add-on copy of a film the Provider carries stays a Version to choose, through the picker`() = testing {
+        val kept = graph.addonTitles.keepFilm(FILM)
+        val carried = providerCopyOfFilm()
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+        vm.attach(MediaKey.Movie(carried.id), playback)
+
+        assertThat(vm.qualityChoices.value.map { it.key }).contains(MediaKey.Movie(kept.id))
+        vm.chooseVersion(MediaKey.Movie(kept.id))
+
+        assertThat(vm.addonPick.value).isEqualTo(MediaKey.Movie(kept.id))
+    }
+
+    @Test
+    fun `an episode watched through an add-on resumes where it stopped on the Provider's copy of the show`() = testing {
+        val (pilot, _) = keptEpisodes()
+        graph.viewerLibrary.recordProgress(pilot.key.stored, positionMillis = FORTY_PERCENT, EPISODE_MILLIS)
+        val carriedPilot = providerCopyOfShow()
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+
+        vm.attach(pilot.key, playback)
+
+        assertThat(playback.played).containsExactly(carriedPilot.key to FORTY_PERCENT)
+    }
+
+    @Test
+    fun `a Provider's episode with no stream address of its own plays, rather than asking add-ons`() = testing {
+        val pilot = providerCopyOfShow().copy(streamUrl = "")
+        graph.database.episodes().upsertAll(listOf(pilot))
+        val vm = testGraph.track(VodPlayerViewModel(app, graph))
+
+        vm.attach(pilot.key, playback)
+
+        assertThat(vm.addonPick.value).isNull()
+        assertThat(playback.played.map { it.first }).containsExactly(pilot.key)
+    }
+
+    /** The Provider's own copy of [FILM], grouped with the kept one as one title (ADR 0007). */
+    private suspend fun providerCopyOfFilm(): Movie {
+        graph.database.sources().insert(PROVIDER)
+        graph.database.movies().upsertAll(
+            listOf(
+                Movie(
+                    sourceId = PROVIDER.id,
+                    streamId = "1",
+                    name = "EN - Lost Film",
+                    categoryId = null,
+                    posterUrl = null,
+                    rating = null,
+                    year = 1999,
+                    plot = null,
+                    durationSeconds = null,
+                    containerExtension = "mp4",
+                    streamUrl = "http://example.com/movie/u/p/1.mp4",
+                    tmdbId = FILM.tmdbId,
+                ),
+            ),
+        )
+        return checkNotNull(graph.database.movies().byProviderId(PROVIDER.id, "1"))
+    }
+
+    /** The Provider's own copy of [SHOW], with its pilot, grouped with the kept one; its pilot is returned. */
+    private suspend fun providerCopyOfShow(): Episode {
+        graph.database.sources().insert(PROVIDER)
+        graph.database.series().upsertAll(
+            listOf(
+                Series(
+                    sourceId = PROVIDER.id,
+                    seriesId = "7",
+                    name = "EN - Lost Show",
+                    categoryId = null,
+                    posterUrl = null,
+                    rating = null,
+                    year = 2010,
+                    plot = null,
+                    tmdbId = SHOW.tmdbId,
+                ),
+            ),
+        )
+        graph.database.episodes().upsertAll(
+            listOf(
+                Episode(
+                    sourceId = PROVIDER.id,
+                    seriesId = "7",
+                    episodeId = "70",
+                    season = 1,
+                    episodeNumber = 1,
+                    title = "Pilot",
+                    plot = null,
+                    durationSeconds = 2_400,
+                    stillUrl = null,
+                    streamUrl = "http://example.com/series/u/p/70.mp4",
+                ),
+            ),
+        )
+        return graph.database.episodes().forSeries(PROVIDER.id, "7").single()
+    }
+
     private suspend fun keptEpisodes(): Pair<Episode, Episode> {
         val show: Series = graph.addonTitles.keepShow(SHOW)
         graph.database.episodes().upsertAll(
@@ -122,6 +238,9 @@ class VodPlayerAddonTitlesTest {
 
     private companion object {
         const val STREAM = "https://example.com/stream.mkv"
+        const val FORTY_PERCENT = EPISODE_MILLIS * 2 / 5
+
+        val PROVIDER = Source(id = 50, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com")
 
         val FILM = AddonTitle(
             tmdbId = "101",

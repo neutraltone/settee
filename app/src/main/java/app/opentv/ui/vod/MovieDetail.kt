@@ -162,7 +162,7 @@ fun MovieDetailScreen(
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
  * Profile's Favourites have loaded, and the toggle does nothing till then. When what Play stands for is a
- * film kept from an add-on ([PageVersions.playsThroughAddons]), Play opens that picker instead, and is
+ * film kept from an add-on ([PageVersions.playOpensPicker]), Play opens that picker instead, and is
  * off with no add-on set up. [versions] adds the Quality
  * pill when the film's Versions differ, whose choice goes to [onChooseVersion]; Play asks first when only
  * another language plays, and is off, saying why, when nothing does.
@@ -191,8 +191,8 @@ internal fun MovieDetailContent(
     val scope = rememberCoroutineScope()
     val picker = rememberAddonPickerState(movie.id)
     // A film kept from an add-on plays only through the picker, so with no add-on left it can't play.
-    val throughPicker = findAddonStreams.takeIf { versions.playsThroughAddons }
-    val plays = versions.plays && (!versions.playsThroughAddons || throughPicker != null)
+    val throughPicker = findAddonStreams.takeIf { versions.playOpensPicker }
+    val plays = versions.plays && (!versions.playOpensPicker || throughPicker != null)
 
     FirstHighlight(movie, spot, similar, likeThisRow, playFocus)
 
@@ -221,7 +221,7 @@ internal fun MovieDetailContent(
                         ),
                         onQuality = { choosingQuality = true },
                         // Play is already this film's way to the picker when it's kept from an add-on.
-                        onAddonSources = findAddonStreams?.takeUnless { versions.playsThroughAddons }
+                        onAddonSources = findAddonStreams?.takeUnless { versions.playOpensPicker }
                             ?.let { find -> { picker.ask(find) } },
                         playFocus = playFocus,
                         spot = spot,

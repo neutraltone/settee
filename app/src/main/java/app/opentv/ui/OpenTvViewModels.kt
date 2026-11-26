@@ -57,8 +57,8 @@ import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
+import app.opentv.data.repo.addonsSourceId
 import app.opentv.data.repo.coverStatuses
-import app.opentv.data.repo.keptFromAddons
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.sameTmdbTitle
@@ -1437,7 +1437,7 @@ class VodViewModel @JvmOverloads constructor(
             // come a moment later and would have the page say there are none just before they show.
             val none = showEpisodes(series).first().all.isEmpty()
             // A show kept from an add-on asks TMDB, not a Provider: no sentence may blame "your provider".
-            val fromAddons = graph.sourceRepository.byId(series.sourceId)?.kind == SourceKind.ADDONS
+            val fromAddons = graph.database.sources().addonsSourceId().keeps(series.sourceId)
             val failure = when {
                 !none -> null
                 timedOut -> episodesFailure(listOf(Result.failure(SocketTimeoutException())), fromAddons)
@@ -1488,12 +1488,13 @@ class VodViewModel @JvmOverloads constructor(
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow {
-        emit(graph.database.versionsOf(series, graph.titleIndex.versionIds))
+        val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds)
+        emit(versions to graph.database.sources().addonsSourceId())
     }
-        .flatMapLatest { versions ->
+        .flatMapLatest { (versions, addons) ->
             val ordered = listOf(series) + versions.filter { it.id != series.id }
             combine(ordered.map { graph.catalogRepository.observeEpisodes(it.sourceId, it.seriesId) }) { lists ->
-                ShowEpisodes.of(lists.first(), lists.drop(1))
+                ShowEpisodes.of(lists.first(), lists.drop(1), addons)
             }
         }
 
@@ -1562,17 +1563,16 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun pageVersions(key: MediaKey): PageVersions {
         val (plan, choices) = graph.vodQualities.pageFor(key)
         val start = plan.start.key
-        val fromAddons = start is MediaKey.Movie &&
-            graph.catalogRepository.movie(start.movieId)?.let { graph.database.sources().keptFromAddons(it) } == true
-        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders)).copy(playsThroughAddons = fromAddons)
+        val opensPicker = start is MediaKey.Movie && graph.addonTitles.keptFromAddons(start)
+        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders)).copy(playOpensPicker = opensPicker)
     }
 
     /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */
     suspend fun chooseVersion(version: MediaKey) = graph.vodQualities.choose(version)
 
     suspend fun resumesPartway(movie: Movie): Boolean {
-        val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
-        return graph.viewerLibrary.resumeFrom(playing.stored) > 0
+        val plan = graph.vodQualities.planFor(MediaKey.Movie(movie.id))
+        return graph.viewerLibrary.resumeFrom(*plan.resumeKeys.toTypedArray()) > 0
     }
 
     /**

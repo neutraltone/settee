@@ -21,9 +21,14 @@ fun showEpisodes(opened: List<Episode>, others: List<List<Episode>>): List<Episo
 /**
  * A show's episodes for its page: [shown], one row per episode across its Versions ([showEpisodes]), and
  * [all] of every Version, which its main button and status read, so an episode Watched in one Version
- * moves Up Next on in all of them.
+ * moves Up Next on in all of them. [addons] says which were kept from an add-on, so OK on one opens the
+ * add-on picker: Versions are listed together, so the rows of one page can come from both.
  */
-data class ShowEpisodes(val shown: List<Episode> = emptyList(), val all: List<Episode> = emptyList()) {
+data class ShowEpisodes(
+    val shown: List<Episode> = emptyList(),
+    val all: List<Episode> = emptyList(),
+    val addons: AddonsSourceId = AddonsSourceId(null),
+) {
     /** [statuses] as the page shows them: an episode is Watched when any other Version of it is. */
     fun statusesFrom(statuses: EpisodeStatuses): EpisodeStatuses {
         val bySeasonAndNumber = all.groupBy { it.season to it.episodeNumber }
@@ -48,7 +53,7 @@ data class ShowEpisodes(val shown: List<Episode> = emptyList(), val all: List<Ep
         ?: episode
 
     companion object {
-        fun of(opened: List<Episode>, others: List<List<Episode>>) =
-            ShowEpisodes(showEpisodes(opened, others), opened + others.flatten())
+        fun of(opened: List<Episode>, others: List<List<Episode>>, addons: AddonsSourceId = AddonsSourceId(null)) =
+            ShowEpisodes(showEpisodes(opened, others), opened + others.flatten(), addons)
     }
 }

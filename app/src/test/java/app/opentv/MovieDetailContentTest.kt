@@ -397,7 +397,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `a film kept from an add-on plays through the picker, with no button of its own for it`() {
-        versions = PageVersions(playsThroughAddons = true)
+        versions = PageVersions(playOpensPicker = true)
         show(movie = film.copy(streamUrl = ""), addons = true)
 
         compose.onNodeWithText("Play").assertIsFocused()
@@ -411,7 +411,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `with no add-on left, a film kept from one can't be played`() {
-        versions = PageVersions(playsThroughAddons = true)
+        versions = PageVersions(playOpensPicker = true)
         show(movie = film.copy(streamUrl = ""), addons = false)
 
         compose.onNodeWithText("Play").assertIsNotEnabled()
@@ -597,17 +597,18 @@ class MovieDetailContentTest {
     private fun choice(id: Long, traits: VersionTraits, playable: Boolean = true, playing: Boolean = false) =
         VodQualities.Choice(MediaKey.Movie(id), traits, playable, playing)
 
-    private val threeVersions = PageVersions(
+    private val fourVersions = PageVersions(
         choices = listOf(
             choice(1, VersionTraits(qualityRank = 400, qualityLabel = "4K"), playable = false),
             choice(2, VersionTraits(qualityRank = 200, qualityLabel = "HD", language = "de")),
             choice(3, VersionTraits(), playing = true),
+            choice(4, VersionTraits(fromAddons = true)),
         ),
     )
 
     @Test
     fun `the Quality pill lists the Versions that differ, greying out what this TV can't play`() {
-        showWith(threeVersions)
+        showWith(fourVersions)
 
         compose.onNodeWithText("Quality").performClick()
         settle()
@@ -615,12 +616,14 @@ class MovieDetailContentTest {
         compose.onNodeWithText("4K").assertIsNotEnabled()
         compose.onNodeWithText("HD · German").assertIsEnabled()
         compose.onNodeWithText("Other").assertIsSelected()
+        // The copy kept from an add-on, named for where it comes from.
+        compose.onNodeWithText("Add-ons").assertIsEnabled()
         captureScreen("movie_detail_quality_pill")
     }
 
     @Test
     fun `choosing in the Quality pill chooses that Version`() {
-        showWith(threeVersions)
+        showWith(fourVersions)
 
         compose.onNodeWithText("Quality").performClick()
         settle()

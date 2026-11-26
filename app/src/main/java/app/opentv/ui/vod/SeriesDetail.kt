@@ -61,12 +61,12 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.AddonsSourceId
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
-import app.opentv.data.repo.playsThroughAddons
 import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
@@ -117,6 +117,7 @@ internal fun SeriesDetailContent(
     episodeFetch: EpisodeFetch = EpisodeFetch(),
     findAddonStreams: ((Episode) -> Flow<AddonSearch>)? = null,
     onPlayAddonStream: (Episode, StremioStream) -> Unit = { _, _ -> },
+    keptFromAddons: AddonsSourceId = AddonsSourceId(null),
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -127,7 +128,7 @@ internal fun SeriesDetailContent(
     // An episode of a show kept from an add-on has no stream of its own: it plays through the add-on
     // picker, and can't without add-ons (ADR 0011).
     val addons = rememberEpisodeAddons(series.id, findAddonStreams)
-    val play: (MediaKey) -> Unit = addons.playing(episodes) { key ->
+    val play: (MediaKey) -> Unit = addons.playing(episodes, keptFromAddons) { key ->
         when {
             !versions.plays -> Unit
             versions.otherLanguage != null -> askingFor = key
@@ -209,7 +210,9 @@ internal fun SeriesDetailContent(
                 if (shown.selected == null && episodeFetch.noEpisodes) {
                     NoEpisodes(nav, episodeFetch)
                 } else {
-                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions, addons.ask)
+                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions) { episode ->
+                        addons.ask.takeUnless { keptFromAddons.keeps(episode.sourceId) }
+                    }
                 }
             }
         }
@@ -433,7 +436,7 @@ private fun EpisodeList(
     episodeList: LazyListState,
     onPlayEpisode: (MediaKey) -> Unit,
     suggestions: List<TitleCover>,
-    onAddonSources: ((Episode) -> Unit)?,
+    addonSourcesFor: (Episode) -> ((Episode) -> Unit)?,
 ) {
     val season = shown.selected
     // A one-season show's wait for its suggestions too, rather than be pushed down a row when More like
@@ -467,7 +470,7 @@ private fun EpisodeList(
                 seriesArt = listOfNotNull(series.backdropUrl, series.posterUrl),
                 onPlay = onPlayEpisode,
                 // Not offered again in its options where OK already opens the picker.
-                onAddonSources = onAddonSources?.takeUnless { ep.playsThroughAddons }?.let { ask -> { ask(ep) } },
+                onAddonSources = addonSourcesFor(ep)?.let { ask -> { ask(ep) } },
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
                     .returnSpot(spot, PageSpot.Episode(ep.id))

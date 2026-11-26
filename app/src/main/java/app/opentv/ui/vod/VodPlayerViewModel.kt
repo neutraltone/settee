@@ -15,6 +15,7 @@ import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
+import app.opentv.data.repo.awaitingPick
 import app.opentv.player.CuePlacement
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
@@ -327,10 +328,10 @@ class VodPlayerViewModel(
 
         fetchingNext?.cancel()
         val planned = if (alreadyPlaying) null else graph.playRequestFor(opened, fromMillis)
-        val key = planned?.first?.key ?: opened
+        val key = planned?.request?.key ?: opened
         // Whatever opened it (Continue Watching, the Next Episode card, Play from start), a title kept
         // from an add-on has nothing to play until the viewer picks one of its add-on streams.
-        val pick = graph.addonPickFor(planned)
+        val pick = graph.addonTitles.awaitingPick(planned?.request?.key)
         // Nothing suspends between here and play: a poll in between would see the last stream's step
         // down, take it for news and undo this. So what to play is read above, before anything moves.
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
@@ -338,7 +339,7 @@ class VodPlayerViewModel(
         lastSeen = null
         skips.clear()
         _addonPick.value = pick
-        pickFrom = fromMillis
+        pickFrom = planned.pickStart(fromMillis)
         planned?.let { requestedFrom = fromMillis }
         playback?.playOrWait(planned, waits = pick != null)
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
@@ -450,22 +451,22 @@ suspend fun VodPlayerViewModel.chooseVersion(version: MediaKey) {
  * What to play for [opened], and what the Quality it's in place of is called, if it is. Each Quality starts
  * from [fromMillis] or else its own resume point.
  */
-private suspend fun ServiceLocator.Graph.playRequestFor(
-    opened: MediaKey,
-    fromMillis: Long?,
-): Pair<PlayerController.Request, String?> {
+private suspend fun ServiceLocator.Graph.playRequestFor(opened: MediaKey, fromMillis: Long?): PlannedPlay {
     val plan = vodQualities.planFor(opened)
     val request = PlayerController.Request(
         key = plan.start.key,
-        startPositionMillis = fromMillis ?: viewerLibrary.resumeFrom(plan.start.key.stored),
+        startPositionMillis = fromMillis ?: viewerLibrary.resumeFrom(*plan.resumeKeys.toTypedArray()),
         label = plan.start.label,
         lower = plan.lower.map {
             PlayerController.Quality(it.key, it.label, fromMillis ?: viewerLibrary.resumeFrom(it.key.stored))
         },
         stepsForSound = true,
     )
-    return request to plan.skipped
+    return PlannedPlay(request, plan.skipped)
 }
+
+/** What the player is to play, and what the Quality it's in place of is called, if it is. */
+internal data class PlannedPlay(val request: PlayerController.Request, val skipped: String?)
 
 /**
  * The episode [this] plays: an add-on's stream of one counts as the episode, so its Next Episode card and

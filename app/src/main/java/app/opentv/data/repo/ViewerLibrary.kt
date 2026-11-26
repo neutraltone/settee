@@ -229,9 +229,13 @@ class ViewerLibrary(
         return true
     }
 
-    /** Where to start [mediaKey] for the active Profile: where they stopped, or 0 if Watched or never played. */
-    suspend fun resumeFrom(mediaKey: String): Long {
-        val pos = positions.get(activeProfileId.value, mediaKey) ?: return 0
+    /**
+     * Where to start [mediaKeys] for the active Profile: where they stopped, or 0 if Watched or never
+     * played. Given several copies of one title, it goes by whichever was played most recently.
+     */
+    suspend fun resumeFrom(vararg mediaKeys: String): Long {
+        val pos = mediaKeys.mapNotNull { positions.get(activeProfileId.value, it) }
+            .maxByOrNull { it.updatedAtMillis } ?: return 0
         return if (statusOf(pos) is WatchStatus.InProgress) pos.positionMillis.coerceAtLeast(0) else 0
     }
 

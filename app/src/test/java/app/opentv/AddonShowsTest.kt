@@ -49,7 +49,13 @@ class AddonShowsTest {
     @Test
     fun `with an add-on, search finds shows with an IMDb id as well as films`(): Unit = runBlocking {
         graph.settings.addStremioAddon(
-            StremioAddon("https://example.com/manifest.json", "Example", listOf("stream"), listOf("movie", "series")),
+            StremioAddon(
+                "https://example.com/manifest.json",
+                "Example",
+                listOf("stream"),
+                listOf("movie", "series"),
+                listOf("movie", "series"),
+            ),
         )
 
         val found = graph.addonTitles.search("lost")

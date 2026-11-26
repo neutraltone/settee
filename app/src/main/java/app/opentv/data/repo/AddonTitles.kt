@@ -82,7 +82,7 @@ class AddonTitles(
         val wanted = hits.filter { it.tmdbId !in (if (it.isMovie) storedFilms else storedShows) }
         // Side by side: one request per title, and the viewer is waiting on the slowest.
         return coroutineScope {
-            wanted.map { hit -> async(dispatchers.io) { imdbIdOf(hit)?.let { hit.toTitle(it) } } }.awaitAll()
+            wanted.map { hit -> async(dispatchers.io) { tmdb.imdbIdOf(hit)?.let { hit.toTitle(it) } } }.awaitAll()
         }.filterNotNull()
     }
 
@@ -148,8 +148,20 @@ class AddonTitles(
      * guessing, and a failure when TMDB didn't answer.
      */
     suspend fun imdbIdOf(movie: Movie): Result<String?> = withContext(dispatchers.io) {
-        if (db.sources().keptFromAddons(movie)) return@withContext Result.success(movie.streamId)
+        if (db.sources().addonsSourceId().keeps(movie.sourceId)) return@withContext Result.success(movie.streamId)
         tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
+    }
+
+    /**
+     * Whether [title] was kept from an add-on ([AddonsSourceId]), so has no stream of its own and plays
+     * only through the add-on picker. False for a title that's gone.
+     */
+    suspend fun keptFromAddons(title: MediaKey.Title): Boolean = withContext(dispatchers.io) {
+        val sourceId = when (title) {
+            is MediaKey.Movie -> db.movies().byId(title.movieId)?.sourceId
+            is MediaKey.Episode -> db.episodes().byId(title.episodeId)?.sourceId
+        }
+        sourceId != null && db.sources().addonsSourceId().keeps(sourceId)
     }
 
     /**
@@ -168,9 +180,6 @@ class AddonTitles(
         val id = db.sources().insert(Source(name = Source.ADDONS_NAME, kind = SourceKind.ADDONS, url = ""))
         checkNotNull(db.sources().byId(id))
     }
-
-    private fun imdbIdOf(hit: TmdbHit): String? =
-        tmdb.imdbId(hit.name, hit.year, isMovie = hit.isMovie, tmdbId = hit.tmdbId).getOrNull()
 
     private companion object {
         /** A screen's worth: each costs a request for its IMDb id. */
@@ -229,6 +238,9 @@ private const val SECONDS_PER_MINUTE = 60
 private suspend fun List<TmdbHit>.storedBy(picks: suspend (List<String>) -> List<TitlePick>): Set<String> =
     if (isEmpty()) emptySet() else picks(map { it.tmdbId }).mapNotNullTo(HashSet()) { it.tmdbId }
 
+private fun TmdbClient.imdbIdOf(hit: TmdbHit): String? =
+    imdbId(hit.name, hit.year, isMovie = hit.isMovie, tmdbId = hit.tmdbId).getOrNull()
+
 private fun TmdbHit.toTitle(imdbId: String) =
     AddonTitle(tmdbId, imdbId, name, year, posterUrl, backdropUrl, overview, isMovie)
 
@@ -263,11 +275,24 @@ private fun AddonTitle.toSeries(sourceId: Long) = Series(
     tmdbId = tmdbId,
 )
 
-/** Whether [movie] was kept from an add-on: it has no stream of its own, and plays through the add-on picker. */
-suspend fun SourceDao.keptFromAddons(movie: Movie): Boolean = addons()?.id == movie.sourceId
+/**
+ * The built-in Add-ons source's row id, null before any title has been kept from an add-on: the one test of
+ * whether a film, show or episode was kept from an add-on, so has no stream of its own and plays only
+ * through the add-on picker (ADR 0011). By source rather than by an empty stream URL, which a Provider's
+ * row can have too, and which must never open the picker.
+ */
+@JvmInline
+value class AddonsSourceId(private val id: Long?) {
+    /** Whether a row of the source [sourceId] was kept from an add-on. */
+    fun keeps(sourceId: Long): Boolean = id != null && id == sourceId
+}
+
+/** See [AddonsSourceId]. */
+suspend fun SourceDao.addonsSourceId(): AddonsSourceId = AddonsSourceId(addons()?.id)
 
 /**
- * Whether this episode is one of a show kept from an add-on: those alone have no stream URL of their own
- * (ADR 0011), so OK on one opens the add-on stream picker rather than the player.
+ * What the player waits on the viewer picking an add-on stream for, when it's to play [key]: the title,
+ * when it was kept from an add-on. Null for anything else, and for nothing to be played anew.
  */
-val Episode.playsThroughAddons: Boolean get() = streamUrl.isEmpty()
+suspend fun AddonTitles.awaitingPick(key: MediaKey?): MediaKey.Title? =
+    (key as? MediaKey.Title)?.takeIf { keptFromAddons(it) }

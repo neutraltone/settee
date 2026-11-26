@@ -154,6 +154,7 @@ private fun ShowPage(
                 onPlayEpisode(MediaKey.AddonStream(MediaKey.Episode(episode.id), it.url, it.headers))
             }
         },
+        keptFromAddons = show.addons,
     )
 }
 

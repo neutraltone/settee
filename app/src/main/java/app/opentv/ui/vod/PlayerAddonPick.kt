@@ -11,12 +11,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import app.opentv.core.ServiceLocator
 import app.opentv.data.model.StreamLink
 import app.opentv.data.repo.MediaKey
-import app.opentv.data.repo.keptFromAddons
-import app.opentv.data.repo.playsThroughAddons
-import app.opentv.player.PlayerController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
@@ -51,27 +47,15 @@ suspend fun VodPlayerViewModel.playAddonStream(link: StreamLink.Direct) {
 fun VodPlayerViewModel.addonStreams(title: MediaKey.Title): Flow<AddonSearch> = addonSearches.forTitle(title)
 
 /**
- * The title [planned] would play, when it was kept from an add-on: it has no stream of its own, so the
- * player waits on the viewer picking one of its add-on streams instead. Null for anything else, and when
- * nothing is to be played anew.
- */
-internal suspend fun ServiceLocator.Graph.addonPickFor(
-    planned: Pair<PlayerController.Request, String?>?,
-): MediaKey.Title? = (planned?.first?.key as? MediaKey.Title)?.takeIf { playsThroughAddons(it) }
-
-/**
  * Plays [planned], or, while the player [waits] on an add-on stream being picked, stops whatever was
  * playing: the last episode's stream, if there was one, has nothing more to give behind the picker.
  */
-internal fun VodPlayerViewModel.Playback.playOrWait(
-    planned: Pair<PlayerController.Request, String?>?,
-    waits: Boolean,
-) {
-    if (waits) stop() else planned?.let { (request, skipped) -> play(request, skipped) }
+internal fun VodPlayerViewModel.Playback.playOrWait(planned: PlannedPlay?, waits: Boolean) {
+    if (waits) stop() else planned?.let { play(it.request, it.skipped) }
 }
 
-/** Whether [title] was kept from an add-on, so has no stream of its own and plays only through the picker. */
-private suspend fun ServiceLocator.Graph.playsThroughAddons(title: MediaKey.Title): Boolean = when (title) {
-    is MediaKey.Movie -> catalogRepository.movie(title.movieId)?.let { database.sources().keptFromAddons(it) } == true
-    is MediaKey.Episode -> catalogRepository.episode(title.episodeId)?.playsThroughAddons == true
-}
+/**
+ * Where a stream picked for the title is to start: [fromMillis], else where the title as a whole had got
+ * to, whichever of its Versions got it there.
+ */
+internal fun PlannedPlay?.pickStart(fromMillis: Long?): Long? = fromMillis ?: this?.request?.startPositionMillis
