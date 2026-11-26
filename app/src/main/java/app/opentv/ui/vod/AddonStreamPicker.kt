@@ -8,15 +8,19 @@ package app.opentv.ui.vod
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -26,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -42,6 +47,7 @@ import app.opentv.data.repo.RankedStream
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -241,23 +247,34 @@ private fun StreamList(streams: List<RankedStream>, onPick: (RankedStream) -> Un
                     .then(if (index == firstPickable) Modifier.focusRequester(first) else Modifier)
                     .onFocusChanged { if (it.isFocused && index != firstPickable) moved = true },
             ) { highlighted ->
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    Text(
-                        stream.stream.title,
-                        style = SetteeType.RowTitle,
-                        color = when {
-                            highlighted -> SetteeColors.OnAccent
-                            stream.pickable -> SetteeColors.Text
-                            else -> SetteeColors.QuietText
-                        },
-                        maxLines = 2,
-                    )
-                    Text(
-                        streamLabel(stream, sharersText(stream.sharers)),
-                        style = SetteeType.Body,
-                        color = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText,
-                        maxLines = 1,
-                    )
+                val titleColour = when {
+                    highlighted -> SetteeColors.OnAccent
+                    stream.pickable -> SetteeColors.Text
+                    else -> SetteeColors.QuietText
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    // Torrents are told apart at a glance, before their greyed title is even read.
+                    if (stream.stream.link is StreamLink.Torrent) {
+                        Icon(
+                            Icons.Filled.Hub,
+                            contentDescription = stringResource(R.string.vod_addon_torrent),
+                            tint = titleColour,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Column {
+                        Text(stream.stream.title, style = SetteeType.RowTitle, color = titleColour, maxLines = 2)
+                        Text(
+                            streamLabel(stream, sharersText(stream.sharers)),
+                            style = SetteeType.Body,
+                            color = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
