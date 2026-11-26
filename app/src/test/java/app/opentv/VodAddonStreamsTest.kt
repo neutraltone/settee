@@ -102,7 +102,7 @@ class VodAddonStreamsTest {
 
     /** What the picker ends up showing for season 2 episode 5 of [series]. */
     private suspend fun search(series: Series): AddonSearch = withTimeout(10_000) {
-        val episode = testEpisode(2, 5)
+        val episode = testEpisode(2, 5).copy(sourceId = series.sourceId, seriesId = series.seriesId)
         testGraph.viewModel { VodViewModel(app, graph) }.addonStreams(series, episode).last()
     }
 
