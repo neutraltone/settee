@@ -55,6 +55,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import java.text.NumberFormat
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -99,7 +100,10 @@ class AddonPickerState internal constructor(private val scope: CoroutineScope) {
         lookup?.cancel()
         open = true
         search = null
-        lookup = scope.launch { find().collect { search = it } }
+        // Collected on the main thread, where the picker's window composes: on a scope whose dispatcher
+        // doesn't move it back (Compose's test one), each answer was written from the add-on's io thread,
+        // and one landing while the window's first composition read the one before was never redrawn.
+        lookup = scope.launch(Dispatchers.Main.immediate) { find().collect { search = it } }
     }
 
     fun close() {
