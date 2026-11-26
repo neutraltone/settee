@@ -7,7 +7,13 @@ package app.opentv.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +32,7 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.AddonRepository
 import app.opentv.pairing.PairingServer
+import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import kotlinx.coroutines.delay
@@ -35,8 +42,8 @@ import kotlinx.coroutines.launch
  * Adding add-ons from a phone, beside the address window: the QR code for the phone's page, and under
  * it each add-on the phone has added while it's open. The phone sends one address at a time; each is
  * checked and kept as a typed one is (`AddonRepository.add`), so the list behind fills as they come,
- * and the phone hears the add-on's name or why it was refused, in the same words. [onDone] hears Done
- * on the phone; leaving the window stops the server.
+ * and the phone hears the add-on's name or why it was refused, in the same words. [onDone] hears Done,
+ * on the phone or under the code here; leaving the window stops the server.
  */
 @Composable
 internal fun AddonsFromPhone(onDone: () -> Unit) {
@@ -79,24 +86,39 @@ internal fun AddonsFromPhone(onDone: () -> Unit) {
         }
     }
 
-    Column(
-        Modifier.width(QR_PANEL_WIDTH).testTag(ADDONS_FROM_PHONE_TAG),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    Column(Modifier.width(QR_PANEL_WIDTH).fillMaxHeight().testTag(ADDONS_FROM_PHONE_TAG)) {
         PhoneQrPanel(
             codeState,
             onRetry = { server.start(PairingServer.Mode.Addon) },
             wording = graph.errorWording,
             description = stringResource(R.string.addons_phone_qr_desc),
+            // Smaller than the pairing screen's: a TV screen is 540 dp tall, and under the code go Done and
+            // every add-on the phone adds.
+            codeSize = ADDONS_QR_SIZE,
         )
-        // The latest few: there's room for no more under the code, and the list behind has them all.
-        added.takeLast(MAX_LISTED).forEach { name ->
-            Text(stringResource(R.string.addons_added, name), SetteeType.Body, maxLines = 1)
-        }
+        // Above the list rather than under it, so it stays put however many come: Down from Save
+        // finds it in the same place each time.
+        ActionButton(stringResource(R.string.common_done), onClick = onDone)
+        Spacer(Modifier.height(LIST_GAP))
+        AddedList(added, Modifier.weight(1f))
+    }
+}
+
+/**
+ * Every add-on the phone has added, oldest first, in the room left under the code. Its rows take no
+ * Highlight, so it follows the newest rather than wait to be scrolled: the list behind has them all.
+ */
+@Composable
+private fun AddedList(added: List<String>, modifier: Modifier) {
+    val list = rememberLazyListState()
+    LaunchedEffect(added.size) { if (added.isNotEmpty()) list.animateScrollToItem(added.lastIndex) }
+    LazyColumn(modifier, state = list, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        items(added) { name -> Text(stringResource(R.string.addons_added, name), SetteeType.Body, maxLines = 1) }
     }
 }
 
 private const val SERVER_DELAY_MS = 400L
-private const val MAX_LISTED = 3
+private val LIST_GAP = 12.dp
+private val ADDONS_QR_SIZE = 200.dp
 
 const val ADDONS_FROM_PHONE_TAG = "addons_from_phone"

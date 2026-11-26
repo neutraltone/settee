@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -25,6 +26,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.StremioAddon
@@ -44,6 +46,7 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
@@ -61,11 +64,20 @@ class AddonsPaneTest {
 
     private val compose = createComposeRule()
 
-    /** The real network, but for a placeholder add-on at [ADDON_HOST], whose manifest is [FILMS_MANIFEST]. */
+    /**
+     * The real network, but for placeholder add-ons at [ADDON_HOST]: `/shows` is [SHOWS_MANIFEST], `/more<n>`
+     * is "More add-on <n>", and anything else [FILMS_MANIFEST].
+     */
     private val network = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
         if (request.url.host != ADDON_HOST) return@addInterceptor chain.proceed(request)
-        val manifest = if (request.url.encodedPath.startsWith("/shows")) SHOWS_MANIFEST else FILMS_MANIFEST
+        val path = request.url.encodedPath
+        val more = Regex("^/more(\\d+)").find(path)?.groupValues?.get(1)
+        val manifest = when {
+            more != null -> """{"id": "org.example.more$more", "name": "More add-on $more", "resources": ["stream"]}"""
+            path.startsWith("/shows") -> SHOWS_MANIFEST
+            else -> FILMS_MANIFEST
+        }
         Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("OK")
             .body(manifest.toResponseBody("application/json".toMediaType()))
             .build()
@@ -78,6 +90,12 @@ class AddonsPaneTest {
     private val device = DeviceKeyboard(compose) { view }
 
     private val graph get() = testGraph.graph
+
+    // The graph's settings are the process's, which every test here starts from.
+    @After
+    fun forgetAddons() {
+        graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
+    }
 
     private fun show(memory: SettingsMemory) = compose.setTvContent {
         view = LocalView.current
@@ -239,6 +257,41 @@ class AddonsPaneTest {
         compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
         // The graph's settings are the process's, which the other tests here start from.
         graph.settings.stremioAddons.value.forEach { graph.settings.removeStremioAddon(it.manifestUrl) }
+    }
+
+    @Test
+    fun `every add-on sent from the phone is listed under the code, and Done on the TV ends it`() {
+        openAddWindow()
+        val session = phoneSession()
+
+        CoroutineScope(graph.dispatchers.io).launch {
+            fromPhone(session, "/addon", "url" to "$ADDON_HOST/films")
+            fromPhone(session, "/addon", "url" to "$ADDON_HOST/shows")
+            (1..4).forEach { fromPhone(session, "/addon", "url" to "$ADDON_HOST/more$it") }
+        }
+        compose.waitForIdle()
+
+        val inWindow = hasAnyAncestor(isDialog())
+        // The newest in sight, the rest in the list above it rather than dropped.
+        compose.onNode(hasText("Added More add-on 4") and inWindow).assertIsDisplayed()
+        captureScreen("settings_addons_phone_many")
+        val listed = listOf("Films add-on", "Shows add-on") + (1..4).map { "More add-on $it" }
+        listed.forEach {
+            compose.onNode(hasScrollAction() and inWindow).performScrollToNode(hasText("Added $it"))
+            compose.onAllNodes(hasText("Added $it") and inWindow).onFirst().assertIsDisplayed()
+        }
+
+        // Down from the box to Save, and on down to Done, under the code: nothing else is below Save.
+        val window = compose.entryKeyboard()
+        window.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNode(hasText("Save") and isFocused() and inWindow).assertExists()
+        window.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNode(hasText("Done") and isFocused() and inWindow).assertExists()
+        window.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+
+        compose.onNode(isDialog()).assertDoesNotExist()
+        compose.runOnIdle { assertThat(graph.pairingServer.state.value).isEqualTo(PairingServer.State.Idle) }
+        compose.onNodeWithText("More add-on 4").assertExists()
     }
 
     @Test

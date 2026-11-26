@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ErrorWording
@@ -31,9 +32,9 @@ import app.opentv.ui.onboarding.describePairingFailure
 
 /**
  * The QR code for Setup's OpenSubtitles step, laid out as the phone pairing screen before it lays its own:
- * the code, white and 300 dp square, with the address to type under it for a camera that won't scan.
- * Its space is fixed, so nothing moves when the code appears after its server starts, or the server
- * can't start and Try again says why in its place.
+ * the code, white and [codeSize] square (300 dp unless a screen needs the room under it), with the
+ * address to type under it for a camera that won't scan. Its space is fixed, so nothing moves when the
+ * code appears after its server starts, or the server can't start and Try again says why in its place.
  */
 @Composable
 internal fun PhoneQrPanel(
@@ -41,11 +42,12 @@ internal fun PhoneQrPanel(
     onRetry: () -> Unit,
     wording: ErrorWording,
     description: String = stringResource(R.string.opensubtitles_qr_desc),
+    codeSize: Dp = QR_PANEL_WIDTH,
 ) {
-    Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) {
+    Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT - (QR_PANEL_WIDTH - codeSize))) {
         when (phone) {
             is PairingServer.State.Listening -> {
-                PhoneQrCode(phone.session.url, description, QR_PANEL_WIDTH)
+                PhoneQrCode(phone.session.url, description, codeSize)
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.pairing_camera_fail), SetteeType.Body, color = SetteeColors.QuietText)
                 Spacer(Modifier.height(4.dp))
