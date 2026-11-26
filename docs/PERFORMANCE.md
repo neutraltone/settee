@@ -180,6 +180,20 @@ To be filled in by a rerun on the Stick with the method above, after compiling w
 | Highlight response, Home along a row (median) | 27 ms | |
 | Highlight response, guide (median) | 54 ms | |
 
+## Torrent engine
+
+The torrent engine's limits (#669, ADR 0012), in `player/torrent/TorrentEngineConfig.kt`. Today's values are first guesses, not measurements.
+
+| Limit | Provisional | Measured on the Stick |
+|---|---:|---|
+| Memory cap (`memoryCapBytes`: blocks queued for disk, three quarters, and to send, a quarter) | 32 MiB | pending |
+| Piece cache cap (`pieceCacheCapBytes`), also the biggest file that plays | 4 GiB | pending |
+| Space kept free (`keepFreeBytes`) | 512 MiB | pending |
+| Upload cap (`uploadRateCapBytesPerSecond`) | 128 KiB/s | pending |
+| Peer connections (`connectionsLimit`) | 40 | pending |
+
+**To measure, once #670 can play a torrent:** a release build on the Stick, a well-shared torrent of a 1080p film, and nothing else running. Record the free storage before starting (`adb shell df /data`), then while it plays: the app's memory (`dumpsys meminfo <package>`, PSS and native heap) at Home before, at start-up, after 5 minutes of playback and after a seek forwards, against the same film from an ordinary stream; dropped frames (`tools/perf/stick_baseline.py`); and the app's cache size (`adb shell dumpsys diskstats`, its entry under App Cache Sizes: a release build can't be looked into with `run-as`). Lower the memory cap and connections until playback suffers, then set them a step above, and set the cache cap from the Stick's free storage less the space kept free. Check the cache size drops back after leaving the player, and after a force-stop and restart.
+
 ## Reading the numbers
 
 - **Frame timing** comes from the app-wide `dumpsys gfxinfo` summary, whose histogram has coarse buckets at the top, and "janky" is Android's own count. The summary also counts "high input latency", but that's left out here because it flagged most frames in every run, even the smooth ones.
