@@ -120,15 +120,6 @@ class LibtorrentEngine(
         }
     }
 
-    /**
-     * The torrent an alert is about, as a handle that outlives the alert. An alert's own `handle()`
-     * points into the alert, which libtorrent frees once it has been handled, so keeping it crashed the
-     * Stick in native code a second later, when [watch] asked whether it was still valid. The session's
-     * `find` returns a copy that stays valid until the torrent is removed.
-     */
-    private fun ownedHandle(run: RunningTorrent, alert: TorrentAlert<*>): TorrentHandle? =
-        run.session?.find(alert.handle().infoHash())?.takeIf { it.isValid }
-
     private fun onFileList(run: RunningTorrent, handle: TorrentHandle) {
         val info = handle.torrentFile()
         if (info == null || _status.value is TorrentStatus.Ready) return
@@ -250,3 +241,12 @@ class LibtorrentEngine(
         private const val POLL_MILLIS = 250L
     }
 }
+
+/**
+ * The torrent an alert is about, as a handle that outlives the alert. An alert's own `handle()`
+ * points into the alert, which libtorrent frees once it has been handled, so keeping it crashed the
+ * Stick in native code a second later, when the per-second watch asked whether it was still valid. The session's
+ * `find` returns a copy that stays valid until the torrent is removed.
+ */
+private fun ownedHandle(run: RunningTorrent, alert: TorrentAlert<*>): TorrentHandle? =
+    run.session?.find(alert.handle().infoHash())?.takeIf { it.isValid }
