@@ -104,7 +104,10 @@ class StremioClient(
         val topTypes = manifest.texts("types")
         val served = resources.mapNotNull { resource ->
             (resource as? JsonPrimitive)?.contentOrNull?.let { it to topTypes }
-                ?: (resource as? JsonObject)?.text("name")?.let { it to (resource.textsOrNull("types") ?: topTypes) }
+                ?: (resource as? JsonObject)?.text("name")?.let { name ->
+                    // An object naming no types of its own takes the manifest's.
+                    name to (if (resource["types"] is JsonArray) resource.texts("types") else topTypes)
+                }
         }
         // Each resource's own types, not all of them merged: an add-on whose catalogue lists shows may
         // still only have streams for films, and asking it for an episode only wastes the viewer's wait.
@@ -214,9 +217,6 @@ class StremioClient(
 
     private fun JsonObject.texts(key: String): List<String> =
         (this[key] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
-
-    // Null when a resource names no types of its own, so it takes the manifest's.
-    private fun JsonObject.textsOrNull(key: String): List<String>? = if (this[key] is JsonArray) texts(key) else null
 
     private companion object {
         const val TAG = "StremioClient"

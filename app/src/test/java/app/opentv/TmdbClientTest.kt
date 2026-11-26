@@ -232,12 +232,11 @@ class TmdbClientTest {
 
     @Test
     fun `a show whose search with its year fails is still found by its name alone`() {
-        val tmdb = TmdbClient(
-            FakeJsonHttp { request ->
-                if (request.url.queryParameter("first_air_date_year") != null) "503" else """{"results": [{"id": 22}]}"""
-            }.http,
-            API_KEY,
-        )
+        val network = FakeJsonHttp { request ->
+            val withYear = request.url.queryParameter("first_air_date_year") != null
+            if (withYear) "503" else """{"results": [{"id": 22}]}"""
+        }
+        val tmdb = TmdbClient(network.http, API_KEY)
 
         assertThat(tmdb.seriesId("A Show", year = 2001)).isEqualTo("22")
     }

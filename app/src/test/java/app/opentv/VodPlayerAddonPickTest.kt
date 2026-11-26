@@ -77,7 +77,13 @@ class VodPlayerAddonPickTest {
     /** The player opened on the kept film, part way through, as Continue Watching opens it. */
     private fun openFromContinueWatching(): Long {
         graph.settings.addStremioAddon(
-            StremioAddon("https://films.example.com/manifest.json", "Films", listOf("stream"), listOf("movie")),
+            StremioAddon(
+                "https://films.example.com/manifest.json",
+                "Films",
+                listOf("stream"),
+                listOf("movie"),
+                listOf("movie"),
+            ),
         )
         val film = runBlocking {
             graph.addonTitles.keepFilm(FILM).also {

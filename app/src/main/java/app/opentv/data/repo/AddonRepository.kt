@@ -66,8 +66,13 @@ class AddonRepository(
         settings.stremioAddons.value
     }
 
-    private fun AddonManifest.toAddon(address: String) =
-        StremioAddon(manifestUrl = address, name = name, resources = resources, types = types, streamTypes = streamTypes)
+    private fun AddonManifest.toAddon(address: String) = StremioAddon(
+        manifestUrl = address,
+        name = name,
+        resources = resources,
+        types = types,
+        streamTypes = streamTypes,
+    )
 
     companion object {
         private const val STREMIO_SCHEME = "stremio://"

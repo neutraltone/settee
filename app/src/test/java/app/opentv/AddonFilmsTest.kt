@@ -57,7 +57,13 @@ class AddonFilmsTest {
     }
 
     private fun addAddon() = graph.settings.addStremioAddon(
-        StremioAddon("https://example.com/manifest.json", "Example", listOf("stream"), listOf("movie")),
+        StremioAddon(
+            "https://example.com/manifest.json",
+            "Example",
+            listOf("stream"),
+            listOf("movie"),
+            listOf("movie"),
+        ),
     )
 
     @Test

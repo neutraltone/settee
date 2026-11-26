@@ -76,7 +76,9 @@ class VodAddonStreamsTest {
     }
 
     private fun addon(host: String, name: String, reply: String, types: List<String> = listOf("movie")) {
-        graph.settings.addStremioAddon(StremioAddon("https://$host/manifest.json", name, listOf("stream"), types))
+        graph.settings.addStremioAddon(
+            StremioAddon("https://$host/manifest.json", name, listOf("stream"), types, types),
+        )
         addonReplies[host] = reply
     }
 
