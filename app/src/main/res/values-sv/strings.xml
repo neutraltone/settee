@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Skicka alltid</string>
     <string name="error_torrents_off">Torrenter är avstängda. Slå på dem under Inställningar, Tillägg, för att spela upp dem.</string>
     <string name="error_torrents_not_yet">Torrenter kan inte spelas upp här än. Välj en ström som inte är en torrent.</string>
+    <string name="settings_addons_torrents">Torrenter</string>
+    <string name="settings_addons_torrents_off">Av. Torrenter som dina tillägg hittar visas i listan men spelas inte upp.</string>
+    <string name="settings_addons_torrents_on">På. Alla som delar en torrent du spelar upp kan se din internetadress.</string>
+    <string name="settings_addons_torrents_title">Slå på torrenter?</string>
+    <string name="settings_addons_torrents_body">En torrent hämtas från andra som delar samma fil. Medan du tittar på en kan alla som delar den se din internetadress.</string>
+    <string name="settings_addons_torrents_confirm">Slå på torrenter</string>
+    <string name="settings_addons_torrents_keep">Låt dem vara av</string>
+    <string name="search_not_from_provider">Inte från din leverantör</string>
+    <string name="pairing_phone_addon_title">Lägg till ett tillägg</string>
+    <string name="pairing_phone_addon_body">Klistra in adressen så kontrollerar tv:n den och lägger till tillägget. Lägg till så många du vill och välj sedan Klar.</string>
+    <string name="pairing_phone_addon_add">Lägg till</string>
+    <string name="pairing_phone_addon_done_title">Allt klart</string>
+    <string name="pairing_phone_addon_done_body">Dina tillägg finns nu på tv:n. Du kan lägga ifrån dig telefonen.</string>
+    <string name="addons_phone_qr_desc">QR-kod för att lägga till tillägg från telefonen</string>
+    <string name="vod_addon_still_asking">Frågar fortfarande dina andra tillägg…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person delar</item>
+        <item quantity="other">%1$d personer delar</item>
+    </plurals>
 </resources>

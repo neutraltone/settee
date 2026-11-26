@@ -411,4 +411,23 @@
     <string name="report_question_always_send">همیشه ارسال</string>
     <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
     <string name="error_torrents_not_yet">تورنت‌ها هنوز اینجا پخش نمی‌شوند. جریانی را انتخاب کنید که تورنت نیست.</string>
+    <string name="settings_addons_torrents">تورنت‌ها</string>
+    <string name="settings_addons_torrents_off">خاموش. تورنت‌هایی که افزونه‌های شما پیدا می‌کنند فهرست می‌شوند، اما پخش نمی‌شوند.</string>
+    <string name="settings_addons_torrents_on">روشن. هر کسی که تورنتی را که پخش می‌کنید به اشتراک می‌گذارد، می‌تواند نشانی اینترنتی شما را ببیند.</string>
+    <string name="settings_addons_torrents_title">تورنت‌ها روشن شوند؟</string>
+    <string name="settings_addons_torrents_body">تورنت از افراد دیگری دریافت می‌شود که همان فایل را به اشتراک می‌گذارند. وقتی یکی را تماشا می‌کنید، هر کسی که آن را به اشتراک می‌گذارد می‌تواند نشانی اینترنتی شما را ببیند.</string>
+    <string name="settings_addons_torrents_confirm">روشن کردن تورنت‌ها</string>
+    <string name="settings_addons_torrents_keep">خاموش بمانند</string>
+    <string name="search_not_from_provider">نه از ارائه‌دهنده شما</string>
+    <string name="pairing_phone_addon_title">افزودن یک افزونه</string>
+    <string name="pairing_phone_addon_body">نشانی آن را جای‌گذاری کنید تا تلویزیون شما آن را بررسی و اضافه کند. هر تعداد که می‌خواهید اضافه کنید، سپس تمام را انتخاب کنید.</string>
+    <string name="pairing_phone_addon_add">افزودن</string>
+    <string name="pairing_phone_addon_done_title">همه‌چیز تمام شد</string>
+    <string name="pairing_phone_addon_done_body">افزونه‌های شما روی تلویزیون هستند. می‌توانید گوشی خود را کنار بگذارید.</string>
+    <string name="addons_phone_qr_desc">کد QR برای افزودن افزونه‌ها از گوشی شما</string>
+    <string name="vod_addon_still_asking">هنوز در حال پرسیدن از افزونه‌های دیگر شما…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d نفر در حال اشتراک‌گذاری</item>
+        <item quantity="other">%1$d نفر در حال اشتراک‌گذاری</item>
+    </plurals>
 </resources>

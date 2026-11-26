@@ -413,4 +413,25 @@
     <string name="report_question_always_send">Vždy odoslať</string>
     <string name="error_torrents_off">Torrenty sú vypnuté. Zapnite ich v Nastavenia, Doplnky, aby ste ich mohli prehrať.</string>
     <string name="error_torrents_not_yet">Torrenty sa tu zatiaľ nedajú prehrať. Vyberte stream, ktorý nie je torrent.</string>
+    <string name="settings_addons_torrents">Torrenty</string>
+    <string name="settings_addons_torrents_off">Vypnuté. Torrenty, ktoré nájdu vaše doplnky, sa zobrazia v zozname, ale neprehrajú sa.</string>
+    <string name="settings_addons_torrents_on">Zapnuté. Každý, kto zdieľa torrent, ktorý prehrávate, môže vidieť vašu internetovú adresu.</string>
+    <string name="settings_addons_torrents_title">Zapnúť torrenty?</string>
+    <string name="settings_addons_torrents_body">Torrent sa sťahuje od iných ľudí, ktorí zdieľajú ten istý súbor. Kým ho pozeráte, každý, kto ho zdieľa, môže vidieť vašu internetovú adresu.</string>
+    <string name="settings_addons_torrents_confirm">Zapnúť torrenty</string>
+    <string name="settings_addons_torrents_keep">Nechať vypnuté</string>
+    <string name="search_not_from_provider">Nie od vášho poskytovateľa</string>
+    <string name="pairing_phone_addon_title">Pridať doplnok</string>
+    <string name="pairing_phone_addon_body">Vložte jeho adresu a televízor ho overí a pridá. Pridajte, koľko chcete, potom vyberte Hotovo.</string>
+    <string name="pairing_phone_addon_add">Pridať</string>
+    <string name="pairing_phone_addon_done_title">Všetko hotové</string>
+    <string name="pairing_phone_addon_done_body">Vaše doplnky sú v televízore. Telefón môžete odložiť.</string>
+    <string name="addons_phone_qr_desc">QR kód na pridávanie doplnkov z telefónu</string>
+    <string name="vod_addon_still_asking">Ešte sa pýtame vašich ďalších doplnkov…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d človek zdieľa</item>
+        <item quantity="few">%1$d ľudia zdieľajú</item>
+        <item quantity="many">%1$d ľudí zdieľa</item>
+        <item quantity="other">%1$d ľudí zdieľa</item>
+    </plurals>
 </resources>

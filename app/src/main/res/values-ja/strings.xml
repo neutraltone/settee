@@ -410,4 +410,22 @@
     <string name="report_question_always_send">常に送信</string>
     <string name="error_torrents_off">トレントはオフです。再生するには、設定のアドオンでオンにしてください。</string>
     <string name="error_torrents_not_yet">トレントはまだここで再生できません。トレント以外のストリームを選んでください。</string>
+    <string name="settings_addons_torrents">トレント</string>
+    <string name="settings_addons_torrents_off">オフ。アドオンが見つけたトレントは一覧に表示されますが、再生されません。</string>
+    <string name="settings_addons_torrents_on">オン。再生中のトレントを共有している全員に、あなたのインターネットアドレスが見えます。</string>
+    <string name="settings_addons_torrents_title">トレントをオンにしますか？</string>
+    <string name="settings_addons_torrents_body">トレントは、同じファイルを共有している他の人から取得されます。視聴中は、それを共有している全員にあなたのインターネットアドレスが見えます。</string>
+    <string name="settings_addons_torrents_confirm">トレントをオンにする</string>
+    <string name="settings_addons_torrents_keep">オフのままにする</string>
+    <string name="search_not_from_provider">プロバイダー以外</string>
+    <string name="pairing_phone_addon_title">アドオンを追加</string>
+    <string name="pairing_phone_addon_body">アドレスを貼り付けると、テレビが確認して追加します。好きなだけ追加したら、完了を選んでください。</string>
+    <string name="pairing_phone_addon_add">追加</string>
+    <string name="pairing_phone_addon_done_title">すべて完了</string>
+    <string name="pairing_phone_addon_done_body">アドオンがテレビに追加されました。スマートフォンを置いても大丈夫です。</string>
+    <string name="addons_phone_qr_desc">スマートフォンからアドオンを追加するためのQRコード</string>
+    <string name="vod_addon_still_asking">ほかのアドオンにまだ問い合わせ中…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d人が共有中</item>
+    </plurals>
 </resources>

@@ -410,4 +410,22 @@
     <string name="report_question_always_send">ส่งทุกครั้ง</string>
     <string name="error_torrents_off">ทอร์เรนต์ปิดอยู่ เปิดได้ที่ การตั้งค่า ส่วนเสริม เพื่อเล่นรายการเหล่านี้</string>
     <string name="error_torrents_not_yet">ยังเล่นทอร์เรนต์ที่นี่ไม่ได้ เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
+    <string name="settings_addons_torrents">ทอร์เรนต์</string>
+    <string name="settings_addons_torrents_off">ปิด ทอร์เรนต์ที่แอดออนของคุณพบจะแสดงในรายการ แต่เล่นไม่ได้</string>
+    <string name="settings_addons_torrents_on">เปิด ทุกคนที่แชร์ทอร์เรนต์ที่คุณเล่นจะเห็นที่อยู่อินเทอร์เน็ตของคุณ</string>
+    <string name="settings_addons_torrents_title">เปิดทอร์เรนต์ไหม</string>
+    <string name="settings_addons_torrents_body">ทอร์เรนต์ดึงข้อมูลมาจากคนอื่นที่แชร์ไฟล์เดียวกัน ระหว่างที่คุณดู ทุกคนที่แชร์ไฟล์นั้นจะเห็นที่อยู่อินเทอร์เน็ตของคุณ</string>
+    <string name="settings_addons_torrents_confirm">เปิดทอร์เรนต์</string>
+    <string name="settings_addons_torrents_keep">ปิดไว้ต่อไป</string>
+    <string name="search_not_from_provider">ไม่ได้มาจากผู้ให้บริการของคุณ</string>
+    <string name="pairing_phone_addon_title">เพิ่มแอดออน</string>
+    <string name="pairing_phone_addon_body">วางที่อยู่ของแอดออน แล้วทีวีจะตรวจสอบและเพิ่มให้ เพิ่มได้มากเท่าที่ต้องการ แล้วเลือก เสร็จสิ้น</string>
+    <string name="pairing_phone_addon_add">เพิ่ม</string>
+    <string name="pairing_phone_addon_done_title">เรียบร้อยแล้ว</string>
+    <string name="pairing_phone_addon_done_body">แอดออนของคุณอยู่บนทีวีแล้ว วางโทรศัพท์ลงได้เลย</string>
+    <string name="addons_phone_qr_desc">คิวอาร์โค้ดสำหรับเพิ่มแอดออนจากโทรศัพท์ของคุณ</string>
+    <string name="vod_addon_still_asking">ยังรอคำตอบจากแอดออนอื่นๆ ของคุณ…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">มีคนแชร์ %1$d คน</item>
+    </plurals>
 </resources>

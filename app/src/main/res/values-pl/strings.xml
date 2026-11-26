@@ -413,4 +413,25 @@
     <string name="report_question_always_send">Zawsze wysyłaj</string>
     <string name="error_torrents_off">Torrenty są wyłączone. Włącz je w Ustawienia, Dodatki, aby je odtworzyć.</string>
     <string name="error_torrents_not_yet">Torrentów nie można tu jeszcze odtwarzać. Wybierz strumień, który nie jest torrentem.</string>
+    <string name="settings_addons_torrents">Torrenty</string>
+    <string name="settings_addons_torrents_off">Wyłączone. Torrenty znalezione przez Twoje dodatki są widoczne na liście, ale się nie odtwarzają.</string>
+    <string name="settings_addons_torrents_on">Włączone. Każdy, kto udostępnia odtwarzany przez Ciebie torrent, widzi Twój adres internetowy.</string>
+    <string name="settings_addons_torrents_title">Włączyć torrenty?</string>
+    <string name="settings_addons_torrents_body">Torrent jest pobierany od innych osób, które udostępniają ten sam plik. Gdy go oglądasz, każdy, kto go udostępnia, widzi Twój adres internetowy.</string>
+    <string name="settings_addons_torrents_confirm">Włącz torrenty</string>
+    <string name="settings_addons_torrents_keep">Zostaw wyłączone</string>
+    <string name="search_not_from_provider">Spoza Twojego dostawcy</string>
+    <string name="pairing_phone_addon_title">Dodaj dodatek</string>
+    <string name="pairing_phone_addon_body">Wklej jego adres, a telewizor go sprawdzi i doda. Dodaj tyle, ile chcesz, a potem wybierz Gotowe.</string>
+    <string name="pairing_phone_addon_add">Dodaj</string>
+    <string name="pairing_phone_addon_done_title">Wszystko gotowe</string>
+    <string name="pairing_phone_addon_done_body">Twoje dodatki są na telewizorze. Możesz odłożyć telefon.</string>
+    <string name="addons_phone_qr_desc">Kod QR do dodawania dodatków z telefonu</string>
+    <string name="vod_addon_still_asking">Nadal pytamy Twoje pozostałe dodatki…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d osoba udostępnia</item>
+        <item quantity="few">%1$d osoby udostępniają</item>
+        <item quantity="many">%1$d osób udostępnia</item>
+        <item quantity="other">%1$d osoby udostępnia</item>
+    </plurals>
 </resources>

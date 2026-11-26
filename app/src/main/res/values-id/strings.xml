@@ -410,4 +410,22 @@
     <string name="report_question_always_send">Selalu kirim</string>
     <string name="error_torrents_off">Torrent nonaktif. Aktifkan di Pengaturan, Add-on, untuk memutarnya.</string>
     <string name="error_torrents_not_yet">Torrent belum bisa diputar di sini. Pilih stream yang bukan torrent.</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Nonaktif. Torrent yang ditemukan add-on Anda tetap tercantum, tetapi tidak diputar.</string>
+    <string name="settings_addons_torrents_on">Aktif. Semua orang yang berbagi torrent yang Anda putar dapat melihat alamat internet Anda.</string>
+    <string name="settings_addons_torrents_title">Aktifkan torrent?</string>
+    <string name="settings_addons_torrents_body">Torrent diambil dari orang lain yang berbagi file yang sama. Selama Anda menontonnya, semua orang yang membagikannya dapat melihat alamat internet Anda.</string>
+    <string name="settings_addons_torrents_confirm">Aktifkan torrent</string>
+    <string name="settings_addons_torrents_keep">Biarkan nonaktif</string>
+    <string name="search_not_from_provider">Bukan dari penyedia Anda</string>
+    <string name="pairing_phone_addon_title">Tambahkan add-on</string>
+    <string name="pairing_phone_addon_body">Tempelkan alamatnya, lalu TV Anda akan memeriksa dan menambahkannya. Tambahkan sebanyak yang Anda mau, lalu pilih Selesai.</string>
+    <string name="pairing_phone_addon_add">Tambah</string>
+    <string name="pairing_phone_addon_done_title">Semua selesai</string>
+    <string name="pairing_phone_addon_done_body">Add-on Anda sudah ada di TV. Anda bisa meletakkan ponsel.</string>
+    <string name="addons_phone_qr_desc">Kode QR untuk menambahkan add-on dari ponsel Anda</string>
+    <string name="vod_addon_still_asking">Masih menanyakan add-on Anda yang lain…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d orang berbagi</item>
+    </plurals>
 </resources>

@@ -413,4 +413,25 @@
     <string name="report_question_always_send">Vždy odeslat</string>
     <string name="error_torrents_off">Torrenty jsou vypnuté. Zapněte je v Nastavení, Doplňky, abyste je mohli přehrát.</string>
     <string name="error_torrents_not_yet">Torrenty tu zatím nejdou přehrát. Vyberte stream, který není torrent.</string>
+    <string name="settings_addons_torrents">Torrenty</string>
+    <string name="settings_addons_torrents_off">Vypnuto. Torrenty, které vaše doplňky najdou, se zobrazí, ale nepřehrají se.</string>
+    <string name="settings_addons_torrents_on">Zapnuto. Každý, kdo sdílí torrent, který přehráváte, uvidí vaši internetovou adresu.</string>
+    <string name="settings_addons_torrents_title">Zapnout torrenty?</string>
+    <string name="settings_addons_torrents_body">Torrent se stahuje od dalších lidí, kteří sdílejí stejný soubor. Zatímco ho sledujete, každý, kdo ho sdílí, vidí vaši internetovou adresu.</string>
+    <string name="settings_addons_torrents_confirm">Zapnout torrenty</string>
+    <string name="settings_addons_torrents_keep">Nechat vypnuté</string>
+    <string name="search_not_from_provider">Není od vašeho poskytovatele</string>
+    <string name="pairing_phone_addon_title">Přidat doplněk</string>
+    <string name="pairing_phone_addon_body">Vložte jeho adresu a televize ho zkontroluje a přidá. Přidejte jich, kolik chcete, a pak zvolte Hotovo.</string>
+    <string name="pairing_phone_addon_add">Přidat</string>
+    <string name="pairing_phone_addon_done_title">Vše hotovo</string>
+    <string name="pairing_phone_addon_done_body">Vaše doplňky jsou v televizi. Telefon můžete odložit.</string>
+    <string name="addons_phone_qr_desc">QR kód pro přidání doplňků z telefonu</string>
+    <string name="vod_addon_still_asking">Stále se ptáme vašich dalších doplňků…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d člověk sdílí</item>
+        <item quantity="few">%1$d lidé sdílejí</item>
+        <item quantity="many">%1$d člověka sdílí</item>
+        <item quantity="other">%1$d lidí sdílí</item>
+    </plurals>
 </resources>

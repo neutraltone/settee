@@ -412,4 +412,23 @@
     <string name="report_question_always_send">Toujours envoyer</string>
     <string name="error_torrents_off">Les torrents sont désactivés. Activez-les dans Paramètres, Modules, pour les lire.</string>
     <string name="error_torrents_not_yet">Les torrents ne peuvent pas encore être lus ici. Choisissez un flux qui n\'est pas un torrent.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Désactivés. Les torrents trouvés par vos extensions s\'affichent, mais ne se lisent pas.</string>
+    <string name="settings_addons_torrents_on">Activés. Toute personne qui partage un torrent que vous lisez peut voir votre adresse internet.</string>
+    <string name="settings_addons_torrents_title">Activer les torrents ?</string>
+    <string name="settings_addons_torrents_body">Un torrent est récupéré auprès d\'autres personnes qui partagent le même fichier. Pendant que vous en regardez un, toutes celles qui le partagent peuvent voir votre adresse internet.</string>
+    <string name="settings_addons_torrents_confirm">Activer les torrents</string>
+    <string name="settings_addons_torrents_keep">Les laisser désactivés</string>
+    <string name="search_not_from_provider">Pas chez votre fournisseur</string>
+    <string name="pairing_phone_addon_title">Ajouter une extension</string>
+    <string name="pairing_phone_addon_body">Collez son adresse : votre télévision la vérifie et l\'ajoute. Ajoutez-en autant que vous voulez, puis choisissez Terminé.</string>
+    <string name="pairing_phone_addon_add">Ajouter</string>
+    <string name="pairing_phone_addon_done_title">C\'est terminé</string>
+    <string name="pairing_phone_addon_done_body">Vos extensions sont sur votre télévision. Vous pouvez poser votre téléphone.</string>
+    <string name="addons_phone_qr_desc">QR code pour ajouter des extensions depuis votre téléphone</string>
+    <string name="vod_addon_still_asking">Vos autres extensions sont encore interrogées…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d personne partage</item>
+        <item quantity="other">%1$d personnes partagent</item>
+    </plurals>
 </resources>

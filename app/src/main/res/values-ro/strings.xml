@@ -412,4 +412,24 @@
     <string name="report_question_always_send">Trimite mereu</string>
     <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
     <string name="error_torrents_not_yet">Torrentele nu pot fi redate aici încă. Alege un flux care nu este torrent.</string>
+    <string name="settings_addons_torrents">Torrente</string>
+    <string name="settings_addons_torrents_off">Oprite. Torrentele găsite de suplimentele tale apar în listă, dar nu pot fi redate.</string>
+    <string name="settings_addons_torrents_on">Pornite. Oricine distribuie un torrent pe care îl redai îți poate vedea adresa de internet.</string>
+    <string name="settings_addons_torrents_title">Pornești torrentele?</string>
+    <string name="settings_addons_torrents_body">Un torrent este preluat de la alte persoane care distribuie același fișier. Cât timp urmărești unul, oricine îl distribuie îți poate vedea adresa de internet.</string>
+    <string name="settings_addons_torrents_confirm">Pornește torrentele</string>
+    <string name="settings_addons_torrents_keep">Lasă-le oprite</string>
+    <string name="search_not_from_provider">Nu sunt de la furnizorul tău</string>
+    <string name="pairing_phone_addon_title">Adaugă un supliment</string>
+    <string name="pairing_phone_addon_body">Lipește adresa lui, iar televizorul o verifică și îl adaugă. Adaugă câte vrei, apoi alege Gata.</string>
+    <string name="pairing_phone_addon_add">Adaugă</string>
+    <string name="pairing_phone_addon_done_title">Totul e gata</string>
+    <string name="pairing_phone_addon_done_body">Suplimentele tale sunt pe televizor. Poți lăsa telefonul jos.</string>
+    <string name="addons_phone_qr_desc">Cod QR pentru adăugarea suplimentelor de pe telefon</string>
+    <string name="vod_addon_still_asking">Încă întrebăm celelalte suplimente ale tale…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persoană distribuie</item>
+        <item quantity="few">%1$d persoane distribuie</item>
+        <item quantity="other">%1$d de persoane distribuie</item>
+    </plurals>
 </resources>

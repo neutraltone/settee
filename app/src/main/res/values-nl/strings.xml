@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Altijd sturen</string>
     <string name="error_torrents_off">Torrents staan uit. Zet ze aan bij Instellingen, Add-ons, om deze af te spelen.</string>
     <string name="error_torrents_not_yet">Torrents kunnen hier nog niet worden afgespeeld. Kies een stream die geen torrent is.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Uit. Torrents die je add-ons vinden, staan in de lijst, maar spelen niet af.</string>
+    <string name="settings_addons_torrents_on">Aan. Iedereen die een torrent deelt die jij afspeelt, kan je internetadres zien.</string>
+    <string name="settings_addons_torrents_title">Torrents aanzetten?</string>
+    <string name="settings_addons_torrents_body">Een torrent wordt opgehaald bij andere mensen die hetzelfde bestand delen. Terwijl je er een kijkt, kan iedereen die hem deelt je internetadres zien.</string>
+    <string name="settings_addons_torrents_confirm">Torrents aanzetten</string>
+    <string name="settings_addons_torrents_keep">Laat ze uit</string>
+    <string name="search_not_from_provider">Niet van je provider</string>
+    <string name="pairing_phone_addon_title">Een add-on toevoegen</string>
+    <string name="pairing_phone_addon_body">Plak het adres, dan controleert je tv de add-on en voegt hem toe. Voeg er zoveel toe als je wilt en kies dan Klaar.</string>
+    <string name="pairing_phone_addon_add">Toevoegen</string>
+    <string name="pairing_phone_addon_done_title">Helemaal klaar</string>
+    <string name="pairing_phone_addon_done_body">Je add-ons staan op je tv. Je kunt je telefoon wegleggen.</string>
+    <string name="addons_phone_qr_desc">QR-code om add-ons toe te voegen vanaf je telefoon</string>
+    <string name="vod_addon_still_asking">Je andere add-ons worden nog gevraagd…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persoon deelt</item>
+        <item quantity="other">%1$d mensen delen</item>
+    </plurals>
 </resources>

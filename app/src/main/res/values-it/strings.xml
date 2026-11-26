@@ -412,4 +412,23 @@
     <string name="report_question_always_send">Invia sempre</string>
     <string name="error_torrents_off">I torrent sono disattivati. Attivali in Impostazioni, Componenti aggiuntivi, per riprodurli.</string>
     <string name="error_torrents_not_yet">I torrent non si possono ancora riprodurre qui. Scegli uno stream che non sia un torrent.</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Disattivati. I torrent trovati dai tuoi add-on compaiono nell\'elenco, ma non si riproducono.</string>
+    <string name="settings_addons_torrents_on">Attivati. Chiunque condivida un torrent che riproduci può vedere il tuo indirizzo internet.</string>
+    <string name="settings_addons_torrents_title">Attivare i torrent?</string>
+    <string name="settings_addons_torrents_body">Un torrent viene scaricato da altre persone che condividono lo stesso file. Mentre ne guardi uno, chiunque lo condivida può vedere il tuo indirizzo internet.</string>
+    <string name="settings_addons_torrents_confirm">Attiva i torrent</string>
+    <string name="settings_addons_torrents_keep">Lasciali disattivati</string>
+    <string name="search_not_from_provider">Non dal tuo provider</string>
+    <string name="pairing_phone_addon_title">Aggiungi un add-on</string>
+    <string name="pairing_phone_addon_body">Incolla il suo indirizzo e la TV lo verifica e lo aggiunge. Aggiungine quanti vuoi, poi scegli Fatto.</string>
+    <string name="pairing_phone_addon_add">Aggiungi</string>
+    <string name="pairing_phone_addon_done_title">Tutto fatto</string>
+    <string name="pairing_phone_addon_done_body">I tuoi add-on sono sulla TV. Puoi mettere giù il telefono.</string>
+    <string name="addons_phone_qr_desc">Codice QR per aggiungere add-on dal telefono</string>
+    <string name="vod_addon_still_asking">Sto ancora chiedendo agli altri add-on…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persona condivide</item>
+        <item quantity="other">%1$d persone condividono</item>
+    </plurals>
 </resources>

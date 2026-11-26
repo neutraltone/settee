@@ -411,4 +411,23 @@
     <string name="report_question_always_send">हमेशा भेजें</string>
     <string name="error_torrents_off">टोरेंट बंद हैं। इन्हें चलाने के लिए सेटिंग्स, ऐड-ऑन में इन्हें चालू करें।</string>
     <string name="error_torrents_not_yet">टोरेंट अभी यहाँ नहीं चल सकते। ऐसी स्ट्रीम चुनें जो टोरेंट न हो।</string>
+    <string name="settings_addons_torrents">टोरेंट</string>
+    <string name="settings_addons_torrents_off">बंद। आपके ऐड-ऑन जो टोरेंट ढूंढते हैं, वे सूची में दिखते हैं, पर चलते नहीं।</string>
+    <string name="settings_addons_torrents_on">चालू। आप जो टोरेंट चलाते हैं, उसे शेयर करने वाला हर व्यक्ति आपका इंटरनेट पता देख सकता है।</string>
+    <string name="settings_addons_torrents_title">टोरेंट चालू करें?</string>
+    <string name="settings_addons_torrents_body">टोरेंट उन दूसरे लोगों से लिया जाता है जो वही फ़ाइल शेयर कर रहे हैं। जब आप कोई टोरेंट देखते हैं, तो उसे शेयर करने वाला हर व्यक्ति आपका इंटरनेट पता देख सकता है।</string>
+    <string name="settings_addons_torrents_confirm">टोरेंट चालू करें</string>
+    <string name="settings_addons_torrents_keep">बंद ही रखें</string>
+    <string name="search_not_from_provider">आपके प्रदाता से नहीं</string>
+    <string name="pairing_phone_addon_title">ऐड-ऑन जोड़ें</string>
+    <string name="pairing_phone_addon_body">इसका पता पेस्ट करें, आपका टीवी इसे जांचकर जोड़ देगा। जितने चाहें जोड़ें, फिर हो गया चुनें।</string>
+    <string name="pairing_phone_addon_add">जोड़ें</string>
+    <string name="pairing_phone_addon_done_title">सब हो गया</string>
+    <string name="pairing_phone_addon_done_body">आपके ऐड-ऑन आपके टीवी पर हैं। अब आप फ़ोन रख सकते हैं।</string>
+    <string name="addons_phone_qr_desc">फ़ोन से ऐड-ऑन जोड़ने के लिए QR कोड</string>
+    <string name="vod_addon_still_asking">अभी भी आपके दूसरे ऐड-ऑन से पूछा जा रहा है…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d व्यक्ति शेयर कर रहा है</item>
+        <item quantity="other">%1$d लोग शेयर कर रहे हैं</item>
+    </plurals>
 </resources>

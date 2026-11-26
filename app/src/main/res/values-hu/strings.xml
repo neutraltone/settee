@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Mindig küldje</string>
     <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
     <string name="error_torrents_not_yet">A torrentek itt még nem játszhatók le. Válassz olyan streamet, amely nem torrent.</string>
+    <string name="settings_addons_torrents">Torrentek</string>
+    <string name="settings_addons_torrents_off">Ki. A bővítmények által talált torrentek megjelennek a listában, de nem játszhatók le.</string>
+    <string name="settings_addons_torrents_on">Be. Mindenki, aki megoszt egy Ön által lejátszott torrentet, látja az Ön internetcímét.</string>
+    <string name="settings_addons_torrents_title">Bekapcsolja a torrenteket?</string>
+    <string name="settings_addons_torrents_body">A torrent más emberektől érkezik, akik ugyanazt a fájlt osztják meg. Amíg néz egyet, mindenki, aki megosztja, látja az Ön internetcímét.</string>
+    <string name="settings_addons_torrents_confirm">Torrentek bekapcsolása</string>
+    <string name="settings_addons_torrents_keep">Maradjanak kikapcsolva</string>
+    <string name="search_not_from_provider">Nem a szolgáltatójától</string>
+    <string name="pairing_phone_addon_title">Bővítmény hozzáadása</string>
+    <string name="pairing_phone_addon_body">Illessze be a címét, a tévé pedig ellenőrzi és hozzáadja. Adjon hozzá annyit, amennyit szeretne, majd válassza a Kész gombot.</string>
+    <string name="pairing_phone_addon_add">Hozzáadás</string>
+    <string name="pairing_phone_addon_done_title">Minden kész</string>
+    <string name="pairing_phone_addon_done_body">A bővítmények a tévén vannak. Leteheti a telefont.</string>
+    <string name="addons_phone_qr_desc">QR-kód bővítmények telefonról való hozzáadásához</string>
+    <string name="vod_addon_still_asking">A többi bővítmény még keres…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d ember osztja meg</item>
+        <item quantity="other">%1$d ember osztja meg</item>
+    </plurals>
 </resources>

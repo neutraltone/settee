@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Send altid</string>
     <string name="error_torrents_off">Torrents er slået fra. Slå dem til under Indstillinger, Tilføjelser, for at afspille dem.</string>
     <string name="error_torrents_not_yet">Torrents kan ikke afspilles her endnu. Vælg en stream, der ikke er en torrent.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Fra. Torrents, som dine tilføjelser finder, vises, men afspilles ikke.</string>
+    <string name="settings_addons_torrents_on">Til. Alle, der deler en torrent, du afspiller, kan se din internetadresse.</string>
+    <string name="settings_addons_torrents_title">Slå torrents til?</string>
+    <string name="settings_addons_torrents_body">En torrent hentes fra andre, der deler den samme fil. Mens du ser en, kan alle, der deler den, se din internetadresse.</string>
+    <string name="settings_addons_torrents_confirm">Slå torrents til</string>
+    <string name="settings_addons_torrents_keep">Behold dem slået fra</string>
+    <string name="search_not_from_provider">Ikke fra din udbyder</string>
+    <string name="pairing_phone_addon_title">Tilføj en tilføjelse</string>
+    <string name="pairing_phone_addon_body">Indsæt dens adresse, så tjekker dit fjernsyn den og tilføjer den. Tilføj så mange, du vil, og vælg derefter Færdig.</string>
+    <string name="pairing_phone_addon_add">Tilføj</string>
+    <string name="pairing_phone_addon_done_title">Alt er klar</string>
+    <string name="pairing_phone_addon_done_body">Dine tilføjelser er på dit fjernsyn. Du kan lægge telefonen fra dig.</string>
+    <string name="addons_phone_qr_desc">QR-kode til at tilføje tilføjelser fra din telefon</string>
+    <string name="vod_addon_still_asking">Spørger stadig dine andre tilføjelser…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person deler</item>
+        <item quantity="other">%1$d personer deler</item>
+    </plurals>
 </resources>

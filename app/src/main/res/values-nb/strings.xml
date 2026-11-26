@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Send alltid</string>
     <string name="error_torrents_off">Torrenter er slått av. Slå dem på under Innstillinger, Tillegg, for å spille dem av.</string>
     <string name="error_torrents_not_yet">Torrenter kan ikke spilles av her ennå. Velg en strøm som ikke er en torrent.</string>
+    <string name="settings_addons_torrents">Torrenter</string>
+    <string name="settings_addons_torrents_off">Av. Torrenter tilleggene dine finner, vises i listen, men spilles ikke av.</string>
+    <string name="settings_addons_torrents_on">På. Alle som deler en torrent du spiller av, kan se internettadressen din.</string>
+    <string name="settings_addons_torrents_title">Slå på torrenter?</string>
+    <string name="settings_addons_torrents_body">En torrent hentes fra andre som deler den samme filen. Mens du ser på en, kan alle som deler den, se internettadressen din.</string>
+    <string name="settings_addons_torrents_confirm">Slå på torrenter</string>
+    <string name="settings_addons_torrents_keep">La dem være av</string>
+    <string name="search_not_from_provider">Ikke fra leverandøren din</string>
+    <string name="pairing_phone_addon_title">Legg til et tillegg</string>
+    <string name="pairing_phone_addon_body">Lim inn adressen, så sjekker TV-en den og legger den til. Legg til så mange du vil, og velg deretter Ferdig.</string>
+    <string name="pairing_phone_addon_add">Legg til</string>
+    <string name="pairing_phone_addon_done_title">Alt er klart</string>
+    <string name="pairing_phone_addon_done_body">Tilleggene dine er på TV-en. Du kan legge fra deg telefonen.</string>
+    <string name="addons_phone_qr_desc">QR-kode for å legge til tillegg fra telefonen</string>
+    <string name="vod_addon_still_asking">Spør fortsatt de andre tilleggene dine…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person deler</item>
+        <item quantity="other">%1$d personer deler</item>
+    </plurals>
 </resources>

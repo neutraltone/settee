@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Immer senden</string>
     <string name="error_torrents_off">Torrents sind aus. Schalte sie unter Einstellungen, Add-ons ein, um sie abzuspielen.</string>
     <string name="error_torrents_not_yet">Torrents lassen sich hier noch nicht abspielen. Wähle einen Stream, der kein Torrent ist.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Aus. Torrents, die deine Add-ons finden, werden angezeigt, aber nicht abgespielt.</string>
+    <string name="settings_addons_torrents_on">An. Alle, die einen Torrent teilen, den du abspielst, können deine Internetadresse sehen.</string>
+    <string name="settings_addons_torrents_title">Torrents einschalten?</string>
+    <string name="settings_addons_torrents_body">Ein Torrent wird von anderen Leuten geladen, die dieselbe Datei teilen. Während du einen schaust, können alle, die ihn teilen, deine Internetadresse sehen.</string>
+    <string name="settings_addons_torrents_confirm">Torrents einschalten</string>
+    <string name="settings_addons_torrents_keep">Aus lassen</string>
+    <string name="search_not_from_provider">Nicht von deinem Anbieter</string>
+    <string name="pairing_phone_addon_title">Add-on hinzufügen</string>
+    <string name="pairing_phone_addon_body">Füge seine Adresse ein, dann prüft dein Fernseher es und fügt es hinzu. Füge so viele hinzu, wie du willst, und wähle dann Fertig.</string>
+    <string name="pairing_phone_addon_add">Hinzufügen</string>
+    <string name="pairing_phone_addon_done_title">Alles erledigt</string>
+    <string name="pairing_phone_addon_done_body">Deine Add-ons sind auf deinem Fernseher. Du kannst dein Smartphone weglegen.</string>
+    <string name="addons_phone_qr_desc">QR-Code zum Hinzufügen von Add-ons über dein Smartphone</string>
+    <string name="vod_addon_still_asking">Deine anderen Add-ons werden noch gefragt…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d Person teilt</item>
+        <item quantity="other">%1$d Personen teilen</item>
+    </plurals>
 </resources>

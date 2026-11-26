@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Her zaman gönder</string>
     <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
     <string name="error_torrents_not_yet">Torrentler burada henüz oynatılamıyor. Torrent olmayan bir yayın seçin.</string>
+    <string name="settings_addons_torrents">Torrentler</string>
+    <string name="settings_addons_torrents_off">Kapalı. Eklentilerinizin bulduğu torrentler listelenir ama oynatılmaz.</string>
+    <string name="settings_addons_torrents_on">Açık. Oynattığınız bir torrenti paylaşan herkes internet adresinizi görebilir.</string>
+    <string name="settings_addons_torrents_title">Torrentler açılsın mı?</string>
+    <string name="settings_addons_torrents_body">Bir torrent, aynı dosyayı paylaşan başka kişilerden alınır. Siz izlerken onu paylaşan herkes internet adresinizi görebilir.</string>
+    <string name="settings_addons_torrents_confirm">Torrentleri aç</string>
+    <string name="settings_addons_torrents_keep">Kapalı kalsın</string>
+    <string name="search_not_from_provider">Sağlayıcınızdan değil</string>
+    <string name="pairing_phone_addon_title">Eklenti ekleyin</string>
+    <string name="pairing_phone_addon_body">Adresini yapıştırın, TV\'niz kontrol edip ekler. İstediğiniz kadar ekleyin, sonra Tamam\'ı seçin.</string>
+    <string name="pairing_phone_addon_add">Ekle</string>
+    <string name="pairing_phone_addon_done_title">Her şey hazır</string>
+    <string name="pairing_phone_addon_done_body">Eklentileriniz TV\'nizde. Telefonunuzu bırakabilirsiniz.</string>
+    <string name="addons_phone_qr_desc">Telefonunuzdan eklenti eklemek için QR kodu</string>
+    <string name="vod_addon_still_asking">Diğer eklentilerinize hâlâ soruluyor…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d kişi paylaşıyor</item>
+        <item quantity="other">%1$d kişi paylaşıyor</item>
+    </plurals>
 </resources>

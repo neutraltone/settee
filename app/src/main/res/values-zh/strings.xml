@@ -410,4 +410,22 @@
     <string name="report_question_always_send">始终发送</string>
     <string name="error_torrents_off">种子已关闭。在设置的附加组件中开启后即可播放这些。</string>
     <string name="error_torrents_not_yet">这里还不能播放种子。请选择不是种子的流。</string>
+    <string name="settings_addons_torrents">种子</string>
+    <string name="settings_addons_torrents_off">已关闭。插件找到的种子会列出，但无法播放。</string>
+    <string name="settings_addons_torrents_on">已开启。分享你所播放种子的所有人都能看到你的网络地址。</string>
+    <string name="settings_addons_torrents_title">开启种子？</string>
+    <string name="settings_addons_torrents_body">种子是从分享同一文件的其他人那里获取的。观看时，所有分享该文件的人都能看到你的网络地址。</string>
+    <string name="settings_addons_torrents_confirm">开启种子</string>
+    <string name="settings_addons_torrents_keep">保持关闭</string>
+    <string name="search_not_from_provider">非你的提供商提供</string>
+    <string name="pairing_phone_addon_title">添加插件</string>
+    <string name="pairing_phone_addon_body">粘贴插件地址，电视会检查并添加。想添加多少都可以，然后选择“完成”。</string>
+    <string name="pairing_phone_addon_add">添加</string>
+    <string name="pairing_phone_addon_done_title">全部完成</string>
+    <string name="pairing_phone_addon_done_body">你的插件已在电视上。可以放下手机了。</string>
+    <string name="addons_phone_qr_desc">用手机添加插件的二维码</string>
+    <string name="vod_addon_still_asking">仍在询问你的其他插件…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d 人在分享</item>
+    </plurals>
 </resources>

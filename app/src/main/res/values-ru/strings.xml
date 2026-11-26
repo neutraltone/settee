@@ -413,4 +413,25 @@
     <string name="report_question_always_send">Всегда отправлять</string>
     <string name="error_torrents_off">Торренты выключены. Включите их в Настройки, Дополнения, чтобы воспроизвести.</string>
     <string name="error_torrents_not_yet">Торренты здесь пока не воспроизводятся. Выберите поток, который не является торрентом.</string>
+    <string name="settings_addons_torrents">Торренты</string>
+    <string name="settings_addons_torrents_off">Выключены. Торренты, найденные вашими дополнениями, показываются в списке, но не воспроизводятся.</string>
+    <string name="settings_addons_torrents_on">Включены. Все, кто раздаёт торрент, который вы смотрите, видят ваш интернет-адрес.</string>
+    <string name="settings_addons_torrents_title">Включить торренты?</string>
+    <string name="settings_addons_torrents_body">Торрент загружается от других людей, которые раздают тот же файл. Пока вы его смотрите, все, кто его раздаёт, видят ваш интернет-адрес.</string>
+    <string name="settings_addons_torrents_confirm">Включить торренты</string>
+    <string name="settings_addons_torrents_keep">Оставить выключенными</string>
+    <string name="search_not_from_provider">Не от вашего провайдера</string>
+    <string name="pairing_phone_addon_title">Добавить дополнение</string>
+    <string name="pairing_phone_addon_body">Вставьте его адрес, и телевизор проверит и добавит его. Добавьте сколько угодно, затем выберите «Готово».</string>
+    <string name="pairing_phone_addon_add">Добавить</string>
+    <string name="pairing_phone_addon_done_title">Всё готово</string>
+    <string name="pairing_phone_addon_done_body">Ваши дополнения уже на телевизоре. Телефон можно отложить.</string>
+    <string name="addons_phone_qr_desc">QR-код для добавления дополнений с телефона</string>
+    <string name="vod_addon_still_asking">Ещё ждём ответа от других дополнений…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d человек раздаёт</item>
+        <item quantity="few">%1$d человека раздают</item>
+        <item quantity="many">%1$d человек раздают</item>
+        <item quantity="other">%1$d человека раздают</item>
+    </plurals>
 </resources>

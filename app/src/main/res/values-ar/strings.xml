@@ -415,4 +415,27 @@
     <string name="report_question_always_send">الإرسال دائمًا</string>
     <string name="error_torrents_off">التورنت متوقف. شغّله من الإعدادات، الإضافات، لتشغيل هذه.</string>
     <string name="error_torrents_not_yet">لا يمكن تشغيل التورنت هنا بعد. اختر بثًا ليس تورنت.</string>
+    <string name="settings_addons_torrents">التورنت</string>
+    <string name="settings_addons_torrents_off">متوقف. تظهر التورنتات التي تجدها إضافاتك، لكنها لا تُشغَّل.</string>
+    <string name="settings_addons_torrents_on">مُشغَّل. يمكن لكل من يشارك تورنت تشغّله أن يرى عنوانك على الإنترنت.</string>
+    <string name="settings_addons_torrents_title">تشغيل التورنت؟</string>
+    <string name="settings_addons_torrents_body">يُجلب التورنت من أشخاص آخرين يشاركون الملف نفسه. أثناء مشاهدتك له، يمكن لكل من يشاركه أن يرى عنوانك على الإنترنت.</string>
+    <string name="settings_addons_torrents_confirm">تشغيل التورنت</string>
+    <string name="settings_addons_torrents_keep">إبقاؤه متوقفًا</string>
+    <string name="search_not_from_provider">ليس من مزوّدك</string>
+    <string name="pairing_phone_addon_title">أضف إضافة</string>
+    <string name="pairing_phone_addon_body">الصق عنوانها وسيتحقق منها تلفازك ويضيفها. أضف ما تشاء، ثم اختر تم.</string>
+    <string name="pairing_phone_addon_add">إضافة</string>
+    <string name="pairing_phone_addon_done_title">انتهى كل شيء</string>
+    <string name="pairing_phone_addon_done_body">إضافاتك الآن على تلفازك. يمكنك وضع هاتفك جانبًا.</string>
+    <string name="addons_phone_qr_desc">رمز QR لإضافة الإضافات من هاتفك</string>
+    <string name="vod_addon_still_asking">ما زلنا نسأل إضافاتك الأخرى…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="zero">%1$d مشارك</item>
+        <item quantity="one">%1$d مشارك</item>
+        <item quantity="two">%1$d مشاركان</item>
+        <item quantity="few">%1$d مشاركين</item>
+        <item quantity="many">%1$d مشاركًا</item>
+        <item quantity="other">%1$d مشارك</item>
+    </plurals>
 </resources>

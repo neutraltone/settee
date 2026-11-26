@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Lähetä aina</string>
     <string name="error_torrents_off">Torrentit ovat pois päältä. Laita ne päälle kohdassa Asetukset, Lisäosat, niin voit toistaa nämä.</string>
     <string name="error_torrents_not_yet">Torrentteja ei voi vielä toistaa täällä. Valitse virta, joka ei ole torrent.</string>
+    <string name="settings_addons_torrents">Torrentit</string>
+    <string name="settings_addons_torrents_off">Pois päältä. Lisäosiesi löytämät torrentit näytetään, mutta niitä ei toisteta.</string>
+    <string name="settings_addons_torrents_on">Päällä. Kaikki, jotka jakavat toistamaasi torrentia, näkevät internet-osoitteesi.</string>
+    <string name="settings_addons_torrents_title">Laitetaanko torrentit päälle?</string>
+    <string name="settings_addons_torrents_body">Torrent haetaan muilta ihmisiltä, jotka jakavat samaa tiedostoa. Kun katsot sellaista, kaikki sen jakajat näkevät internet-osoitteesi.</string>
+    <string name="settings_addons_torrents_confirm">Laita torrentit päälle</string>
+    <string name="settings_addons_torrents_keep">Pidä ne pois päältä</string>
+    <string name="search_not_from_provider">Ei palveluntarjoajaltasi</string>
+    <string name="pairing_phone_addon_title">Lisää lisäosa</string>
+    <string name="pairing_phone_addon_body">Liitä sen osoite, niin televisiosi tarkistaa ja lisää sen. Lisää niin monta kuin haluat ja valitse sitten Valmis.</string>
+    <string name="pairing_phone_addon_add">Lisää</string>
+    <string name="pairing_phone_addon_done_title">Kaikki valmista</string>
+    <string name="pairing_phone_addon_done_body">Lisäosasi ovat televisiossasi. Voit laskea puhelimen käsistäsi.</string>
+    <string name="addons_phone_qr_desc">QR-koodi lisäosien lisäämiseen puhelimella</string>
+    <string name="vod_addon_still_asking">Kysytään vielä muilta lisäosiltasi…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d jakaja</item>
+        <item quantity="other">%1$d jakajaa</item>
+    </plurals>
 </resources>

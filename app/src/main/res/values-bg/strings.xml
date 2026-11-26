@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Винаги изпращай</string>
     <string name="error_torrents_off">Торентите са изключени. Включете ги от Настройки, Добавки, за да пуснете тези.</string>
     <string name="error_torrents_not_yet">Торентите още не могат да се пускат тук. Изберете поток, който не е торент.</string>
+    <string name="settings_addons_torrents">Торенти</string>
+    <string name="settings_addons_torrents_off">Изключени. Торентите, които добавките ви намерят, се показват, но не се пускат.</string>
+    <string name="settings_addons_torrents_on">Включени. Всеки, който споделя торент, който пускате, може да види интернет адреса ви.</string>
+    <string name="settings_addons_torrents_title">Да се включат ли торентите?</string>
+    <string name="settings_addons_torrents_body">Торентът се изтегля от други хора, които споделят същия файл. Докато гледате такъв, всеки, който го споделя, може да види интернет адреса ви.</string>
+    <string name="settings_addons_torrents_confirm">Включване на торентите</string>
+    <string name="settings_addons_torrents_keep">Оставете ги изключени</string>
+    <string name="search_not_from_provider">Не е от вашия доставчик</string>
+    <string name="pairing_phone_addon_title">Добавете добавка</string>
+    <string name="pairing_phone_addon_body">Поставете адреса ѝ и телевизорът ви ще я провери и добави. Добавете колкото искате, после изберете Готово.</string>
+    <string name="pairing_phone_addon_add">Добавяне</string>
+    <string name="pairing_phone_addon_done_title">Всичко е готово</string>
+    <string name="pairing_phone_addon_done_body">Добавките ви са на телевизора. Можете да оставите телефона си.</string>
+    <string name="addons_phone_qr_desc">QR код за добавяне на добавки от телефона ви</string>
+    <string name="vod_addon_still_asking">Все още питаме другите ви добавки…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d човек споделя</item>
+        <item quantity="other">%1$d души споделят</item>
+    </plurals>
 </resources>

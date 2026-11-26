@@ -412,4 +412,24 @@
     <string name="report_question_always_send">Uvijek pošalji</string>
     <string name="error_torrents_off">Torrenti su isključeni. Uključite ih u Postavke, Dodaci, da biste ih reproducirali.</string>
     <string name="error_torrents_not_yet">Torrenti se ovdje još ne mogu reproducirati. Odaberite stream koji nije torrent.</string>
+    <string name="settings_addons_torrents">Torrenti</string>
+    <string name="settings_addons_torrents_off">Isključeno. Torrenti koje vaši dodaci pronađu prikazuju se, ali se ne reproduciraju.</string>
+    <string name="settings_addons_torrents_on">Uključeno. Svi koji dijele torrent koji reproducirate mogu vidjeti vašu internetsku adresu.</string>
+    <string name="settings_addons_torrents_title">Uključiti torrente?</string>
+    <string name="settings_addons_torrents_body">Torrent se preuzima od drugih ljudi koji dijele istu datoteku. Dok ga gledate, svi koji ga dijele mogu vidjeti vašu internetsku adresu.</string>
+    <string name="settings_addons_torrents_confirm">Uključi torrente</string>
+    <string name="settings_addons_torrents_keep">Ostavi ih isključene</string>
+    <string name="search_not_from_provider">Nije od vašeg pružatelja usluge</string>
+    <string name="pairing_phone_addon_title">Dodajte dodatak</string>
+    <string name="pairing_phone_addon_body">Zalijepite njegovu adresu, a vaš TV će ga provjeriti i dodati. Dodajte koliko god želite, a zatim odaberite Gotovo.</string>
+    <string name="pairing_phone_addon_add">Dodaj</string>
+    <string name="pairing_phone_addon_done_title">Sve je gotovo</string>
+    <string name="pairing_phone_addon_done_body">Vaši dodaci su na vašem TV-u. Možete odložiti telefon.</string>
+    <string name="addons_phone_qr_desc">QR kôd za dodavanje dodataka s telefona</string>
+    <string name="vod_addon_still_asking">Još se pitaju vaši ostali dodaci…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d osoba dijeli</item>
+        <item quantity="few">%1$d osobe dijele</item>
+        <item quantity="other">%1$d osoba dijeli</item>
+    </plurals>
 </resources>

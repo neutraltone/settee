@@ -412,4 +412,23 @@
     <string name="report_question_always_send">Enviar siempre</string>
     <string name="error_torrents_off">Los torrents están desactivados. Actívalos en Ajustes, Complementos, para reproducirlos.</string>
     <string name="error_torrents_not_yet">Los torrents aún no se pueden reproducir aquí. Elige una transmisión que no sea un torrent.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Desactivados. Los torrents que encuentran tus complementos aparecen, pero no se reproducen.</string>
+    <string name="settings_addons_torrents_on">Activados. Todos los que comparten un torrent que reproduces pueden ver tu dirección de internet.</string>
+    <string name="settings_addons_torrents_title">¿Activar los torrents?</string>
+    <string name="settings_addons_torrents_body">Un torrent se descarga de otras personas que comparten el mismo archivo. Mientras ves uno, todos los que lo comparten pueden ver tu dirección de internet.</string>
+    <string name="settings_addons_torrents_confirm">Activar los torrents</string>
+    <string name="settings_addons_torrents_keep">Mantenerlos desactivados</string>
+    <string name="search_not_from_provider">No es de tu proveedor</string>
+    <string name="pairing_phone_addon_title">Agrega un complemento</string>
+    <string name="pairing_phone_addon_body">Pega su dirección y tu televisor lo comprobará y lo agregará. Agrega todos los que quieras y luego elige Listo.</string>
+    <string name="pairing_phone_addon_add">Agregar</string>
+    <string name="pairing_phone_addon_done_title">Todo listo</string>
+    <string name="pairing_phone_addon_done_body">Tus complementos ya están en tu televisor. Puedes dejar el teléfono.</string>
+    <string name="addons_phone_qr_desc">Código QR para agregar complementos desde tu teléfono</string>
+    <string name="vod_addon_still_asking">Todavía preguntando a tus otros complementos…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persona compartiendo</item>
+        <item quantity="other">%1$d personas compartiendo</item>
+    </plurals>
 </resources>

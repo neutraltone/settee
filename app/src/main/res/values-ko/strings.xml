@@ -410,4 +410,22 @@
     <string name="report_question_always_send">항상 보내기</string>
     <string name="error_torrents_off">토렌트가 꺼져 있습니다. 재생하려면 설정, 애드온에서 켜세요.</string>
     <string name="error_torrents_not_yet">토렌트는 아직 여기서 재생할 수 없습니다. 토렌트가 아닌 스트림을 고르세요.</string>
+    <string name="settings_addons_torrents">토렌트</string>
+    <string name="settings_addons_torrents_off">꺼짐. 애드온이 찾은 토렌트는 목록에 표시되지만 재생되지 않습니다.</string>
+    <string name="settings_addons_torrents_on">켜짐. 재생하는 토렌트를 공유하는 모든 사람이 내 인터넷 주소를 볼 수 있습니다.</string>
+    <string name="settings_addons_torrents_title">토렌트를 켤까요?</string>
+    <string name="settings_addons_torrents_body">토렌트는 같은 파일을 공유하는 다른 사람들에게서 받아옵니다. 시청하는 동안 그 파일을 공유하는 모든 사람이 내 인터넷 주소를 볼 수 있습니다.</string>
+    <string name="settings_addons_torrents_confirm">토렌트 켜기</string>
+    <string name="settings_addons_torrents_keep">꺼진 상태로 두기</string>
+    <string name="search_not_from_provider">공급자에 없는 콘텐츠</string>
+    <string name="pairing_phone_addon_title">애드온 추가</string>
+    <string name="pairing_phone_addon_body">주소를 붙여넣으면 TV가 확인한 후 추가합니다. 원하는 만큼 추가한 다음 완료를 선택하세요.</string>
+    <string name="pairing_phone_addon_add">추가</string>
+    <string name="pairing_phone_addon_done_title">모두 완료</string>
+    <string name="pairing_phone_addon_done_body">애드온이 TV에 추가되었습니다. 이제 휴대폰을 내려놓아도 됩니다.</string>
+    <string name="addons_phone_qr_desc">휴대폰에서 애드온을 추가하기 위한 QR 코드</string>
+    <string name="vod_addon_still_asking">다른 애드온에 아직 묻는 중…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d명 공유 중</item>
+    </plurals>
 </resources>

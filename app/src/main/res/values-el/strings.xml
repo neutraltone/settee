@@ -411,4 +411,23 @@
     <string name="report_question_always_send">Πάντα αποστολή</string>
     <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
     <string name="error_torrents_not_yet">Τα torrent δεν παίζουν ακόμα εδώ. Διαλέξτε μια ροή που δεν είναι torrent.</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Ανενεργά. Τα torrent που βρίσκουν τα πρόσθετά σας εμφανίζονται, αλλά δεν παίζουν.</string>
+    <string name="settings_addons_torrents_on">Ενεργά. Όποιος μοιράζεται ένα torrent που παίζετε μπορεί να δει τη διεύθυνσή σας στο διαδίκτυο.</string>
+    <string name="settings_addons_torrents_title">Ενεργοποίηση των torrent;</string>
+    <string name="settings_addons_torrents_body">Ένα torrent λαμβάνεται από άλλους ανθρώπους που μοιράζονται το ίδιο αρχείο. Όσο το παρακολουθείτε, όποιος το μοιράζεται μπορεί να δει τη διεύθυνσή σας στο διαδίκτυο.</string>
+    <string name="settings_addons_torrents_confirm">Ενεργοποίηση των torrent</string>
+    <string name="settings_addons_torrents_keep">Να μείνουν ανενεργά</string>
+    <string name="search_not_from_provider">Όχι από τον πάροχό σας</string>
+    <string name="pairing_phone_addon_title">Προσθήκη πρόσθετου</string>
+    <string name="pairing_phone_addon_body">Επικολλήστε τη διεύθυνσή του και η τηλεόρασή σας θα το ελέγξει και θα το προσθέσει. Προσθέστε όσα θέλετε και μετά επιλέξτε Τέλος.</string>
+    <string name="pairing_phone_addon_add">Προσθήκη</string>
+    <string name="pairing_phone_addon_done_title">Όλα έτοιμα</string>
+    <string name="pairing_phone_addon_done_body">Τα πρόσθετά σας είναι στην τηλεόρασή σας. Μπορείτε να αφήσετε το κινητό σας.</string>
+    <string name="addons_phone_qr_desc">Κωδικός QR για προσθήκη πρόσθετων από το κινητό σας</string>
+    <string name="vod_addon_still_asking">Ρωτάμε ακόμα τα άλλα πρόσθετά σας…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d άτομο μοιράζεται</item>
+        <item quantity="other">%1$d άτομα μοιράζονται</item>
+    </plurals>
 </resources>

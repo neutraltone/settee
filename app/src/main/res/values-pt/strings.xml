@@ -412,4 +412,23 @@
     <string name="report_question_always_send">Sempre enviar</string>
     <string name="error_torrents_off">Os torrents estão desligados. Ligue-os em Definições, Extras, para os reproduzir.</string>
     <string name="error_torrents_not_yet">Os torrents ainda não podem ser reproduzidos aqui. Escolha uma transmissão que não seja um torrent.</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Desligado. Os torrents que os seus add-ons encontram aparecem na lista, mas não são reproduzidos.</string>
+    <string name="settings_addons_torrents_on">Ligado. Todos os que partilham um torrent que reproduz podem ver o seu endereço de internet.</string>
+    <string name="settings_addons_torrents_title">Ligar os torrents?</string>
+    <string name="settings_addons_torrents_body">Um torrent é obtido a partir de outras pessoas que partilham o mesmo ficheiro. Enquanto vê um, todos os que o partilham podem ver o seu endereço de internet.</string>
+    <string name="settings_addons_torrents_confirm">Ligar os torrents</string>
+    <string name="settings_addons_torrents_keep">Manter desligados</string>
+    <string name="search_not_from_provider">Não é do seu fornecedor</string>
+    <string name="pairing_phone_addon_title">Adicionar um add-on</string>
+    <string name="pairing_phone_addon_body">Cole o endereço e a sua TV verifica-o e adiciona-o. Adicione quantos quiser e depois escolha Concluído.</string>
+    <string name="pairing_phone_addon_add">Adicionar</string>
+    <string name="pairing_phone_addon_done_title">Tudo pronto</string>
+    <string name="pairing_phone_addon_done_body">Os seus add-ons estão na sua TV. Já pode pousar o telemóvel.</string>
+    <string name="addons_phone_qr_desc">Código QR para adicionar add-ons a partir do telemóvel</string>
+    <string name="vod_addon_still_asking">Ainda a perguntar aos seus outros add-ons…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d pessoa a partilhar</item>
+        <item quantity="other">%1$d pessoas a partilhar</item>
+    </plurals>
 </resources>

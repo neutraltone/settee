@@ -410,4 +410,22 @@
     <string name="report_question_always_send">Luôn gửi</string>
     <string name="error_torrents_off">Torrent đang tắt. Bật trong Cài đặt, Tiện ích bổ sung để phát các mục này.</string>
     <string name="error_torrents_not_yet">Chưa thể phát torrent ở đây. Hãy chọn luồng không phải torrent.</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Tắt. Torrent mà tiện ích của bạn tìm thấy vẫn hiện trong danh sách nhưng không phát được.</string>
+    <string name="settings_addons_torrents_on">Bật. Mọi người đang chia sẻ torrent bạn phát đều có thể thấy địa chỉ internet của bạn.</string>
+    <string name="settings_addons_torrents_title">Bật torrent?</string>
+    <string name="settings_addons_torrents_body">Torrent được tải từ những người khác đang chia sẻ cùng tệp. Khi bạn xem, mọi người đang chia sẻ tệp đó đều có thể thấy địa chỉ internet của bạn.</string>
+    <string name="settings_addons_torrents_confirm">Bật torrent</string>
+    <string name="settings_addons_torrents_keep">Vẫn để tắt</string>
+    <string name="search_not_from_provider">Không phải từ nhà cung cấp của bạn</string>
+    <string name="pairing_phone_addon_title">Thêm tiện ích</string>
+    <string name="pairing_phone_addon_body">Dán địa chỉ của tiện ích, TV sẽ kiểm tra rồi thêm vào. Thêm bao nhiêu tùy thích, sau đó chọn Xong.</string>
+    <string name="pairing_phone_addon_add">Thêm</string>
+    <string name="pairing_phone_addon_done_title">Đã xong</string>
+    <string name="pairing_phone_addon_done_body">Tiện ích của bạn đã có trên TV. Bạn có thể đặt điện thoại xuống.</string>
+    <string name="addons_phone_qr_desc">Mã QR để thêm tiện ích từ điện thoại</string>
+    <string name="vod_addon_still_asking">Vẫn đang hỏi các tiện ích khác của bạn…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d người đang chia sẻ</item>
+    </plurals>
 </resources>
