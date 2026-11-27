@@ -11,7 +11,10 @@ plugins {
 
 android {
     namespace = "app.opentv.baselineprofile"
-    compileSdk = 37
+    // Compose 1.13 needs the 37.1 minor release; `compileSdk = 37` means 37.0 and fails the AAR check.
+    compileSdk {
+        version = release(37) { minorApiLevel = 1 }
+    }
 
     defaultConfig {
         // BaselineProfileRule needs Android 13 or newer, or a rooted device.
