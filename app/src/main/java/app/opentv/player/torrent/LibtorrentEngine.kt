@@ -63,6 +63,8 @@ class LibtorrentEngine(
     override fun start(request: TorrentRequest) {
         stop()
         val run = RunningTorrent(request, cache.folderFor(request.infoHash))
+        // Starting afresh deletes what the last one fetched, so each start is worth a line.
+        Log.i(TAG, "Torrent starting, file ${request.fileIndex ?: "largest"}")
         lock.withLock {
             current = run
             _status.value = TorrentStatus.Connecting()
@@ -213,6 +215,7 @@ class LibtorrentEngine(
     override fun stop() {
         val run = lock.withLock {
             val run = current ?: return
+            Log.i(TAG, "Torrent stopping")
             current = null
             run.stopped = true
             _status.value = TorrentStatus.Idle
