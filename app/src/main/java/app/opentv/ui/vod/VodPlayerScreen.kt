@@ -581,8 +581,6 @@ fun VodPlayerContent(
 
         subtitles?.let { DownloadedSubtitleOverlay(it, positionMillis = { controller.positionMillis }) }
 
-        val notice by controller.notice.collectAsState()
-        notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
         subtitles?.let { SubtitleNote(it, Modifier.align(Alignment.TopStart)) }
 
         when (val current = state) {
@@ -612,6 +610,11 @@ fun VodPlayerContent(
 
             else -> Unit
         }
+
+        // Over the loading screen, not under it: a notice said while a torrent is still fetching is kept
+        // up until the film starts, and was hidden behind Loading.
+        val notice by controller.notice.collectAsState()
+        notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
 
         AnimatedVisibility(visible = controlsVisible && !failed, enter = fadeIn(), exit = fadeOut()) {
             PlayerControlBar(
