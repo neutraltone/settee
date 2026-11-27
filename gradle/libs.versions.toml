@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.1"
+agp = "9.5.3"
 # AGP 9 compiles Kotlin with whichever kotlin-gradle-plugin is on the classpath, falling back to the
 # older one it bundles. This version only wins because the compose and serialization plugins below
 # pull it in, so keep at least one of them, or add the KGP to the root buildscript classpath.
@@ -25,7 +25,7 @@ jlibtorrent = "2.1.2.1"
 navigation = "2.10.2"
 junit = "4.13.2"
 truth = "1.4.5"
-robolectric = "4.18"
+robolectric = "4.18.1"
 roborazzi = "1.79.0"
 androidxTestExt = "1.2.1"
 ktlintGradle = "14.2.0"
@@ -42,9 +42,9 @@ profileinstaller = "1.4.1"
 androidxTestRunner = "1.7.0"
 # Crash reports (ADR 0009). Only sentry-android-core: the umbrella artifact brings NDK and session
 # replay, which Settee never uses.
-sentry = "8.63.0"
+sentry = "8.65.1"
 # Only uploads each release's R8 mapping (#577); everything else it can do is off in app/build.gradle.kts.
-sentryGradle = "6.26.0"
+sentryGradle = "6.27.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
