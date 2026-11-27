@@ -70,8 +70,24 @@ sealed interface TorrentStatus {
     /** Asking trackers and the DHT for people sharing it, and for its list of files. */
     data class Connecting(val peers: Int = 0) : TorrentStatus
 
-    /** The file is known and there's room for it; reads can begin. */
-    data class Ready(val fileSize: Long, val peers: Int) : TorrentStatus
+    /**
+     * The file is known and there's room for it; reads can begin. [bytesPerSecond] is how fast it's
+     * arriving, null until it has been measured.
+     */
+    data class Ready(val fileSize: Long, val peers: Int, val bytesPerSecond: Long? = null) : TorrentStatus {
+        /**
+         * Whether it's arriving slower than a film [durationMillis] long plays, on average across the
+         * file: false while either is unknown.
+         */
+        fun slowerThanPlays(durationMillis: Long): Boolean {
+            val rate = bytesPerSecond ?: return false
+            return durationMillis > 0 && rate * durationMillis < fileSize * MILLIS_PER_SECOND
+        }
+
+        private companion object {
+            const val MILLIS_PER_SECOND = 1_000L
+        }
+    }
 
     /** It can't play; [detail] is for the error's detail line, never a sentence for the viewer. */
     data class Failed(val reason: TorrentFailure, val detail: String? = null) : TorrentStatus

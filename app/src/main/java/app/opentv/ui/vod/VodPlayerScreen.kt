@@ -596,7 +596,7 @@ fun VodPlayerContent(
                         AerialTv(stringResource(R.string.player_loading))
                         Spacer(Modifier.height(16.dp))
                         Text(current.title, SetteeType.Body)
-                        TorrentProgress(controller.torrent)
+                        TorrentProgress(controller.torrent, durationMillis = { controller.player.duration })
                     }
                 }
 

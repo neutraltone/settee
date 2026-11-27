@@ -154,7 +154,10 @@ class LibtorrentEngine(
     /** Once a second: the peer count for the player, and the start-up time limit. */
     private fun watch(run: RunningTorrent) {
         if (run.stopped) return
-        val peers = run.handle?.takeIf { it.isValid }?.status()?.numPeers() ?: 0
+        val torrent = run.handle?.takeIf { it.isValid }?.status()
+        val peers = torrent?.numPeers() ?: 0
+        // libtorrent's own average over the last few seconds, of the file's bytes only.
+        val rate = torrent?.downloadPayloadRate()?.toLong()
         run.peersSeen = maxOf(run.peersSeen, peers)
         val keepWatching = when (val now = _status.value) {
             is TorrentStatus.Connecting ->
@@ -168,7 +171,8 @@ class LibtorrentEngine(
                     true
                 }
             is TorrentStatus.Ready -> {
-                if (now.peers != peers) _status.value = now.copy(peers = peers)
+                val next = now.copy(peers = peers, bytesPerSecond = rate)
+                if (next != now) _status.value = next
                 true
             }
             else -> false

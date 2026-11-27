@@ -875,6 +875,7 @@
         <item quantity="one">Fetching it from %1$d person</item>
         <item quantity="other">Fetching it from %1$d people</item>
     </plurals>
+    <string name="player_torrent_too_slow">It\'s arriving slower than it plays, so it will keep stopping. A smaller copy may play smoothly.</string>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
