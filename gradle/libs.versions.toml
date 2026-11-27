@@ -39,9 +39,9 @@ profileinstaller = "1.4.1"
 androidxTestRunner = "1.7.0"
 # Crash reports (ADR 0009). Only sentry-android-core: the umbrella artifact brings NDK and session
 # replay, which Settee never uses.
-sentry = "8.63.0"
+sentry = "8.65.1"
 # Only uploads each release's R8 mapping (#577); everything else it can do is off in app/build.gradle.kts.
-sentryGradle = "6.26.0"
+sentryGradle = "6.27.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
