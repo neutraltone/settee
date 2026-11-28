@@ -8,6 +8,7 @@ package app.opentv.player
 import androidx.media3.common.PlaybackException
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.RecordedOn
+import app.opentv.player.torrent.TorrentFailure
 
 /** What can be done about a failed stream: the viewer offered Retry, the player restarting it by itself. */
 internal data class Recovery(val canRetry: Boolean, val canRestart: Boolean)
@@ -28,6 +29,12 @@ internal object PlaybackRecovery {
         hadPlayed: Boolean,
         recordedOn: RecordedOn? = null,
     ): Recovery {
+        // A torrent's engine has already given it its time to find people and start, so restarting it by
+        // itself would only keep the viewer waiting as long again. Retry stays, as people may join, unless
+        // this device can't run the engine at all.
+        torrentFailureOf(error)?.let { torrent ->
+            return Recovery(canRetry = torrent.reason != TorrentFailure.UNSUPPORTED_DEVICE, canRestart = false)
+        }
         // Restarting can't change what this device can decode, and on a portal it would only mint
         // more links for a stream that will fail the same way. How many times it failed doesn't
         // count here: the viewer may have stopped the stream on their other device since (#460).

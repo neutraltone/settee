@@ -13,21 +13,46 @@ Everything lives in a SQLite database in the app's private storage on your devic
 - The channel, movie and series catalogue downloaded from your provider
 - The guide (EPG)
 - Your favourites, hidden channels and resume positions
+- The addresses of the Stremio add-ons you've set up, which may hold a key of yours for a service the
+  add-on uses, and the films and shows you've opened from them
 
 None of it is uploaded anywhere. There is no account to create and no server to sync with.
 
 ## Who your device talks to
 
-Only your provider, and only at the address you entered. Channel logos and posters are fetched
-from whatever URLs your provider puts in its catalogue, which are usually its own servers but
-may be third parties — that is your provider's choice, not ours.
+Your provider, at the address you entered. Channel logos and posters are fetched from whatever URLs
+your provider puts in its catalogue, which are usually its own servers but may be third parties —
+that is your provider's choice, not ours.
+
+The others below. Some are asked only once you've set up a Stremio add-on, and those say so.
 
 [TMDB](https://www.themoviedb.org), for the posters, synopses and cast your provider left out, and
 the IMDb match that add-ons need. With no setup at all, after every catalogue refresh Settee asks
 TMDB about every film and show in your catalogue, by title and year (or the TMDB id your provider
-gave), and asks again whenever you open a title's page. It sends the title being looked up and
-Settee's own key, nothing about you or what you watch, though TMDB sees your device's IP address as
-any website does. A build made without Settee's key, such as a fork, never asks TMDB.
+gave), and asks again whenever you open a title's page. These send the title being looked up and
+Settee's own key. Once you've set up an add-on, Settee asks TMDB more:
+
+- **What you type into Search**, as you type it, so Search can offer films and shows your provider
+  doesn't carry. This is the one thing TMDB is sent that you wrote yourself.
+- **A show's seasons and episodes** by its TMDB id, when you open a show you found that way.
+- **A title by its IMDb id**, when a film or show you opened from an add-on on another of your devices
+  arrives by sync, so this device can list it too. This happens with or without add-ons on this device.
+
+None of it says who you are, though TMDB sees your device's IP address as any website does, and a
+search shows TMDB what someone at that address looked for. A build made without Settee's key, such
+as a fork, never asks TMDB.
+
+**Your Stremio add-ons**, at the addresses you gave them, only once you've set one up. Opening a
+film's or an episode's add-on streams, or playing one from Continue Watching or the Next Episode card,
+asks every add-on that serves that kind of title for streams, by the title's IMDb id, and for an
+episode its season and episode number too. So each add-on learns which titles you look up, from your
+device's IP address. Settee also reads each add-on's manifest when you add it, and again later to
+see what it serves. A stream you play comes from wherever the add-on's link points, not from Settee.
+
+**People sharing a torrent**, only with Settings → Add-ons → Torrents on, and only once Settee can play
+torrents. Playing one fetches it from other people sharing the same file, and while it plays, passes
+pieces of it on to them. Every one of them can see your device's IP address and which file it's
+fetching. Settee turns Torrents off until you turn them on and asks you first.
 
 [TheIntroDB](https://theintrodb.org) and [IntroDB](https://introdb.app), for when an episode's
 credits start, so the Next Episode card comes up then rather than near the end. When an episode

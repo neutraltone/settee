@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">正在加载分集…</string>
     <string name="vod_episodes_failed">无法加载这部剧集的分集。请稍后重试。</string>
     <string name="vod_no_episodes">你的提供商还没有添加这部剧集的任何分集。</string>
+    <string name="vod_no_episodes_addons">此节目尚未列出任何剧集。</string>
     <string name="vod_continue_watching">继续观看</string>
     <string name="vod_large_provider_note">若提供商内容较多，首次加载可能需要几分钟。</string>
     <string name="vod_recommended">为你推荐</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">此频道已停止。请重试，或选择其他频道。</string>
     <string name="error_timed_out">你的提供商停止了响应。它可能正忙，请稍后重试。</string>
     <string name="error_web_page">你的提供商发送的是网页而不是视频。链接可能已过期，请尝试在“设置”中刷新你的提供商。</string>
+    <string name="error_unplayable_file">你的提供商发送的文件格式 Settee 无法播放，请换个内容试试。</string>
+    <string name="error_addon_web_page">此插件的链接打开的是网页而不是视频。请选择其他流。</string>
+    <string name="error_addon_unplayable_file">此插件的链接打开的文件格式 Settee 无法播放。请选择其他流。</string>
+    <string name="playback_pick_another_stream">选择其他流</string>
     <string name="error_damaged">此视频已损坏，无法播放。这是你的提供商那边的问题，请换个内容试试。</string>
     <string name="error_behind_live">此频道落后直播太多。请重试以追上直播。</string>
     <string name="error_gone">你的提供商已不再提供此内容。请尝试在“设置”中刷新你的提供商。</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">无法连接到插件。请检查这台电视是否已联网，以及地址是否正确。</string>
     <string name="error_addon_cant_reach_device">无法连接到插件。请检查本设备是否已联网，以及地址是否正确。</string>
     <string name="error_addon_timed_out">插件停止了响应。它可能正忙，请稍后重试。</string>
+    <string name="error_addon_bad_address">这不是网址。请检查输入是否有误。</string>
+    <string name="error_addon_no_match">此电影在 IMDb 上没有匹配项，因此你的附加组件无法查找它。</string>
     <string name="error_addon_trouble">插件出现了问题。这是插件那边的问题，请稍后重试。</string>
     <string name="error_not_an_addon_tv">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及这台电视的网络是否要求你先登录。</string>
     <string name="error_not_an_addon_device">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及本设备的网络是否要求你先登录。</string>
     <string name="error_addon_lookup_tv">无法查找这部电影来询问你的插件。请检查这台电视是否已联网，然后重试。</string>
     <string name="error_addon_lookup_device">无法查找这部电影来询问你的插件。请检查本设备是否已联网，然后重试。</string>
+    <string name="error_addon_no_match_show">此剧集在 IMDb 上没有匹配项，因此你的附加组件无法查找它。</string>
+    <string name="error_addon_lookup_show_tv">无法查找这部剧集来询问你的插件。请检查这台电视是否已联网，然后重试。</string>
+    <string name="error_addon_lookup_show_device">无法查找这部剧集来询问你的插件。请检查本设备是否已联网，然后重试。</string>
     <string name="error_device_refused">你的提供商未接受这些信息。请在“设置”中检查提供商信息。</string>
     <string name="error_guide">无法下载此节目单。请稍后重试。</string>
     <string name="error_guide_empty">此节目单已下载，但其中没有节目。请确认链接是否正确。</string>
@@ -403,4 +413,29 @@
     <string name="report_question_send">发送</string>
     <string name="report_question_dont_send">不发送</string>
     <string name="report_question_always_send">始终发送</string>
+    <string name="error_torrents_off">种子已关闭。在设置的附加组件中开启后即可播放这些。</string>
+    <string name="error_torrent_nobody_sharing">现在没有人分享这个种子，所以无法播放。请选择其他流。</string>
+    <string name="error_torrent_no_space">可用空间不足，无法播放这个种子。请选择更小的流，或腾出一些空间。</string>
+    <string name="error_torrent_timed_out">这个种子找到了分享者，但没能及时开始。请重试，或选择其他流。</string>
+    <string name="error_torrent_unsupported">种子需要 Android 8.0 或更高版本才能播放。请选择不是种子的流。</string>
+    <string name="error_torrent_failed">种子因自身故障而停止。请重试，或选择其他流。</string>
+    <string name="vod_addon_torrent">种子</string>
+    <string name="settings_addons_torrents">种子</string>
+    <string name="settings_addons_torrents_off">已关闭。插件找到的种子会列出，但无法播放。</string>
+    <string name="settings_addons_torrents_on">已开启。分享你所播放种子的所有人都能看到你的网络地址。</string>
+    <string name="settings_addons_torrents_title">开启种子？</string>
+    <string name="settings_addons_torrents_body">种子是从分享同一文件的其他人那里获取的。观看时，所有分享该文件的人都能看到你的网络地址。</string>
+    <string name="settings_addons_torrents_confirm">开启种子</string>
+    <string name="settings_addons_torrents_keep">保持关闭</string>
+    <string name="search_not_from_provider">非你的提供商提供</string>
+    <string name="pairing_phone_addon_title">添加插件</string>
+    <string name="pairing_phone_addon_body">粘贴插件地址，电视会检查并添加。想添加多少都可以，然后选择“完成”。</string>
+    <string name="pairing_phone_addon_add">添加</string>
+    <string name="pairing_phone_addon_done_title">全部完成</string>
+    <string name="pairing_phone_addon_done_body">你的插件已在电视上。可以放下手机了。</string>
+    <string name="addons_phone_qr_desc">用手机添加插件的二维码</string>
+    <string name="vod_addon_still_asking">仍在询问你的其他插件…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d 人在分享</item>
+    </plurals>
 </resources>

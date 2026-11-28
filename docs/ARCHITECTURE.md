@@ -260,6 +260,22 @@ a handful of calls, not the catalogue. A refresh (the worker, or Refresh in sett
 The Movies and Shows re-sync as the app opens launches it instead, so its spinner isn't held, but
 can't skip it: once the stored times have moved, a later refresh would never see that show again.
 
+A show kept from an add-on (ADR 0011) has no panel: `fetchEpisodes` asks TMDB for its seasons instead,
+appended to one show request rather than one request a season, and stores them through the same
+`storeEpisodes`, so local ids, `firstSeenMillis` and retired episodes behave as a Provider's do. Each
+episode's id is the show's IMDb id plus season and episode (`tt…:1:3`), what add-ons are asked with;
+Specials and episodes not yet aired are left out, as no add-on has them and Up Next mustn't point at
+one. They have no stream URL, but what tells the show page that OK opens the add-on picker is their
+source (`AddonsSourceId`), since a Provider's episode can lack one too.
+
+A Provider's show gets the seasons TMDB lists that it doesn't carry the same way (#683): once the
+Provider's episodes are stored on opening its page, `AddonSeasons` keeps an Add-ons copy of the show,
+keyed by IMDb id and with the Provider's TMDB id, so ADR 0007 groups it, and only when TMDB lists a
+season none of the Provider's Versions has. The copy keeps the seasons no Provider's Version carries
+plus those it kept before (`addonSeasonsKept`), so it never duplicates the Provider's seasons, and a
+season the Provider adds later stays as the copy's Version of it, progress and all. The page's Versions
+fetch leaves a Provider's show's copy to `AddonSeasons`, so it never races the Provider's own fetch.
+
 The second is sync. Progress from another device can name an episode this one hasn't stored, so the
 position also carries its `seriesId`, and `WaitingProgress` fetches that series in the background
 after `SyncEngine.apply` has returned, so no sync screen waits on a provider. Each series is fetched
@@ -269,6 +285,14 @@ disabled sources. No position is stored while it waits: the peer's bundle still 
 later sync tries again. Only an episode the provider's answer left out is noted, so it stops being
 asked for. The fetched episodes are dated back to the position rather than now, because they're new
 to this device, not to the viewer, and mustn't show as New Episodes (ADR 0004).
+
+A title kept from an add-on travels the same way, under the Add-ons source's name and its IMDb id.
+A receiver that never kept it, even one with no add-ons and so no Add-ons source yet, hands its film
+positions, episode positions and starred Favourites to `WaitingProgress`, which keeps the title from
+TMDB's look-up by IMDb id (`AddonTitles.keepSyncedFilm`/`keepSyncedShow`), fetches a show's episodes
+from TMDB when a position is on one, then merges the positions. A Favourite is stored by name and id
+on arrival already and lists once its title is kept. TMDB down, or no TMDB Key, stops the run for a
+later sync; an IMDb id TMDB doesn't know is noted, like a missing episode, so it isn't asked again.
 
 Episode lists carry no time the provider added each episode, so each row records when this device
 first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile
@@ -384,6 +408,24 @@ screens, because every way a stream starts goes through `play()`: an automatic r
 down, a zap finishing or a link arriving after Home was pressed would otherwise start the sound
 again behind the other app. Neither releases the player. It collects the lifecycle rather than
 reading it in composition, because Compose draws no frames while the activity is stopped.
+
+### Torrents play through the engine, not a local server
+
+An add-on's torrent (#670, ADR 0012) reaches the player as an ordinary `MediaKey.AddonStream` whose
+link is a magnet link, the file to play as its `so`, so it travels through routes, carry-on and the
+error panel exactly as a web link does. `PlaybackSources` hands it on as a `Playable.Ready` carrying its
+`TorrentRequest`, and refuses it while the Torrents switch is off. The film and episode player's
+`PlayerController` starts the app's one `TorrentEngine` on it and routes `magnet:` to
+`TorrentDataSource`, which reads byte ranges straight from the engine; each read raises the pieces under
+the read position, so a seek fetches where it landed. The usual approach, a local HTTP server the player
+fetches from, was rejected: any app on the box could reach it, and it's one more thing to run and stop.
+
+The engine runs only while a torrent plays: the controller stops it, which deletes its pieces, when it
+plays something else, stops or is released, but only if it started it, since the engine is the app's.
+Turning Torrents off stops it too (`ServiceLocator.torrentEngine`), and leftovers from a crash go at the
+next start (`OpenTvApp`). A torrent has no start-up limit and no restarts by itself: the engine has its
+own limit on finding people and its file list, and its failures (`TorrentFailedException`) have their
+own sentences, Pick another stream and, but on a device that can't run it, Try again.
 
 ### Retries are tuned for IPTV, not for CDNs
 

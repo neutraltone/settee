@@ -139,6 +139,24 @@ class PlayerNavigationTest {
     }
 
     @Test
+    fun `an add-on stream reaches the player with its link and the headers the add-on asked for`() {
+        setApp()
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(9),
+            "https://example.com/a b.mkv?x=1&y=2",
+            mapOf("Referer" to "https://example.com/", "Cookie" to "a=1; b=2"),
+        )
+
+        act { navigate(Routes.vodPlayer(key)) }
+        showing("Movie player")
+
+        compose.runOnIdle {
+            fun arg(name: String) = java.net.URLDecoder.decode(nav.playerArg(name), "UTF-8")
+            assertThat(Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"))).isEqualTo(key)
+        }
+    }
+
+    @Test
     fun `the options panel's pages are the title's own pages`() {
         setApp()
 
@@ -212,6 +230,31 @@ class PlayerNavigationTest {
 
         assertThat(titlePageFor(MediaKey.Movie(9), seriesOfEpisode)).isEqualTo(Routes.movieDetail(9))
         assertThat(titlePageFor(MediaKey.Episode(5), seriesOfEpisode)).isEqualTo(Routes.seriesDetail(3))
+    }
+
+    @Test
+    fun `an add-on stream's page is its title's, a film's or an episode's series'`() = runTest {
+        val seriesOfEpisode: suspend (Long) -> Long? = { episodeId -> if (episodeId == 5L) 3L else null }
+        fun addon(title: MediaKey.Title) = MediaKey.AddonStream(title, "https://example.com/a.mkv")
+
+        assertThat(titlePageFor(addon(MediaKey.Movie(9)), seriesOfEpisode)).isEqualTo(Routes.movieDetail(9))
+        assertThat(titlePageFor(addon(MediaKey.Episode(5)), seriesOfEpisode)).isEqualTo(Routes.seriesDetail(3))
+    }
+
+    @Test
+    fun `an episode's add-on stream comes back from the player's route as it went, add-on and bingeGroup too`() {
+        val key = MediaKey.AddonStream(
+            MediaKey.Episode(12),
+            "https://example.com/s1e2.mkv",
+            mapOf("Referer" to "r"),
+            addonName = "Shows & more",
+            bingeGroup = "shows|1080p",
+        )
+        val route = android.net.Uri.parse(Routes.vodPlayer(key))
+        fun arg(name: String) = route.getQueryParameter(name).orEmpty()
+
+        val back = Routes.vodPlayerKey(arg("key"), arg("addon"), arg("headers"), arg("addonName"), arg("binge"))
+        assertThat(back).isEqualTo(key)
     }
 
     @Test

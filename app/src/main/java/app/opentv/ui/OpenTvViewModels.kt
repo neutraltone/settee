@@ -29,15 +29,13 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
-import app.opentv.data.model.StremioAddon
-import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
-import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.ProviderException
+import app.opentv.data.repo.AddonTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
@@ -59,6 +57,7 @@ import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
+import app.opentv.data.repo.addonsSourceId
 import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
@@ -75,6 +74,8 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.AddonSearch
+import app.opentv.ui.vod.AddonSearches
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -892,6 +893,13 @@ data class OpenedShow(
     val fetched: Boolean,
     val noEpisodes: Boolean = false,
     val failure: ViewerError? = null,
+    /** Kept from an add-on: its episodes come from TMDB, and no sentence about it may mention a provider. */
+    val fromAddons: Boolean = false,
+    /**
+     * The seasons TMDB lists that the Provider's show lacks have been looked for, and any stored under its
+     * Add-ons copy (#683): the page reads the show's Versions again, as that copy may be new.
+     */
+    val addonSeasons: Boolean = false,
 )
 
 /**
@@ -912,18 +920,6 @@ data class Backdrop(
 
 /** What Movies and Shows know a category by: its id is only unique within its provider. */
 val Category.browseKey: String get() = "$sourceId:$id"
-
-/** What a film's add-ons came back with, for its Add-on sources picker. */
-sealed interface AddonStreams {
-    /** TMDB couldn't match the film to IMDb, or the add-ons answered with nothing that plays directly. */
-    data object NoneFound : AddonStreams
-
-    /** The streams that play directly, from every add-on that answered. */
-    data class Found(val streams: List<StremioStream>) : AddonStreams
-
-    /** Every add-on failed, or TMDB didn't answer: [error] says why. */
-    data class Failed(val error: ViewerError) : AddonStreams
-}
 
 /**
  * A Movies or Shows download that failed: which provider, so Provider setup can open it, why, and
@@ -1086,41 +1082,22 @@ class VodViewModel @JvmOverloads constructor(
             .map { it.isNotEmpty() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), settings.stremioAddons.value.isNotEmpty())
 
+    private val addonSearches = AddonSearches(graph)
+
+    /** What the viewer's add-ons offer for [movie], growing as each answers. */
+    fun addonStreams(movie: Movie): Flow<AddonSearch> = addonSearches.forFilm(movie)
+
     /**
-     * The streams the configured add-ons offer for [movie], resolved through TMDB for the IMDb id.
-     * Each add-on is asked on its own, so one failing doesn't sink the rest: it's [AddonStreams.Failed]
-     * only when every one failed, saying why the first did, or when TMDB didn't answer.
+     * What the viewer's add-ons offer for [episode] of [series], as for a film. An episode of another of the
+     * show's Versions, such as a season only its Add-ons copy has (#683), is asked about by its own series,
+     * whose IMDb id it's keyed by, rather than by a TMDB look-up for the Provider's.
      */
-    suspend fun addonStreams(movie: Movie): AddonStreams {
-        val addons = settings.stremioAddons.value
-        val imdb = if (addons.isEmpty()) Result.success(null) else graph.catalogRepository.imdbIdFor(movie)
-        val answers = imdb.fold(
-            onSuccess = { id ->
-                if (id == null) emptyList() else withContext(graph.dispatchers.io) { addons.map { askAddon(it, id) } }
-            },
-            onFailure = { listOf(AddonAnswer.Failed(AddonFailure.NoLookup(it))) },
-        )
-        val streams = answers.filterIsInstance<AddonAnswer.Streams>().flatMap { it.streams }
-        val firstFailure = (answers.firstOrNull() as? AddonAnswer.Failed)?.failure
-        return when {
-            streams.isNotEmpty() -> AddonStreams.Found(streams)
-            firstFailure != null && answers.all { it is AddonAnswer.Failed } ->
-                AddonStreams.Failed(graph.errorWording.ofAddon(firstFailure))
-            else -> AddonStreams.NoneFound
+    fun addonStreams(series: Series, episode: Episode): Flow<AddonSearch> =
+        if (episode.sourceId == series.sourceId && episode.seriesId == series.seriesId) {
+            addonSearches.forEpisode(series, episode)
+        } else {
+            addonSearches.forTitle(MediaKey.Episode(episode.id))
         }
-    }
-
-    // Only an AddonFailure: anything else, cancellation above all, isn't the add-on's to word.
-    private fun askAddon(addon: StremioAddon, imdb: String): AddonAnswer = try {
-        AddonAnswer.Streams(graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb))
-    } catch (failure: AddonFailure) {
-        AddonAnswer.Failed(failure)
-    }
-
-    private sealed interface AddonAnswer {
-        data class Streams(val streams: List<StremioStream>) : AddonAnswer
-        data class Failed(val failure: AddonFailure) : AddonAnswer
-    }
 
     // ---- Netflix-style home rows ----------------------------------------------------------------
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds
@@ -1386,6 +1363,32 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
+     * Films and shows the Provider doesn't carry, for Search's last section (ADR 0011): only with an add-on set up
+     * and a TMDB Key. A flow of its own, so the Provider's results never wait on TMDB.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val addonResults: StateFlow<List<AddonTitle>> =
+        combine(vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged(), hasAddons, ::Pair)
+            .flatMapLatest { (q, addons) ->
+                if (q.length < 2 || !addons) {
+                    flowOf(emptyList())
+                } else {
+                    // Emptied as a new search starts, so the last one's films don't stay under its results.
+                    flow {
+                        emit(emptyList())
+                        emit(graph.addonTitles.search(q))
+                    }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** [film], from Search's Not from your provider, kept as a film of the Add-ons source to open. */
+    suspend fun keepAddonFilm(film: AddonTitle): Movie = graph.addonTitles.keepFilm(film)
+
+    /** [show], from Search's Not from your provider, kept as a show of the Add-ons source to open. */
+    suspend fun keepAddonShow(show: AddonTitle): Series = graph.addonTitles.keepShow(show)
+
+    /**
      * The active Profile's Favourite movies and series: the Favourites rows and the detail pages'
      * stars. Null until first loaded, so a star never shows "not a Favourite" for a frame and acts on it.
      */
@@ -1447,12 +1450,19 @@ class VodViewModel @JvmOverloads constructor(
             // Read here, after the fetches stored them, rather than left to the page's live read, which can
             // come a moment later and would have the page say there are none just before they show.
             val none = showEpisodes(series).first().all.isEmpty()
+            // A show kept from an add-on asks TMDB, not a Provider: no sentence may blame "your provider".
+            val fromAddons = graph.database.sources().addonsSourceId().keeps(series.sourceId)
             val failure = when {
                 !none -> null
-                timedOut -> graph.errorWording.ofProvider(SocketTimeoutException(), R.string.vod_episodes_failed)
-                else -> episodesFailure(outcomes)
+                timedOut -> episodesFailure(listOf(Result.failure(SocketTimeoutException())), fromAddons)
+                else -> episodesFailure(outcomes, fromAddons)
             }
-            send(Opened.Found(OpenedShow(series, fetched = true, noEpisodes = none, failure = failure)))
+            val shown =
+                OpenedShow(series, fetched = true, noEpisodes = none, failure = failure, fromAddons = fromAddons)
+            send(Opened.Found(shown))
+            // Last, once the Provider's episodes are stored, as they're what TMDB's seasons are compared with
+            // (#683). A failure changes nothing: the Provider's seasons are all there.
+            if (graph.addonSeasons.fill(series).isSuccess) send(Opened.Found(shown.copy(addonSeasons = true)))
         } finally {
             // Nothing's waiting for them any more; past the limit they carry on, and store what they find.
             if (!outlived) fetching.forEach { it.cancel() }
@@ -1465,7 +1475,11 @@ class VodViewModel @JvmOverloads constructor(
      */
     private fun fetchVersions(series: Series, asked: MutableSet<Long>): Deferred<List<Result<Unit>>> =
         viewModelScope.async {
-            val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
+            val addons = graph.database.sources().addonsSourceId()
+            // A Provider's show's Add-ons copy is left to addonSeasons, once the Provider's episodes are in (#683).
+            val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds)
+                .filter { addons.keeps(series.sourceId) || !addons.keeps(it.sourceId) }
+                .filter { asked.add(it.id) }
             versions.map { version ->
                 async {
                     val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
@@ -1476,24 +1490,32 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
-     * the opened Version's failure first. Not when any worked: even with nothing in it, the provider has
+     * the opened Version's failure first, and never in a Provider's words for a show kept from an add-on
+     * ([fromAddons]), whose episodes come from TMDB. Not when any worked: even with nothing in it, the provider has
      * answered, and the viewer can't do anything about the other Versions' panels.
      */
-    private fun episodesFailure(outcomes: List<Result<Unit>>): ViewerError? =
+    private fun episodesFailure(outcomes: List<Result<Unit>>, fromAddons: Boolean): ViewerError? =
         outcomes.takeIf { all -> all.none { it.isSuccess } }
             ?.firstOrNull()
             ?.exceptionOrNull()
-            ?.let { graph.errorWording.ofProvider(it, R.string.vod_episodes_failed) }
+            ?.let {
+                if (fromAddons) {
+                    graph.errorWording.of(it, R.string.vod_episodes_failed)
+                } else {
+                    graph.errorWording.ofProvider(it, R.string.vod_episodes_failed)
+                }
+            }
 
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow {
-        emit(graph.database.versionsOf(series, graph.titleIndex.versionIds))
+        val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds)
+        emit(versions to graph.database.sources().addonsSourceId())
     }
-        .flatMapLatest { versions ->
+        .flatMapLatest { (versions, addons) ->
             val ordered = listOf(series) + versions.filter { it.id != series.id }
             combine(ordered.map { graph.catalogRepository.observeEpisodes(it.sourceId, it.seriesId) }) { lists ->
-                ShowEpisodes.of(lists.first(), lists.drop(1))
+                ShowEpisodes.of(lists.first(), lists.drop(1), addons)
             }
         }
 
@@ -1561,15 +1583,17 @@ class VodViewModel @JvmOverloads constructor(
     /** What a film's or show's page shows of its Versions, for the one opened at [key] (#181). */
     suspend fun pageVersions(key: MediaKey): PageVersions {
         val (plan, choices) = graph.vodQualities.pageFor(key)
-        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders))
+        val start = plan.start.key
+        val opensPicker = start is MediaKey.Movie && graph.addonTitles.keptFromAddons(start)
+        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders)).copy(playOpensPicker = opensPicker)
     }
 
     /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */
     suspend fun chooseVersion(version: MediaKey) = graph.vodQualities.choose(version)
 
     suspend fun resumesPartway(movie: Movie): Boolean {
-        val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
-        return graph.viewerLibrary.resumeFrom(playing.stored) > 0
+        val plan = graph.vodQualities.planFor(MediaKey.Movie(movie.id))
+        return graph.viewerLibrary.resumeFrom(*plan.resumeKeys.toTypedArray()) > 0
     }
 
     /**

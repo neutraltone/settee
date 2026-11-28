@@ -555,12 +555,15 @@ class PlaybackErrorsTest {
     }
 
     @Test
-    fun `a failure that isn't the decoder's logs nothing`() {
-        val error = PlaybackException("gone", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+    fun `a failure that isn't the decoder's logs its code and what threw it, never the address`() {
+        // The player restarts after these by itself, so without a line a stream that keeps restarting
+        // (a torrent did, every ten minutes) leaves nothing to go on.
+        DecoderLog.logFailure(httpFailure(503))
 
-        DecoderLog.logFailure(error)
-
-        assertThat(ShadowLog.getLogsForTag("OpenTV")).isEmpty()
+        val logged = ShadowLog.getLogsForTag("OpenTV").joinToString { it.msg }
+        assertThat(logged).contains("ERROR_CODE_IO_BAD_HTTP_STATUS")
+        assertThat(logged).contains("InvalidResponseCodeException")
+        assertThat(logged).doesNotContain("example.com")
     }
 
     private fun httpFailure(status: Int) = ExoPlaybackException.createForSource(

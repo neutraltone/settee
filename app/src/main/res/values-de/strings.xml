@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Episoden werden geladen…</string>
     <string name="vod_episodes_failed">Die Folgen dieser Serie konnten nicht geladen werden. Versuch es gleich noch einmal.</string>
     <string name="vod_no_episodes">Dein Anbieter hat noch keine Folgen dieser Serie hinzugefügt.</string>
+    <string name="vod_no_episodes_addons">Für diese Serie sind noch keine Folgen aufgeführt.</string>
     <string name="vod_continue_watching">Weiterschauen</string>
     <string name="vod_large_provider_note">Bei einem großen Anbieter kann es beim ersten Mal ein paar Minuten dauern.</string>
     <string name="vod_recommended">Für dich empfohlen</string>
@@ -263,6 +264,10 @@
     <string name="error_live_ended">Dieser Sender ist stehen geblieben. Versuch es erneut, oder wähle einen anderen Sender.</string>
     <string name="error_timed_out">Dein Anbieter antwortet nicht mehr. Vielleicht ist er ausgelastet, also versuch es gleich noch einmal.</string>
     <string name="error_web_page">Dein Anbieter hat eine Webseite statt eines Videos geschickt. Der Link ist vielleicht abgelaufen, also aktualisiere deinen Anbieter in den Einstellungen.</string>
+    <string name="error_unplayable_file">Dein Anbieter hat eine Datei in einem Format geschickt, das Settee nicht abspielen kann, also wähle etwas anderes.</string>
+    <string name="error_addon_web_page">Der Link dieses Add-ons hat eine Webseite statt eines Videos geöffnet. Wähle einen anderen Stream.</string>
+    <string name="error_addon_unplayable_file">Der Link dieses Add-ons hat eine Datei in einem Format geöffnet, das Settee nicht abspielen kann. Wähle einen anderen Stream.</string>
+    <string name="playback_pick_another_stream">Anderen Stream wählen</string>
     <string name="error_damaged">Dieses Video ist beschädigt und lässt sich nicht abspielen. Das liegt an deinem Anbieter, also wähle etwas anderes.</string>
     <string name="error_behind_live">Dieser Sender ist zu weit hinter das Live-Bild zurückgefallen. Versuch es erneut, um aufzuholen.</string>
     <string name="error_gone">Das gibt es bei deinem Anbieter nicht mehr. Aktualisiere deinen Anbieter in den Einstellungen.</string>
@@ -289,11 +294,16 @@
     <string name="error_addon_cant_reach_tv">Das Add-on ist nicht erreichbar. Überprüfe, ob dieser Fernseher online ist und die Adresse stimmt.</string>
     <string name="error_addon_cant_reach_device">Das Add-on ist nicht erreichbar. Überprüfe, ob dieses Gerät online ist und die Adresse stimmt.</string>
     <string name="error_addon_timed_out">Das Add-on antwortet nicht mehr. Vielleicht ist es ausgelastet, also versuch es gleich noch einmal.</string>
+    <string name="error_addon_bad_address">Das ist keine Webadresse. Prüf, ob du dich vertippt hast.</string>
+    <string name="error_addon_no_match">Deine Add-ons können diesen Film nicht nachschlagen, da er auf IMDb keinen Treffer hat.</string>
     <string name="error_addon_trouble">Das Add-on hat Probleme. Das liegt an ihm, also versuch es später erneut.</string>
     <string name="error_not_an_addon_tv">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Fernsehers nicht erst eine Anmeldung verlangt.</string>
     <string name="error_not_an_addon_device">Unter dieser Adresse war kein Add-on. Überprüfe, ob es der Link zur manifest.json ist und ob das Internet dieses Geräts nicht erst eine Anmeldung verlangt.</string>
     <string name="error_addon_lookup_tv">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieser Fernseher online ist, und versuch es dann erneut.</string>
     <string name="error_addon_lookup_device">Der Film konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieses Gerät online ist, und versuch es dann erneut.</string>
+    <string name="error_addon_no_match_show">Deine Add-ons können diese Serie nicht nachschlagen, da sie auf IMDb keinen Treffer hat.</string>
+    <string name="error_addon_lookup_show_tv">Die Serie konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieser Fernseher online ist, und versuch es dann erneut.</string>
+    <string name="error_addon_lookup_show_device">Die Serie konnte nicht nachgeschlagen werden, um deine Add-ons zu fragen. Überprüfe, ob dieses Gerät online ist, und versuch es dann erneut.</string>
     <string name="error_device_refused">Dein Anbieter hat diese Angaben nicht akzeptiert. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_guide">Dieser Guide konnte nicht heruntergeladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_guide_empty">Dieser Guide wurde heruntergeladen, enthielt aber keine Sendungen. Überprüfe, ob es der richtige Link ist.</string>
@@ -404,4 +414,30 @@
     <string name="report_question_send">Senden</string>
     <string name="report_question_dont_send">Nicht senden</string>
     <string name="report_question_always_send">Immer senden</string>
+    <string name="error_torrents_off">Torrents sind aus. Schalte sie unter Einstellungen, Add-ons ein, um sie abzuspielen.</string>
+    <string name="error_torrent_nobody_sharing">Gerade teilt niemand diesen Torrent, daher kann er nicht abgespielt werden. Wähle einen anderen Stream.</string>
+    <string name="error_torrent_no_space">Es ist nicht genug Speicher frei, um diesen Torrent abzuspielen. Wähle einen kleineren Stream oder schaffe Platz.</string>
+    <string name="error_torrent_timed_out">Der Torrent hat Leute gefunden, die ihn teilen, ist aber nicht rechtzeitig gestartet. Versuche es erneut oder wähle einen anderen Stream.</string>
+    <string name="error_torrent_unsupported">Torrents brauchen Android 8.0 oder neuer. Wähle einen Stream, der kein Torrent ist.</string>
+    <string name="error_torrent_failed">Der Torrent ist mit einem eigenen Fehler stehen geblieben. Versuche es erneut oder wähle einen anderen Stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Aus. Torrents, die deine Add-ons finden, werden angezeigt, aber nicht abgespielt.</string>
+    <string name="settings_addons_torrents_on">An. Alle, die einen Torrent teilen, den du abspielst, können deine Internetadresse sehen.</string>
+    <string name="settings_addons_torrents_title">Torrents einschalten?</string>
+    <string name="settings_addons_torrents_body">Ein Torrent wird von anderen Leuten geladen, die dieselbe Datei teilen. Während du einen schaust, können alle, die ihn teilen, deine Internetadresse sehen.</string>
+    <string name="settings_addons_torrents_confirm">Torrents einschalten</string>
+    <string name="settings_addons_torrents_keep">Aus lassen</string>
+    <string name="search_not_from_provider">Nicht von deinem Anbieter</string>
+    <string name="pairing_phone_addon_title">Add-on hinzufügen</string>
+    <string name="pairing_phone_addon_body">Füge seine Adresse ein, dann prüft dein Fernseher es und fügt es hinzu. Füge so viele hinzu, wie du willst, und wähle dann Fertig.</string>
+    <string name="pairing_phone_addon_add">Hinzufügen</string>
+    <string name="pairing_phone_addon_done_title">Alles erledigt</string>
+    <string name="pairing_phone_addon_done_body">Deine Add-ons sind auf deinem Fernseher. Du kannst dein Smartphone weglegen.</string>
+    <string name="addons_phone_qr_desc">QR-Code zum Hinzufügen von Add-ons über dein Smartphone</string>
+    <string name="vod_addon_still_asking">Deine anderen Add-ons werden noch gefragt…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d Person teilt</item>
+        <item quantity="other">%1$d Personen teilen</item>
+    </plurals>
 </resources>

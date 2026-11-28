@@ -105,7 +105,10 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | code · HTTP 5xx · format | Provider's server |
 | `UnknownHostException`, `ConnectException`, `NoRouteToHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
 | `InterruptedIOException` (`SocketTimeoutException` among them), `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
-| `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, `ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED`, `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` (not raised today: the player checks no content type) | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: an expired account or blocked channel answering 200 with an HTML page, which won't parse as a TS container or HLS manifest; or a captive page |
+| `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, `ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED`, `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` (not raised today: the player checks no content type), on a Provider's stream whose first bytes (`StreamPeek`: a ranged GET of 512 bytes with the stream's own headers, after the failure) start `<!DOCTYPE` or `<html` past any byte order mark and blank space, in any case; or that couldn't be looked at | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: an expired account or blocked channel answering 200 with an HTML page, which won't parse as a TS container or HLS manifest; or a captive page |
+| As above, on a Provider's stream whose first bytes aren't HTML | `error_unplayable_file` | Your provider sent a file in a format Settee can't play, so try something else. | code · format | Provider's: a container the player has no extractor for |
+| As above, on an add-on's stream whose first bytes are HTML, or couldn't be looked at. Pick another stream (`playback_pick_another_stream`) has the Highlight, before Back, and opens the add-on stream picker over the player (#666) | `error_addon_web_page` | This add-on's link opened a web page instead of video. Pick another stream. | code · format | The add-on's: a dead or expired link, a host's landing page, or a captive page |
+| As above, on an add-on's stream whose first bytes aren't HTML, with Pick another stream as above (#666) | `error_addon_unplayable_file` | This add-on's link opened a file in a format Settee can't play. Pick another stream. | code · format | The add-on's: a container the player has no extractor for |
 | `ERROR_CODE_PARSING_CONTAINER_MALFORMED`, `ERROR_CODE_PARSING_MANIFEST_MALFORMED` | `error_damaged` | This video is damaged and won't play. That's at your provider's end, so try something else. | code · format | Provider's: broken stream |
 | `ERROR_CODE_BEHIND_LIVE_WINDOW` | `error_behind_live` | This channel fell too far behind live. Try again to catch up. | code · format | Neither: a slow connection or a short live window |
 | Decoder failed with a video format | `error_video_format_tv` / `_device` | This TV can't play this video format. | code · format | This hardware's decoders |
@@ -122,6 +125,12 @@ sentence reads right on either, and a stop by hand is a plain finish with no rea
 | A finished recording's file isn't on this device (`ERROR_CODE_IO_FILE_NOT_FOUND`). No Try again, no restart by itself, and the load isn't retried (#475) | `error_recording_missing` | This recording's file isn't there any more. | code · format | Deleted |
 | A finished recording's file isn't on the USB drive (`ERROR_CODE_IO_FILE_NOT_FOUND`). Try again, since plugging the drive back in fixes it, but no restart by itself, and the load isn't retried (#475) | `error_recording_usb_missing` | Can't find this recording on your USB drive. Check it's plugged in, then try again. | code · format | Viewer's: the drive is unplugged, or the file was deleted |
 | Any other Media3 code | `error_anything_else` | This didn't play. Try again, or pick something else. | code · format | Unknown |
+| An add-on's torrent: nobody found sharing it within the engine's start-up limit (`TorrentFailure.NOBODY_SHARING`, 60 s from `TorrentEngine.start`, provisional; `TorrentDataSource` throws `TorrentFailedException`). Instead of the start-up limit's row above, which a torrent doesn't use. Pick another stream has the Highlight, as for an add-on's link; Try again starts the torrent afresh; no restart by itself and no load retries (#670) | `error_torrent_nobody_sharing` | Nobody is sharing this torrent right now, so it can't play. Pick another stream. | NobodySharing · peers found | The torrent's: no one is sharing it any more |
+| An add-on's torrent whose file is bigger than the piece cache cap, or than the free space less what's kept back for the system, found once its file list arrives and before anything is fetched (`TorrentFailure.NOT_ENOUGH_SPACE`, `TorrentCache.roomFor`). Only reached by a torrent whose add-on didn't say its size: the picker leaves out the ones it knows are too big. As above for Pick another stream and Try again (#670) | `error_torrent_no_space` | There isn't enough free space to play this torrent. Pick a smaller stream, or free up some space. | NotEnoughSpace · file size | Viewer's: storage nearly full, or a file bigger than the cap |
+| An add-on's torrent that found people but not its file list within the start-up limit (`TorrentFailure.START_TIMED_OUT`). As above (#670) | `error_torrent_timed_out` | This torrent found people sharing it, but didn't start in time. Try again, or pick another stream. | StartTimedOut · peers found | The torrent's: too few people, or slow ones |
+| An add-on's torrent on a device the engine can't run on: below Android 8.0, or an ABI the APK doesn't carry (`TorrentFailure.UNSUPPORTED_DEVICE`, ADR 0012). Pick another stream, but no Try again (#670) | `error_torrent_unsupported` | Torrents need Android 8.0 or later to play. Pick a stream that isn't a torrent. | UnsupportedDevice · API level or the linkage error | This hardware: Fire OS 6, or an x86 emulator |
+| An add-on's torrent that libtorrent itself stopped with an error (`TorrentFailure.ENGINE_ERROR`). As for nobody sharing (#670) | `error_torrent_failed` | The torrent stopped with a fault of its own. Try again, or pick another stream. | EngineError · libtorrent's message | The torrent or libtorrent |
+| `Playable.Failure.TORRENTS_OFF`: an add-on's torrent asked for while the Torrents switch is off, such as a route kept from before it was turned off (#670) | `error_torrents_off` | Torrents are off. Turn them on in Settings, Add-ons, to play these. | TorrentsOff | The viewer's choice |
 | `Playable.Failure.LINK_REFUSED`: the Stalker portal answered `create_link` with no link, with an error status, or turned the MAC down | `playback_link_refused` | Your provider didn't give a link for this channel. Try refreshing your provider in Settings. | LinkRefused | Provider's portal |
 | `Playable.Failure.UNREACHABLE`: the Stalker portal couldn't be reached (`UnknownHostException`, `ConnectException`, `NoRouteToHostException`) or stopped responding (`InterruptedIOException`) when asked for a link, worded by `ErrorWording.networkSentenceOf` (#468) | `error_cant_reach_tv` / `_device`, `error_timed_out` | Can't reach your provider. Check this TV is online and the address is right. / Your provider stopped responding. It may be busy, so try again in a moment. | exception type | Viewer's network, a wrong address, or the portal down |
 | `Playable.Failure.NO_CATCHUP` | `playback_no_catchup` | Your provider doesn't offer catch-up, so past programmes can't be played. | NoCatchup | Provider's: playlists and portals have no catch-up |
@@ -242,12 +251,16 @@ episodes' place, as an error only when every Version's fetch failed: one that an
 nothing in it, means there's no error to show. Stored episodes always show instead of either. `ErrorWording.ofProvider` words
 the failure of the opened Version, or of the first other one, so a timeout, a rejected login, a 429 or
 a 5xx read as in [Provider connection](#provider-connection). Under it, Try again asks every panel again.
+A show kept from an add-on (#672) asks TMDB instead of a panel, so its failure, a timeout included, is
+always `vod_episodes_failed` worded by `ErrorWording.of`, with the exception type as its detail: no
+sentence about "your provider" fits a show that has none.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
 | Every fetch failed with nothing more specific (an empty or broken reply, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
 | No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
+| The same, for a show kept from an add-on, whose episodes TMDB lists (#672) | `vod_no_episodes_addons` | No episodes of this show are listed yet. | none | TMDB's: none aired or listed yet |
 
 ## Movies and Shows lists
 
@@ -378,12 +391,23 @@ see Settings and Provider connection.
 
 ## Add-ons
 
-Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` throws. In Settings › Add-ons,
-under Add an add-on, when a pasted address couldn't be added; and in a film's Add-on sources picker,
-with a Try again that asks the add-ons again, only when every add-on failed or TMDB didn't answer. When at least one answered,
-the picker lists its streams, or says "No streams found from your add-ons for this title." (an empty
-state, not an error: no detail line), and the failing ones stay quiet. So does a film TMDB answers for but can't match
-to IMDb: that's "No streams found" too. An add-on that answers 404 for a film's streams has nothing for it, not a failure.
+Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` (or, for an address, `AddonRepository`)
+throws. In Settings › Add-ons, inside the address window, which stays open with what was typed, when an
+address couldn't be added (a `stremio://` link or an address without a scheme is read as `https://`, and
+`manifest.json` is added when it's missing); on the phone's page from that window's QR code, where the same
+sentence and detail sit above the refused address, left in its box to correct; and in a film's Add-on sources
+picker, or an episode's (from its options on the show's page), drawn by
+`AddonStreamPicker` from `AddonStreams`, which asks each add-on on its own and lists streams as they arrive.
+Once every add-on has answered with no stream, the picker shows the first failure with a Try again that asks
+them again if any add-on couldn't be reached, or else says "No streams found from your add-ons for this title."
+(an empty state, not an error: no detail line). When any add-on offered a stream, the failing ones stay quiet.
+TMDB not answering also gets Try again; a film or show TMDB can't match to IMDb gets its own sentence, without
+one, since asking again won't change it. An episode is asked by its show's IMDb id plus season and episode, so
+its lookup sentences name the show. An add-on that answers 404 for a title's streams has nothing for it, not a failure.
+Torrents an add-on offers are listed after its links. While the Torrents switch in Settings › Add-ons
+(`AppSettings.torrentsEnabled`, off until turned on) is off, they're greyed and passed over by the Highlight,
+with one quiet line under the list saying why (no detail line: nothing failed); on, they play like any other
+row, and their failures are in Playback.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
@@ -391,7 +415,12 @@ to IMDb: that's "No streams found" too. An add-on that answers 404 for a film's 
 | Timed out (`Unreachable` from a `SocketTimeoutException` or other `InterruptedIOException`) | `error_addon_timed_out` | The add-on stopped responding. It may be busy, so try again in a moment. | exception type | The add-on's server |
 | A 5xx (`AddonFailure.Http`) | `error_addon_trouble` | The add-on is having problems. That's at its end, so try again later. | HTTP status | The add-on's server |
 | Any other status but 2xx (a 404 for the manifest, a 401 or 403 from a personalised address), a web page or anything else that isn't JSON, or JSON with no `id` or `name` (`AddonFailure.NotAnAddon`) | `error_not_an_addon_tv` / `_device` | That address didn't give an add-on. Check it's the manifest.json link, and that this TV's internet doesn't need you to sign in first. | NotAnAddon · HTTP 404 (status when there was one) | The address or the key in it, or Wi-Fi asking to sign in |
+| Settings only: what was typed can't be a web address, such as a space in it or a scheme other than http, https or stremio; nothing is asked (`AddonFailure.BadAddress`) | `error_addon_bad_address` | That isn't a web address. Check what you typed for a mistake. | BadAddress | A typing slip |
+| Add-on sources only: TMDB answered but has no IMDb id for the film, so no add-on was asked (`VodViewModel.addonStreams`) | `error_addon_no_match` | Your add-ons can't look this film up, as it has no match on IMDb. | NoImdbMatch | The film's listing, or TMDB not knowing it |
+| Add-on sources only: torrent rows listed while the Torrents switch is off | `error_torrents_off` | Torrents are off. Turn them on in Settings, Add-ons, to play these. | none | The viewer's choice |
 | Add-on sources only: TMDB, which turns the film into an IMDb id, didn't answer, so no add-on was asked (`AddonFailure.NoLookup`) | `error_addon_lookup_tv` / `_device` | Couldn't look this film up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
+| An episode's Add-on sources only: TMDB answered but has no IMDb id for the show (`VodViewModel.addonStreams`) | `error_addon_no_match_show` | Your add-ons can't look this show up, as it has no match on IMDb. | NoImdbMatch | The show's listing, or TMDB not knowing it |
+| An episode's Add-on sources only: TMDB, which turns the show into an IMDb id, didn't answer (`AddonFailure.NoLookup`) | `error_addon_lookup_show_tv` / `_device` | Couldn't look this show up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
 
 ## OpenSubtitles
 

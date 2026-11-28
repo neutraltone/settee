@@ -75,14 +75,25 @@ const val SERIES_TABLE = "series"
 // isn't put back: that's what grows the count, not the interface doing more than one thing.
 @Suppress("TooManyFunctions")
 interface SourceDao {
-    @Query("SELECT * FROM sources ORDER BY id")
+    // The Providers. The built-in Add-ons source is left out of these three: it has no address and no
+    // Catalogue Refresh, and isn't listed with the Providers (ADR 0011). Sync's names read everySource.
+
+    @Query("SELECT * FROM sources WHERE kind != 'ADDONS' ORDER BY id")
     fun observeAll(): Flow<List<Source>>
 
-    @Query("SELECT * FROM sources WHERE enabled = 1 ORDER BY id")
+    @Query("SELECT * FROM sources WHERE enabled = 1 AND kind != 'ADDONS' ORDER BY id")
     suspend fun enabled(): List<Source>
 
-    @Query("SELECT * FROM sources ORDER BY id")
+    @Query("SELECT * FROM sources WHERE kind != 'ADDONS' ORDER BY id")
     suspend fun all(): List<Source>
+
+    /** The Providers and the Add-ons source, if there is one: everything titles can be kept under. */
+    @Query("SELECT * FROM sources ORDER BY id")
+    suspend fun everySource(): List<Source>
+
+    /** The built-in Add-ons source, or null before a title from an add-on is first kept. */
+    @Query("SELECT * FROM sources WHERE kind = 'ADDONS' ORDER BY id LIMIT 1")
+    suspend fun addons(): Source?
 
     @Query("SELECT * FROM sources WHERE id = :id")
     suspend fun byId(id: Long): Source?

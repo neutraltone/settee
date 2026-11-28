@@ -31,6 +31,11 @@ data class PageVersions(
     val choices: List<VodQualities.Choice> = emptyList(),
     val otherLanguage: OtherLanguage? = null,
     val cantPlay: String? = null,
+    /**
+     * What Play stands for is a film kept from an add-on (ADR 0011), which has no stream of its own:
+     * Play opens the add-on stream picker instead.
+     */
+    val playOpensPicker: Boolean = false,
 ) {
     /** Whether anything of the title plays here; when not, Play is turned off and [cantPlay] says why. */
     val plays: Boolean get() = cantPlay == null
@@ -137,11 +142,13 @@ internal fun cantPlayText(quality: String): String {
 }
 
 /**
- * A Version as the pill names it: "4K", "HD · German", "HD · Italian subtitles", "CAM", or "Other" when
- * nothing tells it apart. Never "Version", a word that isn't on screen.
+ * A Version as the pill names it: "4K", "HD · German", "HD · Italian subtitles", "CAM", "Add-ons" for a
+ * copy kept from an add-on, or "Other" when nothing tells it apart. Never "Version", a word that isn't on screen.
  */
 @Composable
 internal fun versionLabel(traits: VersionTraits): String {
+    // Its name is TMDB's, with nothing in it to tell it apart: where it comes from is what does.
+    if (traits.fromAddons) return stringResource(R.string.settings_pane_addons)
     val parts = listOfNotNull(
         traits.qualityLabel.takeIf { it.isNotEmpty() },
         if (traits.cam) stringResource(R.string.vod_quality_cam) else null,

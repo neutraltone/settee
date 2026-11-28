@@ -7,6 +7,7 @@ package app.opentv.ui.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -16,12 +17,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.StremioAddon
-import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.ConfirmPanel
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
@@ -59,17 +59,9 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
             adding = true
         },
         opens = true,
-        note = when (val current = status) {
-            AddonsViewModel.Status.Idle -> stringResource(R.string.settings_addons_add_note)
-            AddonsViewModel.Status.Checking -> stringResource(R.string.addons_checking)
-            is AddonsViewModel.Status.Added -> stringResource(R.string.addons_added, current.name)
-            // Said beneath, with its detail line, rather than squeezed into the row's note.
-            is AddonsViewModel.Status.Failed -> stringResource(R.string.settings_addons_add_note)
-        },
+        note = (status as? AddonsViewModel.Status.Added)?.let { stringResource(R.string.addons_added, it.name) }
+            ?: stringResource(R.string.settings_addons_add_note),
     )
-    (status as? AddonsViewModel.Status.Failed)?.let {
-        ErrorMessage(it.error.sentence, it.error.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
-    }
     if (addons.isEmpty()) {
         Text(
             stringResource(R.string.addons_empty),
@@ -78,6 +70,7 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
             modifier = Modifier.padding(top = 12.dp),
         )
     }
+    TorrentsRow(viewModel)
 
     details?.let { addon ->
         SidePanel(onBack = { details = null }) {
@@ -98,17 +91,60 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
             viewModel.remove(addon)
         })
     }
+    // Closed only once the add-on is in the list, so a closed window always means it worked; a
+    // refusal keeps it open, with what was typed, to fix one character rather than type it all again.
+    LaunchedEffect(status) {
+        if (status is AddonsViewModel.Status.Added) adding = false
+    }
     if (adding) {
+        val failed = status as? AddonsViewModel.Status.Failed
+        val checking = status == AddonsViewModel.Status.Checking
         EntryWindow(
             title = stringResource(R.string.settings_addons_address),
             initial = "",
             keyboardType = KeyboardType.Uri,
-            hint = stringResource(R.string.settings_addons_address_hint),
-            onSave = { url ->
+            hint = stringResource(if (checking) R.string.addons_checking else R.string.settings_addons_address_hint),
+            onSave = viewModel::add,
+            onCancel = {
                 adding = false
-                viewModel.add(url)
+                viewModel.clearStatus()
             },
-            onCancel = { adding = false },
+            error = failed?.let { it.error.sentence to it.error.detail },
+            beside = {
+                AddonsFromPhone(onDone = {
+                    adding = false
+                    viewModel.clearStatus()
+                })
+            },
+        )
+    }
+}
+
+/**
+ * The Torrents switch. Turning it on asks first, since everyone sharing a file can see this box's
+ * internet address; the Highlight starts on keeping them off. Turning it off needs no asking.
+ */
+@Composable
+private fun TorrentsRow(viewModel: AddonsViewModel) {
+    val on by viewModel.torrentsEnabled.collectAsState()
+    var asking by remember { mutableStateOf(false) }
+    ListRow(
+        stringResource(R.string.settings_addons_torrents),
+        onClick = { if (on) viewModel.setTorrentsEnabled(false) else asking = true },
+        switch = on,
+        note = stringResource(if (on) R.string.settings_addons_torrents_on else R.string.settings_addons_torrents_off),
+    )
+    if (asking) {
+        ConfirmPanel(
+            confirm = stringResource(R.string.settings_addons_torrents_confirm),
+            keep = stringResource(R.string.settings_addons_torrents_keep),
+            onConfirm = {
+                asking = false
+                viewModel.setTorrentsEnabled(true)
+            },
+            onKeep = { asking = false },
+            title = stringResource(R.string.settings_addons_torrents_title),
+            body = stringResource(R.string.settings_addons_torrents_body),
         )
     }
 }

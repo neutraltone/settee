@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Ladataan jaksoja…</string>
     <string name="vod_episodes_failed">Tämän sarjan jaksoja ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="vod_no_episodes">Palveluntarjoajasi ei ole lisännyt tämän sarjan jaksoja.</string>
+    <string name="vod_no_episodes_addons">Tästä sarjasta ei ole vielä listattu jaksoja.</string>
     <string name="vod_continue_watching">Jatka katselua</string>
     <string name="vod_large_provider_note">Suurella palveluntarjoajalla tämä voi kestää pari minuuttia ensimmäisellä kerralla.</string>
     <string name="vod_recommended">Suositellut sinulle</string>
@@ -263,6 +264,10 @@
     <string name="error_live_ended">Tämä kanava pysähtyi. Yritä uudelleen tai valitse toinen kanava.</string>
     <string name="error_timed_out">Palveluntarjoajasi lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
     <string name="error_web_page">Palveluntarjoajasi lähetti verkkosivun videon sijaan. Linkki on ehkä vanhentunut, joten kokeile päivittää palveluntarjoajasi Asetuksista.</string>
+    <string name="error_unplayable_file">Palveluntarjoajasi lähetti tiedoston muodossa, jota Settee ei voi toistaa, joten kokeile jotain muuta.</string>
+    <string name="error_addon_web_page">Tämän lisäosan linkki avasi verkkosivun videon sijaan. Valitse toinen virta.</string>
+    <string name="error_addon_unplayable_file">Tämän lisäosan linkki avasi tiedoston muodossa, jota Settee ei voi toistaa. Valitse toinen virta.</string>
+    <string name="playback_pick_another_stream">Valitse toinen virta</string>
     <string name="error_damaged">Tämä video on vioittunut eikä toistu. Vika on palveluntarjoajasi päässä, joten kokeile jotain muuta.</string>
     <string name="error_behind_live">Tämä kanava jäi liian kauas jälkeen suorasta lähetyksestä. Yritä uudelleen, niin pääset ajan tasalle.</string>
     <string name="error_gone">Tätä ei enää ole palveluntarjoajallasi. Kokeile päivittää palveluntarjoajasi Asetuksista.</string>
@@ -289,11 +294,16 @@
     <string name="error_addon_cant_reach_tv">Lisäosaa ei tavoiteta. Tarkista, että tämä televisio on verkossa ja että osoite on oikein.</string>
     <string name="error_addon_cant_reach_device">Lisäosaa ei tavoiteta. Tarkista, että tämä laite on verkossa ja että osoite on oikein.</string>
     <string name="error_addon_timed_out">Lisäosa lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
+    <string name="error_addon_bad_address">Tämä ei ole verkko-osoite. Tarkista, onko kirjoittamassasi virhe.</string>
+    <string name="error_addon_no_match">Lisäosasi eivät voi hakea tätä elokuvaa, koska sille ei löydy vastinetta IMDb:stä.</string>
     <string name="error_addon_trouble">Lisäosalla on ongelmia. Vika on sen päässä, joten yritä myöhemmin uudelleen.</string>
     <string name="error_not_an_addon_tv">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän television internetyhteys vaadi ensin kirjautumista.</string>
     <string name="error_not_an_addon_device">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän laitteen internetyhteys vaadi ensin kirjautumista.</string>
     <string name="error_addon_lookup_tv">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_addon_lookup_device">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_no_match_show">Lisäosasi eivät voi hakea tätä sarjaa, koska sille ei löydy vastinetta IMDb:stä.</string>
+    <string name="error_addon_lookup_show_tv">Sarjaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_lookup_show_device">Sarjaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>
@@ -404,4 +414,30 @@
     <string name="report_question_send">Lähetä</string>
     <string name="report_question_dont_send">Älä lähetä</string>
     <string name="report_question_always_send">Lähetä aina</string>
+    <string name="error_torrents_off">Torrentit ovat pois päältä. Laita ne päälle kohdassa Asetukset, Lisäosat, niin voit toistaa nämä.</string>
+    <string name="error_torrent_nobody_sharing">Kukaan ei jaa tätä torrentia juuri nyt, joten sitä ei voi toistaa. Valitse toinen striimi.</string>
+    <string name="error_torrent_no_space">Vapaata tilaa ei ole tarpeeksi tämän torrentin toistamiseen. Valitse pienempi striimi tai vapauta tilaa.</string>
+    <string name="error_torrent_timed_out">Torrent löysi jakajia, mutta ei käynnistynyt ajoissa. Yritä uudelleen tai valitse toinen striimi.</string>
+    <string name="error_torrent_unsupported">Torrentit vaativat Android 8.0:n tai uudemman. Valitse striimi, joka ei ole torrent.</string>
+    <string name="error_torrent_failed">Torrent pysähtyi omaan vikaansa. Yritä uudelleen tai valitse toinen striimi.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrentit</string>
+    <string name="settings_addons_torrents_off">Pois päältä. Lisäosiesi löytämät torrentit näytetään, mutta niitä ei toisteta.</string>
+    <string name="settings_addons_torrents_on">Päällä. Kaikki, jotka jakavat toistamaasi torrentia, näkevät internet-osoitteesi.</string>
+    <string name="settings_addons_torrents_title">Laitetaanko torrentit päälle?</string>
+    <string name="settings_addons_torrents_body">Torrent haetaan muilta ihmisiltä, jotka jakavat samaa tiedostoa. Kun katsot sellaista, kaikki sen jakajat näkevät internet-osoitteesi.</string>
+    <string name="settings_addons_torrents_confirm">Laita torrentit päälle</string>
+    <string name="settings_addons_torrents_keep">Pidä ne pois päältä</string>
+    <string name="search_not_from_provider">Ei palveluntarjoajaltasi</string>
+    <string name="pairing_phone_addon_title">Lisää lisäosa</string>
+    <string name="pairing_phone_addon_body">Liitä sen osoite, niin televisiosi tarkistaa ja lisää sen. Lisää niin monta kuin haluat ja valitse sitten Valmis.</string>
+    <string name="pairing_phone_addon_add">Lisää</string>
+    <string name="pairing_phone_addon_done_title">Kaikki valmista</string>
+    <string name="pairing_phone_addon_done_body">Lisäosasi ovat televisiossasi. Voit laskea puhelimen käsistäsi.</string>
+    <string name="addons_phone_qr_desc">QR-koodi lisäosien lisäämiseen puhelimella</string>
+    <string name="vod_addon_still_asking">Kysytään vielä muilta lisäosiltasi…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d jakaja</item>
+        <item quantity="other">%1$d jakajaa</item>
+    </plurals>
 </resources>

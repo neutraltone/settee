@@ -164,6 +164,51 @@ $PROVIDER_FORM_SCRIPT
         """.trimIndent(),
     )
 
+    /**
+     * Adding Stremio add-ons: one address at a time, the box holding [typed] when the TV turned it down
+     * ([error] says why), and under it each add-on [added] so far this session. Done ends the session.
+     */
+    fun addon(token: String, text: (Int) -> String, error: Error?, added: List<String>, typed: String = ""): String {
+        val list = added.takeIf { it.isNotEmpty() }?.joinToString("", "<ul class=\"steps\">", "</ul>") {
+            "<li>${escape(text(R.string.addons_added).format(it))}</li>"
+        }.orEmpty()
+        return page(
+            token = token,
+            content = """
+        <h1>${escape(text(R.string.pairing_phone_addon_title))}</h1>
+        <p class="sub">${escape(text(R.string.pairing_phone_addon_body))}</p>
+
+        ${errorBox(error)}
+
+        <form id="form" method="post" action="/addon" autocomplete="off">
+          <input type="hidden" name="t" value="${escape(token)}">
+          <label for="url">${escape(text(R.string.settings_addons_address))}</label>
+          <input id="url" name="url" type="text" inputmode="url" required value="${escape(typed)}"
+                 placeholder="https://example.com/manifest.json"
+                 autocapitalize="off" autocorrect="off" spellcheck="false">
+          <p class="hint">${escape(text(R.string.settings_addons_address_hint))}</p>
+          <button id="send" type="submit">${escape(text(R.string.pairing_phone_addon_add))}</button>
+        </form>
+
+        $list
+
+        <form method="post" action="/done">
+          <input type="hidden" name="t" value="${escape(token)}">
+          <button type="submit" class="secondary">${escape(text(R.string.common_done))}</button>
+        </form>
+
+        <script>
+          // The TV checks the add-on before it answers, so the button says it's working.
+          document.getElementById('form').addEventListener('submit', function () {
+            var send = document.getElementById('send');
+            send.disabled = true;
+            send.innerHTML = '<span class="spin" aria-hidden="true"></span>' + send.textContent;
+          });
+        </script>
+            """.trimIndent(),
+        )
+    }
+
     private fun errorBox(error: Error?): String = error?.let {
         "<div class=\"error\">${escape(it.sentence)}" +
             (if (it.detail.isNotBlank()) "<span class=\"detail\">${escape(it.detail)}</span>" else "") +

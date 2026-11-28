@@ -217,6 +217,7 @@
     <string name="vod_loading_episodes">Se încarcă episoadele…</string>
     <string name="vod_episodes_failed">Episoadele acestui serial nu au putut fi încărcate. Încearcă din nou peste puțin timp.</string>
     <string name="vod_no_episodes">Furnizorul tău nu a adăugat niciun episod din acest serial.</string>
+    <string name="vod_no_episodes_addons">Încă nu sunt listate episoade ale acestui serial.</string>
     <string name="vod_continue_watching">Continuă vizionarea</string>
     <string name="vod_large_provider_note">Un furnizor mare poate dura câteva minute prima dată.</string>
     <string name="vod_recommended">Recomandate pentru tine</string>
@@ -264,6 +265,10 @@
     <string name="error_live_ended">Acest canal s-a oprit. Încearcă din nou sau alege alt canal.</string>
     <string name="error_timed_out">Furnizorul tău nu mai răspunde. Poate fi ocupat, așa că încearcă din nou peste puțin timp.</string>
     <string name="error_web_page">Furnizorul tău a trimis o pagină web în loc de video. Este posibil ca linkul să fi expirat, așa că încearcă să reîmprospătezi furnizorul în Setări.</string>
+    <string name="error_unplayable_file">Furnizorul tău a trimis un fișier într-un format pe care Settee nu îl poate reda, așa că încearcă altceva.</string>
+    <string name="error_addon_web_page">Linkul acestui supliment a deschis o pagină web în loc de video. Alege alt flux.</string>
+    <string name="error_addon_unplayable_file">Linkul acestui supliment a deschis un fișier într-un format pe care Settee nu îl poate reda. Alege alt flux.</string>
+    <string name="playback_pick_another_stream">Alege alt flux</string>
     <string name="error_damaged">Acest videoclip este deteriorat și nu poate fi redat. Problema e la furnizorul tău, așa că încearcă altceva.</string>
     <string name="error_behind_live">Acest canal a rămas prea mult în urma transmisiunii live. Încearcă din nou ca să recuperezi.</string>
     <string name="error_gone">Acest conținut nu mai există la furnizorul tău. Încearcă să reîmprospătezi furnizorul în Setări.</string>
@@ -290,11 +295,16 @@
     <string name="error_addon_cant_reach_tv">Suplimentul nu poate fi contactat. Verifică dacă acest televizor este online și dacă adresa este corectă.</string>
     <string name="error_addon_cant_reach_device">Suplimentul nu poate fi contactat. Verifică dacă acest dispozitiv este online și dacă adresa este corectă.</string>
     <string name="error_addon_timed_out">Suplimentul nu mai răspunde. Poate fi ocupat, așa că încearcă din nou peste puțin timp.</string>
+    <string name="error_addon_bad_address">Aceasta nu este o adresă web. Verifică dacă ai greșit ceva la scriere.</string>
+    <string name="error_addon_no_match">Suplimentele tale nu pot căuta acest film, deoarece nu are nicio potrivire pe IMDb.</string>
     <string name="error_addon_trouble">Suplimentul are probleme. Sunt de partea lui, așa că încearcă din nou mai târziu.</string>
     <string name="error_not_an_addon_tv">Adresa nu a dat un supliment. Verifică dacă este linkul către manifest.json și dacă internetul acestui televizor nu îți cere mai întâi să te conectezi.</string>
     <string name="error_not_an_addon_device">Adresa nu a dat un supliment. Verifică dacă este linkul către manifest.json și dacă internetul acestui dispozitiv nu îți cere mai întâi să te conectezi.</string>
     <string name="error_addon_lookup_tv">Filmul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_addon_lookup_device">Filmul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
+    <string name="error_addon_no_match_show">Suplimentele tale nu pot căuta acest serial, deoarece nu are nicio potrivire pe IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Serialul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
+    <string name="error_addon_lookup_show_device">Serialul nu a putut fi căutat pentru a-ți întreba suplimentele. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
     <string name="error_device_refused">Furnizorul tău nu a acceptat aceste detalii. Verifică detaliile furnizorului în Setări.</string>
     <string name="error_guide">Acest ghid nu a putut fi descărcat. Încearcă din nou peste puțin timp.</string>
     <string name="error_guide_empty">Ghidul s-a descărcat, dar nu conținea nicio emisiune. Verifică dacă este linkul corect.</string>
@@ -405,4 +415,31 @@
     <string name="report_question_send">Trimite</string>
     <string name="report_question_dont_send">Nu trimite</string>
     <string name="report_question_always_send">Trimite mereu</string>
+    <string name="error_torrents_off">Torrentele sunt oprite. Pornește-le din Setări, Suplimente, ca să le redai.</string>
+    <string name="error_torrent_nobody_sharing">Nimeni nu partajează acest torrent acum, așa că nu poate fi redat. Alege alt stream.</string>
+    <string name="error_torrent_no_space">Nu este destul spațiu liber pentru a reda acest torrent. Alege un stream mai mic sau eliberează spațiu.</string>
+    <string name="error_torrent_timed_out">Torrentul a găsit oameni care îl partajează, dar nu a pornit la timp. Încearcă din nou sau alege alt stream.</string>
+    <string name="error_torrent_unsupported">Torrentele au nevoie de Android 8.0 sau mai nou. Alege un stream care nu este torrent.</string>
+    <string name="error_torrent_failed">Torrentul s-a oprit din cauza unei probleme proprii. Încearcă din nou sau alege alt stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrente</string>
+    <string name="settings_addons_torrents_off">Oprite. Torrentele găsite de suplimentele tale apar în listă, dar nu pot fi redate.</string>
+    <string name="settings_addons_torrents_on">Pornite. Oricine distribuie un torrent pe care îl redai îți poate vedea adresa de internet.</string>
+    <string name="settings_addons_torrents_title">Pornești torrentele?</string>
+    <string name="settings_addons_torrents_body">Un torrent este preluat de la alte persoane care distribuie același fișier. Cât timp urmărești unul, oricine îl distribuie îți poate vedea adresa de internet.</string>
+    <string name="settings_addons_torrents_confirm">Pornește torrentele</string>
+    <string name="settings_addons_torrents_keep">Lasă-le oprite</string>
+    <string name="search_not_from_provider">Nu sunt de la furnizorul tău</string>
+    <string name="pairing_phone_addon_title">Adaugă un supliment</string>
+    <string name="pairing_phone_addon_body">Lipește adresa lui, iar televizorul o verifică și îl adaugă. Adaugă câte vrei, apoi alege Gata.</string>
+    <string name="pairing_phone_addon_add">Adaugă</string>
+    <string name="pairing_phone_addon_done_title">Totul e gata</string>
+    <string name="pairing_phone_addon_done_body">Suplimentele tale sunt pe televizor. Poți lăsa telefonul jos.</string>
+    <string name="addons_phone_qr_desc">Cod QR pentru adăugarea suplimentelor de pe telefon</string>
+    <string name="vod_addon_still_asking">Încă întrebăm celelalte suplimente ale tale…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persoană distribuie</item>
+        <item quantity="few">%1$d persoane distribuie</item>
+        <item quantity="other">%1$d de persoane distribuie</item>
+    </plurals>
 </resources>

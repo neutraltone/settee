@@ -54,7 +54,8 @@ import coil.compose.AsyncImage
 
 /**
  * One episode on a show's page, full width: its thumbnail, title and "S2 E4", and on the right where
- * the Profile is with it. Plays on OK; Menu or a held OK opens its options.
+ * the Profile is with it. Plays on OK; Menu or a held OK opens its options, which offer its add-on
+ * streams when there's [onAddonSources].
  */
 @Composable
 internal fun EpisodeRow(
@@ -63,12 +64,13 @@ internal fun EpisodeRow(
     seriesArt: List<String>,
     onPlay: (MediaKey) -> Unit,
     modifier: Modifier = Modifier,
+    onAddonSources: (() -> Unit)? = null,
 ) {
     HighlightSurface(
         onClick = { onPlay(MediaKey.Episode(ep.id)) },
         style = HighlightStyle.Row,
         modifier = modifier.fillMaxWidth(),
-        onOptions = openOptionsOn(OptionsSubject.OfEpisode(ep, ep.playerTitle)),
+        onOptions = openOptionsOn(OptionsSubject.OfEpisode(ep, ep.playerTitle, onAddonSources)),
     ) { highlighted -> EpisodeRowBody(ep, status, seriesArt, highlighted) }
 }
 

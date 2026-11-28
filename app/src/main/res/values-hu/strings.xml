@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Epizódok betöltése…</string>
     <string name="vod_episodes_failed">Nem sikerült betölteni a sorozat epizódjait. Próbálja újra egy kicsit később.</string>
     <string name="vod_no_episodes">A szolgáltatója nem adott hozzá epizódot ehhez a sorozathoz.</string>
+    <string name="vod_no_episodes_addons">Ennek a sorozatnak még nincsenek epizódjai felsorolva.</string>
     <string name="vod_continue_watching">Nézés folytatása</string>
     <string name="vod_large_provider_note">Nagyobb szolgáltató esetén ez első alkalommal néhány percet is igénybe vehet.</string>
     <string name="vod_recommended">Ajánlott Önnek</string>
@@ -263,6 +264,10 @@
     <string name="error_live_ended">Ez a csatorna leállt. Próbálja újra, vagy válasszon másik csatornát.</string>
     <string name="error_timed_out">A szolgáltató nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
     <string name="error_web_page">A szolgáltató videó helyett egy weboldalt küldött. Lehet, hogy a link lejárt, ezért próbálja frissíteni a szolgáltatót a Beállításokban.</string>
+    <string name="error_unplayable_file">A szolgáltató olyan formátumú fájlt küldött, amelyet a Settee nem tud lejátszani, ezért válasszon mást.</string>
+    <string name="error_addon_web_page">A bővítmény linkje videó helyett egy weboldalt nyitott meg. Válasszon másik streamet.</string>
+    <string name="error_addon_unplayable_file">A bővítmény linkje olyan formátumú fájlt nyitott meg, amelyet a Settee nem tud lejátszani. Válasszon másik streamet.</string>
+    <string name="playback_pick_another_stream">Másik stream választása</string>
     <string name="error_damaged">Ez a videó sérült, és nem játszható le. Ez a szolgáltató oldalán van, ezért válasszon mást.</string>
     <string name="error_behind_live">Ez a csatorna túlságosan lemaradt az élő adástól. Próbálja újra, hogy utolérje.</string>
     <string name="error_gone">Ez már nem érhető el a szolgáltatónál. Próbálja frissíteni a szolgáltatót a Beállításokban.</string>
@@ -289,11 +294,16 @@
     <string name="error_addon_cant_reach_tv">A bővítmény nem érhető el. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
     <string name="error_addon_cant_reach_device">A bővítmény nem érhető el. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
     <string name="error_addon_timed_out">A bővítmény nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
+    <string name="error_addon_bad_address">Ez nem webcím. Ellenőrizze, nem gépelte-e el.</string>
+    <string name="error_addon_no_match">A bővítményei nem tudják kikeresni ezt a filmet, mert nincs találata az IMDb-n.</string>
     <string name="error_addon_trouble">A bővítménynél problémák vannak. Ez az ő oldalán van, ezért próbálja újra később.</string>
     <string name="error_not_an_addon_tv">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek a TV-nek az internete nem kér-e előbb bejelentkezést.</string>
     <string name="error_not_an_addon_device">Ez a cím nem adott bővítményt. Ellenőrizze, hogy a manifest.json hivatkozás-e, és hogy ennek az eszköznek az internete nem kér-e előbb bejelentkezést.</string>
     <string name="error_addon_lookup_tv">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, majd próbálja újra.</string>
     <string name="error_addon_lookup_device">Nem sikerült megkeresni a filmet, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, majd próbálja újra.</string>
+    <string name="error_addon_no_match_show">A bővítményei nem tudják kikeresni ezt a sorozatot, mert nincs találata az IMDb-n.</string>
+    <string name="error_addon_lookup_show_tv">Nem sikerült megkeresni a sorozatot, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, majd próbálja újra.</string>
+    <string name="error_addon_lookup_show_device">Nem sikerült megkeresni a sorozatot, hogy megkérdezzük a bővítményeit. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, majd próbálja újra.</string>
     <string name="error_device_refused">A szolgáltató nem fogadta el ezeket az adatokat. Ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="error_guide">Nem sikerült letölteni ezt a műsorújságot. Próbálja újra egy kicsit később.</string>
     <string name="error_guide_empty">A műsorújság letöltődött, de nem volt benne műsor. Ellenőrizze, hogy a helyes linket adta-e meg.</string>
@@ -404,4 +414,30 @@
     <string name="report_question_send">Küldés</string>
     <string name="report_question_dont_send">Ne küldje</string>
     <string name="report_question_always_send">Mindig küldje</string>
+    <string name="error_torrents_off">A torrentek ki vannak kapcsolva. Kapcsold be őket a Beállítások, Bővítmények alatt a lejátszáshoz.</string>
+    <string name="error_torrent_nobody_sharing">Ezt a torrentet most senki sem osztja meg, ezért nem játszható le. Válassz másik streamet.</string>
+    <string name="error_torrent_no_space">Nincs elég szabad hely a torrent lejátszásához. Válassz kisebb streamet, vagy szabadíts fel helyet.</string>
+    <string name="error_torrent_timed_out">A torrent talált megosztókat, de nem indult el időben. Próbáld újra, vagy válassz másik streamet.</string>
+    <string name="error_torrent_unsupported">A torrentekhez Android 8.0 vagy újabb kell. Válassz olyan streamet, amely nem torrent.</string>
+    <string name="error_torrent_failed">A torrent egy saját hiba miatt leállt. Próbáld újra, vagy válassz másik streamet.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrentek</string>
+    <string name="settings_addons_torrents_off">Ki. A bővítmények által talált torrentek megjelennek a listában, de nem játszhatók le.</string>
+    <string name="settings_addons_torrents_on">Be. Mindenki, aki megoszt egy Ön által lejátszott torrentet, látja az Ön internetcímét.</string>
+    <string name="settings_addons_torrents_title">Bekapcsolja a torrenteket?</string>
+    <string name="settings_addons_torrents_body">A torrent más emberektől érkezik, akik ugyanazt a fájlt osztják meg. Amíg néz egyet, mindenki, aki megosztja, látja az Ön internetcímét.</string>
+    <string name="settings_addons_torrents_confirm">Torrentek bekapcsolása</string>
+    <string name="settings_addons_torrents_keep">Maradjanak kikapcsolva</string>
+    <string name="search_not_from_provider">Nem a szolgáltatójától</string>
+    <string name="pairing_phone_addon_title">Bővítmény hozzáadása</string>
+    <string name="pairing_phone_addon_body">Illessze be a címét, a tévé pedig ellenőrzi és hozzáadja. Adjon hozzá annyit, amennyit szeretne, majd válassza a Kész gombot.</string>
+    <string name="pairing_phone_addon_add">Hozzáadás</string>
+    <string name="pairing_phone_addon_done_title">Minden kész</string>
+    <string name="pairing_phone_addon_done_body">A bővítmények a tévén vannak. Leteheti a telefont.</string>
+    <string name="addons_phone_qr_desc">QR-kód bővítmények telefonról való hozzáadásához</string>
+    <string name="vod_addon_still_asking">A többi bővítmény még keres…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d ember osztja meg</item>
+        <item quantity="other">%1$d ember osztja meg</item>
+    </plurals>
 </resources>

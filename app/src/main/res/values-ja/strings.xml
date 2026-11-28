@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">エピソードを読み込み中…</string>
     <string name="vod_episodes_failed">このシリーズのエピソードを読み込めませんでした。少し待ってからもう一度お試しください。</string>
     <string name="vod_no_episodes">プロバイダーはこのシリーズのエピソードをまだ追加していません。</string>
+    <string name="vod_no_episodes_addons">この番組のエピソードはまだ掲載されていません。</string>
     <string name="vod_continue_watching">続きから再生</string>
     <string name="vod_large_provider_note">プロバイダーの規模が大きい場合、初回は数分かかることがあります。</string>
     <string name="vod_recommended">あなたへのおすすめ</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">このチャンネルは停止しました。もう一度お試しいただくか、別のチャンネルを選んでください。</string>
     <string name="error_timed_out">プロバイダーからの応答がなくなりました。混み合っている可能性があるので、少し待ってからもう一度お試しください。</string>
     <string name="error_web_page">プロバイダーから動画ではなくウェブページが届きました。リンクの期限が切れている可能性があるので、「設定」でプロバイダーを更新してみてください。</string>
+    <string name="error_unplayable_file">プロバイダーから Settee で再生できない形式のファイルが届きました。別のものをお試しください。</string>
+    <string name="error_addon_web_page">このアドオンのリンクを開くと、動画ではなくウェブページが表示されました。別のストリームを選んでください。</string>
+    <string name="error_addon_unplayable_file">このアドオンのリンクを開くと、Settee で再生できない形式のファイルでした。別のストリームを選んでください。</string>
+    <string name="playback_pick_another_stream">別のストリームを選ぶ</string>
     <string name="error_damaged">この動画は破損しているため再生できません。プロバイダー側の問題なので、別のものをお試しください。</string>
     <string name="error_behind_live">このチャンネルはライブから大きく遅れました。もう一度お試しいただくと追いつきます。</string>
     <string name="error_gone">これはもうプロバイダーにありません。「設定」でプロバイダーを更新してみてください。</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">アドオンに接続できません。このテレビがオンラインか、アドレスが正しいかを確認してください。</string>
     <string name="error_addon_cant_reach_device">アドオンに接続できません。この端末がオンラインか、アドレスが正しいかを確認してください。</string>
     <string name="error_addon_timed_out">アドオンからの応答がなくなりました。混み合っている可能性があるので、少し待ってからもう一度お試しください。</string>
+    <string name="error_addon_bad_address">これはウェブアドレスではありません。入力に誤りがないか確認してください。</string>
+    <string name="error_addon_no_match">この映画はIMDbに一致する作品がないため、アドオンで検索できません。</string>
     <string name="error_addon_trouble">アドオン側で問題が起きています。アドオン側の問題なので、しばらくしてからもう一度お試しください。</string>
     <string name="error_not_an_addon_tv">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、このテレビのインターネットが先にログインを求めていないかを確認してください。</string>
     <string name="error_not_an_addon_device">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、この端末のインターネットが先にログインを求めていないかを確認してください。</string>
     <string name="error_addon_lookup_tv">アドオンに問い合わせるための映画の検索ができませんでした。このテレビがオンラインか確認して、もう一度お試しください。</string>
     <string name="error_addon_lookup_device">アドオンに問い合わせるための映画の検索ができませんでした。この端末がオンラインか確認して、もう一度お試しください。</string>
+    <string name="error_addon_no_match_show">この番組はIMDbに一致する作品がないため、アドオンで検索できません。</string>
+    <string name="error_addon_lookup_show_tv">アドオンに問い合わせるための番組の検索ができませんでした。このテレビがオンラインか確認して、もう一度お試しください。</string>
+    <string name="error_addon_lookup_show_device">アドオンに問い合わせるための番組の検索ができませんでした。この端末がオンラインか確認して、もう一度お試しください。</string>
     <string name="error_device_refused">プロバイダーがこの情報を受け付けませんでした。「設定」でプロバイダーの情報を確認してください。</string>
     <string name="error_guide">この番組表をダウンロードできませんでした。少し待ってからもう一度お試しください。</string>
     <string name="error_guide_empty">この番組表はダウンロードできましたが、番組が入っていませんでした。正しいリンクかどうかを確認してください。</string>
@@ -403,4 +413,29 @@
     <string name="report_question_send">送信</string>
     <string name="report_question_dont_send">送信しない</string>
     <string name="report_question_always_send">常に送信</string>
+    <string name="error_torrents_off">トレントはオフです。再生するには、設定のアドオンでオンにしてください。</string>
+    <string name="error_torrent_nobody_sharing">今このトレントを共有している人がいないため、再生できません。別のストリームを選んでください。</string>
+    <string name="error_torrent_no_space">このトレントを再生する空き容量が足りません。小さいストリームを選ぶか、空き容量を増やしてください。</string>
+    <string name="error_torrent_timed_out">共有している人は見つかりましたが、トレントが時間内に始まりませんでした。もう一度試すか、別のストリームを選んでください。</string>
+    <string name="error_torrent_unsupported">トレントの再生には Android 8.0 以降が必要です。トレント以外のストリームを選んでください。</string>
+    <string name="error_torrent_failed">トレント自体の問題で停止しました。もう一度試すか、別のストリームを選んでください。</string>
+    <string name="vod_addon_torrent">トレント</string>
+    <string name="settings_addons_torrents">トレント</string>
+    <string name="settings_addons_torrents_off">オフ。アドオンが見つけたトレントは一覧に表示されますが、再生されません。</string>
+    <string name="settings_addons_torrents_on">オン。再生中のトレントを共有している全員に、あなたのインターネットアドレスが見えます。</string>
+    <string name="settings_addons_torrents_title">トレントをオンにしますか？</string>
+    <string name="settings_addons_torrents_body">トレントは、同じファイルを共有している他の人から取得されます。視聴中は、それを共有している全員にあなたのインターネットアドレスが見えます。</string>
+    <string name="settings_addons_torrents_confirm">トレントをオンにする</string>
+    <string name="settings_addons_torrents_keep">オフのままにする</string>
+    <string name="search_not_from_provider">プロバイダー以外</string>
+    <string name="pairing_phone_addon_title">アドオンを追加</string>
+    <string name="pairing_phone_addon_body">アドレスを貼り付けると、テレビが確認して追加します。好きなだけ追加したら、完了を選んでください。</string>
+    <string name="pairing_phone_addon_add">追加</string>
+    <string name="pairing_phone_addon_done_title">すべて完了</string>
+    <string name="pairing_phone_addon_done_body">アドオンがテレビに追加されました。スマートフォンを置いても大丈夫です。</string>
+    <string name="addons_phone_qr_desc">スマートフォンからアドオンを追加するためのQRコード</string>
+    <string name="vod_addon_still_asking">ほかのアドオンにまだ問い合わせ中…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d人が共有中</item>
+    </plurals>
 </resources>

@@ -9,16 +9,21 @@ import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -29,19 +34,25 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
+import app.opentv.data.model.StreamLink
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.RankedStream
 import app.opentv.data.repo.VersionTraits
 import app.opentv.data.repo.VodQualities
-import app.opentv.ui.AddonStreams
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.ERROR_DETAIL_TAG
+import app.opentv.ui.vod.AddonSearch
 import app.opentv.ui.vod.MovieDetailContent
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PageVersions
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -86,9 +97,12 @@ class MovieDetailContentTest {
         studio = "Big Studio",
     )
 
+    private fun ranked(url: String, title: String, addon: String, label: String, size: Long? = null) =
+        RankedStream(StremioStream(StreamLink.Direct(url), title, addon), 0, label, size, playable = true)
+
     private val streams = listOf(
-        StremioStream(url = "https://example.com/a.mkv", title = "1080p", addonName = "First add-on"),
-        StremioStream(url = "https://example.com/b.mkv", title = "4K", addonName = "Second add-on"),
+        ranked("https://example.com/b.mkv", "The Quiet Road 2160p", "Second add-on", "4K", 9L shl 30),
+        ranked("https://example.com/a.mkv", "The Quiet Road 1080p", "First add-on", "FHD"),
     )
 
     private var plays = 0
@@ -111,7 +125,7 @@ class MovieDetailContentTest {
 
     private fun similarFilm(id: Long, name: String) = film.copy(id = id, streamId = "m$id", name = name)
 
-    private var findStreams: (suspend () -> AddonStreams) = { AddonStreams.Found(streams) }
+    private var findStreams: () -> Flow<AddonSearch> = { flowOf(AddonSearch.Results(streams, finished = true)) }
 
     private fun show(
         movie: Movie = film,
@@ -372,46 +386,219 @@ class MovieDetailContentTest {
         press(Key.DirectionCenter)
 
         compose.onNodeWithText("Choose a stream").assertIsDisplayed()
-        compose.onNode(hasText("4K") and hasClickAction()).assertExists()
+        compose.onNode(hasText("The Quiet Road 2160p") and isFocused()).assertExists()
+        compose.onNodeWithText("Second add-on · 4K · 9 GB").assertIsDisplayed()
+        compose.onNodeWithText("First add-on · FHD").assertIsDisplayed()
         captureScreen("movie_detail_addon_picker")
 
-        compose.onNode(hasText("4K") and hasClickAction()).performClick()
+        compose.onNode(hasText("The Quiet Road 1080p") and hasClickAction()).performClick()
         settle()
 
-        assertThat(playedStream).isEqualTo(streams[1])
+        assertThat(playedStream).isEqualTo(streams[1].stream)
         compose.onNodeWithText("Choose a stream").assertDoesNotExist()
     }
 
     @Test
+    fun `a film kept from an add-on plays through the picker, with no button of its own for it`() {
+        versions = PageVersions(playOpensPicker = true)
+        show(movie = film.copy(streamUrl = ""), addons = true)
+
+        compose.onNodeWithText("Play").assertIsFocused()
+        compose.onNodeWithText("Add-on sources").assertDoesNotExist()
+        captureScreen("movie_detail_addon_film")
+        press(Key.DirectionCenter)
+
+        compose.onNodeWithText("Choose a stream").assertIsDisplayed()
+        assertThat(plays).isEqualTo(0)
+    }
+
+    @Test
+    fun `with no add-on left, a film kept from one can't be played`() {
+        versions = PageVersions(playOpensPicker = true)
+        show(movie = film.copy(streamUrl = ""), addons = false)
+
+        compose.onNodeWithText("Play").assertIsNotEnabled()
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
+
+    @Test
+    fun `while no add-on has answered, the picker says it's looking`() {
+        findStreams = { emptyFlow() }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNodeWithText("Finding streams from your add-ons…").assertIsDisplayed()
+        captureScreen("movie_detail_addon_picker_loading")
+    }
+
+    @Test
+    fun `streams show as the first add-ons answer, with a line while the rest are asked`() {
+        val answers = MutableStateFlow<AddonSearch>(AddonSearch.Results(streams.take(1), finished = false))
+        findStreams = { answers }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNode(hasText("The Quiet Road 2160p") and isFocused()).assertExists()
+        compose.onNodeWithText("Still asking your other add-ons…").assertIsDisplayed()
+        compose.onNodeWithText("The Quiet Road 1080p").assertDoesNotExist()
+        captureScreen("movie_detail_addon_picker_partial")
+
+        answers.value = AddonSearch.Results(streams, finished = true)
+        settle()
+
+        compose.onNodeWithText("The Quiet Road 1080p").assertIsDisplayed()
+        compose.onNodeWithText("Still asking your other add-ons…").assertDoesNotExist()
+    }
+
+    @Test
     fun `a picker closed while it is still looking stays closed when the streams arrive`() {
-        val answer = CompletableDeferred<AddonStreams>()
-        findStreams = { answer.await() }
+        val answers = MutableStateFlow<AddonSearch?>(null)
+        findStreams = { answers.filterNotNull() }
         show(addons = true)
         compose.onNodeWithText("Add-on sources").performClick()
         compose.onNodeWithText("Finding streams from your add-ons…").assertIsDisplayed()
 
         Espresso.pressBack()
         settle()
-        answer.complete(AddonStreams.Found(streams))
+        answers.value = AddonSearch.Results(streams, finished = true)
         settle()
 
         compose.onNodeWithText("Choose a stream").assertDoesNotExist()
     }
 
+    private val torrent = RankedStream(
+        StremioStream(StreamLink.Torrent("abc123", 1), "The Quiet Road 1080p WEB", "Torrents add-on"),
+        qualityRank = 300,
+        qualityLabel = "FHD",
+        sizeBytes = 2L shl 30,
+        playable = true,
+        sharers = 45,
+    )
+
     @Test
-    fun `when every add-on fails, the picker says why, with Try again, which asks them again`() {
+    fun `while torrents are off, their rows are greyed and passed over, with a line saying how to turn them on`() {
+        findStreams = { flowOf(AddonSearch.Results(streams + torrent, finished = true, torrentsOn = false)) }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
+        compose.onNodeWithText("Torrents add-on · FHD · 2 GB · 45 people sharing").assertIsDisplayed()
+        torrentRow.assertIsNotEnabled()
+        // Marked at a glance, and only the torrent: the direct streams above it carry no badge.
+        compose.onAllNodesWithText("Torrent").assertCountEquals(1)
+        torrentRow.assert(hasText("Torrent"))
+        compose.onNodeWithText("Torrents are off. Turn them on in Settings, Add-ons, to play these.")
+            .assertIsDisplayed()
+        // The Highlight stops on the last stream that plays, rather than on one that doesn't.
+        val inPicker = isFocused() and hasAnyAncestor(isDialog())
+        repeat(2) {
+            compose.onNode(inPicker).performKeyInput { pressKey(Key.DirectionDown) }
+            settle()
+        }
+        compose.onNode(hasText("The Quiet Road 1080p") and inPicker).assertExists()
+        captureScreen("movie_detail_addon_picker_torrents_off")
+
+        torrentRow.performClick()
+        settle()
+        assertThat(playedStream).isNull()
+    }
+
+    @Test
+    fun `with torrents on, their rows can be picked to play`() {
+        findStreams = { flowOf(AddonSearch.Results(streams + torrent, finished = true, torrentsOn = true)) }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        val torrentRow = compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction())
+        torrentRow.assertIsEnabled()
+        compose.onNodeWithText("Torrents are off", substring = true).assertDoesNotExist()
+        // The Highlight reaches it from the streams above, as it does any row.
+        val inPicker = isFocused() and hasAnyAncestor(isDialog())
+        repeat(streams.size) {
+            compose.onNode(inPicker).performKeyInput { pressKey(Key.DirectionDown) }
+            settle()
+        }
+        compose.onNode(hasText("The Quiet Road 1080p WEB") and inPicker).assertExists()
+        captureScreen("movie_detail_addon_picker_torrents_on")
+
+        torrentRow.performClick()
+        settle()
+        assertThat(playedStream).isEqualTo(torrent.stream)
+    }
+
+    @Test
+    fun `torrents too big for this device are left out, with a line saying how many and how much room there is`() {
+        val tooBig = torrent.copy(
+            stream = StremioStream(StreamLink.Torrent("def456", 1), "The Quiet Road 2160p REMUX", "Torrents add-on"),
+            sizeBytes = 40L shl 30,
+        )
+        val unknownSize = torrent.copy(
+            stream = StremioStream(StreamLink.Torrent("789abc", 1), "The Quiet Road 720p", "Torrents add-on"),
+            sizeBytes = null,
+        )
+        findStreams = {
+            flowOf(
+                AddonSearch.Results(
+                    listOf(tooBig) + streams + torrent + unknownSize,
+                    finished = true,
+                    torrentsOn = true,
+                    torrentRoom = 5L shl 29,
+                ),
+            )
+        }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNodeWithText("The Quiet Road 2160p REMUX").assertDoesNotExist()
+        // One that fits stays, and so does one whose size nobody said.
+        compose.onNode(hasText("The Quiet Road 1080p WEB") and hasClickAction()).assertIsEnabled()
+        compose.onNode(hasText("The Quiet Road 720p") and hasClickAction()).assertIsEnabled()
+        compose.onNodeWithText("1 more won't fit. This device has room for 2.5 GB.").assertIsDisplayed()
+        compose.onNode(hasText("The Quiet Road 2160p") and isFocused()).assertExists()
+        captureScreen("movie_detail_addon_picker_torrent_too_big")
+    }
+
+    @Test
+    fun `when every add-on has answered with nothing, the picker says none were found`() {
+        findStreams = { flowOf(AddonSearch.Results(emptyList(), finished = true)) }
+        show(addons = true)
+
+        compose.onNodeWithText("Add-on sources").performClick()
+        settle()
+
+        compose.onNodeWithText("No streams found from your add-ons for this title.").assertIsDisplayed()
+        compose.onNodeWithText("Try again").assertDoesNotExist()
+        captureScreen("movie_detail_addon_picker_none")
+    }
+
+    @Test
+    fun `when an add-on couldn't be reached and none had streams, the picker says why, and Try again asks again`() {
         var asked = 0
         findStreams = {
             asked++
             if (asked == 1) {
-                AddonStreams.Failed(
-                    ViewerError(
-                        "Can't reach the add-on. Check this TV is online and the address is right.",
-                        "UnknownHost",
+                flowOf(
+                    AddonSearch.Results(
+                        emptyList(),
+                        finished = true,
+                        failure = ViewerError(
+                            "Can't reach the add-on. Check this TV is online and the address is right.",
+                            "UnknownHost",
+                        ),
                     ),
                 )
             } else {
-                AddonStreams.Found(streams)
+                flowOf(AddonSearch.Results(streams, finished = true))
             }
         }
         show(addons = true)
@@ -430,17 +617,16 @@ class MovieDetailContentTest {
         settle()
 
         assertThat(asked).isEqualTo(2)
-        compose.onNode(hasText("4K") and hasClickAction()).assertExists()
+        compose.onNode(hasText("The Quiet Road 2160p") and hasClickAction()).assertExists()
     }
 
     @Test
-    fun `two add-ons offering the same link both show`() {
-        val same = "https://example.com/same.mkv"
+    fun `a film with no IMDb match says the add-ons can't look it up, with nothing to try again`() {
         findStreams = {
-            AddonStreams.Found(
-                listOf(
-                    StremioStream(url = same, title = "1080p", addonName = "First add-on"),
-                    StremioStream(url = same, title = "1080p", addonName = "Second add-on"),
+            flowOf(
+                AddonSearch.CantAsk(
+                    ViewerError("Your add-ons can't look this film up, as it has no match on IMDb.", "NoImdbMatch"),
+                    canRetry = false,
                 ),
             )
         }
@@ -449,8 +635,10 @@ class MovieDetailContentTest {
         compose.onNodeWithText("Add-on sources").performClick()
         settle()
 
-        compose.onNodeWithText("First add-on").assertExists()
-        compose.onNodeWithText("Second add-on").assertExists()
+        compose.onNodeWithText("Your add-ons can't look this film up, as it has no match on IMDb.").assertIsDisplayed()
+        compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("NoImdbMatch"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Try again").assertDoesNotExist()
+        captureScreen("movie_detail_addon_picker_no_match")
     }
 
     private fun showWith(shown: PageVersions) {
@@ -461,17 +649,18 @@ class MovieDetailContentTest {
     private fun choice(id: Long, traits: VersionTraits, playable: Boolean = true, playing: Boolean = false) =
         VodQualities.Choice(MediaKey.Movie(id), traits, playable, playing)
 
-    private val threeVersions = PageVersions(
+    private val fourVersions = PageVersions(
         choices = listOf(
             choice(1, VersionTraits(qualityRank = 400, qualityLabel = "4K"), playable = false),
             choice(2, VersionTraits(qualityRank = 200, qualityLabel = "HD", language = "de")),
             choice(3, VersionTraits(), playing = true),
+            choice(4, VersionTraits(fromAddons = true)),
         ),
     )
 
     @Test
     fun `the Quality pill lists the Versions that differ, greying out what this TV can't play`() {
-        showWith(threeVersions)
+        showWith(fourVersions)
 
         compose.onNodeWithText("Quality").performClick()
         settle()
@@ -479,12 +668,14 @@ class MovieDetailContentTest {
         compose.onNodeWithText("4K").assertIsNotEnabled()
         compose.onNodeWithText("HD · German").assertIsEnabled()
         compose.onNodeWithText("Other").assertIsSelected()
+        // The copy kept from an add-on, named for where it comes from.
+        compose.onNodeWithText("Add-ons").assertIsEnabled()
         captureScreen("movie_detail_quality_pill")
     }
 
     @Test
     fun `choosing in the Quality pill chooses that Version`() {
-        showWith(threeVersions)
+        showWith(fourVersions)
 
         compose.onNodeWithText("Quality").performClick()
         settle()

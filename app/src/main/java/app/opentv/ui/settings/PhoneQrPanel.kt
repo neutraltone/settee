@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ErrorWording
@@ -31,16 +32,22 @@ import app.opentv.ui.onboarding.describePairingFailure
 
 /**
  * The QR code for Setup's OpenSubtitles step, laid out as the phone pairing screen before it lays its own:
- * the code, white and 300 dp square, with the address to type under it for a camera that won't scan.
- * Its space is fixed, so nothing moves when the code appears after its server starts, or the server
- * can't start and Try again says why in its place.
+ * the code, white and [codeSize] square (300 dp unless a screen needs the room under it), with the
+ * address to type under it for a camera that won't scan. Its space is fixed, so nothing moves when the
+ * code appears after its server starts, or the server can't start and Try again says why in its place.
  */
 @Composable
-internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
-    Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) {
+internal fun PhoneQrPanel(
+    phone: PairingServer.State,
+    onRetry: () -> Unit,
+    wording: ErrorWording,
+    description: String = stringResource(R.string.opensubtitles_qr_desc),
+    codeSize: Dp = QR_PANEL_WIDTH,
+) {
+    Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT - (QR_PANEL_WIDTH - codeSize))) {
         when (phone) {
             is PairingServer.State.Listening -> {
-                PhoneQrCode(phone.session.url, stringResource(R.string.opensubtitles_qr_desc), QR_PANEL_WIDTH)
+                PhoneQrCode(phone.session.url, description, codeSize)
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.pairing_camera_fail), SetteeType.Body, color = SetteeColors.QuietText)
                 Spacer(Modifier.height(4.dp))
@@ -62,15 +69,16 @@ internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wordi
 
 /**
  * What the QR code shows for [phone]: the server's state, except that while it hears from the phone (a
- * sign-in to check, a skip) it keeps showing what it was. Those states carry no address, and the code
- * vanished each time a sign-in was checked.
+ * sign-in or an add-on to check, a skip, Done) it keeps showing what it was. Those states carry no
+ * address, and the code vanished each time a sign-in was checked.
  */
 @Composable
 internal fun codeShown(phone: PairingServer.State): PairingServer.State {
     var shown by remember { mutableStateOf(phone) }
     LaunchedEffect(phone) {
-        val hearing = phone is PairingServer.State.SignInReceived
-        if (!hearing && phone != PairingServer.State.KeySkipped) shown = phone
+        val hearing = phone is PairingServer.State.SignInReceived || phone is PairingServer.State.AddonReceived
+        val ending = phone == PairingServer.State.KeySkipped || phone == PairingServer.State.AddonsDone
+        if (!hearing && !ending) shown = phone
     }
     return shown
 }

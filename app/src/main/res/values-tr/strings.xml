@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Bölümler yükleniyor…</string>
     <string name="vod_episodes_failed">Bu dizinin bölümleri yüklenemedi. Birazdan tekrar deneyin.</string>
     <string name="vod_no_episodes">Sağlayıcınız bu dizinin hiçbir bölümünü eklemedi.</string>
+    <string name="vod_no_episodes_addons">Bu dizinin henüz listelenen bölümü yok.</string>
     <string name="vod_continue_watching">İzlemeye devam et</string>
     <string name="vod_large_provider_note">Büyük bir sağlayıcıda ilk seferde bu birkaç dakika sürebilir.</string>
     <string name="vod_recommended">Size özel öneriler</string>
@@ -263,6 +264,10 @@
     <string name="error_live_ended">Bu kanal durdu. Tekrar deneyin veya başka bir kanal seçin.</string>
     <string name="error_timed_out">Sağlayıcınız yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
     <string name="error_web_page">Sağlayıcınız video yerine bir web sayfası gönderdi. Bağlantının süresi dolmuş olabilir, bu yüzden Ayarlar\'dan sağlayıcınızı yenilemeyi deneyin.</string>
+    <string name="error_unplayable_file">Sağlayıcınız Settee\'nin oynatamadığı bir biçimde dosya gönderdi, bu yüzden başka bir şey deneyin.</string>
+    <string name="error_addon_web_page">Bu eklentinin bağlantısı video yerine bir web sayfası açtı. Başka bir yayın seçin.</string>
+    <string name="error_addon_unplayable_file">Bu eklentinin bağlantısı Settee\'nin oynatamadığı bir biçimde dosya açtı. Başka bir yayın seçin.</string>
+    <string name="playback_pick_another_stream">Başka bir yayın seç</string>
     <string name="error_damaged">Bu video bozuk ve oynatılamıyor. Sorun sağlayıcınızın tarafında, bu yüzden başka bir şey deneyin.</string>
     <string name="error_behind_live">Bu kanal canlı yayının çok gerisinde kaldı. Yetişmek için tekrar deneyin.</string>
     <string name="error_gone">Bu artık sağlayıcınızda yok. Ayarlar\'dan sağlayıcınızı yenilemeyi deneyin.</string>
@@ -289,11 +294,16 @@
     <string name="error_addon_cant_reach_tv">Eklentiye ulaşılamıyor. Bu TV\'nin internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
     <string name="error_addon_cant_reach_device">Eklentiye ulaşılamıyor. Bu cihazın internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
     <string name="error_addon_timed_out">Eklenti yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
+    <string name="error_addon_bad_address">Bu bir web adresi değil. Yazdığınızda hata olup olmadığını kontrol edin.</string>
+    <string name="error_addon_no_match">Eklentileriniz bu filmi arayamıyor, çünkü IMDb\'de eşleşmesi yok.</string>
     <string name="error_addon_trouble">Eklenti sorun yaşıyor. Sorun onun tarafında, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_not_an_addon_tv">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu TV\'nin internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_addon_lookup_tv">Eklentilerinize sormak için bu film aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_addon_lookup_device">Eklentilerinize sormak için bu film aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_no_match_show">Eklentileriniz bu diziyi arayamıyor, çünkü IMDb\'de eşleşmesi yok.</string>
+    <string name="error_addon_lookup_show_tv">Eklentilerinize sormak için bu dizi aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_lookup_show_device">Eklentilerinize sormak için bu dizi aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_device_refused">Sağlayıcınız bu bilgileri kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_guide">Bu rehber indirilemedi. Birazdan tekrar deneyin.</string>
     <string name="error_guide_empty">Bu rehber indirildi ama içinde hiç program yoktu. Doğru bağlantı olduğunu kontrol edin.</string>
@@ -404,4 +414,30 @@
     <string name="report_question_send">Gönder</string>
     <string name="report_question_dont_send">Gönderme</string>
     <string name="report_question_always_send">Her zaman gönder</string>
+    <string name="error_torrents_off">Torrentler kapalı. Bunları oynatmak için Ayarlar, Eklentiler bölümünden açın.</string>
+    <string name="error_torrent_nobody_sharing">Şu anda bu torrenti kimse paylaşmıyor, bu yüzden oynatılamıyor. Başka bir yayın seçin.</string>
+    <string name="error_torrent_no_space">Bu torrenti oynatmak için yeterli boş alan yok. Daha küçük bir yayın seçin veya yer açın.</string>
+    <string name="error_torrent_timed_out">Bu torrent paylaşan kişiler buldu ama zamanında başlamadı. Yeniden deneyin veya başka bir yayın seçin.</string>
+    <string name="error_torrent_unsupported">Torrentler için Android 8.0 veya üstü gerekir. Torrent olmayan bir yayın seçin.</string>
+    <string name="error_torrent_failed">Torrent kendi sorunu yüzünden durdu. Yeniden deneyin veya başka bir yayın seçin.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrentler</string>
+    <string name="settings_addons_torrents_off">Kapalı. Eklentilerinizin bulduğu torrentler listelenir ama oynatılmaz.</string>
+    <string name="settings_addons_torrents_on">Açık. Oynattığınız bir torrenti paylaşan herkes internet adresinizi görebilir.</string>
+    <string name="settings_addons_torrents_title">Torrentler açılsın mı?</string>
+    <string name="settings_addons_torrents_body">Bir torrent, aynı dosyayı paylaşan başka kişilerden alınır. Siz izlerken onu paylaşan herkes internet adresinizi görebilir.</string>
+    <string name="settings_addons_torrents_confirm">Torrentleri aç</string>
+    <string name="settings_addons_torrents_keep">Kapalı kalsın</string>
+    <string name="search_not_from_provider">Sağlayıcınızdan değil</string>
+    <string name="pairing_phone_addon_title">Eklenti ekleyin</string>
+    <string name="pairing_phone_addon_body">Adresini yapıştırın, TV\'niz kontrol edip ekler. İstediğiniz kadar ekleyin, sonra Tamam\'ı seçin.</string>
+    <string name="pairing_phone_addon_add">Ekle</string>
+    <string name="pairing_phone_addon_done_title">Her şey hazır</string>
+    <string name="pairing_phone_addon_done_body">Eklentileriniz TV\'nizde. Telefonunuzu bırakabilirsiniz.</string>
+    <string name="addons_phone_qr_desc">Telefonunuzdan eklenti eklemek için QR kodu</string>
+    <string name="vod_addon_still_asking">Diğer eklentilerinize hâlâ soruluyor…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d kişi paylaşıyor</item>
+        <item quantity="other">%1$d kişi paylaşıyor</item>
+    </plurals>
 </resources>

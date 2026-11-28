@@ -34,6 +34,7 @@ import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.player.PlayerController
+import app.opentv.player.torrent.TorrentEngine
 import java.io.IOException
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -204,13 +205,15 @@ class TestPlayers(private val context: Context) {
     /**
      * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
      * stream at a placeholder address). The first [failing] streams fail with [failure].
-     * [preview] makes it the controller a preview pane uses.
+     * [preview] makes it the controller a preview pane uses; [torrentEngine] is what it plays torrents with.
      */
+    @Suppress("LongParameterList") // Each is a way a test sets up the player; all default to the usual.
     fun controller(
         window: FakeTimeline.TimelineWindowDefinition = FILM,
         dvr: Boolean = false,
         failing: Int = 0,
         preview: Boolean = false,
+        torrentEngine: TorrentEngine? = null,
         resolve: suspend (MediaKey) -> Playable = ::placeholder,
     ) = PlayerController(
         context,
@@ -236,6 +239,7 @@ class TestPlayers(private val context: Context) {
                     .build()
             },
             decoders = decoders,
+            torrentEngine = torrentEngine,
         ),
     )
 
@@ -267,18 +271,20 @@ class TestPlayers(private val context: Context) {
 
     /**
      * A [PlayerController] reading [resolve]'s addresses through the app's own data sources rather than fake
-     * media, for how a real file fails. Its player runs on [clock], so it only moves on in [until].
+     * media, for how a real file fails, over [client] for a web address. Its player runs on [clock], so it only
+     * moves on in [until].
      */
-    fun realSourceController(resolve: suspend (MediaKey) -> Playable) = PlayerController(
-        context,
-        scope,
-        OkHttpClient(),
-        resolve = resolve,
-        PlayerController.Options(
-            limitStartUp = limitStartUp,
-            buildPlayer = { builder -> builder.setClock(clock).build() },
-        ),
-    )
+    fun realSourceController(client: OkHttpClient = OkHttpClient(), resolve: suspend (MediaKey) -> Playable) =
+        PlayerController(
+            context,
+            scope,
+            client,
+            resolve = resolve,
+            PlayerController.Options(
+                limitStartUp = limitStartUp,
+                buildPlayer = { builder -> builder.setClock(clock).build() },
+            ),
+        )
 
     /** Cancels what the controllers left running, such as an automatic restart, so it can't outlive the test. */
     fun close() = scope.cancel()

@@ -58,8 +58,12 @@ sealed interface OptionsSubject {
         override val title get() = series.displayTitle
     }
 
-    /** [title] is how the series page lists the episode. */
-    data class OfEpisode(val episode: Episode, override val title: String) : OptionsSubject
+    /**
+     * [title] is how the series page lists the episode. [onAddonSources] opens the page's picker of the
+     * episode's add-on streams, and is null when the viewer has no add-ons: only the page has the picker.
+     */
+    data class OfEpisode(val episode: Episode, override val title: String, val onAddonSources: (() -> Unit)? = null) :
+        OptionsSubject
 
     /** A season header on the series page: [episodes] are the season's, [title] how the header reads. */
     data class OfSeason(val episodes: List<Episode>, override val title: String) : OptionsSubject
@@ -278,6 +282,7 @@ class ItemOptionsViewModel @JvmOverloads constructor(
         is OptionsSubject.OfEpisode -> OptionsFor.Episode(
             library.marks.statusOf(subject.episode.mediaKey),
             library.catchUp.hasEarlierToMark(subject.episode),
+            addonSources = subject.onAddonSources != null,
         )
         is OptionsSubject.OfSeason -> {
             val statuses = library.episodeStatuses().first()
@@ -313,6 +318,8 @@ class ItemOptionsViewModel @JvmOverloads constructor(
             is OptionsSubject.OfMovie -> chooseFor(subject.movie, option)
             is OptionsSubject.OfSeries -> setFavourite(subject.series, option)
             is OptionsSubject.OfEpisode -> {
+                // Only the page it was opened from has the picker, so the panel hands Add-on sources back.
+                if (option == ItemOption.AddonSources) subject.onAddonSources?.invoke()
                 mark(subject.episode.mediaKey, option)
                 library.catchUp.chooseUpToHere(subject.episode, option)
             }

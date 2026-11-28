@@ -760,12 +760,36 @@ class AppSettings private constructor(context: Context, fileName: String = "open
      * manifest URL the user pasted (a debrid key, if any, is baked into that URL on the add-on's own
      * site — never entered here). Empty = the whole feature stays inert.
      */
+    /**
+     * Whether add-ons' torrent results may play. Off until the viewer turns them on knowing that everyone
+     * sharing a file sees this box's internet address. It belongs to the box, as that address does, so
+     * it's neither a Profile setting nor synced.
+     */
+    private val _torrentsEnabled = MutableStateFlow(prefs.getBoolean(KEY_TORRENTS, false))
+    val torrentsEnabled: StateFlow<Boolean> = _torrentsEnabled.asStateFlow()
+
+    fun setTorrentsEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_TORRENTS, enabled) }
+        _torrentsEnabled.value = enabled
+    }
+
     private val _stremioAddons = MutableStateFlow(readStremioAddons())
     val stremioAddons: StateFlow<List<StremioAddon>> = _stremioAddons.asStateFlow()
 
+    /**
+     * Keeps [addon], in place of any stored one at the same address, so adding one again refreshes it
+     * without moving it: the list's order is the viewer's.
+     */
     fun addStremioAddon(addon: StremioAddon) {
-        val deduped = _stremioAddons.value.filterNot { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
-        persistStremioAddons(deduped + addon)
+        val current = _stremioAddons.value
+        val same = current.indexOfFirst { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
+        persistStremioAddons(if (same < 0) current + addon else current.toMutableList().apply { set(same, addon) })
+    }
+
+    /** Replaces the stored add-on at [addon]'s address, unless the viewer has removed it meanwhile. */
+    fun refreshStremioAddon(addon: StremioAddon) {
+        val stored = _stremioAddons.value.any { it.manifestUrl.equals(addon.manifestUrl, ignoreCase = true) }
+        if (stored) addStremioAddon(addon)
     }
 
     fun removeStremioAddon(manifestUrl: String) {
@@ -841,6 +865,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_OS_HOST = "opensubtitles_host"
         private const val KEY_OS_AUTO = "opensubtitles_auto"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
+        private const val KEY_TORRENTS = "torrents_enabled"
         private const val KEY_CRASH_REPORTS = "crash_reports_on"
         private const val KEY_CRASH_INSTALL_ID = "crash_reports_install_id"
         private const val KEY_CRASH_REFUSALS = "crash_reports_refusals"

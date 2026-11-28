@@ -27,9 +27,16 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 @OptIn(UnstableApi::class)
 object DecoderLog {
 
-    /** Logs what a decoder failed on, when the failure reached the player. */
+    /**
+     * Logs what a decoder failed on, when the failure reached the player; for any other failure, its
+     * code and the class of what threw it, never a message, which can hold the address.
+     */
     fun logFailure(error: PlaybackException) {
-        if (error.errorCode !in DECODER_FAILURES) return
+        if (error.errorCode !in DECODER_FAILURES) {
+            val causes = generateSequence(error.cause) { it.cause }.take(MAX_CAUSES)
+            Log.w(TAG, "${error.errorCodeName}: ${causes.joinToString(" < ") { it.javaClass.simpleName }}")
+            return
+        }
         val failure = error as? ExoPlaybackException
         Log.w(
             TAG,
@@ -128,6 +135,7 @@ object DecoderLog {
         (error as? MediaCodecRenderer.DecoderInitializationException)?.codecInfo?.name
 
     private const val TAG = "OpenTV"
+    private const val MAX_CAUSES = 4
 
     private val DECODER_FAILURES = PlaybackRecovery.UNPLAYABLE_FORMATS + PlaybackException.ERROR_CODE_DECODING_FAILED
 }

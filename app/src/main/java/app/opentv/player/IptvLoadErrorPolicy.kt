@@ -42,6 +42,9 @@ internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
             (info.exception as? DataSourceException)?.reason == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
                 C.TIME_UNSET
 
+            // The torrent engine has given up on it, and every read now fails at once the same way.
+            torrentFailureOf(info.exception) != null -> C.TIME_UNSET
+
             statusCode == null -> if (super.getRetryDelayMsFor(info) == C.TIME_UNSET) {
                 C.TIME_UNSET
             } else {

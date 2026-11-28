@@ -46,6 +46,7 @@ class VodQualities(
      * opened was called, when this device isn't going to try it at all. [otherLanguages] are the
      * Versions that would play when none in the device's language does: [start] is then the one opened,
      * and the viewer is asked before any of them plays, in [otherLanguage] if their names say which.
+     * [fromAddons] are the title's copies kept from an add-on, for where to resume.
      */
     data class Plan(
         val start: Quality,
@@ -53,7 +54,16 @@ class VodQualities(
         val skipped: String? = null,
         val otherLanguages: List<Quality> = emptyList(),
         val otherLanguage: String? = null,
+        val fromAddons: List<MediaKey> = emptyList(),
     ) {
+        /**
+         * Where to resume [start] from: its own progress, or a copy kept from an add-on's when that's newer.
+         * A copy kept from an add-on is never what plays unasked, so a film watched through an add-on resumes
+         * where it stopped on the Provider's copy once there is one. A Provider's Versions keep their own, as
+         * the one played last is what plays.
+         */
+        val resumeKeys: List<String> get() = (listOf(start.key) + fromAddons).map { it.stored }.distinct()
+
         /** Nothing of the title plays on this device, in any language: Play can only fail. */
         fun playsNothing(decoders: DecoderList) =
             otherLanguages.isEmpty() && lower.isEmpty() && !decoders.playsQualityRanked(qualityRankOf(start.label))
@@ -88,7 +98,8 @@ class VodQualities(
         val language = deviceLanguage()
         return title.all
             .sortedWith(
-                compareBy<Candidate> { it.traits.cam }
+                compareBy<Candidate> { it.traits.fromAddons }
+                    .thenBy { it.traits.cam }
                     .thenByDescending { it.traits.qualityRank }
                     .thenByDescending { it.traits.inLanguage(language) }
                     .thenByDescending { it.quality.key == playing },
@@ -114,12 +125,18 @@ class VodQualities(
         versions.chosenAs(version)?.let { (title, id) -> profileSettings.chooseVersion(title, id) }
     }
 
-    private suspend fun plan(title: TitleVersionLookup.Versions): Plan {
+    private suspend fun plan(title: TitleVersionLookup.Versions): Plan =
+        planOf(title).copy(fromAddons = title.all.filter { it.traits.fromAddons }.map { it.quality.key })
+
+    private suspend fun planOf(title: TitleVersionLookup.Versions): Plan {
         val opened = title.opened
         val playable = title.all.filter { decoders.playsQualityRanked(it.traits.qualityRank) }
         val language = deviceLanguage()
+        // A copy kept from an add-on comes last: it plays only through the picker, so Play stands for a
+        // Provider's copy whenever there is one (ADR 0011).
         val usual = playable.filter { it.traits.inLanguage(language) }.sortedWith(
-            compareBy<Candidate> { it.traits.cam }
+            compareBy<Candidate> { it.traits.fromAddons }
+                .thenBy { it.traits.cam }
                 .thenByDescending { it.traits.qualityRank }
                 // The same shelf next: a provider's shelves differ in more than their names say.
                 .thenByDescending { it.shelf != null && it.shelf == opened.shelf }
@@ -141,15 +158,20 @@ class VodQualities(
             ordered.isEmpty() -> Plan(opened.quality)
             else -> Plan(
                 start = ordered.first().quality,
-                lower = ordered.drop(1).map { it.quality },
+                // Never stepped down to: it has no stream to step down to.
+                lower = ordered.drop(1).filterNot { it.traits.fromAddons }.map { it.quality },
                 skipped = opened.quality.label.takeUnless { opened in playable },
             )
         }
     }
 
-    /** What this Profile last played or chose of the title, whichever was later, if it plays here. */
+    /**
+     * What this Profile last played or chose of the title, whichever was later, if it plays here. A copy
+     * kept from an add-on counts only when chosen: played last, it's the Provider's copy that carries on.
+     */
     private suspend fun preferredOf(playable: List<Candidate>, title: String?): Candidate? {
-        val lastPlayed = playable.filter { it.playedAt != null }.maxByOrNull { it.playedAt ?: 0 }
+        val lastPlayed = playable.filter { it.playedAt != null && !it.traits.fromAddons }
+            .maxByOrNull { it.playedAt ?: 0 }
         val choice = title?.let { profileSettings.chosenVersion(it) }
         val chosen = choice?.let { c -> playable.firstOrNull { it.version == c.version } }
         return when {
@@ -194,14 +216,16 @@ private class TitleVersionLookup(
     private suspend fun movie(opened: MediaKey.Movie): Versions? {
         val movie = db.movies().byId(opened.movieId) ?: return null
         val tmdbId = knownTmdbId(movie.tmdbId)
+        val addons = db.sources().addonsSourceId()
         val rows = (listOf(movie) + db.versionsOf(movie, versionIds)).distinctBy { it.id }
         val profile = activeProfileId.value
         val candidates = rows.map { row ->
             val key = MediaKey.Movie(row.id)
+            val category = row.categoryId?.let { db.categories().nameOf(row.sourceId, it, StreamKind.MOVIE) }
             candidate(
                 key = key,
                 name = row.name,
-                category = row.categoryId?.let { db.categories().nameOf(row.sourceId, it, StreamKind.MOVIE) },
+                traits = versionTraits(row.name, category).copy(fromAddons = addons.keeps(row.sourceId)),
                 version = versionId(row.sourceId, row.streamId),
                 playedAt = db.positions().get(profile, key.stored)?.updatedAtMillis,
             )
@@ -215,23 +239,29 @@ private class TitleVersionLookup(
         if (episode == null || series == null) return null
         // Read once for every Version, rather than once each.
         val played = db.positions().ofKind(activeProfileId.value, EPISODE_PREFIX)
-        val self = seriesCandidate(series, opened, played)
+        val addons = db.sources().addonsSourceId()
+        val self = seriesCandidate(series, opened, played, addons)
         return Versions(
             self,
-            listOf(self) + copiesOf(episode, series, played),
+            listOf(self) + copiesOf(episode, series, played, addons),
             knownTmdbId(series.tmdbId)?.let {
                 "series:$it"
             },
         )
     }
 
-    private suspend fun copiesOf(episode: Episode, series: Series, played: List<PlaybackPosition>): List<Candidate> {
+    private suspend fun copiesOf(
+        episode: Episode,
+        series: Series,
+        played: List<PlaybackPosition>,
+        addons: AddonsSourceId,
+    ): List<Candidate> {
         // A series' episodes are fetched when its page is opened, so another Version's may never have
         // been. Waiting on the provider is only worth it when this device won't try the one opened.
         val fetch = !decoders.playsName(series.name)
         val copies = db.versionsOf(series, versionIds).filter { it.id != series.id }
         return copies.filter { decoders.playsName(it.name) }.mapNotNull { copy ->
-            sameEpisodeIn(copy, episode, fetch)?.let { seriesCandidate(copy, MediaKey.Episode(it), played) }
+            sameEpisodeIn(copy, episode, fetch)?.let { seriesCandidate(copy, MediaKey.Episode(it), played, addons) }
         }
     }
 
@@ -239,14 +269,16 @@ private class TitleVersionLookup(
         series: Series,
         key: MediaKey.Episode,
         played: List<PlaybackPosition>,
+        addons: AddonsSourceId,
     ): Candidate {
         val episodeKeys = db.episodes().forSeries(series.sourceId, series.seriesId)
             .map { MediaKey.Episode(it.id).stored }.toSet()
         val playedAt = played.filter { it.mediaKey in episodeKeys }.maxOfOrNull { it.updatedAtMillis }
+        val category = series.categoryId?.let { db.categories().nameOf(series.sourceId, it, StreamKind.SERIES) }
         return candidate(
             key = key,
             name = series.name,
-            category = series.categoryId?.let { db.categories().nameOf(series.sourceId, it, StreamKind.SERIES) },
+            traits = versionTraits(series.name, category).copy(fromAddons = addons.keeps(series.sourceId)),
             version = versionId(series.sourceId, series.seriesId),
             playedAt = playedAt,
         )
@@ -280,8 +312,14 @@ private class Candidate(
     val playedAt: Long?,
 )
 
-private fun candidate(key: MediaKey, name: String, category: String?, version: String?, playedAt: Long?): Candidate {
-    val traits = versionTraits(name, category)
+/** [traits] are what [versionTraits] reads from [name] and its category, and where the row came from. */
+private fun candidate(
+    key: MediaKey,
+    name: String,
+    traits: VersionTraits,
+    version: String?,
+    playedAt: Long?,
+): Candidate {
     val shelf = SHELF.find(name)?.groupValues?.get(1)?.lowercase()
     return Candidate(VodQualities.Quality(key, traits.qualityLabel), traits, shelf, version, playedAt)
 }

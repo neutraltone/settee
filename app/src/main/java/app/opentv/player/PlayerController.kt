@@ -30,6 +30,10 @@ import app.opentv.data.repo.RecordedOn
 import app.opentv.data.repo.SubtitlePreference
 import app.opentv.diagnostics.PlaybackDiagnostics
 import app.opentv.isRunningOnTelevision
+import app.opentv.player.torrent.TorrentDataSource
+import app.opentv.player.torrent.TorrentEngine
+import app.opentv.player.torrent.TorrentPlayback
+import app.opentv.player.torrent.TorrentStatus
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -81,8 +85,17 @@ class PlayerController(
         data class Buffering(val title: String) : State
         data class Playing(val title: String) : State
 
-        /** Playback stopped and retries are exhausted. [reason] is the sentence and detail line to show. */
-        data class Error(val title: String, val reason: ViewerError, val canRetry: Boolean) : State
+        /**
+         * Playback stopped and retries are exhausted. [reason] is the sentence and detail line to show.
+         * [anotherStreamOf] is the title an add-on's stream was of, when another of its streams is worth
+         * picking instead; null otherwise.
+         */
+        data class Error(
+            val title: String,
+            val reason: ViewerError,
+            val canRetry: Boolean,
+            val anotherStreamOf: MediaKey.Title? = null,
+        ) : State
     }
 
     /** How this controller's player is set up, for what it will be asked to play. */
@@ -137,6 +150,12 @@ class PlayerController(
         val diagnostics: PlaybackDiagnostics? = null,
         /** Times each start of playback, as the `playback-start` journey (ADR 0010). None for the preview. */
         val journeys: JourneyTimer? = null,
+        /**
+         * What an add-on's torrent plays through (#670): started on one when it's asked for, stopped, which
+         * deletes its pieces, when something else is or the player is released. Only the film and episode
+         * player has one; nothing else is handed a torrent.
+         */
+        val torrentEngine: TorrentEngine? = null,
     )
 
     /**
@@ -246,6 +265,12 @@ class PlayerController(
     /** Where the stream on the player is kept, if it's a finished recording, so its failures say so. */
     private var recordedOn: RecordedOn? = null
 
+    /** The stream handed to the player last, for a look at what it sent should the player fail to read it. */
+    private var onPlayer: Playable.Ready? = null
+
+    /** Counts [play]s, so a sentence worked out after a failure can tell it's been overtaken. */
+    private var tunes = 0
+
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
@@ -272,11 +297,21 @@ class PlayerController(
             val custom = buildMap<String, androidx.media3.datasource.DataSource.Factory> {
                 options.smbDataSourceFactory?.let { put("smb", it) }
                 options.growingDataSourceFactory?.let { put("optvrec", it) }
+                options.torrentEngine?.let { put("magnet", TorrentDataSource.Factory(it)) }
             }
             if (custom.isEmpty()) default else RoutingDataSourceFactory(default, custom)
         }
 
     private val loadErrorPolicy = IptvLoadErrorPolicy()
+
+    /**
+     * Where the torrent this player is playing has got to, for the screen to show it connecting and how
+     * many people it has found; [TorrentStatus.Idle] when it isn't playing one.
+     */
+    val torrent: StateFlow<TorrentStatus> get() = torrents.status
+
+    /** Starts the torrent each stream needs, and stops this player's when it plays something else or goes. */
+    private val torrents = TorrentPlayback(options.torrentEngine)
 
     /**
      * Held so captions can be turned on and off at runtime. Prefer the device language when
@@ -371,21 +406,36 @@ class PlayerController(
                     DecoderLog.logFailure(error)
                     val request = current
                     val recovery = counts.failed(error, hadPlayed, recordedOn)
-                    states.publish(
-                        State.Error(
-                            title = _title.value,
-                            // The last stream's format lingers until this one's tracks are known, so only a
-                            // selected video track's counts.
-                            reason = PlaybackErrors.describe(
-                                strings,
-                                error,
-                                onTelevision,
-                                player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
-                                recordedOn,
-                            ),
-                            canRetry = recovery.canRetry,
+                    val title = _title.value
+                    // The last stream's format lingers until this one's tracks are known, so only a
+                    // selected video track's counts.
+                    val format = player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) }
+                    val stream = onPlayer
+                    val failedRecordedOn = recordedOn
+                    fun failed(start: StreamStart?) = State.Error(
+                        title = title,
+                        reason = PlaybackErrors.describe(
+                            strings,
+                            error,
+                            onTelevision,
+                            format,
+                            failedRecordedOn,
+                            FailedStream(stream?.key, start),
                         ),
+                        canRetry = recovery.canRetry,
+                        anotherStreamOf = anotherStreamOf(error, stream?.key),
                     )
+                    if (stream != null && isUnreadable(error) && stream.isWebAddress) {
+                        // Whether it was a web page or a file the player can't read is only in the bytes it sent.
+                        val tune = tunes
+                        scope.launch {
+                            val start = StreamPeek.startOf(httpClient, stream.url, stream.headersSent)
+                            // Anything asked for meanwhile, a restart included, has a sentence of its own.
+                            if (tune == tunes) states.publish(failed(start))
+                        }
+                    } else {
+                        states.publish(failed(start = null))
+                    }
                     if (recovery.canRestart && request != null) restartLater(request)
                 }
 
@@ -449,6 +499,7 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
+        tunes++
         // An automatic restart keeps counting, so a stream that keeps dropping stops after a couple
         // of restarts rather than retrying (and, on a portal, minting a link) forever. Anything else
         // is asked for, even the same channel picked again, so it gets restarts of its own.
@@ -476,6 +527,7 @@ class PlayerController(
                     // sentence and its next state would cover it.
                     gaveUp = true
                     player.stop()
+                    torrents.play(null)
                     loaded = null
                     // Whether stop() empties the player's tracks is ExoPlayer's business; the options
                     // offered under the sentence mustn't be the last stream's.
@@ -490,7 +542,9 @@ class PlayerController(
             _reportedSource.value = playable.source
             _title.value = playable.title
             titled = request.key
-            httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))
+            // The whole set is replaced, so an add-on's headers never ride along on the next stream.
+            httpFactory.setDefaultRequestProperties(playable.headersSent)
+            onPlayer = playable
             states.publish(State.Buffering(playable.title))
 
             val mediaItem = playable.mediaItem()
@@ -498,10 +552,14 @@ class PlayerController(
             with(player) {
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
+                // After the last stream has stopped reading, so a torrent it was waiting on stops under nothing.
+                torrents.play(playable.torrent)
                 gaveUp = false
                 hadPlayed = false
                 recordedOn = playable.recordedOn
-                guard.started(limitStartUp, recordedOn)
+                // A torrent has the engine's own limit on finding people and its file list, and its own
+                // sentences for missing it; the start-up limit's would blame a provider.
+                guard.started(limitStartUp && playable.torrent == null, recordedOn)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the
@@ -647,6 +705,7 @@ class PlayerController(
         loaded = null
         player.stop()
         player.clearMediaItems()
+        torrents.play(null)
         states.publish(State.Idle)
     }
 
@@ -693,6 +752,7 @@ class PlayerController(
         switchJob?.cancel()
         guard.release()
         player.release()
+        torrents.play(null)
     }
 
     private enum class Hold { NONE, PAUSED, STOPPED }
@@ -737,5 +797,12 @@ private fun Playable.Ready.mediaItem(): MediaItem = MediaItem.Builder()
         }
     }
     .build()
+
+/** Every header the stream is fetched with: what an add-on asks for, and the User-Agent. */
+private val Playable.Ready.headersSent: Map<String, String> get() = requestHeaders + ("User-Agent" to userAgent)
+
+/** Whether [Playable.Ready.url] is fetched over the web, rather than from a file or a NAS. */
+private val Playable.Ready.isWebAddress: Boolean
+    get() = url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
 
 private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
