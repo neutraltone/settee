@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Was du ansiehst und als Favorit markierst, erscheint hier.</string>
     <string name="error_http_401">Dein Anbieter hat deine Anmeldung nicht akzeptiert. Überprüfe Benutzername und Passwort in den Einstellungen.</string>
     <string name="error_http_403">Dein Anbieter hat das abgelehnt. Dein Konto wird vielleicht auf einem anderen Gerät genutzt, also beende die Wiedergabe dort und versuch es erneut.</string>
+    <string name="error_http_404">Dein Anbieter konnte das gerade nicht finden. Er hat vielleicht Probleme, also versuch es später erneut.</string>
     <string name="error_http_429">Dein Anbieter bekommt zu viele Anfragen von diesem Gerät. Warte eine Minute und versuch es dann erneut.</string>
     <string name="error_http_451">Dein Anbieter kann das dort, wo du bist, nicht zeigen.</string>
     <string name="error_http_5xx">Dein Anbieter hat Probleme. Das liegt an ihm, also versuch es später erneut.</string>

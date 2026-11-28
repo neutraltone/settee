@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Katsomasi ohjelmat ja suosikkisi näkyvät täällä.</string>
     <string name="error_http_401">Palveluntarjoajasi ei hyväksynyt kirjautumistasi. Tarkista käyttäjätunnus ja salasana Asetuksista.</string>
     <string name="error_http_403">Palveluntarjoajasi esti tämän. Tiliäsi saatetaan käyttää toisella laitteella, joten lopeta käyttö siellä ja yritä uudelleen.</string>
+    <string name="error_http_404">Palveluntarjoajasi ei löytänyt tätä juuri nyt. Sillä voi olla ongelmia, joten yritä myöhemmin uudelleen.</string>
     <string name="error_http_429">Palveluntarjoajasi saa liikaa pyyntöjä tältä laitteelta. Odota hetki ja yritä sitten uudelleen.</string>
     <string name="error_http_451">Palveluntarjoajasi ei voi näyttää tätä sijainnissasi.</string>
     <string name="error_http_5xx">Palveluntarjoajallasi on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>

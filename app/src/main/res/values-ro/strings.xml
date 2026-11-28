@@ -255,6 +255,7 @@
     <string name="home_empty_hint">Ce urmărești și ce pui la favorite va apărea aici.</string>
     <string name="error_http_401">Furnizorul tău nu ți-a acceptat autentificarea. Verifică numele de utilizator și parola în Setări.</string>
     <string name="error_http_403">Furnizorul tău a refuzat acest lucru. Contul tău poate fi folosit pe alt dispozitiv, așa că oprește-l acolo și încearcă din nou.</string>
+    <string name="error_http_404">Furnizorul tău nu a putut găsi asta acum. S-ar putea să aibă probleme, așa că încearcă din nou mai târziu.</string>
     <string name="error_http_429">Furnizorul tău primește prea multe cereri de la acest dispozitiv. Așteaptă un minut, apoi încearcă din nou.</string>
     <string name="error_http_451">Furnizorul tău nu poate afișa acest conținut acolo unde te afli.</string>
     <string name="error_http_5xx">Furnizorul tău are probleme. Sunt de partea lor, așa că încearcă din nou mai târziu.</string>

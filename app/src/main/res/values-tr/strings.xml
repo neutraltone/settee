@@ -254,6 +254,7 @@
     <string name="home_empty_hint">İzledikleriniz ve favorilerinize ekledikleriniz burada görünür.</string>
     <string name="error_http_401">Sağlayıcınız girişinizi kabul etmedi. Ayarlar\'dan kullanıcı adını ve şifreyi kontrol edin.</string>
     <string name="error_http_403">Sağlayıcınız bunu reddetti. Hesabınız başka bir cihazda kullanılıyor olabilir, orada durdurup tekrar deneyin.</string>
+    <string name="error_http_404">Sağlayıcınız bunu şu anda bulamadı. Sorun yaşıyor olabilir, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_http_429">Sağlayıcınız bu cihazdan çok fazla istek alıyor. Bir dakika bekleyin, ardından tekrar deneyin.</string>
     <string name="error_http_451">Sağlayıcınız bunu bulunduğunuz yerde gösteremiyor.</string>
     <string name="error_http_5xx">Sağlayıcınız sorun yaşıyor. Sorun onların tarafında, bu yüzden daha sonra tekrar deneyin.</string>

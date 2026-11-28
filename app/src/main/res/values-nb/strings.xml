@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Det du ser på og gjør til favoritter, vises her.</string>
     <string name="error_http_401">Leverandøren din godtok ikke innloggingen din. Sjekk brukernavnet og passordet i Innstillinger.</string>
     <string name="error_http_403">Leverandøren din avviste dette. Kontoen din kan være i bruk på en annen enhet, så stopp den der og prøv igjen.</string>
+    <string name="error_http_404">Leverandøren din fant ikke dette akkurat nå. Den kan ha problemer, så prøv igjen senere.</string>
     <string name="error_http_429">Leverandøren din får for mange forespørsler fra denne enheten. Vent et minutt, og prøv så igjen.</string>
     <string name="error_http_451">Leverandøren din kan ikke vise dette der du er.</string>
     <string name="error_http_5xx">Leverandøren din har problemer. Det er på deres side, så prøv igjen senere.</string>

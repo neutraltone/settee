@@ -255,6 +255,7 @@
     <string name="home_empty_hint">Quello che guardi e aggiungi ai preferiti comparirà qui.</string>
     <string name="error_http_401">Il tuo provider non ha accettato il tuo accesso. Controlla nome utente e password in Impostazioni.</string>
     <string name="error_http_403">Il tuo provider ha rifiutato la richiesta. Il tuo account potrebbe essere in uso su un altro dispositivo, quindi interrompi la riproduzione lì e riprova.</string>
+    <string name="error_http_404">Il tuo provider non è riuscito a trovarlo in questo momento. Potrebbe avere dei problemi, quindi riprova più tardi.</string>
     <string name="error_http_429">Il tuo provider sta ricevendo troppe richieste da questo dispositivo. Aspetta un minuto, poi riprova.</string>
     <string name="error_http_451">Il tuo provider non può mostrare questo contenuto dove ti trovi.</string>
     <string name="error_http_5xx">Il tuo provider ha dei problemi. Dipende da loro, quindi riprova più tardi.</string>

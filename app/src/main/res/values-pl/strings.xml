@@ -256,6 +256,7 @@
     <string name="home_empty_hint">Tutaj pojawi się to, co oglądasz i dodajesz do ulubionych.</string>
     <string name="error_http_401">Dostawca nie zaakceptował Twoich danych logowania. Sprawdź nazwę użytkownika i hasło w Ustawieniach.</string>
     <string name="error_http_403">Dostawca odmówił dostępu. Twoje konto może być używane na innym urządzeniu, więc zatrzymaj je tam i spróbuj ponownie.</string>
+    <string name="error_http_404">Dostawca nie mógł teraz tego znaleźć. Może mieć problemy, więc spróbuj ponownie później.</string>
     <string name="error_http_429">Dostawca otrzymuje zbyt wiele żądań z tego urządzenia. Odczekaj minutę, a potem spróbuj ponownie.</string>
     <string name="error_http_451">Dostawca nie może pokazać tego tam, gdzie jesteś.</string>
     <string name="error_http_5xx">Dostawca ma problemy. To leży po jego stronie, więc spróbuj ponownie później.</string>
