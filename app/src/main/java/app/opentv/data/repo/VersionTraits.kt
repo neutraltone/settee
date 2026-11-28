@@ -26,6 +26,11 @@ data class VersionTraits(
     val sound: String? = null,
     /** Filmed in a cinema: never chosen on its own while anything else plays. */
     val cam: Boolean = false,
+    /**
+     * Kept from an add-on (ADR 0011): it has no stream of its own and plays through the add-on picker, so
+     * it's never what plays unless the viewer chooses it or there's nothing else.
+     */
+    val fromAddons: Boolean = false,
 ) {
     /**
      * Whether this Version is in [deviceLanguage], so Settee may switch to it unasked. Unmarked counts:

@@ -9,9 +9,11 @@ import android.util.Log
 import androidx.annotation.VisibleForTesting
 import app.opentv.core.AppDispatchers
 import app.opentv.core.AppSettings
-import app.opentv.data.db.EpisodeDao
-import app.opentv.data.db.SourceDao
+import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Series
 import app.opentv.data.model.Source
+import app.opentv.data.model.StreamKind
+import app.opentv.sync.SyncFavourite
 import app.opentv.sync.SyncPosition
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -23,16 +25,18 @@ import kotlinx.coroutines.launch
 
 /**
  * Brings in synced progress for episodes this device hasn't fetched, since episodes are only stored
- * once a series is opened. Positions aren't kept: the peer's bundle still carries one that couldn't
- * be placed, so a later sync tries it again, which is why there's no table of waiting positions.
- * All that's kept is which episodes a provider said it doesn't have (see [notFound]).
+ * once a series is opened, and keeps the titles from add-ons that another device kept and this one
+ * hasn't, from their IMDb ids, so their progress and Favourites land here (ADR 0011). Positions
+ * aren't kept: the peer's bundle still carries one that couldn't be placed, so a later sync tries it
+ * again, which is why there's no table of waiting positions. All that's kept is which episodes a
+ * provider said it doesn't have (see [notFound]), and which add-on titles TMDB doesn't know.
  */
 class WaitingProgress(
     private val library: ViewerLibrary,
     private val catalog: CatalogRepository,
-    private val sources: SourceDao,
-    private val episodes: EpisodeDao,
+    private val db: OpenTvDatabase,
     private val settings: AppSettings,
+    private val addonTitles: AddonTitles,
     private val dispatchers: AppDispatchers = AppDispatchers(),
 ) {
     // Its own scope because the sync screen doesn't wait for a provider, and may be gone before it answers.
@@ -42,18 +46,29 @@ class WaitingProgress(
     @VisibleForTesting
     internal suspend fun close() = background.coroutineContext.job.cancelAndJoin()
 
-    /** Fetches each series in [waiting] once, then merges its positions. Returns before any of that happens. */
-    fun fetchFor(waiting: List<SyncPosition>) {
-        if (waiting.isEmpty()) return
+    /**
+     * Fetches each series in [waiting] once, then merges its positions, and keeps each add-on title in
+     * [waiting] or starred in [favourites] that this device hasn't kept. Returns before any of that happens.
+     */
+    fun fetchFor(waiting: List<SyncPosition>, favourites: List<SyncFavourite> = emptyList()) {
+        val addonFavourites = favourites.filter { !it.removed && it.source.isAddons() }
+        if (waiting.isEmpty() && addonFavourites.isEmpty()) return
         background.launch {
-            runCatching { fetchAndMerge(waiting) }
+            runCatching { fetchAndMerge(waiting, addonFavourites) }
                 .onFailure { if (it is CancellationException) throw it }
                 .onFailure { Log.w(TAG, "Couldn't bring in synced progress", it) }
         }
     }
 
-    private suspend fun fetchAndMerge(waiting: List<SyncPosition>) {
-        val enabled = sources.enabled().associateBy { it.name }
+    private suspend fun fetchAndMerge(waiting: List<SyncPosition>, addonFavourites: List<SyncFavourite>) {
+        val (fromAddons, fromProviders) = waiting.partition { it.source.isAddons() }
+        fetchFromProviders(fromProviders)
+        keepAddonTitles(fromAddons, addonFavourites)
+    }
+
+    private suspend fun fetchFromProviders(waiting: List<SyncPosition>) {
+        if (waiting.isEmpty()) return
+        val enabled = db.sources().enabled().associateBy { it.name }
         val notFound = settings.syncEpisodesNotFound()
         val series = waiting
             .filter { it.source in enabled && keyOf(it) !in notFound }
@@ -65,6 +80,40 @@ class WaitingProgress(
             // A provider that's down would otherwise cost one timeout per series.
             if (name !in down && !fetchAndMerge(enabled.getValue(name), seriesId, positions)) down += name
         }
+    }
+
+    /**
+     * Keeps the films and shows from add-ons named by [positions] and [favourites] from TMDB, a show's
+     * episodes too when a position is on one, then merges the positions. A Favourite needs nothing more:
+     * it's stored by source name and IMDb id already, and lists once its title is kept.
+     */
+    private suspend fun keepAddonTitles(positions: List<SyncPosition>, favourites: List<SyncFavourite>) {
+        val episodesByShow = positions.filter { it.kind == MediaKey.EPISODE }.groupBy { it.seriesId.orEmpty() }
+        val films = positions.filter { it.kind == MediaKey.MOVIE }.map { it.id } +
+            favourites.filter { it.kind == StreamKind.MOVIE.name }.map { it.id }
+        val shows = episodesByShow.keys + favourites.filter { it.kind == StreamKind.SERIES.name }.map { it.id }
+        val notFound = settings.syncEpisodesNotFound()
+        val titles = (films.map { it to true } + shows.map { it to false })
+            .distinct()
+            .filter { (imdbId, _) -> imdbId.isNotEmpty() && notFoundKey(Source.ADDONS_NAME, imdbId) !in notFound }
+        // The same limit as a provider's: one sync naming many titles at app launch shouldn't flood TMDB.
+        for ((imdbId, isMovie) in titles.take(MAX_SERIES_PER_RUN)) {
+            val kept = if (isMovie) addonTitles.keepSyncedFilm(imdbId) else addonTitles.keepSyncedShow(imdbId)
+            // TMDB down, or no Key: a later sync tries again, rather than one timeout per title now.
+            val title = kept.getOrElse { break }
+            when (title) {
+                // TMDB not knowing it is remembered, or every sync would ask again, forever.
+                null -> settings.addSyncEpisodesNotFound(listOf(notFoundKey(Source.ADDONS_NAME, imdbId)))
+                is Series -> episodesByShow[imdbId]?.let { fetchAndMerge(title, it) }
+            }
+        }
+        val filmPositions = positions.filter { it.kind == MediaKey.MOVIE }
+        if (filmPositions.isNotEmpty()) library.syncedProgress.import(filmPositions)
+    }
+
+    /** [fetchAndMerge] for a show kept from an add-on, whose episodes TMDB lists. */
+    private suspend fun fetchAndMerge(show: Series, positions: List<SyncPosition>) {
+        db.sources().byId(show.sourceId)?.let { fetchAndMerge(it, show.seriesId, positions) }
     }
 
     /** Returns false when the provider couldn't be reached. */
@@ -85,7 +134,7 @@ class WaitingProgress(
      * send one when they're struggling, so that series is asked again.
      */
     private suspend fun notFound(source: Source, seriesId: String, missing: List<SyncPosition>) {
-        if (episodes.forSeries(source.id, seriesId).isEmpty()) return
+        if (db.episodes().forSeries(source.id, seriesId).isEmpty()) return
         settings.addSyncEpisodesNotFound(missing.map(::keyOf))
     }
 
@@ -99,6 +148,8 @@ class WaitingProgress(
         const val MAX_SERIES_PER_RUN = 25
     }
 }
+
+private fun String.isAddons() = SourceDirectory.sameName(this, Source.ADDONS_NAME)
 
 // Keyed by the provider's name, as the waiting positions are labelled, so a rename has to move them.
 private fun notFoundKey(source: String, episodeId: String) = "$source\t$episodeId"

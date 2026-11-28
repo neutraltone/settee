@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.test.utils.ExoPlayerTestRunner
 import app.opentv.core.AppSettings
@@ -116,6 +117,8 @@ class PlayerNoticeTest {
         assertThat(focusedId()).isEqualTo(focusedBefore)
         captureScreen("live_player_stepped_down")
 
+        // Timed from when HD starts playing, so a notice said while loading is seen.
+        players.until { controller.player.playbackState == Player.STATE_READY }
         players.advance(5_100)
         compose.waitForIdle()
         compose.onNodeWithText(message).assertDoesNotExist()

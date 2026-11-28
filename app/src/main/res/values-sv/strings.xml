@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Läser in avsnitt…</string>
     <string name="vod_episodes_failed">Det gick inte att läsa in avsnitten i den här serien. Försök igen om en stund.</string>
     <string name="vod_no_episodes">Din leverantör har inte lagt till några avsnitt av den här serien.</string>
+    <string name="vod_no_episodes_addons">Inga avsnitt av det här programmet finns listade än.</string>
     <string name="vod_continue_watching">Fortsätt titta</string>
     <string name="vod_large_provider_note">En stor leverantör kan ta ett par minuter första gången.</string>
     <string name="vod_recommended">Rekommenderat för dig</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">Den här kanalen stannade. Försök igen, eller välj en annan kanal.</string>
     <string name="error_timed_out">Din leverantör slutade svara. Den kan vara upptagen, så försök igen om en stund.</string>
     <string name="error_web_page">Din leverantör skickade en webbsida i stället för video. Länken kan ha gått ut, så prova att uppdatera din leverantör i Inställningar.</string>
+    <string name="error_unplayable_file">Din leverantör skickade en fil i ett format som Settee inte kan spela upp, så prova något annat.</string>
+    <string name="error_addon_web_page">Tilläggets länk öppnade en webbsida i stället för video. Välj en annan ström.</string>
+    <string name="error_addon_unplayable_file">Tilläggets länk öppnade en fil i ett format som Settee inte kan spela upp. Välj en annan ström.</string>
+    <string name="playback_pick_another_stream">Välj en annan ström</string>
     <string name="error_damaged">Den här videon är skadad och kan inte spelas upp. Det ligger hos din leverantör, så prova något annat.</string>
     <string name="error_behind_live">Den här kanalen hamnade för långt efter direktsändningen. Försök igen för att komma ikapp.</string>
     <string name="error_gone">Det här finns inte längre hos din leverantör. Prova att uppdatera din leverantör i Inställningar.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">Når inte tillägget. Kontrollera att den här TV:n är ansluten till internet och att adressen stämmer.</string>
     <string name="error_addon_cant_reach_device">Når inte tillägget. Kontrollera att den här enheten är ansluten till internet och att adressen stämmer.</string>
     <string name="error_addon_timed_out">Tillägget slutade svara. Det kan vara upptaget, så försök igen om en stund.</string>
+    <string name="error_addon_bad_address">Det är ingen webbadress. Kontrollera det du skrev efter fel.</string>
+    <string name="error_addon_no_match">Dina tillägg kan inte slå upp den här filmen, eftersom den saknar träff på IMDb.</string>
     <string name="error_addon_trouble">Tillägget har problem. Det ligger hos det, så försök igen senare.</string>
     <string name="error_not_an_addon_tv">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här TV:n inte kräver att du loggar in först.</string>
     <string name="error_not_an_addon_device">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här enheten inte kräver att du loggar in först.</string>
     <string name="error_addon_lookup_tv">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här TV:n är ansluten till internet och försök igen.</string>
     <string name="error_addon_lookup_device">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här enheten är ansluten till internet och försök igen.</string>
+    <string name="error_addon_no_match_show">Dina tillägg kan inte slå upp den här serien, eftersom den saknar träff på IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Kunde inte slå upp serien för att fråga dina tillägg. Kontrollera att den här TV:n är ansluten till internet och försök igen.</string>
+    <string name="error_addon_lookup_show_device">Kunde inte slå upp serien för att fråga dina tillägg. Kontrollera att den här enheten är ansluten till internet och försök igen.</string>
     <string name="error_device_refused">Din leverantör godkände inte uppgifterna. Kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="error_guide">Det gick inte att ladda ner guiden. Försök igen om en stund.</string>
     <string name="error_guide_empty">Guiden laddades ner men innehöll inga program. Kontrollera att det är rätt länk.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">Skicka</string>
     <string name="report_question_dont_send">Skicka inte</string>
     <string name="report_question_always_send">Skicka alltid</string>
+    <string name="error_torrents_off">Torrenter är avstängda. Slå på dem under Inställningar, Tillägg, för att spela upp dem.</string>
+    <string name="error_torrent_nobody_sharing">Ingen delar den här torrenten just nu, så den kan inte spelas upp. Välj en annan ström.</string>
+    <string name="error_torrent_no_space">Det finns inte tillräckligt med ledigt utrymme för den här torrenten. Välj en mindre ström eller frigör utrymme.</string>
+    <string name="error_torrent_timed_out">Torrenten hittade personer som delar den, men startade inte i tid. Försök igen eller välj en annan ström.</string>
+    <string name="error_torrent_unsupported">Torrenter kräver Android 8.0 eller senare. Välj en ström som inte är en torrent.</string>
+    <string name="error_torrent_failed">Torrenten stannade på grund av ett eget fel. Försök igen eller välj en annan ström.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrenter</string>
+    <string name="settings_addons_torrents_off">Av. Torrenter som dina tillägg hittar visas i listan men spelas inte upp.</string>
+    <string name="settings_addons_torrents_on">På. Alla som delar en torrent du spelar upp kan se din internetadress.</string>
+    <string name="settings_addons_torrents_title">Slå på torrenter?</string>
+    <string name="settings_addons_torrents_body">En torrent hämtas från andra som delar samma fil. Medan du tittar på en kan alla som delar den se din internetadress.</string>
+    <string name="settings_addons_torrents_confirm">Slå på torrenter</string>
+    <string name="settings_addons_torrents_keep">Låt dem vara av</string>
+    <string name="search_not_from_provider">Inte från din leverantör</string>
+    <string name="pairing_phone_addon_title">Lägg till ett tillägg</string>
+    <string name="pairing_phone_addon_body">Klistra in adressen så kontrollerar tv:n den och lägger till tillägget. Lägg till så många du vill och välj sedan Klar.</string>
+    <string name="pairing_phone_addon_add">Lägg till</string>
+    <string name="pairing_phone_addon_done_title">Allt klart</string>
+    <string name="pairing_phone_addon_done_body">Dina tillägg finns nu på tv:n. Du kan lägga ifrån dig telefonen.</string>
+    <string name="addons_phone_qr_desc">QR-kod för att lägga till tillägg från telefonen</string>
+    <string name="vod_addon_still_asking">Frågar fortfarande dina andra tillägg…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person delar</item>
+        <item quantity="other">%1$d personer delar</item>
+    </plurals>
 </resources>

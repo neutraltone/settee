@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Indlæser episoder…</string>
     <string name="vod_episodes_failed">Afsnittene af denne serie kunne ikke indlæses. Prøv igen om lidt.</string>
     <string name="vod_no_episodes">Din udbyder har ikke tilføjet nogen afsnit af denne serie.</string>
+    <string name="vod_no_episodes_addons">Der er endnu ikke angivet nogen afsnit af dette program.</string>
     <string name="vod_continue_watching">Fortsæt visning</string>
     <string name="vod_large_provider_note">En stor udbyder kan tage et par minutter første gang.</string>
     <string name="vod_recommended">Anbefalet til dig</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">Kanalen stoppede. Prøv igen, eller vælg en anden kanal.</string>
     <string name="error_timed_out">Din udbyder holdt op med at svare. Den har måske travlt, så prøv igen om lidt.</string>
     <string name="error_web_page">Din udbyder sendte en webside i stedet for video. Linket er måske udløbet, så prøv at opdatere din udbyder i Indstillinger.</string>
+    <string name="error_unplayable_file">Din udbyder sendte en fil i et format, Settee ikke kan afspille, så prøv noget andet.</string>
+    <string name="error_addon_web_page">Tilføjelsens link åbnede en webside i stedet for video. Vælg en anden stream.</string>
+    <string name="error_addon_unplayable_file">Tilføjelsens link åbnede en fil i et format, Settee ikke kan afspille. Vælg en anden stream.</string>
+    <string name="playback_pick_another_stream">Vælg en anden stream</string>
     <string name="error_damaged">Denne video er beskadiget og kan ikke afspilles. Det er hos din udbyder, så prøv noget andet.</string>
     <string name="error_behind_live">Kanalen kom for langt bagud i forhold til live. Prøv igen for at indhente den.</string>
     <string name="error_gone">Det findes ikke længere hos din udbyder. Prøv at opdatere din udbyder i Indstillinger.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">Kan ikke nå tilføjelsen. Tjek, at dette tv er online, og at adressen er rigtig.</string>
     <string name="error_addon_cant_reach_device">Kan ikke nå tilføjelsen. Tjek, at denne enhed er online, og at adressen er rigtig.</string>
     <string name="error_addon_timed_out">Tilføjelsen holdt op med at svare. Den har måske travlt, så prøv igen om lidt.</string>
+    <string name="error_addon_bad_address">Det er ikke en webadresse. Tjek det, du skrev, for fejl.</string>
+    <string name="error_addon_no_match">Dine tilføjelser kan ikke slå denne film op, da den ikke har noget match på IMDb.</string>
     <string name="error_addon_trouble">Tilføjelsen har problemer. Det er hos den, så prøv igen senere.</string>
     <string name="error_not_an_addon_tv">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at dette tv\'s internet ikke kræver, at du logger ind først.</string>
     <string name="error_not_an_addon_device">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at denne enheds internet ikke kræver, at du logger ind først.</string>
     <string name="error_addon_lookup_tv">Kunne ikke slå filmen op for at spørge dine tilføjelser. Tjek, at dette tv er online, og prøv så igen.</string>
     <string name="error_addon_lookup_device">Kunne ikke slå filmen op for at spørge dine tilføjelser. Tjek, at denne enhed er online, og prøv så igen.</string>
+    <string name="error_addon_no_match_show">Dine tilføjelser kan ikke slå denne serie op, da den ikke har noget match på IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Kunne ikke slå serien op for at spørge dine tilføjelser. Tjek, at dette tv er online, og prøv så igen.</string>
+    <string name="error_addon_lookup_show_device">Kunne ikke slå serien op for at spørge dine tilføjelser. Tjek, at denne enhed er online, og prøv så igen.</string>
     <string name="error_device_refused">Din udbyder godkendte ikke oplysningerne. Tjek din udbyders oplysninger i Indstillinger.</string>
     <string name="error_guide">Kunne ikke downloade guiden. Prøv igen om lidt.</string>
     <string name="error_guide_empty">Guiden blev downloadet, men der var ingen programmer i den. Tjek, at det er det rigtige link.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">Send</string>
     <string name="report_question_dont_send">Send ikke</string>
     <string name="report_question_always_send">Send altid</string>
+    <string name="error_torrents_off">Torrents er slået fra. Slå dem til under Indstillinger, Tilføjelser, for at afspille dem.</string>
+    <string name="error_torrent_nobody_sharing">Ingen deler denne torrent lige nu, så den kan ikke afspilles. Vælg en anden stream.</string>
+    <string name="error_torrent_no_space">Der er ikke nok ledig plads til at afspille denne torrent. Vælg en mindre stream, eller frigør plads.</string>
+    <string name="error_torrent_timed_out">Denne torrent fandt nogen, der deler den, men startede ikke i tide. Prøv igen, eller vælg en anden stream.</string>
+    <string name="error_torrent_unsupported">Torrents kræver Android 8.0 eller nyere. Vælg en stream, der ikke er en torrent.</string>
+    <string name="error_torrent_failed">Torrenten stoppede på grund af en fejl i den. Prøv igen, eller vælg en anden stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Fra. Torrents, som dine tilføjelser finder, vises, men afspilles ikke.</string>
+    <string name="settings_addons_torrents_on">Til. Alle, der deler en torrent, du afspiller, kan se din internetadresse.</string>
+    <string name="settings_addons_torrents_title">Slå torrents til?</string>
+    <string name="settings_addons_torrents_body">En torrent hentes fra andre, der deler den samme fil. Mens du ser en, kan alle, der deler den, se din internetadresse.</string>
+    <string name="settings_addons_torrents_confirm">Slå torrents til</string>
+    <string name="settings_addons_torrents_keep">Behold dem slået fra</string>
+    <string name="search_not_from_provider">Ikke fra din udbyder</string>
+    <string name="pairing_phone_addon_title">Tilføj en tilføjelse</string>
+    <string name="pairing_phone_addon_body">Indsæt dens adresse, så tjekker dit fjernsyn den og tilføjer den. Tilføj så mange, du vil, og vælg derefter Færdig.</string>
+    <string name="pairing_phone_addon_add">Tilføj</string>
+    <string name="pairing_phone_addon_done_title">Alt er klar</string>
+    <string name="pairing_phone_addon_done_body">Dine tilføjelser er på dit fjernsyn. Du kan lægge telefonen fra dig.</string>
+    <string name="addons_phone_qr_desc">QR-kode til at tilføje tilføjelser fra din telefon</string>
+    <string name="vod_addon_still_asking">Spørger stadig dine andre tilføjelser…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person deler</item>
+        <item quantity="other">%1$d personer deler</item>
+    </plurals>
 </resources>

@@ -217,6 +217,7 @@
     <string name="vod_loading_episodes">Učitavanje epizoda…</string>
     <string name="vod_episodes_failed">Epizode ove serije nije bilo moguće učitati. Pokušajte ponovno za trenutak.</string>
     <string name="vod_no_episodes">Vaš pružatelj usluge nije dodao nijednu epizodu ove serije.</string>
+    <string name="vod_no_episodes_addons">Za ovu seriju još nisu navedene epizode.</string>
     <string name="vod_continue_watching">Nastavi gledati</string>
     <string name="vod_large_provider_note">Kod velikog pružatelja usluge prvi put može potrajati nekoliko minuta.</string>
     <string name="vod_recommended">Preporučeno za vas</string>
@@ -263,6 +264,10 @@
     <string name="error_live_ended">Ovaj se kanal zaustavio. Pokušajte ponovno ili odaberite drugi kanal.</string>
     <string name="error_timed_out">Vaš pružatelj usluge prestao je odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
     <string name="error_web_page">Vaš pružatelj usluge poslao je web-stranicu umjesto videa. Poveznica je možda istekla, pa pokušajte osvježiti pružatelja usluge u Postavkama.</string>
+    <string name="error_unplayable_file">Vaš pružatelj usluge poslao je datoteku u formatu koji Settee ne može reproducirati, pa pokušajte nešto drugo.</string>
+    <string name="error_addon_web_page">Poveznica ovog dodatka otvorila je web-stranicu umjesto videa. Odaberite drugi stream.</string>
+    <string name="error_addon_unplayable_file">Poveznica ovog dodatka otvorila je datoteku u formatu koji Settee ne može reproducirati. Odaberite drugi stream.</string>
+    <string name="playback_pick_another_stream">Odaberi drugi stream</string>
     <string name="error_damaged">Ovaj video je oštećen i neće se reproducirati. To je na strani vašeg pružatelja usluge, pa pokušajte nešto drugo.</string>
     <string name="error_behind_live">Ovaj kanal previše je zaostao za prijenosom uživo. Pokušajte ponovno da ga sustignete.</string>
     <string name="error_gone">Ovoga više nema kod vašeg pružatelja usluge. Pokušajte osvježiti pružatelja usluge u Postavkama.</string>
@@ -289,11 +294,16 @@
     <string name="error_addon_cant_reach_tv">Nije moguće doći do dodatka. Provjerite je li ovaj TV povezan s internetom i je li adresa točna.</string>
     <string name="error_addon_cant_reach_device">Nije moguće doći do dodatka. Provjerite je li ovaj uređaj povezan s internetom i je li adresa točna.</string>
     <string name="error_addon_timed_out">Dodatak je prestao odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
+    <string name="error_addon_bad_address">To nije web-adresa. Provjerite ima li pogreške u upisanom.</string>
+    <string name="error_addon_no_match">Vaši dodaci ne mogu potražiti ovaj film jer nema podudaranja na IMDb-u.</string>
     <string name="error_addon_trouble">Dodatak ima problema. To je na njegovoj strani, pa pokušajte ponovno kasnije.</string>
     <string name="error_not_an_addon_tv">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog TV-a ne traži da se prvo prijavite.</string>
     <string name="error_not_an_addon_device">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog uređaja ne traži da se prvo prijavite.</string>
     <string name="error_addon_lookup_tv">Film nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj TV povezan s internetom, pa pokušajte ponovno.</string>
     <string name="error_addon_lookup_device">Film nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj uređaj povezan s internetom, pa pokušajte ponovno.</string>
+    <string name="error_addon_no_match_show">Vaši dodaci ne mogu potražiti ovu seriju jer nema podudaranja na IMDb-u.</string>
+    <string name="error_addon_lookup_show_tv">Seriju nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj TV povezan s internetom, pa pokušajte ponovno.</string>
+    <string name="error_addon_lookup_show_device">Seriju nije bilo moguće pronaći da bi se pitali vaši dodaci. Provjerite je li ovaj uređaj povezan s internetom, pa pokušajte ponovno.</string>
     <string name="error_device_refused">Vaš pružatelj usluge nije prihvatio ove podatke. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_guide">Nije moguće preuzeti ovaj vodič. Pokušajte ponovno za trenutak.</string>
     <string name="error_guide_empty">Ovaj vodič je preuzet, ali u njemu nema emisija. Provjerite je li to prava poveznica.</string>
@@ -404,4 +414,31 @@
     <string name="report_question_send">Pošalji</string>
     <string name="report_question_dont_send">Nemoj slati</string>
     <string name="report_question_always_send">Uvijek pošalji</string>
+    <string name="error_torrents_off">Torrenti su isključeni. Uključite ih u Postavke, Dodaci, da biste ih reproducirali.</string>
+    <string name="error_torrent_nobody_sharing">Trenutačno nitko ne dijeli ovaj torrent pa se ne može reproducirati. Odaberite drugi stream.</string>
+    <string name="error_torrent_no_space">Nema dovoljno slobodnog prostora za ovaj torrent. Odaberite manji stream ili oslobodite prostor.</string>
+    <string name="error_torrent_timed_out">Torrent je pronašao ljude koji ga dijele, ali se nije pokrenuo na vrijeme. Pokušajte ponovno ili odaberite drugi stream.</string>
+    <string name="error_torrent_unsupported">Torrenti trebaju Android 8.0 ili noviji. Odaberite stream koji nije torrent.</string>
+    <string name="error_torrent_failed">Torrent se zaustavio zbog vlastite greške. Pokušajte ponovno ili odaberite drugi stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrenti</string>
+    <string name="settings_addons_torrents_off">Isključeno. Torrenti koje vaši dodaci pronađu prikazuju se, ali se ne reproduciraju.</string>
+    <string name="settings_addons_torrents_on">Uključeno. Svi koji dijele torrent koji reproducirate mogu vidjeti vašu internetsku adresu.</string>
+    <string name="settings_addons_torrents_title">Uključiti torrente?</string>
+    <string name="settings_addons_torrents_body">Torrent se preuzima od drugih ljudi koji dijele istu datoteku. Dok ga gledate, svi koji ga dijele mogu vidjeti vašu internetsku adresu.</string>
+    <string name="settings_addons_torrents_confirm">Uključi torrente</string>
+    <string name="settings_addons_torrents_keep">Ostavi ih isključene</string>
+    <string name="search_not_from_provider">Nije od vašeg pružatelja usluge</string>
+    <string name="pairing_phone_addon_title">Dodajte dodatak</string>
+    <string name="pairing_phone_addon_body">Zalijepite njegovu adresu, a vaš TV će ga provjeriti i dodati. Dodajte koliko god želite, a zatim odaberite Gotovo.</string>
+    <string name="pairing_phone_addon_add">Dodaj</string>
+    <string name="pairing_phone_addon_done_title">Sve je gotovo</string>
+    <string name="pairing_phone_addon_done_body">Vaši dodaci su na vašem TV-u. Možete odložiti telefon.</string>
+    <string name="addons_phone_qr_desc">QR kôd za dodavanje dodataka s telefona</string>
+    <string name="vod_addon_still_asking">Još se pitaju vaši ostali dodaci…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d osoba dijeli</item>
+        <item quantity="few">%1$d osobe dijele</item>
+        <item quantity="other">%1$d osoba dijeli</item>
+    </plurals>
 </resources>

@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">กำลังโหลดตอน…</string>
     <string name="vod_episodes_failed">โหลดตอนของซีรีส์นี้ไม่ได้ ลองอีกครั้งในอีกสักครู่</string>
     <string name="vod_no_episodes">ผู้ให้บริการของคุณยังไม่ได้เพิ่มตอนใดของซีรีส์นี้</string>
+    <string name="vod_no_episodes_addons">ยังไม่มีตอนของรายการนี้</string>
     <string name="vod_continue_watching">ดูต่อ</string>
     <string name="vod_large_provider_note">ผู้ให้บริการรายใหญ่อาจใช้เวลาสองสามนาทีในครั้งแรก</string>
     <string name="vod_recommended">แนะนำสำหรับคุณ</string>
@@ -261,6 +262,10 @@
     <string name="error_live_ended">ช่องนี้หยุดเล่น ลองอีกครั้ง หรือเลือกช่องอื่น</string>
     <string name="error_timed_out">ผู้ให้บริการของคุณหยุดตอบสนอง อาจกำลังมีผู้ใช้มาก ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_web_page">ผู้ให้บริการของคุณส่งหน้าเว็บมาแทนวิดีโอ ลิงก์อาจหมดอายุแล้ว ลองรีเฟรชผู้ให้บริการของคุณในการตั้งค่า</string>
+    <string name="error_unplayable_file">ผู้ให้บริการของคุณส่งไฟล์ในรูปแบบที่ Settee เล่นไม่ได้ ลองเลือกรายการอื่น</string>
+    <string name="error_addon_web_page">ลิงก์ของแอดออนนี้เปิดหน้าเว็บแทนวิดีโอ เลือกสตรีมอื่น</string>
+    <string name="error_addon_unplayable_file">ลิงก์ของแอดออนนี้เปิดไฟล์ในรูปแบบที่ Settee เล่นไม่ได้ เลือกสตรีมอื่น</string>
+    <string name="playback_pick_another_stream">เลือกสตรีมอื่น</string>
     <string name="error_damaged">วิดีโอนี้เสียหายและเล่นไม่ได้ ปัญหานี้อยู่ฝั่งผู้ให้บริการของคุณ ลองเลือกรายการอื่น</string>
     <string name="error_behind_live">ช่องนี้ช้ากว่าการถ่ายทอดสดมากเกินไป ลองอีกครั้งเพื่อตามให้ทัน</string>
     <string name="error_gone">รายการนี้ไม่มีอยู่ในผู้ให้บริการของคุณแล้ว ลองรีเฟรชผู้ให้บริการของคุณในการตั้งค่า</string>
@@ -287,11 +292,16 @@
     <string name="error_addon_cant_reach_tv">เข้าถึงแอดออนไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่และที่อยู่ถูกต้อง</string>
     <string name="error_addon_cant_reach_device">เข้าถึงแอดออนไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่และที่อยู่ถูกต้อง</string>
     <string name="error_addon_timed_out">แอดออนหยุดตอบสนอง อาจกำลังมีผู้ใช้มาก ลองอีกครั้งในอีกสักครู่</string>
+    <string name="error_addon_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ผิดหรือไม่</string>
+    <string name="error_addon_no_match">ส่วนเสริมของคุณค้นหาภาพยนตร์เรื่องนี้ไม่ได้ เพราะไม่มีรายการที่ตรงกันใน IMDb</string>
     <string name="error_addon_trouble">แอดออนกำลังมีปัญหา ปัญหานี้อยู่ฝั่งแอดออน ลองอีกครั้งภายหลัง</string>
     <string name="error_not_an_addon_tv">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของทีวีเครื่องนี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>
     <string name="error_not_an_addon_device">ที่อยู่นั้นไม่ได้ให้แอดออน ตรวจสอบว่าเป็นลิงก์ manifest.json และอินเทอร์เน็ตของอุปกรณ์นี้ไม่ได้ขอให้ลงชื่อเข้าใช้ก่อน</string>
     <string name="error_addon_lookup_tv">ค้นหาภาพยนตร์นี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_addon_lookup_device">ค้นหาภาพยนตร์นี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_addon_no_match_show">ส่วนเสริมของคุณค้นหารายการนี้ไม่ได้ เพราะไม่มีรายการที่ตรงกันใน IMDb</string>
+    <string name="error_addon_lookup_show_tv">ค้นหารายการนี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_addon_lookup_show_device">ค้นหารายการนี้เพื่อถามแอดออนของคุณไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_device_refused">ผู้ให้บริการของคุณไม่ยอมรับรายละเอียดเหล่านี้ ตรวจสอบรายละเอียดผู้ให้บริการของคุณในการตั้งค่า</string>
     <string name="error_guide">ดาวน์โหลดผังรายการนี้ไม่สำเร็จ ลองอีกครั้งในอีกสักครู่</string>
     <string name="error_guide_empty">ดาวน์โหลดผังรายการนี้แล้ว แต่ไม่มีรายการอยู่ในนั้น ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง</string>
@@ -402,4 +412,29 @@
     <string name="report_question_send">ส่ง</string>
     <string name="report_question_dont_send">ไม่ส่ง</string>
     <string name="report_question_always_send">ส่งทุกครั้ง</string>
+    <string name="error_torrents_off">ทอร์เรนต์ปิดอยู่ เปิดได้ที่ การตั้งค่า ส่วนเสริม เพื่อเล่นรายการเหล่านี้</string>
+    <string name="error_torrent_nobody_sharing">ตอนนี้ไม่มีใครแชร์ทอร์เรนต์นี้ จึงเล่นไม่ได้ เลือกสตรีมอื่น</string>
+    <string name="error_torrent_no_space">พื้นที่ว่างไม่พอสำหรับเล่นทอร์เรนต์นี้ เลือกสตรีมที่เล็กกว่า หรือเพิ่มพื้นที่ว่าง</string>
+    <string name="error_torrent_timed_out">ทอร์เรนต์นี้พบคนที่แชร์อยู่ แต่เริ่มไม่ทันเวลา ลองอีกครั้ง หรือเลือกสตรีมอื่น</string>
+    <string name="error_torrent_unsupported">ทอร์เรนต์ต้องใช้ Android 8.0 ขึ้นไป เลือกสตรีมที่ไม่ใช่ทอร์เรนต์</string>
+    <string name="error_torrent_failed">ทอร์เรนต์หยุดเพราะปัญหาของตัวเอง ลองอีกครั้ง หรือเลือกสตรีมอื่น</string>
+    <string name="vod_addon_torrent">ทอร์เรนต์</string>
+    <string name="settings_addons_torrents">ทอร์เรนต์</string>
+    <string name="settings_addons_torrents_off">ปิด ทอร์เรนต์ที่แอดออนของคุณพบจะแสดงในรายการ แต่เล่นไม่ได้</string>
+    <string name="settings_addons_torrents_on">เปิด ทุกคนที่แชร์ทอร์เรนต์ที่คุณเล่นจะเห็นที่อยู่อินเทอร์เน็ตของคุณ</string>
+    <string name="settings_addons_torrents_title">เปิดทอร์เรนต์ไหม</string>
+    <string name="settings_addons_torrents_body">ทอร์เรนต์ดึงข้อมูลมาจากคนอื่นที่แชร์ไฟล์เดียวกัน ระหว่างที่คุณดู ทุกคนที่แชร์ไฟล์นั้นจะเห็นที่อยู่อินเทอร์เน็ตของคุณ</string>
+    <string name="settings_addons_torrents_confirm">เปิดทอร์เรนต์</string>
+    <string name="settings_addons_torrents_keep">ปิดไว้ต่อไป</string>
+    <string name="search_not_from_provider">ไม่ได้มาจากผู้ให้บริการของคุณ</string>
+    <string name="pairing_phone_addon_title">เพิ่มแอดออน</string>
+    <string name="pairing_phone_addon_body">วางที่อยู่ของแอดออน แล้วทีวีจะตรวจสอบและเพิ่มให้ เพิ่มได้มากเท่าที่ต้องการ แล้วเลือก เสร็จสิ้น</string>
+    <string name="pairing_phone_addon_add">เพิ่ม</string>
+    <string name="pairing_phone_addon_done_title">เรียบร้อยแล้ว</string>
+    <string name="pairing_phone_addon_done_body">แอดออนของคุณอยู่บนทีวีแล้ว วางโทรศัพท์ลงได้เลย</string>
+    <string name="addons_phone_qr_desc">คิวอาร์โค้ดสำหรับเพิ่มแอดออนจากโทรศัพท์ของคุณ</string>
+    <string name="vod_addon_still_asking">ยังรอคำตอบจากแอดออนอื่นๆ ของคุณ…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">มีคนแชร์ %1$d คน</item>
+    </plurals>
 </resources>

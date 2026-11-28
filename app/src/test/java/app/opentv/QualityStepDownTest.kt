@@ -106,7 +106,8 @@ class QualityStepDownTest {
         streams(UHD to 2160, HD to 1080)
         val controller = controller()
         controller.startAt(UHD, "4K", hd)
-        players.until { controller.notice.value != null }
+        // Timed from when HD starts playing, so a notice said while loading is seen.
+        players.until { controller.notice.value != null && controller.player.playbackState == Player.STATE_READY }
 
         players.advance(4_500)
         assertThat(controller.notice.value).isNotNull()

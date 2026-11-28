@@ -24,6 +24,7 @@ import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncFavourite
 import app.opentv.sync.SyncHiddenChannel
+import app.opentv.sync.SyncPosition
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -302,6 +303,18 @@ class SyncStoresTest {
 
         assertThat(hidden).isEqualTo(0)
         assertThat(deviceB.db.channels().byId(101)?.hidden).isFalse()
+    }
+
+    @Test
+    fun `progress on an add-on film this device never kept waits to be kept, and the rest stays dropped`() = testing {
+        deviceB.alex()
+        val addonFilm = SyncPosition("Alex", Source.ADDONS_NAME, "movie", "tt0000101", null, 1_000, 6_000, 5)
+        val otherFilm = addonFilm.copy(source = "Unknown provider", id = "m1")
+
+        val imported = deviceB.library.syncedProgress.import(listOf(addonFilm, otherFilm))
+
+        assertThat(imported.taken).isEqualTo(0)
+        assertThat(imported.waiting).containsExactly(addonFilm)
     }
 
     @Test

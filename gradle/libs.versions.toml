@@ -19,6 +19,9 @@ datastore = "1.3.0"
 documentfile = "1.1.0"
 coil = "2.7.0"
 zxing = "3.5.4"
+# The torrent engine (ADR 0012): libtorrent through FrostWire's bindings, from their own Maven
+# repository (settings.gradle.kts). Its native library needs Android 8.0 (API 26).
+jlibtorrent = "2.1.2.1"
 navigation = "2.10.2"
 junit = "4.13.2"
 truth = "1.4.5"
@@ -98,6 +101,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 # QR encoding for phone pairing. The core artifact is pure Java with no Android
 # dependency, so the bitmap rendering stays under our control.
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+jlibtorrent-android = { group = "com.frostwire", name = "jlibtorrent-android", version.ref = "jlibtorrent" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }

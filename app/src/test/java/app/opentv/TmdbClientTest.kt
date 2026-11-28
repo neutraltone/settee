@@ -230,6 +230,17 @@ class TmdbClientTest {
         }
     }
 
+    @Test
+    fun `a show whose search with its year fails is still found by its name alone`() {
+        val network = FakeJsonHttp { request ->
+            val withYear = request.url.queryParameter("first_air_date_year") != null
+            if (withYear) "503" else """{"results": [{"id": 22}]}"""
+        }
+        val tmdb = TmdbClient(network.http, API_KEY)
+
+        assertThat(tmdb.seriesId("A Show", year = 2001)).isEqualTo("22")
+    }
+
     /** The query of the film search TMDB was sent for [title], with [year] as the provider's year field. */
     private fun movieQueryFor(title: String, year: Int? = null): String? {
         tmdbWith(API_KEY).movieMetaOrFailure(title, year, tmdbId = null)

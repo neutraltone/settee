@@ -22,6 +22,9 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.Playable.Failure
+import app.opentv.player.torrent.TorrentRequest
+import app.opentv.player.torrent.isTorrentUri
+import app.opentv.player.torrent.torrentRequestOf
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import java.io.File
@@ -40,19 +43,31 @@ sealed interface MediaKey {
         override val stored get() = "live:$channelId"
     }
 
-    data class Movie(val movieId: Long) : MediaKey {
+    /** A film or an episode: what an add-on can be asked for streams of. */
+    sealed interface Title : MediaKey
+
+    data class Movie(val movieId: Long) : Title {
         override val stored get() = "$MOVIE:$movieId"
     }
 
     /**
-     * A stream a Stremio add-on offered for [movieId]. Its [url] isn't in the catalogue, so the key
-     * carries it; progress is kept on the film, the same as playing it from the panel.
+     * A stream a Stremio add-on offered for [title], a film or an episode. Its [url] and the request
+     * [headers] the add-on asks for aren't in the catalogue, so the key carries them; progress is kept on
+     * the title, the same as playing it from the panel, so [stored] is the title's. [addonName] and
+     * [bingeGroup] say which add-on sent it and the kind of stream it is, so the Next Episode can carry on
+     * with that add-on's stream of the same kind (ADR 0011).
      */
-    data class AddonStream(val movieId: Long, val url: String) : MediaKey {
-        override val stored get() = "$MOVIE:$movieId"
+    data class AddonStream(
+        val title: Title,
+        val url: String,
+        val headers: Map<String, String> = emptyMap(),
+        val addonName: String? = null,
+        val bingeGroup: String? = null,
+    ) : MediaKey {
+        override val stored get() = title.stored
     }
 
-    data class Episode(val episodeId: Long) : MediaKey {
+    data class Episode(val episodeId: Long) : Title {
         override val stored get() = "$EPISODE:$episodeId"
     }
 
@@ -112,6 +127,13 @@ sealed interface Playable {
          * add-on's stream, and null for a recording, kept on the device or the viewer's NAS.
          */
         val source: ReportedSource? = null,
+        /** Sent with every request for it besides [userAgent]: what an add-on asks its stream be fetched with. */
+        val requestHeaders: Map<String, String> = emptyMap(),
+        /**
+         * The torrent [url] links to, for an add-on's torrent: the player starts the torrent engine on it
+         * and reads [url] through the engine. Null for anything fetched as it is.
+         */
+        val torrent: TorrentRequest? = null,
     ) : Playable
 
     /**
@@ -137,6 +159,9 @@ sealed interface Playable {
 
         /** The provider's address isn't one, so no catch-up URL can be built from it. */
         BAD_ADDRESS,
+
+        /** An add-on's torrent, with the Torrents switch off in Settings › Add-ons. */
+        TORRENTS_OFF,
     }
 }
 
@@ -153,6 +178,8 @@ class PlaybackSources(
     private val stalkerApi: StalkerApi,
     private val lineup: ChannelLineup,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** The Torrents switch, `AppSettings.torrentsEnabled`: off, an add-on's torrent doesn't play. */
+    private val torrentsOn: () -> Boolean = { false },
 ) {
 
     suspend fun forWatching(key: MediaKey): Playable = resolving(key) {
@@ -237,16 +264,38 @@ class PlaybackSources(
         )
     }
 
-    /** An add-on's stream isn't the panel's, so the panel's user agent has no business on it. */
+    /**
+     * An add-on's stream isn't the panel's, so the panel's user agent has no business on it: it goes
+     * with the headers the add-on asked for, its own user agent among them when it names one. A torrent
+     * is read through the torrent engine, and only while the Torrents switch is on: the key may have been
+     * kept from before it was turned off, in a route the app comes back to.
+     */
     private suspend fun addonStream(key: MediaKey.AddonStream): Playable.Ready {
-        val movie = db.movies().byId(key.movieId).or(Failure.GONE)
+        val title = when (val of = key.title) {
+            is MediaKey.Movie -> db.movies().byId(of.movieId).or(Failure.GONE).displayTitle
+            is MediaKey.Episode -> db.episodes().byId(of.episodeId).or(Failure.GONE).playerTitle
+        }
+        if (isTorrentUri(key.url)) {
+            if (!torrentsOn()) throw Unplayable(Failure.TORRENTS_OFF, title)
+            return Playable.Ready(
+                key,
+                key.url,
+                Source.DEFAULT_USER_AGENT,
+                title,
+                isLive = false,
+                source = ReportedSource.STREMIO,
+                torrent = torrentRequestOf(key.url).or(Failure.GONE),
+            )
+        }
+        val agent = key.headers.entries.firstOrNull { it.key.equals(USER_AGENT, ignoreCase = true) }
         return Playable.Ready(
             key,
             key.url,
-            Source.DEFAULT_USER_AGENT,
-            movie.displayTitle,
+            agent?.value ?: Source.DEFAULT_USER_AGENT,
+            title,
             isLive = false,
             source = ReportedSource.STREMIO,
+            requestHeaders = key.headers - agent?.key.orEmpty(),
         )
     }
 
@@ -377,3 +426,4 @@ private fun userAgentOf(source: Source?) = source?.userAgent ?: Source.DEFAULT_U
 val Episode.playerTitle: String get() = "S${season}E$episodeNumber · $title"
 
 private const val TAG = "PlaybackSources"
+private const val USER_AGENT = "User-Agent"

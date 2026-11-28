@@ -15,6 +15,7 @@ import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
+import app.opentv.data.repo.awaitingPick
 import app.opentv.player.CuePlacement
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
@@ -43,6 +44,7 @@ import kotlinx.coroutines.withContext
  * the episode it was showing. The screen keeps the [Playback] (its PlayerController) and hands it
  * over in [attach], so moving on swaps the media item in the same player instead of navigating.
  */
+@Suppress("TooManyFunctions") // Each is something the screen asks; the rest are extensions already.
 class VodPlayerViewModel(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
@@ -134,6 +136,30 @@ class VodPlayerViewModel(
     /** Whether the options list offers Mark watched: a movie or episode not already Watched. */
     val canMarkWatched: StateFlow<Boolean> = _canMarkWatched.asStateFlow()
 
+    private val _addonPick = MutableStateFlow<MediaKey.Title?>(null)
+
+    /**
+     * The title kept from an add-on that the player was opened on, or moved on to, while it waits for the
+     * viewer to pick one of its add-on streams: it has no stream of its own (ADR 0011). Null otherwise.
+     */
+    val addonPick: StateFlow<MediaKey.Title?> = _addonPick.asStateFlow()
+
+    /** Where the title waiting in [addonPick] is to start once a stream is picked; null for its resume point. */
+    internal var pickFrom: Long? = null
+        private set
+
+    /**
+     * Pick another stream, on an add-on's stream that failed: opens the picker over the player for [title], and
+     * the stream picked starts where the failed one was to.
+     */
+    fun pickAnotherStream(title: MediaKey.Title) {
+        pickFrom = lastKnown
+        _addonPick.value = title
+    }
+
+    /** What [addonStreams] asks, and carrying on after an add-on episode with the same add-on. */
+    internal val carryOn = AddonCarryOn(AddonSearches(graph), viewModelScope)
+
     private val _finished = MutableStateFlow(false)
 
     /** What was playing reached its end, with nothing to move on to: the player has nothing left to show. */
@@ -215,6 +241,8 @@ class VodPlayerViewModel(
 
     /** Polled while the screen shows: moves on when the countdown says so. */
     suspend fun poll() {
+        // Nothing plays while a stream is being picked, and what the last one left mustn't move on or close.
+        if (_addonPick.value != null) return
         // Progress and the Next Episode now belong to the row playback moved to.
         playback?.steppedDownTo()?.takeIf { it != _current.value }?.let { start(it, alreadyPlaying = true) }
         val progress = playback?.progress() ?: return
@@ -233,6 +261,8 @@ class VodPlayerViewModel(
     suspend fun saveProgress() {
         val key = _current.value
         val progress = playback?.progress()
+        // Nothing has played of a title still waiting for its stream to be picked: its resume point stays.
+        if (_addonPick.value != null) return
         // recordProgress clears a hand mark, and the player saves again as it closes.
         if (key == null || progress == null || key == marked) return
         if (progress.durationMillis > 0) lastSeen = progress
@@ -274,11 +304,16 @@ class VodPlayerViewModel(
     private suspend fun act(decision: Decision?) {
         _overlay.value = countdown.overlay
         when (decision) {
+            // After an add-on's stream of an episode, a next one kept from an add-on plays the same
+            // add-on's stream with the same bingeGroup as soon as it offers one, as Stremio carries on. Its
+            // picker shows meanwhile, and stays when there's no such stream (ADR 0011).
             Decision.PlayNext -> next?.let { next ->
-                _current.value?.let {
-                    graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0)
-                }
-                start(MediaKey.Episode(next.id))
+                val after = _current.value
+                after?.let { graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0) }
+                val title = MediaKey.Episode(next.id)
+                carryOn.ready(after, title)
+                start(title)
+                if (_addonPick.value == title) carryOn.carryOn(title) { playAddonStream(it) } else carryOn.stop()
             }
             Decision.Pause -> playback?.pause()
             Decision.StopStream -> playback?.stop()
@@ -304,20 +339,23 @@ class VodPlayerViewModel(
 
         fetchingNext?.cancel()
         val planned = if (alreadyPlaying) null else graph.playRequestFor(opened, fromMillis)
-        val key = planned?.first?.key ?: opened
+        val key = planned?.request?.key ?: opened
+        // Whatever opened it (Continue Watching, the Next Episode card, Play from start), a title kept
+        // from an add-on has nothing to play until the viewer picks one of its add-on streams.
+        val pick = graph.addonTitles.awaitingPick(planned?.request?.key)
         // Nothing suspends between here and play: a poll in between would see the last stream's step
         // down, take it for news and undo this. So what to play is read above, before anything moves.
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
         skips.clear()
-        planned?.let { (request, skipped) ->
-            requestedFrom = fromMillis
-            playback?.play(request, skipped)
-        }
+        _addonPick.value = pick
+        pickFrom = planned.pickStart(fromMillis)
+        planned?.let { requestedFrom = fromMillis }
+        playback?.playOrWait(planned, waits = pick != null)
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
-        val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
+        val episode = key.episode?.let { graph.catalogRepository.episode(it.episodeId) }
         val (before, after) = graph.viewerLibrary.nextEpisodes.around(episode)
         previous = before
         timings.lookUp(viewModelScope, episode, stillPlaying = { _current.value == key }) { countdown.cue = it }
@@ -424,22 +462,33 @@ suspend fun VodPlayerViewModel.chooseVersion(version: MediaKey) {
  * What to play for [opened], and what the Quality it's in place of is called, if it is. Each Quality starts
  * from [fromMillis] or else its own resume point.
  */
-private suspend fun ServiceLocator.Graph.playRequestFor(
-    opened: MediaKey,
-    fromMillis: Long?,
-): Pair<PlayerController.Request, String?> {
+private suspend fun ServiceLocator.Graph.playRequestFor(opened: MediaKey, fromMillis: Long?): PlannedPlay {
     val plan = vodQualities.planFor(opened)
     val request = PlayerController.Request(
         key = plan.start.key,
-        startPositionMillis = fromMillis ?: viewerLibrary.resumeFrom(plan.start.key.stored),
+        startPositionMillis = fromMillis ?: viewerLibrary.resumeFrom(*plan.resumeKeys.toTypedArray()),
         label = plan.start.label,
         lower = plan.lower.map {
             PlayerController.Quality(it.key, it.label, fromMillis ?: viewerLibrary.resumeFrom(it.key.stored))
         },
         stepsForSound = true,
     )
-    return request to plan.skipped
+    return PlannedPlay(request, plan.skipped)
 }
+
+/** What the player is to play, and what the Quality it's in place of is called, if it is. */
+internal data class PlannedPlay(val request: PlayerController.Request, val skipped: String?)
+
+/**
+ * The episode [this] plays: an add-on's stream of one counts as the episode, so its Next Episode card and
+ * episode buttons work as on the Provider's stream.
+ */
+private val MediaKey.episode: MediaKey.Episode?
+    get() = when (this) {
+        is MediaKey.Episode -> this
+        is MediaKey.AddonStream -> title as? MediaKey.Episode
+        else -> null
+    }
 
 /** Recordings and catch-up have no watch state to mark. */
 private suspend fun ServiceLocator.Graph.canMarkWatched(key: MediaKey): Boolean {

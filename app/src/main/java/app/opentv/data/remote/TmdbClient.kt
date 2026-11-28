@@ -111,43 +111,45 @@ class TmdbClient(
      * a failure when TMDB didn't answer, so a film's Add-on sources can say so rather than that
      * nothing was found.
      */
-    fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): Result<String?> = runCatching {
-        val key = credential ?: return@runCatching null
-        val read = { url: HttpUrl, operation: Operation -> fetch(url, key, operation) }
-        val asked = TmdbTitle(isMovie, title, year, tmdbId)
-        val id = asked.tmdbId ?: searchId(asked, read) ?: return@runCatching null
-        val builder = TMDB_BASE.newBuilder()
-            .addPathSegment(if (isMovie) "movie" else "tv")
-            .addPathSegment(id)
-        if (!isMovie) builder.addPathSegment("external_ids")
-        val o = read(builder.build(), Operation.DETAILS)?.jsonObject ?: return@runCatching null
-        o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
-    }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
+    fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): Result<String?> =
+        lookUp(none = null) { read ->
+            val asked = TmdbTitle(isMovie, title, year, tmdbId)
+            val id = asked.tmdbId ?: searchId(asked, read) ?: return@lookUp null
+            val builder = TMDB_BASE.newBuilder()
+                .addPathSegment(if (isMovie) "movie" else "tv")
+                .addPathSegment(id)
+            if (!isMovie) builder.addPathSegment("external_ids")
+            val o = read(builder.build(), Operation.DETAILS)?.jsonObject ?: return@lookUp null
+            o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
+        }
 
-    /** The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. */
+    /**
+     * The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. A
+     * search TMDB didn't answer counts as no match, so one with the year that fails still tries without.
+     */
     fun seriesId(title: String, year: Int?): String? {
         val key = credential ?: return null
         return TmdbTitle(isMovie = false, title, year, providersId = null)
             .takeIf { it.query.isNotBlank() }
-            ?.let { asked -> searchId(asked) { url, operation -> get(url, key, operation) } }
+            ?.let { asked ->
+                searchId(asked) { url, operation ->
+                    runCatching { fetch(url, key, operation) }.onFailure(::logFailure).getOrNull()
+                }
+            }
     }
 
-    /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
-    private fun searchId(title: TmdbTitle, read: (HttpUrl, Operation) -> JsonElement?): String? {
-        val (isMovie, _, year) = title
-        fun run(withYear: Boolean): String? {
-            val b = TMDB_BASE.newBuilder()
-                .addPathSegment("search")
-                .addPathSegment(if (isMovie) "movie" else "tv")
-                .addQueryParameter("query", title.query)
-                .addQueryParameter("include_adult", "false")
-            if (withYear && year != null) {
-                b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
-            }
-            val results = read(b.build(), Operation.SEARCH)?.jsonObject?.get("results")?.jsonArray ?: return null
-            return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
-        }
-        return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
+    /**
+     * One look-up through Settee's key: [ask] reads TMDB with the function it's handed, which throws when
+     * TMDB doesn't answer. [none] with no key; a failure, logged, when TMDB didn't answer.
+     */
+    internal fun <T> lookUp(none: T, ask: ((HttpUrl, Operation) -> JsonElement?) -> T): Result<T> = runCatching {
+        val key = credential ?: return@runCatching none
+        ask { url, operation -> fetch(url, key, operation) }
+    }.onFailure(::logFailure)
+
+    // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
+    private fun logFailure(failure: Throwable) {
+        Log.w(TAG, "TMDB request failed: ${failure.javaClass.simpleName}")
     }
 
     private fun details(isMovie: Boolean, id: String, read: (HttpUrl, Operation) -> JsonElement?): TmdbMeta? {
@@ -196,8 +198,8 @@ class TmdbClient(
 
         return TmdbMeta(
             tmdbId = id,
-            posterUrl = poster?.let { IMG_POSTER + it },
-            backdropUrl = backdrop?.let { IMG_BACKDROP + it },
+            posterUrl = poster?.let { TMDB_IMG_POSTER + it },
+            backdropUrl = backdrop?.let { TMDB_IMG_BACKDROP + it },
             overview = overview,
             cast = cast,
             director = director,
@@ -210,12 +212,6 @@ class TmdbClient(
             recommendations = recommendations,
         )
     }
-
-    // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
-    private fun get(url: HttpUrl, key: Credential, operation: Operation): JsonElement? =
-        runCatching { fetch(url, key, operation) }
-            .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
-            .getOrNull()
 
     /**
      * The answer to [url], asked as [operation]; null for a 404, which is TMDB saying there's nothing.
@@ -251,9 +247,6 @@ class TmdbClient(
 
     private companion object {
         const val TAG = "TmdbClient"
-        val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
-        const val IMG_POSTER = "https://image.tmdb.org/t/p/w500"
-        const val IMG_BACKDROP = "https://image.tmdb.org/t/p/w1280"
         const val TOP_CAST = 12
         const val TOP_STUDIOS = 4
         const val HTTP_NOT_FOUND = 404
@@ -261,6 +254,28 @@ class TmdbClient(
         /** The crew jobs that count as writing it: TMDB files writers under several. */
         val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
     }
+}
+
+internal val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
+internal const val TMDB_IMG_POSTER = "https://image.tmdb.org/t/p/w500"
+internal const val TMDB_IMG_BACKDROP = "https://image.tmdb.org/t/p/w1280"
+
+/** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
+private fun searchId(title: TmdbTitle, read: (HttpUrl, Operation) -> JsonElement?): String? {
+    val (isMovie, _, year) = title
+    fun run(withYear: Boolean): String? {
+        val b = TMDB_BASE.newBuilder()
+            .addPathSegment("search")
+            .addPathSegment(if (isMovie) "movie" else "tv")
+            .addQueryParameter("query", title.query)
+            .addQueryParameter("include_adult", "false")
+        if (withYear && year != null) {
+            b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
+        }
+        val results = read(b.build(), Operation.SEARCH)?.jsonObject?.get("results")?.jsonArray ?: return null
+        return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
+    }
+    return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
 }
 
 /**

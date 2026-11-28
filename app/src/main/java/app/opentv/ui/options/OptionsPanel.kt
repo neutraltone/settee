@@ -89,6 +89,7 @@ internal fun <T> ChoicePanel(
 internal fun ItemOption.label(): String = when (this) {
     ItemOption.PlayFromStart -> stringResource(R.string.options_play_from_start)
     ItemOption.ShowInfo -> stringResource(R.string.options_show_info)
+    ItemOption.AddonSources -> stringResource(R.string.vod_addon_sources)
     is ItemOption.MarkAction -> label()
     ItemOption.RemoveFromContinueWatching -> stringResource(R.string.options_remove_continue_watching)
     ItemOption.AddFavourite -> stringResource(R.string.options_add_favourite)

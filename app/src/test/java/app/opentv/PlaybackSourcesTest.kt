@@ -20,6 +20,8 @@ import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.RecordedOn
 import app.opentv.player.PlaybackErrors
+import app.opentv.player.torrent.TorrentRequest
+import app.opentv.player.torrent.uri
 import com.google.common.truth.Truth.assertThat
 import java.util.TimeZone
 import org.junit.After
@@ -36,8 +38,15 @@ class PlaybackSourcesTest {
     private val test = TestCatalog(ApplicationProvider.getApplicationContext())
     private val db = test.db
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    private val sources =
-        PlaybackSources(db, XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.lineup, clock = { NOW })
+    private var torrentsOn = true
+    private val sources = PlaybackSources(
+        db,
+        XtreamApi(test.panel.http),
+        StalkerApi(test.panel.http),
+        test.lineup,
+        clock = { NOW },
+        torrentsOn = { torrentsOn },
+    )
 
     @After
     fun close() = test.close()
@@ -153,7 +162,10 @@ class PlaybackSourcesTest {
     fun `a film's add-on stream plays as that film, with the app's own user agent`() = testing {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         db.movies().upsertAll(listOf(movie()))
-        val key = MediaKey.AddonStream(db.movies().all().single().id, "https://example.org/addon/drive.mp4")
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(db.movies().all().single().id),
+            "https://example.org/addon/drive.mp4",
+        )
 
         val playable = sources.forWatching(key)
 
@@ -165,6 +177,31 @@ class PlaybackSourcesTest {
                 "Drive",
                 isLive = false,
                 source = ReportedSource.STREMIO,
+            ),
+        )
+    }
+
+    @Test
+    fun `a film's add-on stream goes with the add-on's headers and user agent, never the provider's`() = testing {
+        db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+        db.movies().upsertAll(listOf(movie()))
+        val key = MediaKey.AddonStream(
+            MediaKey.Movie(db.movies().all().single().id),
+            "https://example.org/addon/drive.mp4",
+            mapOf("Referer" to "https://example.org/", "user-agent" to "AddonPlayer/2"),
+        )
+
+        val playable = sources.forWatching(key)
+
+        assertThat(playable).isEqualTo(
+            Playable.Ready(
+                key,
+                "https://example.org/addon/drive.mp4",
+                "AddonPlayer/2",
+                "Drive",
+                isLive = false,
+                source = ReportedSource.STREMIO,
+                requestHeaders = mapOf("Referer" to "https://example.org/"),
             ),
         )
     }
@@ -186,6 +223,69 @@ class PlaybackSourcesTest {
                 isLive = false,
             ),
         )
+    }
+
+    @Test
+    fun `an episode's add-on stream goes with the add-on's headers, not the provider's, kept on the episode`() =
+        testing {
+            db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+            db.episodes().upsertAll(listOf(testEpisode(1, 2)))
+            val key = MediaKey.AddonStream(
+                MediaKey.Episode(12),
+                "https://example.org/addon/s1e2.mp4",
+                mapOf("Referer" to "https://example.org/"),
+            )
+
+            val playable = sources.forWatching(key)
+
+            assertThat(key.stored).isEqualTo("ep:12")
+            assertThat(playable).isEqualTo(
+                Playable.Ready(
+                    key,
+                    "https://example.org/addon/s1e2.mp4",
+                    "OpenTV/0.1 (Android)",
+                    "S1E2 · Episode 2",
+                    isLive = false,
+                    source = ReportedSource.STREMIO,
+                    requestHeaders = mapOf("Referer" to "https://example.org/"),
+                ),
+            )
+        }
+
+    @Test
+    fun `a film's torrent plays as that film, opened through the torrent engine`() = testing {
+        db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+        db.movies().upsertAll(listOf(movie()))
+        val torrent = TorrentRequest(HASH, fileIndex = 2, trackers = listOf("udp://tracker.example.org:1337"))
+        val key = MediaKey.AddonStream(MediaKey.Movie(db.movies().all().single().id), torrent.uri)
+
+        val playable = sources.forWatching(key)
+
+        assertThat(playable).isEqualTo(
+            Playable.Ready(
+                key,
+                torrent.uri,
+                "OpenTV/0.1 (Android)",
+                "Drive",
+                isLive = false,
+                source = ReportedSource.STREMIO,
+                torrent = torrent,
+            ),
+        )
+    }
+
+    @Test
+    fun `a torrent doesn't play while torrents are off`() = testing {
+        db.sources().insert(PANEL_SOURCE)
+        db.movies().upsertAll(listOf(movie()))
+        torrentsOn = false
+        val key = MediaKey.AddonStream(MediaKey.Movie(db.movies().all().single().id), TorrentRequest(HASH, null).uri)
+
+        val playable = sources.forWatching(key)
+
+        assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.TORRENTS_OFF, "Drive"))
+        assertThat(PlaybackErrors.describe(context, Playable.Failure.TORRENTS_OFF).sentence)
+            .isEqualTo("Torrents are off. Turn them on in Settings, Add-ons, to play these.")
     }
 
     @Test
@@ -627,3 +727,5 @@ private const val NEWS_START = 1_699_995_600_000L
 
 /** Where these tests' clock stands. */
 private const val NOW = 1_700_000_000_000L
+
+private const val HASH = "0123456789abcdef0123456789abcdef01234567"

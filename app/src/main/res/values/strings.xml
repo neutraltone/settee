@@ -292,6 +292,13 @@
     <string name="settings_edit_provider_title">Edit provider</string>
     <string name="addons_checking">Checking…</string>
     <string name="addons_added">Added %1$s</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Off. Torrents your add-ons find are listed, but don\'t play.</string>
+    <string name="settings_addons_torrents_on">On. Everyone sharing a torrent you play can see your internet address.</string>
+    <string name="settings_addons_torrents_title">Turn on torrents?</string>
+    <string name="settings_addons_torrents_body">A torrent is fetched from other people sharing the same file. While you watch one, everyone sharing it can see your internet address.</string>
+    <string name="settings_addons_torrents_confirm">Turn on torrents</string>
+    <string name="settings_addons_torrents_keep">Keep them off</string>
 
     <!-- ============================ Display & playback settings ============================ -->
     <string name="settings_language_system">System default</string>
@@ -542,6 +549,8 @@
 
     <!-- ============================ Search ============================ -->
     <string name="search_type_name">Type a name</string>
+    <!-- Search's section of films TMDB knows that the viewer's provider doesn't carry, playable through add-ons. -->
+    <string name="search_not_from_provider">Not from your provider</string>
     <string name="search_start_hint">Start typing to search channels, movies and shows.</string>
     <string name="search_no_results">Nothing matches “%1$s”. Try fewer or different words.</string>
     <string name="search_recent_title">Recent searches</string>
@@ -568,6 +577,7 @@
     <string name="vod_loading_episodes">Loading episodes…</string>
     <string name="vod_episodes_failed">Couldn\'t load the episodes of this series. Try again in a moment.</string>
     <string name="vod_no_episodes">Your provider hasn\'t added any episodes of this series.</string>
+    <string name="vod_no_episodes_addons">No episodes of this show are listed yet.</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
     <string name="vod_favourites">Favourites</string>
@@ -788,6 +798,12 @@
     <string name="pairing_phone_opensubtitles_saved_title">Signed in</string>
     <string name="pairing_phone_opensubtitles_skipped_body">You can sign in later in Settings › OpenSubtitles. Carry on on your TV.</string>
     <string name="pairing_phone_opensubtitles_saved_body">Your TV is signed in to OpenSubtitles. You can put your phone down.</string>
+    <string name="pairing_phone_addon_title">Add an add-on</string>
+    <string name="pairing_phone_addon_body">Paste its address and your TV checks it and adds it. Add as many as you like, then choose Done.</string>
+    <string name="pairing_phone_addon_add">Add</string>
+    <string name="pairing_phone_addon_done_title">All done</string>
+    <string name="pairing_phone_addon_done_body">Your add-ons are on your TV. You can put your phone down.</string>
+    <string name="addons_phone_qr_desc">QR code for adding add-ons from your phone</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>
@@ -799,6 +815,10 @@
     <string name="error_live_ended">This channel stopped. Try again, or pick another channel.</string>
     <string name="error_timed_out">Your provider stopped responding. It may be busy, so try again in a moment.</string>
     <string name="error_web_page">Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings.</string>
+    <string name="error_unplayable_file">Your provider sent a file in a format Settee can\'t play, so try something else.</string>
+    <string name="error_addon_web_page">This add-on\'s link opened a web page instead of video. Pick another stream.</string>
+    <string name="error_addon_unplayable_file">This add-on\'s link opened a file in a format Settee can\'t play. Pick another stream.</string>
+    <string name="playback_pick_another_stream">Pick another stream</string>
     <string name="error_damaged">This video is damaged and won\'t play. That\'s at your provider\'s end, so try something else.</string>
     <string name="error_behind_live">This channel fell too far behind live. Try again to catch up.</string>
     <string name="error_gone">This isn\'t on your provider any more. Try refreshing your provider in Settings.</string>
@@ -827,10 +847,42 @@
     <string name="error_addon_cant_reach_device">Can\'t reach the add-on. Check this device is online and the address is right.</string>
     <string name="error_addon_timed_out">The add-on stopped responding. It may be busy, so try again in a moment.</string>
     <string name="error_addon_trouble">The add-on is having problems. That\'s at its end, so try again later.</string>
+    <string name="error_addon_bad_address">That isn\'t a web address. Check what you typed for a mistake.</string>
+    <string name="error_addon_no_match">Your add-ons can\'t look this film up, as it has no match on IMDb.</string>
+    <string name="vod_addon_still_asking">Still asking your other add-ons…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d person sharing</item>
+        <item quantity="other">%1$d people sharing</item>
+    </plurals>
+    <!-- Under the add-on stream list: torrents left out because the whole file wouldn't fit. %2$s is a size such as 2.5 GB. -->
+    <plurals name="vod_addon_too_big">
+        <item quantity="one">%1$d more won\'t fit. This device has room for %2$s.</item>
+        <item quantity="other">%1$d more won\'t fit. This device has room for %2$s.</item>
+    </plurals>
+    <string name="error_torrents_off">Torrents are off. Turn them on in Settings, Add-ons, to play these.</string>
+    <string name="error_torrent_nobody_sharing">Nobody is sharing this torrent right now, so it can\'t play. Pick another stream.</string>
+    <string name="error_torrent_no_space">There isn\'t enough free space to play this torrent. Pick a smaller stream, or free up some space.</string>
+    <string name="error_torrent_timed_out">This torrent found people sharing it, but didn\'t start in time. Try again, or pick another stream.</string>
+    <string name="error_torrent_unsupported">Torrents need Android 8.0 or later to play. Pick a stream that isn\'t a torrent.</string>
+    <string name="error_torrent_failed">The torrent stopped with a fault of its own. Try again, or pick another stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="player_torrent_connecting">Looking for people sharing this torrent</string>
+    <plurals name="player_torrent_found">
+        <item quantity="one">Found %1$d person sharing it</item>
+        <item quantity="other">Found %1$d people sharing it</item>
+    </plurals>
+    <plurals name="player_torrent_fetching">
+        <item quantity="one">Fetching it from %1$d person</item>
+        <item quantity="other">Fetching it from %1$d people</item>
+    </plurals>
+    <string name="player_torrent_too_slow">It\'s arriving slower than it plays, so it will keep stopping. A smaller copy may play smoothly.</string>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
     <string name="error_addon_lookup_device">Couldn\'t look this film up to ask your add-ons. Check this device is online, then try again.</string>
+    <string name="error_addon_no_match_show">Your add-ons can\'t look this show up, as it has no match on IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Couldn\'t look this show up to ask your add-ons. Check this TV is online, then try again.</string>
+    <string name="error_addon_lookup_show_device">Couldn\'t look this show up to ask your add-ons. Check this device is online, then try again.</string>
     <string name="test_ok_xtream">Your login works.</string>
     <string name="test_ok_xtream_user">Signed in as %1$s.</string>
     <string name="test_ok_xtream_expires">Your subscription runs until %1$s.</string>

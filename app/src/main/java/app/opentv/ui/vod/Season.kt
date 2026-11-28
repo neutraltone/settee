@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
 import app.opentv.data.model.Episode
+import app.opentv.data.repo.AddonsSourceId
 import app.opentv.data.repo.SeriesMainAction
 
 /** One season of a series: its [number] (0 for Specials) and its episodes in order. */
@@ -30,6 +31,16 @@ fun seasonsOf(episodes: List<Episode>): List<Season> = episodes
  */
 fun openingSeason(seasons: List<Season>, mainAction: SeriesMainAction?): Int? =
     mainAction?.episode?.season ?: seasons.firstOrNull()?.number
+
+/**
+ * The numbers of the [seasons] listed only from a copy kept from an add-on ([addons]), when others come
+ * from a Provider: the seasons a Provider's show lacks (#683), whose pills say so. None for a show only
+ * add-ons have, where it would tell nothing apart.
+ */
+fun seasonsFromAddons(seasons: List<Season>, addons: AddonsSourceId): Set<Int> {
+    val (fromAddons, fromProviders) = seasons.partition { season -> season.episodes.all { addons.keeps(it.sourceId) } }
+    return if (fromProviders.isEmpty()) emptySet() else fromAddons.mapTo(HashSet()) { it.number }
+}
 
 /** A season's pill: "Season 2", or "Specials" for Season 0. */
 @Composable

@@ -17,6 +17,8 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.carryLivePreviewFromBefore
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.work.SyncWorker
+import app.opentv.player.torrent.TorrentCache
+import app.opentv.player.torrent.TorrentEngineConfig
 import app.opentv.recording.RecordingEngine
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -91,6 +93,12 @@ open class OpenTvApp :
         // the repository, not through the engine: an alarm that cold-starts Settee builds the engine
         // before marking its recording started, and this has to have run by then.
         val interrupted = RecordingEngine.Interrupted.stored(this)
+
+        // A torrent's pieces are deleted when its player closes; any still here were left by a crash
+        // or a kill (#669). Nothing can be playing a torrent yet in a process just started.
+        appScope.launch {
+            runCatching { TorrentCache(TorrentCache.dirIn(cacheDir), TorrentEngineConfig()).clearLeftovers() }
+        }
         appScope.launch { runCatching { graph.recordingRepository.failInterrupted(interrupted) } }
 
         // 1.0's device-wide Live Preview switch, moved onto each Profile (#212). Early in the launch,

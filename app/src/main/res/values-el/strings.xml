@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Φόρτωση επεισοδίων…</string>
     <string name="vod_episodes_failed">Δεν ήταν δυνατή η φόρτωση των επεισοδίων αυτής της σειράς. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="vod_no_episodes">Ο πάροχός σας δεν έχει προσθέσει επεισόδια αυτής της σειράς.</string>
+    <string name="vod_no_episodes_addons">Δεν υπάρχουν ακόμα επεισόδια αυτής της σειράς.</string>
     <string name="vod_continue_watching">Συνέχιση παρακολούθησης</string>
     <string name="vod_large_provider_note">Ένας μεγάλος πάροχος μπορεί να χρειαστεί μερικά λεπτά την πρώτη φορά.</string>
     <string name="vod_recommended">Προτεινόμενα για εσάς</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">Αυτό το κανάλι σταμάτησε. Δοκιμάστε ξανά ή επιλέξτε άλλο κανάλι.</string>
     <string name="error_timed_out">Ο πάροχός σας σταμάτησε να αποκρίνεται. Μπορεί να είναι απασχολημένος, οπότε δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_web_page">Ο πάροχός σας έστειλε μια ιστοσελίδα αντί για βίντεο. Ο σύνδεσμος μπορεί να έχει λήξει, οπότε δοκιμάστε να ανανεώσετε τον πάροχό σας στις Ρυθμίσεις.</string>
+    <string name="error_unplayable_file">Ο πάροχός σας έστειλε ένα αρχείο σε μορφή που το Settee δεν μπορεί να αναπαράγει, οπότε δοκιμάστε κάτι άλλο.</string>
+    <string name="error_addon_web_page">Ο σύνδεσμος αυτού του πρόσθετου άνοιξε μια ιστοσελίδα αντί για βίντεο. Διαλέξτε άλλη ροή.</string>
+    <string name="error_addon_unplayable_file">Ο σύνδεσμος αυτού του πρόσθετου άνοιξε ένα αρχείο σε μορφή που το Settee δεν μπορεί να αναπαράγει. Διαλέξτε άλλη ροή.</string>
+    <string name="playback_pick_another_stream">Διαλέξτε άλλη ροή</string>
     <string name="error_damaged">Αυτό το βίντεο είναι κατεστραμμένο και δεν αναπαράγεται. Αυτό είναι από την πλευρά του παρόχου σας, οπότε δοκιμάστε κάτι άλλο.</string>
     <string name="error_behind_live">Αυτό το κανάλι έμεινε πολύ πίσω από τη ζωντανή μετάδοση. Δοκιμάστε ξανά για να το προλάβετε.</string>
     <string name="error_gone">Αυτό δεν υπάρχει πια στον πάροχό σας. Δοκιμάστε να ανανεώσετε τον πάροχό σας στις Ρυθμίσεις.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">Δεν είναι δυνατή η πρόσβαση στο πρόσθετο. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη στο διαδίκτυο και ότι η διεύθυνση είναι σωστή.</string>
     <string name="error_addon_cant_reach_device">Δεν είναι δυνατή η πρόσβαση στο πρόσθετο. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη στο διαδίκτυο και ότι η διεύθυνση είναι σωστή.</string>
     <string name="error_addon_timed_out">Το πρόσθετο σταμάτησε να αποκρίνεται. Μπορεί να είναι απασχολημένο, οπότε δοκιμάστε ξανά σε λίγο.</string>
+    <string name="error_addon_bad_address">Αυτή δεν είναι διεύθυνση ιστού. Ελέγξτε τι πληκτρολογήσατε για κάποιο λάθος.</string>
+    <string name="error_addon_no_match">Τα πρόσθετά σας δεν μπορούν να αναζητήσουν αυτήν την ταινία, γιατί δεν έχει αντιστοίχιση στο IMDb.</string>
     <string name="error_addon_trouble">Το πρόσθετο αντιμετωπίζει προβλήματα. Αυτό είναι από τη δική του πλευρά, οπότε δοκιμάστε ξανά αργότερα.</string>
     <string name="error_not_an_addon_tv">Αυτή η διεύθυνση δεν έδωσε πρόσθετο. Ελέγξτε ότι είναι ο σύνδεσμος manifest.json και ότι το διαδίκτυο αυτής της τηλεόρασης δεν ζητά πρώτα σύνδεση.</string>
     <string name="error_not_an_addon_device">Αυτή η διεύθυνση δεν έδωσε πρόσθετο. Ελέγξτε ότι είναι ο σύνδεσμος manifest.json και ότι το διαδίκτυο αυτής της συσκευής δεν ζητά πρώτα σύνδεση.</string>
     <string name="error_addon_lookup_tv">Δεν ήταν δυνατή η αναζήτηση της ταινίας για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
     <string name="error_addon_lookup_device">Δεν ήταν δυνατή η αναζήτηση της ταινίας για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
+    <string name="error_addon_no_match_show">Τα πρόσθετά σας δεν μπορούν να αναζητήσουν αυτήν τη σειρά, γιατί δεν έχει αντιστοίχιση στο IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Δεν ήταν δυνατή η αναζήτηση της σειράς για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
+    <string name="error_addon_lookup_show_device">Δεν ήταν δυνατή η αναζήτηση της σειράς για να ερωτηθούν τα πρόσθετά σας. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη στο διαδίκτυο και δοκιμάστε ξανά.</string>
     <string name="error_device_refused">Ο πάροχός σας δεν δέχτηκε αυτά τα στοιχεία. Ελέγξτε τα στοιχεία του παρόχου σας στις Ρυθμίσεις.</string>
     <string name="error_guide">Δεν ήταν δυνατή η λήψη αυτού του οδηγού. Δοκιμάστε ξανά σε λίγο.</string>
     <string name="error_guide_empty">Ο οδηγός λήφθηκε, αλλά δεν περιείχε προγράμματα. Ελέγξτε ότι είναι ο σωστός σύνδεσμος.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">Αποστολή</string>
     <string name="report_question_dont_send">Χωρίς αποστολή</string>
     <string name="report_question_always_send">Πάντα αποστολή</string>
+    <string name="error_torrents_off">Τα torrent είναι απενεργοποιημένα. Ενεργοποιήστε τα στις Ρυθμίσεις, Πρόσθετα, για να τα παίξετε.</string>
+    <string name="error_torrent_nobody_sharing">Κανείς δεν μοιράζεται αυτό το torrent αυτή τη στιγμή, οπότε δεν μπορεί να παιχτεί. Διαλέξτε άλλη ροή.</string>
+    <string name="error_torrent_no_space">Δεν υπάρχει αρκετός ελεύθερος χώρος για αυτό το torrent. Διαλέξτε μικρότερη ροή ή ελευθερώστε χώρο.</string>
+    <string name="error_torrent_timed_out">Το torrent βρήκε άτομα που το μοιράζονται, αλλά δεν ξεκίνησε εγκαίρως. Δοκιμάστε ξανά ή διαλέξτε άλλη ροή.</string>
+    <string name="error_torrent_unsupported">Τα torrent χρειάζονται Android 8.0 ή νεότερο. Διαλέξτε ροή που δεν είναι torrent.</string>
+    <string name="error_torrent_failed">Το torrent σταμάτησε λόγω δικού του σφάλματος. Δοκιμάστε ξανά ή διαλέξτε άλλη ροή.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Ανενεργά. Τα torrent που βρίσκουν τα πρόσθετά σας εμφανίζονται, αλλά δεν παίζουν.</string>
+    <string name="settings_addons_torrents_on">Ενεργά. Όποιος μοιράζεται ένα torrent που παίζετε μπορεί να δει τη διεύθυνσή σας στο διαδίκτυο.</string>
+    <string name="settings_addons_torrents_title">Ενεργοποίηση των torrent;</string>
+    <string name="settings_addons_torrents_body">Ένα torrent λαμβάνεται από άλλους ανθρώπους που μοιράζονται το ίδιο αρχείο. Όσο το παρακολουθείτε, όποιος το μοιράζεται μπορεί να δει τη διεύθυνσή σας στο διαδίκτυο.</string>
+    <string name="settings_addons_torrents_confirm">Ενεργοποίηση των torrent</string>
+    <string name="settings_addons_torrents_keep">Να μείνουν ανενεργά</string>
+    <string name="search_not_from_provider">Όχι από τον πάροχό σας</string>
+    <string name="pairing_phone_addon_title">Προσθήκη πρόσθετου</string>
+    <string name="pairing_phone_addon_body">Επικολλήστε τη διεύθυνσή του και η τηλεόρασή σας θα το ελέγξει και θα το προσθέσει. Προσθέστε όσα θέλετε και μετά επιλέξτε Τέλος.</string>
+    <string name="pairing_phone_addon_add">Προσθήκη</string>
+    <string name="pairing_phone_addon_done_title">Όλα έτοιμα</string>
+    <string name="pairing_phone_addon_done_body">Τα πρόσθετά σας είναι στην τηλεόρασή σας. Μπορείτε να αφήσετε το κινητό σας.</string>
+    <string name="addons_phone_qr_desc">Κωδικός QR για προσθήκη πρόσθετων από το κινητό σας</string>
+    <string name="vod_addon_still_asking">Ρωτάμε ακόμα τα άλλα πρόσθετά σας…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d άτομο μοιράζεται</item>
+        <item quantity="other">%1$d άτομα μοιράζονται</item>
+    </plurals>
 </resources>

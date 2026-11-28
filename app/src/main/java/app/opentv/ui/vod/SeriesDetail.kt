@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
@@ -58,8 +59,10 @@ import app.opentv.core.ReportedSource
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
+import app.opentv.data.model.StremioStream
 import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.AddonsSourceId
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
@@ -78,6 +81,7 @@ import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.rememberErrorReport
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -91,7 +95,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
  * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
- * page says why ([episodeFetch]).
+ * page says why ([episodeFetch]). With [findAddonStreams], each episode's options offer its add-on streams
+ * in a picker, and the one picked calls [onPlayAddonStream]; for a show kept from an add-on, OK on an
+ * episode, and its main button, open that picker.
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -110,6 +116,9 @@ internal fun SeriesDetailContent(
     onOpenSeries: (Long) -> Unit = {},
     suggestionsKnown: Boolean = true,
     episodeFetch: EpisodeFetch = EpisodeFetch(),
+    findAddonStreams: ((Episode) -> Flow<AddonSearch>)? = null,
+    onPlayAddonStream: (Episode, StremioStream) -> Unit = { _, _ -> },
+    keptFromAddons: AddonsSourceId = AddonsSourceId(null),
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -117,7 +126,10 @@ internal fun SeriesDetailContent(
     var askingFor by remember(series.id) { mutableStateOf<MediaKey?>(null) }
     // Play asks first when only another language plays, and when nothing plays here an episode doesn't
     // either: the hero says why, and the player would only fail (#181).
-    val play: (MediaKey) -> Unit = { key ->
+    // An episode of a show kept from an add-on has no stream of its own: it plays through the add-on
+    // picker, and can't without add-ons (ADR 0011).
+    val addons = rememberEpisodeAddons(series.id, findAddonStreams)
+    val play: (MediaKey) -> Unit = addons.playing(episodes, keptFromAddons) { key ->
         when {
             !versions.plays -> Unit
             versions.otherLanguage != null -> askingFor = key
@@ -183,7 +195,7 @@ internal fun SeriesDetailContent(
             }
             Spacer(Modifier.height(SetteeSpace.RowGap))
             if (shown.hasPills) {
-                SeasonPills(nav, spot, shown, pillRow, showingLikeThis)
+                SeasonPills(nav, spot, shown, pillRow, showingLikeThis, keptFromAddons)
                 Spacer(Modifier.height(SetteeSpace.RowGap))
             }
             if (showingLikeThis) {
@@ -199,7 +211,9 @@ internal fun SeriesDetailContent(
                 if (shown.selected == null && episodeFetch.noEpisodes) {
                     NoEpisodes(nav, episodeFetch)
                 } else {
-                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions)
+                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions) { episode ->
+                        addons.ask.takeUnless { keptFromAddons.keeps(episode.sourceId) }
+                    }
                 }
             }
         }
@@ -216,6 +230,8 @@ internal fun SeriesDetailContent(
             askingFor = null
         },
     )
+
+    EpisodeAddonPicker(addons, onPlayAddonStream)
 
     if (castShown) {
         CastPanel(
@@ -313,7 +329,10 @@ private fun SeasonPills(
     shown: ShowSeasons,
     pillRow: LazyListState,
     showingLikeThis: Boolean,
+    keptFromAddons: AddonsSourceId,
 ) {
+    val fromAddons = remember(shown.all, keptFromAddons) { seasonsFromAddons(shown.all, keptFromAddons) }
+    val addonsMark = stringResource(R.string.settings_pane_addons)
     LazyRow(
         state = pillRow,
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -329,6 +348,8 @@ private fun SeasonPills(
                 selected = isSelected,
                 onClick = { openOptions?.invoke() },
                 onOptions = openOptions,
+                icon = Icons.Filled.Extension.takeIf { season.number in fromAddons },
+                iconDescription = addonsMark.takeIf { season.number in fromAddons },
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(nav.focus.pill) else Modifier)
                     .returnSpot(spot, null)
@@ -365,6 +386,8 @@ class EpisodeFetch(
     val failure: ViewerError? = null,
     /** The kind of the show's Source, for its [failure]'s Error Report. */
     val source: ReportedSource? = null,
+    /** A show kept from an add-on, which has no provider to say has listed none of its episodes. */
+    val fromAddons: Boolean = false,
     val onTryAgain: () -> Unit = {},
 )
 
@@ -376,7 +399,8 @@ class EpisodeFetch(
 private fun NoEpisodes(nav: ShowPageNav, fetch: EpisodeFetch) {
     val failure = fetch.failure
     if (failure == null) {
-        Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
+        val none = if (fetch.fromAddons) R.string.vod_no_episodes_addons else R.string.vod_no_episodes
+        Text(stringResource(none), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
     val report = rememberErrorReport(failure, fetch.source)
@@ -418,6 +442,7 @@ private fun EpisodeList(
     episodeList: LazyListState,
     onPlayEpisode: (MediaKey) -> Unit,
     suggestions: List<TitleCover>,
+    addonSourcesFor: (Episode) -> ((Episode) -> Unit)?,
 ) {
     val season = shown.selected
     // A one-season show's wait for its suggestions too, rather than be pushed down a row when More like
@@ -450,6 +475,8 @@ private fun EpisodeList(
                 status = statuses[ep.id],
                 seriesArt = listOfNotNull(series.backdropUrl, series.posterUrl),
                 onPlay = onPlayEpisode,
+                // Not offered again in its options where OK already opens the picker.
+                onAddonSources = addonSourcesFor(ep)?.let { ask -> { ask(ep) } },
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
                     .returnSpot(spot, PageSpot.Episode(ep.id))

@@ -116,10 +116,12 @@ fun PhonePairingScreen(
                     }
                 }
 
-                // An OpenSubtitles sign-in only arrives once a later step has taken over, so it isn't
-                // seen here.
+                // An OpenSubtitles sign-in only arrives once a later step has taken over, and add-ons only
+                // in Settings, so neither is seen here.
                 is PairingServer.State.Received,
                 is PairingServer.State.SignInReceived,
+                is PairingServer.State.AddonReceived,
+                PairingServer.State.AddonsDone,
                 PairingServer.State.KeySkipped,
                 -> PairingConnecting()
 

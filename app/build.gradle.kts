@@ -183,6 +183,18 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            // The torrent engine's native library is 14-17 MB a copy. Only the ARM ABIs that Fire TV and
+            // phones use are kept (ADR 0012): an x86_64 copy for the emulator isn't worth its size, as
+            // this Mac's emulators are arm64 and Robolectric never loads it. An x86 device or emulator
+            // gets TorrentFailure.UNSUPPORTED_DEVICE. Not abiFilters, which would drop the x86 builds of
+            // AndroidX's own small libraries with it.
+            excludes += setOf("lib/x86/libjlibtorrent.so", "lib/x86_64/libjlibtorrent.so")
+            // Compressed, and extracted at install. Stored uncompressed (AGP's default) the APK carried
+            // both ABIs' 31.6 MB as they are, and the box keeps the whole APK; compressed, the download
+            // is far smaller and only the box's own ABI is extracted, so it takes less space too.
+            useLegacyPackaging = true
+        }
     }
 
     lint {
@@ -409,6 +421,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.sentry.android.core)
     implementation(libs.zxing.core)
+    // The torrent engine (ADR 0012, player/torrent). Only its ARM native libraries are packaged.
+    implementation(libs.jlibtorrent.android)
     // Installs the baseline profile on a sideloaded APK, which no app store does for us: on the
     // first run, or at the next background dexopt (docs/PERFORMANCE.md).
     implementation(libs.androidx.profileinstaller)

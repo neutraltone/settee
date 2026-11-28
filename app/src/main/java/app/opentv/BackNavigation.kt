@@ -82,7 +82,7 @@ fun NavController.switchToRecording(recordingRoute: String) {
 suspend fun titlePageFor(mediaKey: MediaKey, seriesOfEpisode: suspend (episodeId: Long) -> Long?): String? =
     when (mediaKey) {
         is MediaKey.Movie -> Routes.movieDetail(mediaKey.movieId)
-        is MediaKey.AddonStream -> Routes.movieDetail(mediaKey.movieId)
+        is MediaKey.AddonStream -> titlePageFor(mediaKey.title, seriesOfEpisode)
         is MediaKey.Episode -> seriesOfEpisode(mediaKey.episodeId)?.let(Routes::seriesDetail)
         is MediaKey.Live, is MediaKey.Catchup, is MediaKey.Recording -> null
     }

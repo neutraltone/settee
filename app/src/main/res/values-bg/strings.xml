@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Зареждане на епизоди…</string>
     <string name="vod_episodes_failed">Епизодите на този сериал не можаха да се заредят. Опитайте отново след малко.</string>
     <string name="vod_no_episodes">Вашият доставчик не е добавил епизоди от този сериал.</string>
+    <string name="vod_no_episodes_addons">Все още няма изброени епизоди на този сериал.</string>
     <string name="vod_continue_watching">Продължи гледането</string>
     <string name="vod_large_provider_note">При голям доставчик първия път може да отнеме няколко минути.</string>
     <string name="vod_recommended">Препоръчано за вас</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">Този канал спря. Опитайте отново или изберете друг канал.</string>
     <string name="error_timed_out">Доставчикът ви спря да отговаря. Може да е претоварен, затова опитайте отново след малко.</string>
     <string name="error_web_page">Доставчикът ви изпрати уеб страница вместо видео. Връзката може да е изтекла, затова опитайте да опресните доставчика в Настройки.</string>
+    <string name="error_unplayable_file">Доставчикът ви изпрати файл във формат, който Settee не може да пусне, затова изберете нещо друго.</string>
+    <string name="error_addon_web_page">Връзката на тази добавка отвори уеб страница вместо видео. Изберете друг поток.</string>
+    <string name="error_addon_unplayable_file">Връзката на тази добавка отвори файл във формат, който Settee не може да пусне. Изберете друг поток.</string>
+    <string name="playback_pick_another_stream">Изберете друг поток</string>
     <string name="error_damaged">Това видео е повредено и не може да се възпроизведе. Проблемът е при доставчика ви, затова изберете нещо друго.</string>
     <string name="error_behind_live">Този канал изостана твърде много от живото излъчване. Опитайте отново, за да го настигнете.</string>
     <string name="error_gone">Това вече го няма при доставчика ви. Опитайте да опресните доставчика в Настройки.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">Няма връзка с добавката. Проверете дали този телевизор е свързан с интернет и дали адресът е верен.</string>
     <string name="error_addon_cant_reach_device">Няма връзка с добавката. Проверете дали това устройство е свързано с интернет и дали адресът е верен.</string>
     <string name="error_addon_timed_out">Добавката спря да отговаря. Може да е претоварена, затова опитайте отново след малко.</string>
+    <string name="error_addon_bad_address">Това не е уеб адрес. Проверете написаното за грешка.</string>
+    <string name="error_addon_no_match">Добавките ви не могат да потърсят този филм, защото няма съвпадение в IMDb.</string>
     <string name="error_addon_trouble">Добавката има проблеми. Те са от нейната страна, затова опитайте отново по-късно.</string>
     <string name="error_not_an_addon_tv">Този адрес не даде добавка. Проверете дали е връзката към manifest.json и дали интернетът на този телевизор не иска първо да влезете.</string>
     <string name="error_not_an_addon_device">Този адрес не даде добавка. Проверете дали е връзката към manifest.json и дали интернетът на това устройство не иска първо да влезете.</string>
     <string name="error_addon_lookup_tv">Филмът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали този телевизор е свързан с интернет и опитайте отново.</string>
     <string name="error_addon_lookup_device">Филмът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали това устройство е свързано с интернет и опитайте отново.</string>
+    <string name="error_addon_no_match_show">Добавките ви не могат да потърсят този сериал, защото няма съвпадение в IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Сериалът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали този телевизор е свързан с интернет и опитайте отново.</string>
+    <string name="error_addon_lookup_show_device">Сериалът не можа да бъде намерен, за да се попитат добавките ви. Проверете дали това устройство е свързано с интернет и опитайте отново.</string>
     <string name="error_device_refused">Доставчикът ви не прие тези данни. Проверете данните на доставчика в Настройки.</string>
     <string name="error_guide">Тази програма не можа да се изтегли. Опитайте отново след малко.</string>
     <string name="error_guide_empty">Програмата се изтегли, но в нея няма предавания. Проверете дали връзката е правилна.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">Изпрати</string>
     <string name="report_question_dont_send">Не изпращай</string>
     <string name="report_question_always_send">Винаги изпращай</string>
+    <string name="error_torrents_off">Торентите са изключени. Включете ги от Настройки, Добавки, за да пуснете тези.</string>
+    <string name="error_torrent_nobody_sharing">В момента никой не споделя този торент, така че не може да се пусне. Изберете друг поток.</string>
+    <string name="error_torrent_no_space">Няма достатъчно свободно място за този торент. Изберете по-малък поток или освободете място.</string>
+    <string name="error_torrent_timed_out">Торентът откри хора, които го споделят, но не тръгна навреме. Опитайте отново или изберете друг поток.</string>
+    <string name="error_torrent_unsupported">Торентите изискват Android 8.0 или по-нов. Изберете поток, който не е торент.</string>
+    <string name="error_torrent_failed">Торентът спря заради собствен проблем. Опитайте отново или изберете друг поток.</string>
+    <string name="vod_addon_torrent">Торент</string>
+    <string name="settings_addons_torrents">Торенти</string>
+    <string name="settings_addons_torrents_off">Изключени. Торентите, които добавките ви намерят, се показват, но не се пускат.</string>
+    <string name="settings_addons_torrents_on">Включени. Всеки, който споделя торент, който пускате, може да види интернет адреса ви.</string>
+    <string name="settings_addons_torrents_title">Да се включат ли торентите?</string>
+    <string name="settings_addons_torrents_body">Торентът се изтегля от други хора, които споделят същия файл. Докато гледате такъв, всеки, който го споделя, може да види интернет адреса ви.</string>
+    <string name="settings_addons_torrents_confirm">Включване на торентите</string>
+    <string name="settings_addons_torrents_keep">Оставете ги изключени</string>
+    <string name="search_not_from_provider">Не е от вашия доставчик</string>
+    <string name="pairing_phone_addon_title">Добавете добавка</string>
+    <string name="pairing_phone_addon_body">Поставете адреса ѝ и телевизорът ви ще я провери и добави. Добавете колкото искате, после изберете Готово.</string>
+    <string name="pairing_phone_addon_add">Добавяне</string>
+    <string name="pairing_phone_addon_done_title">Всичко е готово</string>
+    <string name="pairing_phone_addon_done_body">Добавките ви са на телевизора. Можете да оставите телефона си.</string>
+    <string name="addons_phone_qr_desc">QR код за добавяне на добавки от телефона ви</string>
+    <string name="vod_addon_still_asking">Все още питаме другите ви добавки…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d човек споделя</item>
+        <item quantity="other">%1$d души споделят</item>
+    </plurals>
 </resources>

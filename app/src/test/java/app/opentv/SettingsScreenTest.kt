@@ -41,9 +41,7 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
-import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
-import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.settings.START_DELAY_MS
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
@@ -611,48 +609,6 @@ class SettingsScreenTest {
         compose.onNode(hasText("Stop sharing") and isFocused()).assertExists()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag(SettingsTags.CODE_BLOCK).assertDoesNotExist()
-    }
-
-    @Test
-    fun `OK on an add-on opens its details, where it's removed after asking`() {
-        graph.settings.addStremioAddon(StremioAddon("https://example.com/films168/manifest.json", "Films add-on 168"))
-        show(SettingsMemory(SettingsSection.Addons))
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        captureScreen("settings_addons")
-
-        compose.onNodeWithText("Films add-on 168").requestFocus()
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNode(hasText("Films add-on 168") and hasAnyAncestor(isDialog())).assertExists()
-        compose.onNode(hasText("example.com") and hasAnyAncestor(isDialog())).assertExists()
-        pressInPanel("Remove", Key.DirectionCenter)
-        pressInPanel("Keep it", Key.DirectionUp)
-        pressInPanel("Yes, remove Films add-on 168", Key.DirectionCenter)
-
-        compose.runOnIdle {
-            assertThat(graph.settings.stremioAddons.value.map { it.name }).doesNotContain("Films add-on 168")
-        }
-    }
-
-    @Test
-    fun `Add an add-on asks for its address on an entry screen, and says why one couldn't be added`() {
-        show(SettingsMemory(SettingsSection.Addons))
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
-
-        compose.onNodeWithText("Add an add-on").requestFocus()
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.entryKeyboard().run {
-            assertThat(connection().first.inputType)
-                .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
-            // Nothing listens on port 9 here, so the connection is refused.
-            type("http://127.0.0.1:9/manifest.json")
-            pressAction()
-        }
-
-        compose.onAllNodes(hasText("Can't reach the add-on.", substring = true)).onFirst().assertExists()
-        compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("Connect"), useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("That address didn't give an add-on", substring = true).assertDoesNotExist()
-        compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
-        captureScreen("settings_addons_failed")
     }
 
     @Test

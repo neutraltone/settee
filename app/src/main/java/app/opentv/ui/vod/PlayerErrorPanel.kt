@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ReportedSource
+import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.ReportButton
 import app.opentv.ui.design.ErrorMessage
@@ -42,6 +43,8 @@ import app.opentv.ui.rememberErrorReport
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
  * to reach these buttons, and with the bar hidden behind them the viewer would be left with nothing lit.
  * Where the failure could be Settee's, Report ends the row (ADR 0010), from a Source of [reportedSource]'s kind.
+ * An add-on's stream that another of its streams could stand in for starts the row with Pick another stream,
+ * which [onPickAnother] opens the picker for.
  */
 @Composable
 internal fun PlayerErrorPanel(
@@ -49,6 +52,7 @@ internal fun PlayerErrorPanel(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     reportedSource: ReportedSource? = null,
+    onPickAnother: (MediaKey.Title) -> Unit = {},
 ) {
     val report = rememberErrorReport(error.reason, reportedSource)
     val first = remember { FocusRequester() }
@@ -72,7 +76,16 @@ internal fun PlayerErrorPanel(
             ErrorMessage(error.reason.sentence, report?.detail ?: error.reason.detail) {
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (error.canRetry) {
+                    val another = error.anotherStreamOf
+                    if (another != null) {
+                        PanelButton(
+                            R.string.playback_pick_another_stream,
+                            { onPickAnother(another) },
+                            Modifier.focusRequester(first),
+                        )
+                        if (error.canRetry) PanelButton(R.string.common_try_again, onRetry)
+                        PanelButton(R.string.common_back, onBack)
+                    } else if (error.canRetry) {
                         PanelButton(R.string.common_try_again, onRetry, Modifier.focusRequester(first))
                         PanelButton(R.string.common_back, onBack)
                     } else {

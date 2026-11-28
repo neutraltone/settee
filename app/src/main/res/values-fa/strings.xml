@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">در حال بارگذاری قسمت‌ها…</string>
     <string name="vod_episodes_failed">قسمت‌های این سریال بارگذاری نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="vod_no_episodes">ارائه‌دهنده شما هیچ قسمتی از این سریال اضافه نکرده است.</string>
+    <string name="vod_no_episodes_addons">هنوز هیچ قسمتی از این سریال فهرست نشده است.</string>
     <string name="vod_continue_watching">ادامه تماشا</string>
     <string name="vod_large_provider_note">برای ارائه‌دهنده‌های بزرگ، بار اول ممکن است چند دقیقه طول بکشد.</string>
     <string name="vod_recommended">پیشنهادشده برای شما</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">این کانال متوقف شد. دوباره تلاش کنید، یا کانال دیگری انتخاب کنید.</string>
     <string name="error_timed_out">ارائه‌دهنده شما دیگر پاسخ نمی‌دهد. ممکن است مشغول باشد، پس کمی بعد دوباره تلاش کنید.</string>
     <string name="error_web_page">ارائه‌دهنده شما به جای ویدیو یک صفحه وب فرستاد. ممکن است پیوند منقضی شده باشد، پس بازخوانی ارائه‌دهنده را در تنظیمات امتحان کنید.</string>
+    <string name="error_unplayable_file">ارائه‌دهنده شما فایلی با قالبی فرستاد که Settee نمی‌تواند پخش کند، پس چیز دیگری را امتحان کنید.</string>
+    <string name="error_addon_web_page">پیوند این افزونه به جای ویدیو یک صفحه وب باز کرد. جریان دیگری را انتخاب کنید.</string>
+    <string name="error_addon_unplayable_file">پیوند این افزونه فایلی با قالبی باز کرد که Settee نمی‌تواند پخش کند. جریان دیگری را انتخاب کنید.</string>
+    <string name="playback_pick_another_stream">انتخاب جریان دیگر</string>
     <string name="error_damaged">این ویدیو آسیب دیده است و پخش نمی‌شود. مشکل از طرف ارائه‌دهنده شماست، پس چیز دیگری را امتحان کنید.</string>
     <string name="error_behind_live">این کانال خیلی از پخش زنده عقب افتاد. برای رسیدن به آن دوباره تلاش کنید.</string>
     <string name="error_gone">این دیگر در ارائه‌دهنده شما موجود نیست. بازخوانی ارائه‌دهنده را در تنظیمات امتحان کنید.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">دسترسی به افزونه ممکن نیست. بررسی کنید این تلویزیون به اینترنت وصل باشد و نشانی درست باشد.</string>
     <string name="error_addon_cant_reach_device">دسترسی به افزونه ممکن نیست. بررسی کنید این دستگاه به اینترنت وصل باشد و نشانی درست باشد.</string>
     <string name="error_addon_timed_out">افزونه دیگر پاسخ نمی‌دهد. ممکن است مشغول باشد، پس کمی بعد دوباره تلاش کنید.</string>
+    <string name="error_addon_bad_address">این یک نشانی وب نیست. آنچه را نوشتید از نظر اشتباه بررسی کنید.</string>
+    <string name="error_addon_no_match">افزونه‌های شما نمی‌توانند این فیلم را جستجو کنند، چون در IMDb مطابقتی ندارد.</string>
     <string name="error_addon_trouble">افزونه با مشکل روبه‌رو است. مشکل از طرف آن است، پس بعداً دوباره تلاش کنید.</string>
     <string name="error_not_an_addon_tv">این نشانی افزونه‌ای نداد. بررسی کنید پیوند manifest.json باشد و اینترنت این تلویزیون اول از شما درخواست ورود نکند.</string>
     <string name="error_not_an_addon_device">این نشانی افزونه‌ای نداد. بررسی کنید پیوند manifest.json باشد و اینترنت این دستگاه اول از شما درخواست ورود نکند.</string>
     <string name="error_addon_lookup_tv">جست‌وجوی این فیلم برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این تلویزیون به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
     <string name="error_addon_lookup_device">جست‌وجوی این فیلم برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این دستگاه به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
+    <string name="error_addon_no_match_show">افزونه‌های شما نمی‌توانند این سریال را جستجو کنند، چون در IMDb مطابقتی ندارد.</string>
+    <string name="error_addon_lookup_show_tv">جست‌وجوی این سریال برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این تلویزیون به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
+    <string name="error_addon_lookup_show_device">جست‌وجوی این سریال برای پرسیدن از افزونه‌هایتان ممکن نشد. بررسی کنید این دستگاه به اینترنت وصل باشد، سپس دوباره تلاش کنید.</string>
     <string name="error_device_refused">ارائه‌دهنده شما این اطلاعات را نپذیرفت. اطلاعات ارائه‌دهنده خود را در تنظیمات بررسی کنید.</string>
     <string name="error_guide">دانلود این راهنما ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
     <string name="error_guide_empty">این راهنما دانلود شد، اما هیچ برنامه‌ای در آن نبود. بررسی کنید پیوند درست باشد.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">ارسال</string>
     <string name="report_question_dont_send">ارسال نشود</string>
     <string name="report_question_always_send">همیشه ارسال</string>
+    <string name="error_torrents_off">تورنت‌ها خاموش هستند. برای پخش این‌ها، آن‌ها را در تنظیمات، افزونه‌ها روشن کنید.</string>
+    <string name="error_torrent_nobody_sharing">در حال حاضر کسی این تورنت را به اشتراک نمی‌گذارد، پس پخش نمی‌شود. جریان دیگری انتخاب کنید.</string>
+    <string name="error_torrent_no_space">فضای خالی کافی برای پخش این تورنت نیست. جریان کوچک‌تری انتخاب کنید یا کمی فضا آزاد کنید.</string>
+    <string name="error_torrent_timed_out">این تورنت کسانی را پیدا کرد که آن را به اشتراک می‌گذارند، اما به‌موقع شروع نشد. دوباره امتحان کنید یا جریان دیگری انتخاب کنید.</string>
+    <string name="error_torrent_unsupported">تورنت‌ها برای پخش به Android 8.0 یا جدیدتر نیاز دارند. جریانی انتخاب کنید که تورنت نباشد.</string>
+    <string name="error_torrent_failed">تورنت به‌خاطر خطای خودش متوقف شد. دوباره امتحان کنید یا جریان دیگری انتخاب کنید.</string>
+    <string name="vod_addon_torrent">تورنت</string>
+    <string name="settings_addons_torrents">تورنت‌ها</string>
+    <string name="settings_addons_torrents_off">خاموش. تورنت‌هایی که افزونه‌های شما پیدا می‌کنند فهرست می‌شوند، اما پخش نمی‌شوند.</string>
+    <string name="settings_addons_torrents_on">روشن. هر کسی که تورنتی را که پخش می‌کنید به اشتراک می‌گذارد، می‌تواند نشانی اینترنتی شما را ببیند.</string>
+    <string name="settings_addons_torrents_title">تورنت‌ها روشن شوند؟</string>
+    <string name="settings_addons_torrents_body">تورنت از افراد دیگری دریافت می‌شود که همان فایل را به اشتراک می‌گذارند. وقتی یکی را تماشا می‌کنید، هر کسی که آن را به اشتراک می‌گذارد می‌تواند نشانی اینترنتی شما را ببیند.</string>
+    <string name="settings_addons_torrents_confirm">روشن کردن تورنت‌ها</string>
+    <string name="settings_addons_torrents_keep">خاموش بمانند</string>
+    <string name="search_not_from_provider">نه از ارائه‌دهنده شما</string>
+    <string name="pairing_phone_addon_title">افزودن یک افزونه</string>
+    <string name="pairing_phone_addon_body">نشانی آن را جای‌گذاری کنید تا تلویزیون شما آن را بررسی و اضافه کند. هر تعداد که می‌خواهید اضافه کنید، سپس تمام را انتخاب کنید.</string>
+    <string name="pairing_phone_addon_add">افزودن</string>
+    <string name="pairing_phone_addon_done_title">همه‌چیز تمام شد</string>
+    <string name="pairing_phone_addon_done_body">افزونه‌های شما روی تلویزیون هستند. می‌توانید گوشی خود را کنار بگذارید.</string>
+    <string name="addons_phone_qr_desc">کد QR برای افزودن افزونه‌ها از گوشی شما</string>
+    <string name="vod_addon_still_asking">هنوز در حال پرسیدن از افزونه‌های دیگر شما…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d نفر در حال اشتراک‌گذاری</item>
+        <item quantity="other">%1$d نفر در حال اشتراک‌گذاری</item>
+    </plurals>
 </resources>

@@ -54,6 +54,14 @@ internal class StreamGuard(
     val steppedDownTo: StateFlow<MediaKey?> = _steppedDownTo.asStateFlow()
 
     private var saidNoSound = false
+
+    /**
+     * Whether the stream on the player has started playing. A notice said before then is kept up until
+     * it has: a torrent knows its tracks long before its first frame, and a notice timed from then was
+     * gone behind Loading before the viewer saw a picture.
+     */
+    private var playing = true
+    private var timeNoticeOnArrival = false
     private val loggedTracks = HashSet<String>()
 
     private val firstFrame = FirstFrameWatch(scope) { format ->
@@ -90,13 +98,21 @@ internal class StreamGuard(
         firstFrame.newStream()
         if (limitStartUp) startUp.newStream()
         loggedTracks.clear()
+        playing = false
     }
 
     /**
      * The stream on the player is ready to play, for the first time or again, or has already ended:
      * either way it got somewhere, so it isn't the start-up limit's business any more.
      */
-    fun arrived() = startUp.end()
+    fun arrived() {
+        startUp.end()
+        playing = true
+        if (timeNoticeOnArrival) {
+            timeNoticeOnArrival = false
+            timeNotice()
+        }
+    }
 
     /** Whether the controller is holding playback back on purpose, which the start-up limit doesn't count. */
     var held: Boolean by startUp::held
@@ -190,12 +206,18 @@ internal class StreamGuard(
     /** Takes down what's showing: it would only contradict what's about to be said. */
     private fun stopSaying() {
         noticeJob?.cancel()
+        timeNoticeOnArrival = false
         _notice.value = null
     }
 
     private fun say(message: String) {
         noticeJob?.cancel()
         _notice.value = message
+        if (playing) timeNotice() else timeNoticeOnArrival = true
+    }
+
+    private fun timeNotice() {
+        noticeJob?.cancel()
         noticeJob = scope.launch {
             delay(NOTICE_MILLIS)
             _notice.value = null

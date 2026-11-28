@@ -151,6 +151,8 @@ fun VodPlayerScreen(
                 liveRecording = growingRec,
                 diagnostics = graph.diagnosticsLog,
                 journeys = graph.journeys,
+                // An add-on's torrent plays through the app's one engine, stopped when this player goes.
+                torrentEngine = graph.torrentEngine,
             ),
         )
     }
@@ -579,8 +581,6 @@ fun VodPlayerContent(
 
         subtitles?.let { DownloadedSubtitleOverlay(it, positionMillis = { controller.positionMillis }) }
 
-        val notice by controller.notice.collectAsState()
-        notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
         subtitles?.let { SubtitleNote(it, Modifier.align(Alignment.TopStart)) }
 
         when (val current = state) {
@@ -596,6 +596,7 @@ fun VodPlayerContent(
                         AerialTv(stringResource(R.string.player_loading))
                         Spacer(Modifier.height(16.dp))
                         Text(current.title, SetteeType.Body)
+                        TorrentProgress(controller.torrent, durationMillis = { controller.player.duration })
                     }
                 }
 
@@ -604,10 +605,16 @@ fun VodPlayerContent(
                 onRetry = controller::retry,
                 onBack = onBack,
                 reportedSource = reportedSource,
+                onPickAnother = viewModel::pickAnotherStream,
             )
 
             else -> Unit
         }
+
+        // Over the loading screen, not under it: a notice said while a torrent is still fetching is kept
+        // up until the film starts, and was hidden behind Loading.
+        val notice by controller.notice.collectAsState()
+        notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
 
         AnimatedVisibility(visible = controlsVisible && !failed, enter = fadeIn(), exit = fadeOut()) {
             PlayerControlBar(
@@ -748,6 +755,8 @@ fun VodPlayerContent(
             onDismiss = { optionsOpen = false },
         )
     }
+
+    PlayerAddonPick(viewModel, onBack)
 }
 
 private const val POLL_MILLIS = 500L

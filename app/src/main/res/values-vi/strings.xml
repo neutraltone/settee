@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">Đang tải tập phim…</string>
     <string name="vod_episodes_failed">Không thể tải các tập của phim bộ này. Hãy thử lại sau giây lát.</string>
     <string name="vod_no_episodes">Nhà cung cấp của bạn chưa thêm tập nào của phim bộ này.</string>
+    <string name="vod_no_episodes_addons">Chưa có tập nào của chương trình này.</string>
     <string name="vod_continue_watching">Tiếp tục xem</string>
     <string name="vod_large_provider_note">Với nhà cung cấp lớn, lần đầu có thể mất vài phút.</string>
     <string name="vod_recommended">Đề xuất cho bạn</string>
@@ -261,6 +262,10 @@
     <string name="error_live_ended">Kênh này đã dừng. Thử lại, hoặc chọn kênh khác.</string>
     <string name="error_timed_out">Nhà cung cấp đã ngừng phản hồi. Có thể họ đang bận, vì vậy hãy thử lại sau giây lát.</string>
     <string name="error_web_page">Nhà cung cấp đã gửi một trang web thay vì video. Liên kết có thể đã hết hạn, vì vậy hãy thử làm mới nhà cung cấp trong Cài đặt.</string>
+    <string name="error_unplayable_file">Nhà cung cấp đã gửi một tệp ở định dạng Settee không phát được, vì vậy hãy thử nội dung khác.</string>
+    <string name="error_addon_web_page">Liên kết của tiện ích này mở ra một trang web thay vì video. Hãy chọn luồng khác.</string>
+    <string name="error_addon_unplayable_file">Liên kết của tiện ích này mở ra một tệp ở định dạng Settee không phát được. Hãy chọn luồng khác.</string>
+    <string name="playback_pick_another_stream">Chọn luồng khác</string>
     <string name="error_damaged">Video này bị hỏng và không phát được. Đó là vấn đề phía nhà cung cấp, vì vậy hãy thử nội dung khác.</string>
     <string name="error_behind_live">Kênh này bị chậm quá xa so với trực tiếp. Thử lại để theo kịp.</string>
     <string name="error_gone">Nội dung này không còn trên nhà cung cấp của bạn. Thử làm mới nhà cung cấp trong Cài đặt.</string>
@@ -287,11 +292,16 @@
     <string name="error_addon_cant_reach_tv">Không thể kết nối tới tiện ích. Kiểm tra xem TV này có đang trực tuyến và địa chỉ có đúng không.</string>
     <string name="error_addon_cant_reach_device">Không thể kết nối tới tiện ích. Kiểm tra xem thiết bị này có đang trực tuyến và địa chỉ có đúng không.</string>
     <string name="error_addon_timed_out">Tiện ích đã ngừng phản hồi. Có thể nó đang bận, vì vậy hãy thử lại sau giây lát.</string>
+    <string name="error_addon_bad_address">Đây không phải là địa chỉ web. Hãy kiểm tra xem bạn có gõ sai không.</string>
+    <string name="error_addon_no_match">Tiện ích bổ sung của bạn không thể tra cứu phim này vì không có kết quả khớp trên IMDb.</string>
     <string name="error_addon_trouble">Tiện ích đang gặp sự cố. Đó là vấn đề phía tiện ích, vì vậy hãy thử lại sau.</string>
     <string name="error_not_an_addon_tv">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của TV này không yêu cầu bạn đăng nhập trước.</string>
     <string name="error_not_an_addon_device">Địa chỉ đó không trả về tiện ích. Kiểm tra xem đó có phải liên kết manifest.json không, và Internet của thiết bị này không yêu cầu bạn đăng nhập trước.</string>
     <string name="error_addon_lookup_tv">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem TV này có đang trực tuyến không, rồi thử lại.</string>
     <string name="error_addon_lookup_device">Không thể tra cứu phim này để hỏi các tiện ích của bạn. Kiểm tra xem thiết bị này có đang trực tuyến không, rồi thử lại.</string>
+    <string name="error_addon_no_match_show">Tiện ích bổ sung của bạn không thể tra cứu chương trình này vì không có kết quả khớp trên IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Không thể tra cứu chương trình này để hỏi các tiện ích của bạn. Kiểm tra xem TV này có đang trực tuyến không, rồi thử lại.</string>
+    <string name="error_addon_lookup_show_device">Không thể tra cứu chương trình này để hỏi các tiện ích của bạn. Kiểm tra xem thiết bị này có đang trực tuyến không, rồi thử lại.</string>
     <string name="error_device_refused">Nhà cung cấp không chấp nhận các thông tin này. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_guide">Không thể tải lịch phát này. Thử lại sau giây lát.</string>
     <string name="error_guide_empty">Đã tải lịch phát này, nhưng không có chương trình nào trong đó. Kiểm tra xem liên kết có đúng không.</string>
@@ -402,4 +412,29 @@
     <string name="report_question_send">Gửi</string>
     <string name="report_question_dont_send">Không gửi</string>
     <string name="report_question_always_send">Luôn gửi</string>
+    <string name="error_torrents_off">Torrent đang tắt. Bật trong Cài đặt, Tiện ích bổ sung để phát các mục này.</string>
+    <string name="error_torrent_nobody_sharing">Hiện không ai chia sẻ torrent này nên không thể phát. Hãy chọn luồng khác.</string>
+    <string name="error_torrent_no_space">Không đủ dung lượng trống để phát torrent này. Hãy chọn luồng nhỏ hơn hoặc giải phóng dung lượng.</string>
+    <string name="error_torrent_timed_out">Torrent này đã tìm thấy người chia sẻ nhưng không bắt đầu kịp. Hãy thử lại hoặc chọn luồng khác.</string>
+    <string name="error_torrent_unsupported">Torrent cần Android 8.0 trở lên để phát. Hãy chọn luồng không phải torrent.</string>
+    <string name="error_torrent_failed">Torrent đã dừng do lỗi của chính nó. Hãy thử lại hoặc chọn luồng khác.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Tắt. Torrent mà tiện ích của bạn tìm thấy vẫn hiện trong danh sách nhưng không phát được.</string>
+    <string name="settings_addons_torrents_on">Bật. Mọi người đang chia sẻ torrent bạn phát đều có thể thấy địa chỉ internet của bạn.</string>
+    <string name="settings_addons_torrents_title">Bật torrent?</string>
+    <string name="settings_addons_torrents_body">Torrent được tải từ những người khác đang chia sẻ cùng tệp. Khi bạn xem, mọi người đang chia sẻ tệp đó đều có thể thấy địa chỉ internet của bạn.</string>
+    <string name="settings_addons_torrents_confirm">Bật torrent</string>
+    <string name="settings_addons_torrents_keep">Vẫn để tắt</string>
+    <string name="search_not_from_provider">Không phải từ nhà cung cấp của bạn</string>
+    <string name="pairing_phone_addon_title">Thêm tiện ích</string>
+    <string name="pairing_phone_addon_body">Dán địa chỉ của tiện ích, TV sẽ kiểm tra rồi thêm vào. Thêm bao nhiêu tùy thích, sau đó chọn Xong.</string>
+    <string name="pairing_phone_addon_add">Thêm</string>
+    <string name="pairing_phone_addon_done_title">Đã xong</string>
+    <string name="pairing_phone_addon_done_body">Tiện ích của bạn đã có trên TV. Bạn có thể đặt điện thoại xuống.</string>
+    <string name="addons_phone_qr_desc">Mã QR để thêm tiện ích từ điện thoại</string>
+    <string name="vod_addon_still_asking">Vẫn đang hỏi các tiện ích khác của bạn…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d người đang chia sẻ</item>
+    </plurals>
 </resources>

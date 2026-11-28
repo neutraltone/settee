@@ -480,7 +480,7 @@ class VodPlayerViewModelTest {
         vm.attach(MediaKey.Movie(7), playback)
         assertThat(vm.canMarkWatched.value).isTrue()
 
-        vm.attach(MediaKey.AddonStream(8, "https://example.com/8.mkv"), playback)
+        vm.attach(MediaKey.AddonStream(MediaKey.Movie(8), "https://example.com/8.mkv"), playback)
         assertThat(vm.canMarkWatched.value).isTrue()
 
         vm.attach(testEpisode(1, 1).key, playback)

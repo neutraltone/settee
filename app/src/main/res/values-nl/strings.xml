@@ -216,6 +216,7 @@
     <string name="vod_loading_episodes">Afleveringen laden…</string>
     <string name="vod_episodes_failed">De afleveringen van deze serie konden niet worden geladen. Probeer het zo opnieuw.</string>
     <string name="vod_no_episodes">Je provider heeft nog geen afleveringen van deze serie toegevoegd.</string>
+    <string name="vod_no_episodes_addons">Er staan nog geen afleveringen van deze serie vermeld.</string>
     <string name="vod_continue_watching">Verdergaan met kijken</string>
     <string name="vod_large_provider_note">Bij een grote provider kan dit de eerste keer een paar minuten duren.</string>
     <string name="vod_recommended">Aanbevolen voor jou</string>
@@ -262,6 +263,10 @@
     <string name="error_live_ended">Deze zender is gestopt. Probeer het opnieuw, of kies een andere zender.</string>
     <string name="error_timed_out">Je provider reageert niet meer. Misschien is het er druk, dus probeer het zo opnieuw.</string>
     <string name="error_web_page">Je provider stuurde een webpagina in plaats van video. De link is misschien verlopen, dus probeer je provider te vernieuwen in Instellingen.</string>
+    <string name="error_unplayable_file">Je provider stuurde een bestand in een formaat dat Settee niet kan afspelen, dus kies iets anders.</string>
+    <string name="error_addon_web_page">De link van deze add-on opende een webpagina in plaats van video. Kies een andere stream.</string>
+    <string name="error_addon_unplayable_file">De link van deze add-on opende een bestand in een formaat dat Settee niet kan afspelen. Kies een andere stream.</string>
+    <string name="playback_pick_another_stream">Kies een andere stream</string>
     <string name="error_damaged">Deze video is beschadigd en speelt niet af. Dat ligt aan de kant van je provider, dus kies iets anders.</string>
     <string name="error_behind_live">Deze zender liep te ver achter op live. Probeer het opnieuw om bij te komen.</string>
     <string name="error_gone">Dit staat niet meer bij je provider. Probeer je provider te vernieuwen in Instellingen.</string>
@@ -288,11 +293,16 @@
     <string name="error_addon_cant_reach_tv">Kan de add-on niet bereiken. Controleer of deze tv online is en het adres klopt.</string>
     <string name="error_addon_cant_reach_device">Kan de add-on niet bereiken. Controleer of dit apparaat online is en het adres klopt.</string>
     <string name="error_addon_timed_out">De add-on reageert niet meer. Misschien is het er druk, dus probeer het zo opnieuw.</string>
+    <string name="error_addon_bad_address">Dat is geen webadres. Controleer wat je hebt getypt op fouten.</string>
+    <string name="error_addon_no_match">Je add-ons kunnen deze film niet opzoeken, omdat er geen overeenkomst op IMDb is.</string>
     <string name="error_addon_trouble">De add-on heeft problemen. Dat ligt aan hun kant, dus probeer het later opnieuw.</string>
     <string name="error_not_an_addon_tv">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van deze tv niet eerst vraagt om je aan te melden.</string>
     <string name="error_not_an_addon_device">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van dit apparaat niet eerst vraagt om je aan te melden.</string>
     <string name="error_addon_lookup_tv">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
     <string name="error_addon_lookup_device">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_addon_no_match_show">Je add-ons kunnen deze serie niet opzoeken, omdat er geen overeenkomst op IMDb is.</string>
+    <string name="error_addon_lookup_show_tv">Kon deze serie niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_addon_lookup_show_device">Kon deze serie niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_device_refused">Je provider heeft deze gegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_guide">Kan deze gids niet downloaden. Probeer het zo opnieuw.</string>
     <string name="error_guide_empty">Deze gids is gedownload, maar er stonden geen programma\'s in. Controleer of het de juiste link is.</string>
@@ -403,4 +413,30 @@
     <string name="report_question_send">Sturen</string>
     <string name="report_question_dont_send">Niet sturen</string>
     <string name="report_question_always_send">Altijd sturen</string>
+    <string name="error_torrents_off">Torrents staan uit. Zet ze aan bij Instellingen, Add-ons, om deze af te spelen.</string>
+    <string name="error_torrent_nobody_sharing">Niemand deelt deze torrent op dit moment, dus hij kan niet worden afgespeeld. Kies een andere stream.</string>
+    <string name="error_torrent_no_space">Er is niet genoeg vrije ruimte om deze torrent af te spelen. Kies een kleinere stream of maak ruimte vrij.</string>
+    <string name="error_torrent_timed_out">Deze torrent vond mensen die hem delen, maar startte niet op tijd. Probeer het opnieuw of kies een andere stream.</string>
+    <string name="error_torrent_unsupported">Torrents hebben Android 8.0 of nieuwer nodig. Kies een stream die geen torrent is.</string>
+    <string name="error_torrent_failed">De torrent stopte door een eigen fout. Probeer het opnieuw of kies een andere stream.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrents</string>
+    <string name="settings_addons_torrents_off">Uit. Torrents die je add-ons vinden, staan in de lijst, maar spelen niet af.</string>
+    <string name="settings_addons_torrents_on">Aan. Iedereen die een torrent deelt die jij afspeelt, kan je internetadres zien.</string>
+    <string name="settings_addons_torrents_title">Torrents aanzetten?</string>
+    <string name="settings_addons_torrents_body">Een torrent wordt opgehaald bij andere mensen die hetzelfde bestand delen. Terwijl je er een kijkt, kan iedereen die hem deelt je internetadres zien.</string>
+    <string name="settings_addons_torrents_confirm">Torrents aanzetten</string>
+    <string name="settings_addons_torrents_keep">Laat ze uit</string>
+    <string name="search_not_from_provider">Niet van je provider</string>
+    <string name="pairing_phone_addon_title">Een add-on toevoegen</string>
+    <string name="pairing_phone_addon_body">Plak het adres, dan controleert je tv de add-on en voegt hem toe. Voeg er zoveel toe als je wilt en kies dan Klaar.</string>
+    <string name="pairing_phone_addon_add">Toevoegen</string>
+    <string name="pairing_phone_addon_done_title">Helemaal klaar</string>
+    <string name="pairing_phone_addon_done_body">Je add-ons staan op je tv. Je kunt je telefoon wegleggen.</string>
+    <string name="addons_phone_qr_desc">QR-code om add-ons toe te voegen vanaf je telefoon</string>
+    <string name="vod_addon_still_asking">Je andere add-ons worden nog gevraagd…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="one">%1$d persoon deelt</item>
+        <item quantity="other">%1$d mensen delen</item>
+    </plurals>
 </resources>

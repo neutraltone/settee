@@ -14,6 +14,7 @@ import app.opentv.player.StreamGuard
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,5 +76,35 @@ class StreamGuardStepDownTest {
             .isEqualTo("This device can't play 4K. Playing a lower quality instead.")
         assertThat(noticeFor(onTelevision = false, "", "HD"))
             .isEqualTo("This device can't play that quality. Playing another instead.")
+    }
+
+    @Test
+    fun `a notice said before the stream starts stays up until it does, then for its usual time`() {
+        // A torrent knows its tracks long before its first frame: the AC3 a stereo-only TV can't play was
+        // said and gone behind Loading before the film began, so the viewer heard nothing and was told nothing.
+        val guard = guard(onTelevision = true)
+        guard.started(limitStartUp = false)
+
+        guard.steppedDown("4K", PlayerController.Quality(MediaKey.Live(2), "HD"))
+        scope.advanceTimeBy(60_000)
+        assertThat(guard.notice.value).isNotNull()
+
+        guard.arrived()
+        scope.advanceTimeBy(4_999)
+        assertThat(guard.notice.value).isNotNull()
+        scope.advanceTimeBy(2)
+        assertThat(guard.notice.value).isNull()
+    }
+
+    @Test
+    fun `a notice said once the stream is playing goes after its usual time`() {
+        val guard = guard(onTelevision = true)
+        guard.started(limitStartUp = false)
+        guard.arrived()
+
+        guard.steppedDown("4K", PlayerController.Quality(MediaKey.Live(2), "HD"))
+        scope.advanceTimeBy(5_001)
+
+        assertThat(guard.notice.value).isNull()
     }
 }

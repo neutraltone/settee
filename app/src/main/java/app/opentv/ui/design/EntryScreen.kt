@@ -7,7 +7,9 @@ package app.opentv.ui.design
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
@@ -34,6 +37,13 @@ import androidx.compose.ui.unit.dp
  * nor anything [refusal] turns down; its reason shows under the box. [hint]
  * is a quiet line under that, such as where else the setting can be typed. Text longer than
  * [maxLength] is cut to fit, however it arrives.
+ *
+ * [error] is why a save that had to be checked elsewhere was turned down, as a sentence and its
+ * detail line: the screen stays, with what was typed, so the viewer can fix it rather than type it
+ * all again.
+ *
+ * [beside] is another way to give the same thing, drawn to the right of the box, such as a QR code
+ * for a phone.
  */
 @Composable
 fun EntryScreen(
@@ -48,6 +58,8 @@ fun EntryScreen(
     maxLength: Int? = null,
     allowBlank: Boolean = false,
     refusal: (String) -> String? = { null },
+    error: Pair<String, String>? = null,
+    beside: (@Composable () -> Unit)? = null,
 ) {
     val text = rememberTextFieldState(initial)
     val box = remember { FocusRequester() }
@@ -65,34 +77,42 @@ fun EntryScreen(
         val now = text.text.toString()
         if ((allowBlank || now.isNotBlank()) && refusal(now) == null) onSave(now)
     }
-    Column(
+    Row(
         Modifier
             .fillMaxSize()
             .background(SetteeColors.Background)
             .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+        horizontalArrangement = Arrangement.spacedBy(SetteeSpace.ScreenSide),
     ) {
-        Text(title, SetteeType.ScreenTitle)
-        Spacer(Modifier.height(SetteeSpace.RowGap))
-        Column(Modifier.widthIn(max = BOX_WIDTH).fillMaxWidth()) {
-            TextField(
-                state = text,
-                placeholder = placeholder,
-                maxLength = maxLength,
-                keyboardType = keyboardType,
-                onSubmit = save,
-                modifier = Modifier.fillMaxWidth().focusRequester(box),
-            )
-            refused?.let {
-                Spacer(Modifier.height(LINE_GAP))
-                Text(it, SetteeType.Body, color = SetteeColors.Accent)
-            }
-            hint?.let {
-                Spacer(Modifier.height(LINE_GAP))
-                Text(it, SetteeType.Body, color = SetteeColors.QuietText)
-            }
+        Column(Modifier.weight(1f)) {
+            Text(title, SetteeType.ScreenTitle)
             Spacer(Modifier.height(SetteeSpace.RowGap))
-            ActionButton(saveLabel, onClick = save)
+            Column(Modifier.widthIn(max = BOX_WIDTH).fillMaxWidth()) {
+                TextField(
+                    state = text,
+                    placeholder = placeholder,
+                    maxLength = maxLength,
+                    keyboardType = keyboardType,
+                    onSubmit = save,
+                    modifier = Modifier.fillMaxWidth().focusRequester(box),
+                )
+                refused?.let {
+                    Spacer(Modifier.height(LINE_GAP))
+                    Text(it, SetteeType.Body, color = SetteeColors.Accent)
+                }
+                error?.let { (sentence, detail) ->
+                    Spacer(Modifier.height(LINE_GAP))
+                    ErrorMessage(sentence, detail, textAlign = TextAlign.Start)
+                }
+                hint?.let {
+                    Spacer(Modifier.height(LINE_GAP))
+                    Text(it, SetteeType.Body, color = SetteeColors.QuietText)
+                }
+                Spacer(Modifier.height(SetteeSpace.RowGap))
+                ActionButton(saveLabel, onClick = save)
+            }
         }
+        beside?.invoke()
     }
 }
 

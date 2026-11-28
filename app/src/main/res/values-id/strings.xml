@@ -215,6 +215,7 @@
     <string name="vod_loading_episodes">Memuat episode…</string>
     <string name="vod_episodes_failed">Tidak dapat memuat episode serial ini. Coba lagi sebentar lagi.</string>
     <string name="vod_no_episodes">Penyedia Anda belum menambahkan episode apa pun dari serial ini.</string>
+    <string name="vod_no_episodes_addons">Belum ada episode acara ini yang terdaftar.</string>
     <string name="vod_continue_watching">Lanjutkan menonton</string>
     <string name="vod_large_provider_note">Penyedia besar bisa memakan waktu beberapa menit pada percobaan pertama.</string>
     <string name="vod_recommended">Direkomendasikan untuk Anda</string>
@@ -261,6 +262,10 @@
     <string name="error_live_ended">Saluran ini berhenti. Coba lagi, atau pilih saluran lain.</string>
     <string name="error_timed_out">Penyedia Anda berhenti merespons. Mungkin sedang sibuk, jadi coba lagi sebentar lagi.</string>
     <string name="error_web_page">Penyedia Anda mengirim halaman web, bukan video. Tautannya mungkin sudah kedaluwarsa, jadi coba segarkan penyedia Anda di Pengaturan.</string>
+    <string name="error_unplayable_file">Penyedia Anda mengirim file dalam format yang tidak bisa diputar Settee, jadi coba yang lain.</string>
+    <string name="error_addon_web_page">Tautan add-on ini membuka halaman web, bukan video. Pilih stream lain.</string>
+    <string name="error_addon_unplayable_file">Tautan add-on ini membuka file dalam format yang tidak bisa diputar Settee. Pilih stream lain.</string>
+    <string name="playback_pick_another_stream">Pilih stream lain</string>
     <string name="error_damaged">Video ini rusak dan tidak dapat diputar. Masalahnya ada di pihak penyedia Anda, jadi coba yang lain.</string>
     <string name="error_behind_live">Saluran ini tertinggal terlalu jauh dari siaran langsung. Coba lagi untuk menyusul.</string>
     <string name="error_gone">Ini sudah tidak ada lagi di penyedia Anda. Coba segarkan penyedia Anda di Pengaturan.</string>
@@ -287,11 +292,16 @@
     <string name="error_addon_cant_reach_tv">Tidak dapat menjangkau add-on. Periksa apakah TV ini online dan alamatnya sudah benar.</string>
     <string name="error_addon_cant_reach_device">Tidak dapat menjangkau add-on. Periksa apakah perangkat ini online dan alamatnya sudah benar.</string>
     <string name="error_addon_timed_out">Add-on berhenti merespons. Mungkin sedang sibuk, jadi coba lagi sebentar lagi.</string>
+    <string name="error_addon_bad_address">Itu bukan alamat web. Periksa apakah ada salah ketik.</string>
+    <string name="error_addon_no_match">Add-on Anda tidak dapat mencari film ini, karena tidak ada kecocokan di IMDb.</string>
     <string name="error_addon_trouble">Add-on sedang bermasalah. Masalahnya ada di pihaknya, jadi coba lagi nanti.</string>
     <string name="error_not_an_addon_tv">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet TV ini tidak meminta Anda masuk terlebih dahulu.</string>
     <string name="error_not_an_addon_device">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet perangkat ini tidak meminta Anda masuk terlebih dahulu.</string>
     <string name="error_addon_lookup_tv">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
     <string name="error_addon_lookup_device">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
+    <string name="error_addon_no_match_show">Add-on Anda tidak dapat mencari serial ini, karena tidak ada kecocokan di IMDb.</string>
+    <string name="error_addon_lookup_show_tv">Tidak dapat mencari serial ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
+    <string name="error_addon_lookup_show_device">Tidak dapat mencari serial ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
     <string name="error_device_refused">Penyedia Anda tidak menerima detail ini. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_guide">Gagal mengunduh panduan ini. Coba lagi sebentar lagi.</string>
     <string name="error_guide_empty">Panduan ini berhasil diunduh, tetapi tidak berisi acara. Periksa apakah tautannya benar.</string>
@@ -402,4 +412,29 @@
     <string name="report_question_send">Kirim</string>
     <string name="report_question_dont_send">Jangan kirim</string>
     <string name="report_question_always_send">Selalu kirim</string>
+    <string name="error_torrents_off">Torrent nonaktif. Aktifkan di Pengaturan, Add-on, untuk memutarnya.</string>
+    <string name="error_torrent_nobody_sharing">Tidak ada yang membagikan torrent ini sekarang, jadi tidak bisa diputar. Pilih stream lain.</string>
+    <string name="error_torrent_no_space">Ruang kosong tidak cukup untuk memutar torrent ini. Pilih stream yang lebih kecil, atau kosongkan ruang.</string>
+    <string name="error_torrent_timed_out">Torrent ini menemukan orang yang membagikannya, tetapi tidak mulai tepat waktu. Coba lagi, atau pilih stream lain.</string>
+    <string name="error_torrent_unsupported">Torrent memerlukan Android 8.0 atau yang lebih baru. Pilih stream yang bukan torrent.</string>
+    <string name="error_torrent_failed">Torrent berhenti karena masalahnya sendiri. Coba lagi, atau pilih stream lain.</string>
+    <string name="vod_addon_torrent">Torrent</string>
+    <string name="settings_addons_torrents">Torrent</string>
+    <string name="settings_addons_torrents_off">Nonaktif. Torrent yang ditemukan add-on Anda tetap tercantum, tetapi tidak diputar.</string>
+    <string name="settings_addons_torrents_on">Aktif. Semua orang yang berbagi torrent yang Anda putar dapat melihat alamat internet Anda.</string>
+    <string name="settings_addons_torrents_title">Aktifkan torrent?</string>
+    <string name="settings_addons_torrents_body">Torrent diambil dari orang lain yang berbagi file yang sama. Selama Anda menontonnya, semua orang yang membagikannya dapat melihat alamat internet Anda.</string>
+    <string name="settings_addons_torrents_confirm">Aktifkan torrent</string>
+    <string name="settings_addons_torrents_keep">Biarkan nonaktif</string>
+    <string name="search_not_from_provider">Bukan dari penyedia Anda</string>
+    <string name="pairing_phone_addon_title">Tambahkan add-on</string>
+    <string name="pairing_phone_addon_body">Tempelkan alamatnya, lalu TV Anda akan memeriksa dan menambahkannya. Tambahkan sebanyak yang Anda mau, lalu pilih Selesai.</string>
+    <string name="pairing_phone_addon_add">Tambah</string>
+    <string name="pairing_phone_addon_done_title">Semua selesai</string>
+    <string name="pairing_phone_addon_done_body">Add-on Anda sudah ada di TV. Anda bisa meletakkan ponsel.</string>
+    <string name="addons_phone_qr_desc">Kode QR untuk menambahkan add-on dari ponsel Anda</string>
+    <string name="vod_addon_still_asking">Masih menanyakan add-on Anda yang lain…</string>
+    <plurals name="vod_addon_sharers">
+        <item quantity="other">%1$d orang berbagi</item>
+    </plurals>
 </resources>
