@@ -2,6 +2,18 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.8.0](https://github.com/neutraltone/settee/compare/v1.7.0...v1.8.0) (2026-11-28)
+
+
+### Features
+
+* **#665:** Stremio add-ons play episodes and find titles your provider doesn't have ([#674](https://github.com/neutraltone/settee/issues/674)) ([7a0a623](https://github.com/neutraltone/settee/commit/7a0a623e235bdefae45f661fcec59747fe965dc7))
+
+
+### Bug fixes
+
+* **#687:** a title that won't load because the provider can't find it says to try again later, not that it's gone ([#689](https://github.com/neutraltone/settee/issues/689)) ([13db4f7](https://github.com/neutraltone/settee/commit/13db4f7f684b8dc5460086728904f93b0c65bdeb))
+
 ## [1.7.0](https://github.com/neutraltone/settee/compare/v1.6.0...v1.7.0) (2026-11-25)
 
 
