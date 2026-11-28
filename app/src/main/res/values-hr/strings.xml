@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Ono što gledate i dodate u favorite pojavit će se ovdje.</string>
     <string name="error_http_401">Vaš pružatelj usluge nije prihvatio vašu prijavu. Provjerite korisničko ime i lozinku u Postavkama.</string>
     <string name="error_http_403">Vaš pružatelj usluge je ovo odbio. Vaš se račun možda koristi na drugom uređaju, pa ga ondje zaustavite i pokušajte ponovno.</string>
+    <string name="error_http_404">Vaš pružatelj usluge to trenutno nije mogao pronaći. Možda ima problema, pa pokušajte ponovno kasnije.</string>
     <string name="error_http_429">Vaš pružatelj usluge prima previše zahtjeva s ovog uređaja. Pričekajte minutu, zatim pokušajte ponovno.</string>
     <string name="error_http_451">Vaš pružatelj usluge ne može prikazati ovo ondje gdje se nalazite.</string>
     <string name="error_http_5xx">Vaš pružatelj usluge ima problema. To je na njegovoj strani, pa pokušajte ponovno kasnije.</string>

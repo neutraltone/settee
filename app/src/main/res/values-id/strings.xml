@@ -252,6 +252,7 @@
     <string name="home_empty_hint">Yang Anda tonton dan favoritkan akan muncul di sini.</string>
     <string name="error_http_401">Penyedia Anda tidak menerima login Anda. Periksa nama pengguna dan kata sandi di Pengaturan.</string>
     <string name="error_http_403">Penyedia Anda menolak ini. Akun Anda mungkin sedang dipakai di perangkat lain, jadi hentikan di sana lalu coba lagi.</string>
+    <string name="error_http_404">Penyedia Anda tidak dapat menemukan ini sekarang. Mungkin sedang bermasalah, jadi coba lagi nanti.</string>
     <string name="error_http_429">Penyedia Anda menerima terlalu banyak permintaan dari perangkat ini. Tunggu satu menit, lalu coba lagi.</string>
     <string name="error_http_451">Penyedia Anda tidak dapat menampilkan ini di lokasi Anda.</string>
     <string name="error_http_5xx">Penyedia Anda sedang bermasalah. Masalahnya ada di pihak mereka, jadi coba lagi nanti.</string>

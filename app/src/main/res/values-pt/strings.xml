@@ -254,6 +254,7 @@
     <string name="home_empty_hint">O que vir e marcar como favorito aparece aqui.</string>
     <string name="error_http_401">O seu fornecedor não aceitou o seu início de sessão. Verifique o nome de utilizador e a palavra-passe nas Definições.</string>
     <string name="error_http_403">O seu fornecedor recusou isto. A sua conta pode estar em uso noutro dispositivo, por isso pare a reprodução lá e tente novamente.</string>
+    <string name="error_http_404">O seu fornecedor não conseguiu encontrar isto agora. Pode estar com problemas, por isso tente novamente mais tarde.</string>
     <string name="error_http_429">O seu fornecedor está a receber demasiados pedidos deste dispositivo. Aguarde um minuto e tente novamente.</string>
     <string name="error_http_451">O seu fornecedor não pode mostrar isto onde está.</string>
     <string name="error_http_5xx">O seu fornecedor está com problemas. É do lado dele, por isso tente novamente mais tarde.</string>

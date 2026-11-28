@@ -216,7 +216,9 @@ object PlaybackErrors {
     fun describeHttpStatus(context: Context, code: Int): String = when (code) {
         401 -> context.getString(R.string.error_http_401)
         403 -> context.getString(R.string.error_http_403)
-        404 -> context.getString(R.string.error_gone)
+        // Not error_gone: a title only reaches a request while it's still listed, and the 404s seen were
+        // a provider's file server failing for half an hour on episodes it still listed (#687).
+        404 -> context.getString(R.string.error_http_404)
         // 405 usually means Xtream versus playlist is set wrong, but that's setup advice, so it stays in
         // provider setup rather than in a sentence the viewer reads mid-film.
         429 -> context.getString(R.string.error_http_429)

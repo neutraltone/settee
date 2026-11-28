@@ -255,6 +255,7 @@
     <string name="home_empty_hint">Tu sa zobrazí, čo sledujete a čo si označíte ako obľúbené.</string>
     <string name="error_http_401">Poskytovateľ neprijal vaše prihlasovacie údaje. Skontrolujte používateľské meno a heslo v Nastaveniach.</string>
     <string name="error_http_403">Poskytovateľ to odmietol. Váš účet sa možno používa na inom zariadení, zastavte ho tam a skúste to znova.</string>
+    <string name="error_http_404">Poskytovateľ to teraz nemohol nájsť. Možno má problémy, preto to skúste neskôr.</string>
     <string name="error_http_429">Poskytovateľ dostáva z tohto zariadenia príliš veľa požiadaviek. Počkajte minútu a potom to skúste znova.</string>
     <string name="error_http_451">Poskytovateľ toto nemôže zobraziť tam, kde ste.</string>
     <string name="error_http_5xx">Poskytovateľ má problémy. Je to na jeho strane, preto to skúste neskôr.</string>

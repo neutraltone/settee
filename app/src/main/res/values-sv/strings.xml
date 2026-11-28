@@ -253,6 +253,7 @@
     <string name="home_empty_hint">Det du tittar på och gör till favoriter visas här.</string>
     <string name="error_http_401">Din leverantör godkände inte din inloggning. Kontrollera användarnamn och lösenord i Inställningar.</string>
     <string name="error_http_403">Din leverantör nekade det här. Ditt konto kan vara i bruk på en annan enhet, så stoppa det där och försök igen.</string>
+    <string name="error_http_404">Din leverantör kunde inte hitta det just nu. Den kan ha problem, så försök igen senare.</string>
     <string name="error_http_429">Din leverantör får för många förfrågningar från den här enheten. Vänta en minut och försök sedan igen.</string>
     <string name="error_http_451">Din leverantör kan inte visa det här där du är.</string>
     <string name="error_http_5xx">Din leverantör har problem. Det ligger hos dem, så försök igen senare.</string>

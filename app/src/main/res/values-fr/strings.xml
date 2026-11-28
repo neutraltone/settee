@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Ce que vous regardez et ajoutez aux favoris apparaîtra ici.</string>
     <string name="error_http_401">Votre fournisseur n\'a pas accepté votre identifiant. Vérifiez le nom d\'utilisateur et le mot de passe dans les Paramètres.</string>
     <string name="error_http_403">Votre fournisseur a refusé. Votre compte est peut-être utilisé sur un autre appareil, alors arrêtez la lecture là-bas et réessayez.</string>
+    <string name="error_http_404">Votre fournisseur n\'a pas pu trouver ceci pour l\'instant. Il a peut-être des problèmes, alors réessayez plus tard.</string>
     <string name="error_http_429">Votre fournisseur reçoit trop de demandes de cet appareil. Attendez une minute, puis réessayez.</string>
     <string name="error_http_451">Votre fournisseur ne peut pas diffuser ce contenu là où vous êtes.</string>
     <string name="error_http_5xx">Votre fournisseur a des problèmes. Cela vient de chez lui, alors réessayez plus tard.</string>

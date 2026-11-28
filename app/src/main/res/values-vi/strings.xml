@@ -252,6 +252,7 @@
     <string name="home_empty_hint">Những gì bạn xem và yêu thích sẽ hiện ở đây.</string>
     <string name="error_http_401">Nhà cung cấp không chấp nhận đăng nhập của bạn. Kiểm tra tên người dùng và mật khẩu trong Cài đặt.</string>
     <string name="error_http_403">Nhà cung cấp đã từ chối yêu cầu này. Tài khoản của bạn có thể đang được dùng trên thiết bị khác, vì vậy hãy dừng ở đó rồi thử lại.</string>
+    <string name="error_http_404">Nhà cung cấp không tìm thấy nội dung này lúc này. Họ có thể đang gặp sự cố, vì vậy hãy thử lại sau.</string>
     <string name="error_http_429">Nhà cung cấp đang nhận quá nhiều yêu cầu từ thiết bị này. Đợi một phút, rồi thử lại.</string>
     <string name="error_http_451">Nhà cung cấp không thể hiển thị nội dung này ở nơi bạn đang ở.</string>
     <string name="error_http_5xx">Nhà cung cấp đang gặp sự cố. Đó là vấn đề phía họ, vì vậy hãy thử lại sau.</string>

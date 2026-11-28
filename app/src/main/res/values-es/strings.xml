@@ -254,6 +254,7 @@
     <string name="home_empty_hint">Lo que veas y marques como favorito aparecerá aquí.</string>
     <string name="error_http_401">Tu proveedor no aceptó tu inicio de sesión. Revisa el usuario y la contraseña en Ajustes.</string>
     <string name="error_http_403">Tu proveedor lo rechazó. Puede que tu cuenta se esté usando en otro dispositivo, así que detén la reproducción allí y vuelve a intentarlo.</string>
+    <string name="error_http_404">Tu proveedor no ha podido encontrarlo ahora mismo. Puede que tenga problemas, así que vuelve a intentarlo más tarde.</string>
     <string name="error_http_429">Tu proveedor está recibiendo demasiadas solicitudes desde este dispositivo. Espera un minuto y vuelve a intentarlo.</string>
     <string name="error_http_451">Tu proveedor no puede mostrar esto donde estás.</string>
     <string name="error_http_5xx">Tu proveedor tiene problemas. Es cosa suya, así que vuelve a intentarlo más tarde.</string>

@@ -252,6 +252,7 @@
     <string name="home_empty_hint">你观看和收藏的内容会显示在这里。</string>
     <string name="error_http_401">你的提供商未接受你的登录。请在“设置”中检查用户名和密码。</string>
     <string name="error_http_403">你的提供商拒绝了此请求。你的账户可能正在其他设备上使用，请在那台设备上停止播放后重试。</string>
+    <string name="error_http_404">你的提供商暂时找不到这个内容。他们那边可能出了问题，请稍后重试。</string>
     <string name="error_http_429">本设备向你的提供商发送的请求过多。请等待一分钟后重试。</string>
     <string name="error_http_451">你的提供商无法在你所在的地区提供此内容。</string>
     <string name="error_http_5xx">你的提供商出现了问题。这是他们那边的问题，请稍后重试。</string>

@@ -82,7 +82,8 @@ class VoiceStringsTest {
     @Test
     fun `docs ERRORS md names only strings that exist, and lists the playback and provider sentences`() {
         assertWithMessage("error keys found in docs/ERRORS.md").that(errorKeys).containsAtLeast(
-            "error_http_401", "error_http_403", "error_gone", "error_cant_reach_tv", "error_cant_reach_device",
+            "error_http_401", "error_http_403", "error_http_404", "error_gone",
+            "error_cant_reach_tv", "error_cant_reach_device",
             "error_login", "sync_wrong_code", "recset_status_failed", "about_check_failed",
         )
     }

@@ -790,6 +790,7 @@
     <string name="pairing_phone_opensubtitles_saved_body">Your TV is signed in to OpenSubtitles. You can put your phone down.</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
+    <string name="error_http_404">Your provider couldn\'t find this just now. It may be having problems, so try again later.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>
     <string name="error_http_451">Your provider can\'t show this where you are.</string>
     <string name="error_http_5xx">Your provider is having problems. That\'s at their end, so try again later.</string>

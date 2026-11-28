@@ -253,6 +253,7 @@
     <string name="home_empty_hint">Amit néz, és amit kedvencnek jelöl, itt jelenik meg.</string>
     <string name="error_http_401">A szolgáltató nem fogadta el a bejelentkezést. Ellenőrizze a felhasználónevet és a jelszót a Beállításokban.</string>
     <string name="error_http_403">A szolgáltató ezt elutasította. Lehet, hogy a fiókját egy másik eszközön használják, ezért állítsa le ott, és próbálja újra.</string>
+    <string name="error_http_404">A szolgáltató most nem találta ezt. Lehet, hogy problémái vannak, ezért próbálja újra később.</string>
     <string name="error_http_429">A szolgáltató túl sok kérést kap erről az eszközről. Várjon egy percet, majd próbálja újra.</string>
     <string name="error_http_451">A szolgáltató ezt nem tudja megjeleníteni ott, ahol Ön van.</string>
     <string name="error_http_5xx">A szolgáltatónál problémák vannak. Ez az ő oldalukon van, ezért próbálja újra később.</string>

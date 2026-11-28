@@ -236,7 +236,7 @@ class PlaybackErrorsTest {
             403 to
                 "Your provider refused this. Your account may be in use on another device, " +
                 "so stop it there and try again.",
-            404 to "This isn't on your provider any more. Try refreshing your provider in Settings.",
+            404 to "Your provider couldn't find this just now. It may be having problems, so try again later.",
             405 to "This didn't play. Try again, or pick something else.",
             429 to "Your provider is getting too many requests from this device. Wait a minute, then try again.",
             451 to "Your provider can't show this where you are.",
